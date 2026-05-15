@@ -3,8 +3,40 @@ import {
   Mail, MessageCircle, Sheet, FileText, Sparkles, Wand2, Search, 
   Bell, ChevronDown, Check, AlertCircle, Clock, MoreHorizontal, 
   Paperclip, Send, ArrowRight, Home, Inbox, FileBox, Users, Settings, Filter,
-  Tag, MapPin, Truck, Package, Box
+  Tag, MapPin, Truck, Package, Box, LayoutGrid, MessagesSquare
 } from "lucide-react";
+import { Atelier } from "./Atelier";
+
+type ViewMode = 'inbox' | 'command';
+
+function ViewSwitcher({ mode, setMode }: { mode: ViewMode; setMode: (m: ViewMode) => void }) {
+  return (
+    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-white border border-[#E5EAF0] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1 flex items-center gap-0.5">
+      <button
+        onClick={() => setMode('inbox')}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          mode === 'inbox'
+            ? 'bg-[#9000FF] text-white shadow-sm'
+            : 'text-[#5E687B] hover:text-[#212833]'
+        }`}
+      >
+        <MessagesSquare size={13} />
+        Conversation Hub
+      </button>
+      <button
+        onClick={() => setMode('command')}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          mode === 'command'
+            ? 'bg-[#9000FF] text-white shadow-sm'
+            : 'text-[#5E687B] hover:text-[#212833]'
+        }`}
+      >
+        <LayoutGrid size={13} />
+        Command Center
+      </button>
+    </div>
+  );
+}
 
 // Types & Mock Data
 type ShipmentStatus = 'on-track' | 'at-risk' | 'delayed';
@@ -62,12 +94,23 @@ const SUPPLIERS = [
 export function ConversationHub() {
   const [activeMessageId, setActiveMessageId] = useState<string>('m1');
   const [aiBriefingExpanded, setAiBriefingExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('inbox');
 
   const activeMessage = INBOX.find(m => m.id === activeMessageId) || INBOX[0];
   const activeShipment = SHIPMENTS.find(s => s.id === activeMessage.shipmentId);
 
+  if (viewMode === 'command') {
+    return (
+      <div className="relative h-screen w-full">
+        <ViewSwitcher mode={viewMode} setMode={setViewMode} />
+        <Atelier />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-full bg-[#FAFBFC] text-[#212833] font-[Inter,sans-serif] overflow-hidden">
+      <ViewSwitcher mode={viewMode} setMode={setViewMode} />
       
       {/* LEFT NAV RAIL */}
       <div className="w-[64px] bg-white border-r border-[#E5EAF0] flex flex-col items-center py-4 z-20 shadow-[1px_0_10px_rgba(0,0,0,0.02)]">
