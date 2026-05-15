@@ -3,5 +3,8 @@ type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/flowforge/Atelier.tsx": () => import("../components/mockups/flowforge/Atelier.tsx"),
   "./components/mockups/flowforge/ConversationHub.tsx": () => import("../components/mockups/flowforge/ConversationHub.tsx"),
+  "./components/mockups/flowforge/POVariantA.tsx": () => import("../components/mockups/flowforge/POVariantA.tsx"),
+  "./components/mockups/flowforge/POVariantB.tsx": () => import("../components/mockups/flowforge/POVariantB.tsx"),
+  "./components/mockups/flowforge/POVariantC.tsx": () => import("../components/mockups/flowforge/POVariantC.tsx"),
   "./components/mockups/flowforge/ShipmentAtlas.tsx": () => import("../components/mockups/flowforge/ShipmentAtlas.tsx")
 };
