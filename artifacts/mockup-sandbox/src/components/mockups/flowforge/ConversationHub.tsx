@@ -10,14 +10,53 @@ import { Atelier } from "./Atelier";
 type ViewMode = 'inbox' | 'command';
 
 function ViewSwitcher({ mode, setMode }: { mode: ViewMode; setMode: (m: ViewMode) => void }) {
+  const [pos, setPos] = React.useState({ x: window.innerWidth - 320, y: window.innerHeight - 60 });
+  const [dragging, setDragging] = React.useState(false);
+  const offset = React.useRef({ x: 0, y: 0 });
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    setDragging(true);
+  };
+
+  React.useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent) => {
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth - (ref.current?.offsetWidth ?? 240), e.clientX - offset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - (ref.current?.offsetHeight ?? 40), e.clientY - offset.current.y)),
+      });
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [dragging]);
+
   return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-white border border-[#E5EAF0] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-1 flex items-center gap-0.5">
+    <div
+      ref={ref}
+      style={{ position: 'fixed', left: pos.x, top: pos.y, zIndex: 50, userSelect: 'none' }}
+      className="bg-white border border-[#E5EAF0] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.12)] p-1 flex items-center gap-0.5"
+    >
+      {/* drag handle */}
+      <div
+        onMouseDown={onMouseDown}
+        className="pl-2 pr-1 flex items-center cursor-grab active:cursor-grabbing text-[#C0C8D4] hover:text-[#9000FF] transition-colors"
+        title="Drag to move"
+      >
+        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor">
+          <circle cx="3" cy="4" r="1.5"/><circle cx="9" cy="4" r="1.5"/>
+          <circle cx="3" cy="8" r="1.5"/><circle cx="9" cy="8" r="1.5"/>
+          <circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/>
+        </svg>
+      </div>
       <button
         onClick={() => setMode('inbox')}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-          mode === 'inbox'
-            ? 'bg-[#9000FF] text-white shadow-sm'
-            : 'text-[#5E687B] hover:text-[#212833]'
+          mode === 'inbox' ? 'bg-[#9000FF] text-white shadow-sm' : 'text-[#5E687B] hover:text-[#212833]'
         }`}
       >
         <MessagesSquare size={13} />
@@ -26,9 +65,7 @@ function ViewSwitcher({ mode, setMode }: { mode: ViewMode; setMode: (m: ViewMode
       <button
         onClick={() => setMode('command')}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-          mode === 'command'
-            ? 'bg-[#9000FF] text-white shadow-sm'
-            : 'text-[#5E687B] hover:text-[#212833]'
+          mode === 'command' ? 'bg-[#9000FF] text-white shadow-sm' : 'text-[#5E687B] hover:text-[#212833]'
         }`}
       >
         <LayoutGrid size={13} />
