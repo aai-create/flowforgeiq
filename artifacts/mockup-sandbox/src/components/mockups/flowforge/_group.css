@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .flowforge-bg {
+    background-color: #FAFBFC;
+  }
+  .flowforge-text {
+    color: #212833;
+  }
+  .flowforge-muted {
+    color: #5E687B;
+  }
+  .flowforge-primary {
+    background-color: #9000FF;
+  }
+  .flowforge-primary-text {
+    color: #9000FF;
+  }
+  .flowforge-border {
+    border-color: #E5EAF0;
+  }
+  .flowforge-border-dark {
+    border-color: #D6E3EB;
+  }
+  .flowforge-ai-glow {
+    box-shadow: 0 0 15px rgba(144, 0, 255, 0.15);
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes pulse-border {
+  0% { border-color: rgba(144, 0, 255, 0.4); }
+  50% { border-color: rgba(144, 0, 255, 1); }
+  100% { border-color: rgba(144, 0, 255, 0.4); }
+}
+
+.animate-pulse-border {
+  animation: pulse-border 2s infinite;
+}

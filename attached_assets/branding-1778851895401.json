@@ -1,0 +1,148 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Inter",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#9000FF",
+    "secondary": "#212833",
+    "accent": "#9000FF",
+    "background": "#FFFFFF",
+    "textPrimary": "#5E687B",
+    "link": "#5E687B"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Inter",
+      "heading": "Inter"
+    },
+    "fontStacks": {
+      "heading": [
+        "Inter",
+        "Framework7Icons",
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "sans-serif"
+      ],
+      "body": [
+        "Inter",
+        "Framework7Icons",
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Inter",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "16px",
+      "h2": "16px",
+      "body": "14.4px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "8px"
+  },
+  "components": {
+    "input": {
+      "background": "#FFFFFF",
+      "textColor": "#212833",
+      "borderColor": "#9000FF",
+      "borderRadius": "8px",
+      "borderRadiusCorners": {
+        "topLeft": "8px",
+        "topRight": "8px",
+        "bottomRight": "8px",
+        "bottomLeft": "8px"
+      },
+      "shadow": "rgb(255, 255, 255) 0px 0px 0px 0px, rgb(144, 0, 255) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+    },
+    "buttonPrimary": {
+      "background": "#9000FF",
+      "textColor": "#FFFFFF",
+      "borderColor": "#9000FF",
+      "borderRadius": "8px",
+      "borderRadiusCorners": {
+        "topLeft": "8px",
+        "topRight": "8px",
+        "bottomRight": "8px",
+        "bottomLeft": "8px"
+      },
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "transparent",
+      "textColor": "#212833",
+      "borderColor": "#D6E3EB",
+      "borderRadius": "8px",
+      "borderRadiusCorners": {
+        "topLeft": "8px",
+        "topRight": "8px",
+        "bottomRight": "8px",
+        "bottomLeft": "8px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "https://web.akiflow.com/images/logo-r-flat.svg",
+    "favicon": "https://web.akiflow.com/favicons/apple-touch-icon.png",
+    "ogImage": null,
+    "logoAlt": "Akiflow Logo"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Selected #0 because it is visible, matches the brand name 'Akiflow', and is the only candidate provided. It is also medium-sized and matches the favicon domain.",
+    "confidence": 0.9,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 0,
+      "text": "Log in",
+      "reasoning": "Button #0 ('Log in') uses the brand's vibrant color (#9000FF), indicating it is the primary call-to-action for users to access the platform."
+    },
+    "secondary": {
+      "index": 2,
+      "text": "Log in with Google",
+      "reasoning": "Button #2 ('Log in with Google') has a transparent background, making it a suitable secondary option as it offers an alternative login method without using the primary brand color."
+    },
+    "confidence": 0.95
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "tech-savvy professionals"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.95,
+    "colors": 0.9,
+    "overall": 0.925
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 0,
+        "selectedLogoReasoning": "Selected #0 because it is visible, matches the brand name 'Akiflow', and is the only candidate provided. It is also medium-sized and matches the favicon domain.",
+        "confidence": 0.9
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}
