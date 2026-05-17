@@ -1026,36 +1026,14 @@ export function ConversationHub() {
         {/* ── INBOX VIEW ── */}
         {navTab==="inbox"&&<>
 
-          {/* MILESTONE STRIP */}
-          <div className="bg-white border-b border-[#E5EAF0] shrink-0 py-3 px-4 overflow-x-auto flex gap-3 z-10 shadow-[0_2px_6px_rgba(0,0,0,0.02)]" style={{height:148}}>
-            {shipments.map(s=>{
-              const isSelected=selectedShipmentId===s.id;
-              const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
-              const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
-              const cur=stages.find(st=>st.id===s.currentStageId);
-              return (
-                <div key={s.id} onClick={()=>selectShipment(s.id)}
-                  className={`w-[296px] shrink-0 border rounded-xl p-3 flex flex-col gap-1.5 cursor-pointer group transition-all ${isSelected?"border-[#9000FF]/40 shadow-md bg-[#FAFBFF]":"border-[#E5EAF0] bg-white hover:border-[#9000FF]/20 hover:shadow-sm"}`}>
-                  <div className="flex justify-between items-start">
-                    <div className="min-w-0"><div className={`text-xs font-bold mb-0.5 ${isSelected?"text-[#9000FF]":"text-[#212833] group-hover:text-[#9000FF]"} transition-colors`}>{s.po}</div><div className="text-[10px] text-[#5E687B] truncate w-[180px]">{s.product}</div></div>
-                    <div className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 shrink-0 ${statusCls(s.status)}`}>{s.status==="delayed"?<AlertCircle size={8}/>:s.status==="at-risk"?<Clock size={8}/>:<Check size={8}/>}{s.dueDate}</div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between text-[9px] text-[#5E687B] mb-1 uppercase tracking-wider"><span className="font-bold text-[#212833]">{cur?.label??"—"}</span><span>{pct}%</span></div>
-                    <div className="flex gap-px h-1.5">{stages.map((_,idx)=><div key={idx} className={`flex-1 rounded-full transition-all duration-500 ${idx<stageIdx?(s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400"):idx===stageIdx?(s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-500":"bg-[#9000FF]"):"bg-[#E5EAF0]"}`}/>)}</div>
-                  </div>
-                  <PaymentStatus payments={s.payments}/>
-                </div>
-              );
-            })}
-          </div>
-
           {/* 3-COLUMN INBOX */}
           <div className="flex-1 flex overflow-hidden">
 
             {/* Col 1 — Filters */}
-            <div className="w-[208px] bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col shrink-0">
-              <div className="p-3 border-b border-[#E5EAF0]">
+            <div className="w-[228px] bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col shrink-0">
+
+              {/* Channels */}
+              <div className="p-3 border-b border-[#E5EAF0] shrink-0">
                 <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Channels</div>
                 <div className="flex flex-col gap-0.5">
                   {([
@@ -1077,6 +1055,45 @@ export function ConversationHub() {
                   })}
                 </div>
               </div>
+
+              {/* Purchase Orders — scrollable list, same style as Suppliers */}
+              <div className="p-3 border-b border-[#E5EAF0] shrink-0">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Purchase Orders</div>
+                  {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {shipments.map(s=>{
+                    const isSelected=selectedShipmentId===s.id;
+                    const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
+                    const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
+                    const cur=stages.find(st=>st.id===s.currentStageId);
+                    const dotCls=s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400";
+                    return (
+                      <button key={s.id} onClick={()=>selectShipment(s.id)}
+                        className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#F0F4F8]"}`}>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
+                          <span className={`text-[10px] font-bold leading-none ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
+                          <span className="text-[8px] text-[#9E9FAE] ml-auto shrink-0">{s.dueDate}</span>
+                        </div>
+                        <div className="text-[9px] text-[#5E687B] truncate pl-3 mb-1.5 leading-tight">{s.product}</div>
+                        <div className="pl-3">
+                          <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
+                          </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <span className="text-[8px] text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
+                            <span className="text-[8px] text-[#9E9FAE] shrink-0">{pct}%</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Suppliers */}
               <div className="p-3 flex-1 overflow-y-auto">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Suppliers</div>
