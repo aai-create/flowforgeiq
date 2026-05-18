@@ -1129,6 +1129,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery]     = useState("");
   const [aiQuery, setAiQuery]             = useState("");
   const [showAiResult, setShowAiResult]   = useState(false);
+  const [aiResult, setAiResult]           = useState("");
+  const [aiResultLoading, setAiResultLoading] = useState(false);
 
   // Apply deep-link URL params (?supplier= or ?shipment=) once messages are loaded.
   // Reports navigates here with these params so users land on the right filtered view.
@@ -1400,15 +1402,21 @@ export default function Home() {
               </>
             ) : (
               <>
-                <input type="text" value={aiQuery} onChange={e=>{setAiQuery(e.target.value);setShowAiResult(false);}} onKeyDown={e=>{if(e.key==="Enter"&&aiQuery.trim())setShowAiResult(true);}}
+                <input type="text" value={aiQuery} onChange={e=>{setAiQuery(e.target.value);setShowAiResult(false);}} onKeyDown={e=>{if(e.key==="Enter"&&aiQuery.trim()){setShowAiResult(true);setAiResultLoading(true);setAiResult("");fetch(`${import.meta.env.BASE_URL}api/copilot/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:aiQuery})}).then(r=>r.json()).then((d:{reply:string})=>{setAiResult(d.reply);}).catch(()=>{setAiResult("Sorry, I couldn't connect to the AI. Please try again.");}).finally(()=>setAiResultLoading(false));}}}
                   placeholder="Ask FlowForge anything...  ⌘K"
                   className="w-full pl-14 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"/>
                 {showAiResult&&(
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/20 rounded-xl shadow-xl z-50 p-4">
-                    <div className="flex items-start gap-2 mb-3"><Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5"/><p className="text-xs text-[#212833] leading-relaxed">2 urgent items today: Guangzhou Metalworks is requesting a 2-day delay on PO-0142, and the balance payment of $8,960 is overdue. Want me to draft replies for both?</p></div>
-                    <div className="flex flex-wrap gap-2">
-                      {["Draft reply","Flag payment","Show all tasks"].map(c=><button key={c} onClick={()=>{setShowAiResult(false);setAiQuery("");}} className="text-[10px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold">{c}</button>)}
+                    <div className="flex items-start gap-2 mb-3">
+                      <Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5"/>
+                      {aiResultLoading
+                        ? <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"0ms"}}/><span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"150ms"}}/><span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"300ms"}}/></span>
+                        : <p className="text-xs text-[#212833] leading-relaxed">{aiResult}</p>
+                      }
                     </div>
+                    {!aiResultLoading&&<div className="flex flex-wrap gap-2">
+                      {["Draft reply","Flag payment","Show all tasks"].map(c=><button key={c} onClick={()=>{setShowAiResult(false);setAiQuery("");}} className="text-[10px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold">{c}</button>)}
+                    </div>}
                     <button onClick={()=>{setShowAiResult(false);setAiQuery("");}} className="absolute top-3 right-3 text-[#5E687B] hover:text-[#212833]"><X size={13}/></button>
                   </div>
                 )}

@@ -189,27 +189,37 @@ export function Atelier() {
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
 
-  const sendMessage = () => {
-    const text = aiInput.trim();
-    if (!text) return;
-    const lower = text.toLowerCase();
-    const reply = lower.includes("wire") || lower.includes("payment")
-      ? "I'll prepare the wire transfer details for PO-0160 ($21,700 to Hangzhou Timber Co.). Shall I also draft the remittance advice email?"
-      : lower.includes("draft") || lower.includes("repl")
-      ? "Drafting replies for PO-0142 (2-day delay approval) and PO-0165 (port congestion). I'll have both ready in a moment."
-      : lower.includes("tianjin") || lower.includes("delay")
-      ? "The Tianjin port congestion is adding an estimated 4-day delay to PO-0165. I can draft an approval message to Tianjin Wire Works — want me to proceed?"
-      : lower.includes("quote") || lower.includes("po-0168")
-      ? "PO-0168 has 3 factory quotes awaiting review. Guangzhou Metalworks is lowest at $7,230 vs the $7,500 target. Want me to pre-select it?"
-      : "I'll look into that across your active POs. Give me a moment to check the latest data.";
-    setAiMessages(prev => [...prev, { role: "user", text }, { role: "ai", text: reply }]);
+  const sendMessage = async (overrideText?: string) => {
+    const text = (overrideText ?? aiInput).trim();
+    if (!text || aiLoading) return;
+    setAiMessages(prev => [...prev, { role: "user", text }]);
     setAiInput("");
+    setAiLoading(true);
+    try {
+      const history = aiMessages.map(m => ({
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.text,
+      }));
+      const res = await fetch(`${import.meta.env.BASE_URL}api/copilot/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history }),
+      });
+      if (!res.ok) throw new Error("AI request failed");
+      const data = await res.json() as { reply: string };
+      setAiMessages(prev => [...prev, { role: "ai", text: data.reply }]);
+    } catch {
+      setAiMessages(prev => [...prev, { role: "ai", text: "Sorry, I couldn't connect to the AI. Please try again." }]);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleChipClick = (chip: string) => {
-    setAiInput(chip);
+    void sendMessage(chip);
   };
 
   const focusShipment = (shipmentId: string) => {
@@ -660,14 +670,30 @@ export function Atelier() {
                 </div>
               ))}
 
+              {/* Loading bubble */}
+              {aiLoading && (
+                <div className="flex justify-start">
+                  <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0 mt-1 mr-2">
+                    <Sparkles className="w-3 h-3 text-[#9000FF]" />
+                  </div>
+                  <div className="bg-white border border-[#E5EAF0] shadow-sm px-3 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"0ms"}} />
+                    <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"150ms"}} />
+                    <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"300ms"}} />
+                  </div>
+                </div>
+              )}
+
               {/* Action chips */}
-              <div className="flex flex-wrap gap-2 ml-8">
-                {["Draft reply to Guangzhou", "Approve Tianjin delay", "Initiate wire $21,700", "Show PO-0168 quotes"].map(c => (
-                  <button key={c} onClick={() => handleChipClick(c)} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
-                    {c}
-                  </button>
-                ))}
-              </div>
+              {!aiLoading && (
+                <div className="flex flex-wrap gap-2 ml-8">
+                  {["Draft reply to Guangzhou", "Approve Tianjin delay", "Initiate wire $21,700", "Show PO-0168 quotes"].map(c => (
+                    <button key={c} onClick={() => handleChipClick(c)} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </ScrollArea>
 
@@ -678,11 +704,15 @@ export function Atelier() {
                 <Paperclip className="w-4 h-4" />
               </button>
               <input type="text" value={aiInput} onChange={e => setAiInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") sendMessage(); }}
+                onKeyDown={e => { if (e.key === "Enter") void sendMessage(); }}
+                disabled={aiLoading}
                 placeholder="Ask about a shipment, supplier..."
-                className="flex-1 bg-transparent text-xs h-10 focus:outline-none placeholder:text-[#A0ABB8]" />
-              <button onClick={sendMessage} className={`h-7 w-7 rounded-lg mr-1 shrink-0 flex items-center justify-center transition-colors ${aiInput.trim() ? "bg-[#9000FF] hover:bg-[#7A00D9]" : "bg-[#E5EAF0]"}`}>
-                <Send className={`w-3.5 h-3.5 ${aiInput.trim() ? "text-white" : "text-[#9E9FAE]"}`} />
+                className="flex-1 bg-transparent text-xs h-10 focus:outline-none placeholder:text-[#A0ABB8] disabled:opacity-60" />
+              <button onClick={() => void sendMessage()} disabled={aiLoading || !aiInput.trim()} className={`h-7 w-7 rounded-lg mr-1 shrink-0 flex items-center justify-center transition-colors ${aiInput.trim() && !aiLoading ? "bg-[#9000FF] hover:bg-[#7A00D9]" : "bg-[#E5EAF0]"}`}>
+                {aiLoading
+                  ? <span className="w-3 h-3 border-2 border-[#9000FF]/30 border-t-[#9000FF] rounded-full animate-spin" />
+                  : <Send className={`w-3.5 h-3.5 ${aiInput.trim() ? "text-white" : "text-[#9E9FAE]"}`} />
+                }
               </button>
             </div>
             <div className="mt-1.5 text-center">

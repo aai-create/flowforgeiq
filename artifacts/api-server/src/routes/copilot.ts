@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, copilotProposalsTable, autonomyPoliciesTable } from "@workspace/db";
+import { db, copilotProposalsTable, autonomyPoliciesTable, shipmentsTable, messagesTable, suppliersTable, paymentsTable } from "@workspace/db";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import {
   CreateCopilotProposalBody,
@@ -8,6 +8,8 @@ import {
   ListCopilotProposalsQueryParams,
 } from "@workspace/api-zod";
 import { runTriggerEngine } from "../lib/copilot-trigger";
+import { openai } from "@workspace/integrations-openai-ai-server";
+import { z } from "zod";
 
 const router: IRouter = Router();
 
@@ -159,6 +161,91 @@ router.put("/copilot/policies", async (req, res) => {
       .returning();
     res.json(inserted);
   }
+});
+
+// ─── AI Chat ──────────────────────────────────────────────────────────────────
+const CopilotChatBody = z.object({
+  message: z.string().min(1).max(2000),
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional(),
+});
+
+router.post("/copilot/chat", async (req, res) => {
+  const input = CopilotChatBody.parse(req.body);
+
+  // Pull live context: active shipments + recent messages + payments
+  const shipments = await db
+    .select({
+      id: shipmentsTable.id,
+      poNumber: shipmentsTable.poNumber,
+      product: shipmentsTable.product,
+      supplierName: suppliersTable.name,
+      status: shipmentsTable.status,
+      currentStageId: shipmentsTable.currentStageId,
+      dueDate: shipmentsTable.dueDate,
+      exFactoryDate: shipmentsTable.exFactoryDate,
+    })
+    .from(shipmentsTable)
+    .leftJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+    .where(inArray(shipmentsTable.status, ["on-track", "at-risk", "delayed"]));
+
+  const recentMessages = await db
+    .select()
+    .from(messagesTable)
+    .orderBy(desc(messagesTable.receivedAt))
+    .limit(20);
+
+  const payments = await db
+    .select()
+    .from(paymentsTable)
+    .where(eq(paymentsTable.paid, false));
+
+  const TODAY = "2026-05-18";
+
+  const shipmentContext = shipments.map(s => {
+    const msgs = recentMessages.filter(m => m.shipmentId === s.id);
+    const pmts = payments.filter(p => p.shipmentId === s.id);
+    const stage = s.currentStageId.replace(/_/g, " ");
+    const overduePayments = pmts.filter(p => new Date(p.dueDate) < new Date(TODAY));
+    return [
+      `• ${s.poNumber} (${s.product}) — supplier: ${s.supplierName ?? "unknown"}, status: ${s.status}, stage: ${stage}, ex-factory: ${s.exFactoryDate}`,
+      overduePayments.length > 0
+        ? `  ⚠ Overdue payments: ${overduePayments.map(p => `${p.label} $${p.amountUsd} (due ${p.dueDate})`).join(", ")}`
+        : "",
+      msgs.length > 0 && msgs[0].unread
+        ? `  📩 Unread message from ${msgs[0].sender} (${msgs[0].channel}): "${msgs[0].snippet}"`
+        : "",
+    ].filter(Boolean).join("\n");
+  }).join("\n");
+
+  const systemPrompt = `You are FlowForge Copilot, an AI assistant for a supply-chain buyer managing international purchase orders. Today is ${TODAY}.
+
+ACTIVE SHIPMENTS:
+${shipmentContext || "No active shipments."}
+
+Your role:
+- Answer questions about shipments, suppliers, payments, and logistics
+- Draft concise, professional supplier replies when asked
+- Suggest actions for overdue payments, delays, and stage transitions
+- Be direct and specific — use PO numbers and supplier names from the data above
+- Keep replies short and actionable (2-4 sentences max unless drafting a message)
+- When drafting supplier messages, output just the message text in quotes
+
+If asked to draft a reply, write a clear, professional message the buyer can send directly.`;
+
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: systemPrompt },
+    ...(input.history ?? []),
+    { role: "user", content: input.message },
+  ];
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    messages,
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  const reply = (content && content.trim()) ? content.trim() : "I couldn't generate a response. Please try again.";
+  res.json({ reply });
 });
 
 export default router;
