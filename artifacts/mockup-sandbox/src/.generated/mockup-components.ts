@@ -6,5 +6,8 @@ export const modules: ModuleMap = {
   "./components/mockups/flowforge/POVariantA.tsx": () => import("../components/mockups/flowforge/POVariantA.tsx"),
   "./components/mockups/flowforge/POVariantB.tsx": () => import("../components/mockups/flowforge/POVariantB.tsx"),
   "./components/mockups/flowforge/POVariantC.tsx": () => import("../components/mockups/flowforge/POVariantC.tsx"),
-  "./components/mockups/flowforge/ShipmentAtlas.tsx": () => import("../components/mockups/flowforge/ShipmentAtlas.tsx")
+  "./components/mockups/flowforge/ShipmentAtlas.tsx": () => import("../components/mockups/flowforge/ShipmentAtlas.tsx"),
+  "./components/mockups/pdf-field-viewer/HoverPopover.tsx": () => import("../components/mockups/pdf-field-viewer/HoverPopover.tsx"),
+  "./components/mockups/pdf-field-viewer/InlineSnippet.tsx": () => import("../components/mockups/pdf-field-viewer/InlineSnippet.tsx"),
+  "./components/mockups/pdf-field-viewer/SplitPane.tsx": () => import("../components/mockups/pdf-field-viewer/SplitPane.tsx")
 };
