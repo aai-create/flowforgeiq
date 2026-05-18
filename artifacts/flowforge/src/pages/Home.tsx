@@ -7,7 +7,7 @@ import {
   GripVertical, Plus, Trash2, DollarSign, CreditCard, CalendarClock,
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
-  Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit,
+  Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
@@ -1328,6 +1328,8 @@ export default function Home() {
             </button>
           ))}
           <div className="w-6 h-px bg-[#E5EAF0] mx-auto my-1"/>
+          <button onClick={()=>window.location.assign(`${import.meta.env.BASE_URL}reports`)} title="Reports"
+            className="p-2 rounded-md hover:bg-[#F0F4F8] text-[#5E687B] hover:text-[#9000FF] transition-colors"><BarChart3 size={17}/></button>
           <button onClick={()=>setShowStageConfig(true)} title="Workflow Stages"
             className="p-2 rounded-md hover:bg-[#F0F4F8] text-[#5E687B] hover:text-[#9000FF] transition-colors"><SlidersHorizontal size={17}/></button>
         </div>

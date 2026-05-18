@@ -7,7 +7,7 @@ import {
   Sparkles, AlertCircle, Clock, ChevronRight, Hash, X,
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
-  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert,
+  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -257,6 +257,7 @@ export function Atelier() {
                   { icon: LayoutGrid,  label: "All Shipments", count: String(shipments.length), active: false, href: null },
                   { icon: Calendar,    label: "Calendar",      count: null, active: false, href: null },
                   { icon: ShieldAlert, label: "Risk Radar",    count: radarData ? String(radarData.items.filter(i => i.riskScore >= 70).length) : null, active: false, href: `${import.meta.env.BASE_URL}risk-radar` },
+                  { icon: BarChart3,  label: "Reports",       count: null, active: false, href: `${import.meta.env.BASE_URL}reports` },
                 ].map(({ icon: Icon, label, count, active, href }) => (
                   <button key={label}
                     onClick={() => { if (href) window.location.assign(href); }}

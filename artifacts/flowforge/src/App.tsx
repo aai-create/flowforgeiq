@@ -6,11 +6,16 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { Atelier } from "@/pages/Atelier";
 import { RiskRadar } from "@/pages/RiskRadar";
+import { Reports } from "@/pages/Reports";
 
 const queryClient = new QueryClient();
 
 function RiskRadarPage() {
   return <RiskRadar />;
+}
+
+function ReportsPage() {
+  return <Reports />;
 }
 
 function Router() {
@@ -19,6 +24,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/command" component={Atelier} />
       <Route path="/risk-radar" component={RiskRadarPage} />
+      <Route path="/reports" component={ReportsPage} />
       <Route component={NotFound} />
     </Switch>
   );
