@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListCopilotProposals,
   useGetCopilotSummary,
@@ -6,6 +7,8 @@ import {
   useTriggerCopilot,
   useUpdateCopilotProposal,
   useUpsertAutonomyPolicy,
+  getListCopilotProposalsQueryKey,
+  getListAutonomyPoliciesQueryKey,
   type CopilotProposal,
   type AutonomyPolicy,
 } from "@workspace/api-client-react";
@@ -369,24 +372,34 @@ function PolicyRow({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function CopilotQueue() {
-  const { data: proposals = [], refetch: refetchProposals } = useListCopilotProposals({});
+  const queryClient = useQueryClient();
+
+  const { data: proposals = [] } = useListCopilotProposals({});
   const { data: summary } = useGetCopilotSummary();
   const { data: policies = [] } = useListAutonomyPolicies();
 
   const { mutate: triggerEngine, isPending: isTriggering } = useTriggerCopilot({
     mutation: {
-      onSuccess: () => { void refetchProposals(); },
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListCopilotProposalsQueryKey() });
+      },
     },
   });
 
   const { mutate: updateProposal } = useUpdateCopilotProposal({
     mutation: {
-      onSuccess: () => { void refetchProposals(); },
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListCopilotProposalsQueryKey() });
+      },
     },
   });
 
   const { mutate: upsertPolicy } = useUpsertAutonomyPolicy({
-    mutation: {},
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListAutonomyPoliciesQueryKey() });
+      },
+    },
   });
 
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "auto_executed" | "rejected">("all");
