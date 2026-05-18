@@ -216,8 +216,21 @@ function parseFieldProvenance(raw: Record<string, unknown> | undefined): FieldPr
 }
 
 const PROVENANCE_SCHEMA = `"fieldProvenance": {
-  "<fieldName>": { "confidence": number (0-1), "snippet": "exact text fragment from document that supports this value" }
+  "<fieldName>": { "confidence": number (0-1), "snippet": "exact text fragment or reasoning that supports this value" }
 }`;
+
+const EXTRACTION_RULES = `
+EXTRACTION RULES — follow these exactly:
+1. Always provide your BEST INFERENCE for every applicable field. Never return null just because you are uncertain.
+2. Use the document text first. If a field is not explicitly stated, infer it from context (filename, shipment list, document type, industry norms).
+3. Only return null for a field when it is genuinely NOT APPLICABLE to this document type (e.g. invoiceNumber is null for a purchase_order; qcResult is null for a commercial_invoice).
+4. For inferred values, set a lower confidence (0.3–0.6) in fieldProvenance and write your reasoning in the snippet.
+5. Common inference rules:
+   - currency defaults to "USD" for US buyers unless stated otherwise
+   - incoterms for Chinese suppliers default to "FOB [city]" if not stated
+   - paymentTerms "30/70" means 30% deposit, 70% balance
+   - portOfLoading can be inferred from supplier city/country
+   - documentType: classify from filename or document header`;
 
 async function extractFromPdfOrText(
   textContent: string,
@@ -233,6 +246,7 @@ async function extractFromPdfOrText(
     model: "gpt-5-mini",
     max_completion_tokens: 4096,
     messages: [{ role: "user", content: `You are a supply-chain document extraction AI.
+${EXTRACTION_RULES}
 
 Active shipments for PO matching:
 ${shipCtx}
@@ -392,6 +406,7 @@ async function extractFromSpreadsheetText(
     model: "gpt-5-mini",
     max_completion_tokens: 4096,
     messages: [{ role: "user", content: `You are a supply-chain data extraction AI.
+${EXTRACTION_RULES}
 
 Active shipments:
 ${shipCtx}

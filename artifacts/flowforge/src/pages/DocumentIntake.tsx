@@ -187,6 +187,10 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
 
   const displayVal = String(value ?? "—");
   const isEmpty = !value;
+  // Only show confidence badge when there is an actual extracted value
+  const showConfidence = !isEmpty;
+  // Values with per-field confidence below 0.65 were inferred rather than directly read
+  const isInferred = !isEmpty && confidence < 0.65;
 
   return (
     <div className="flex items-start gap-2 py-1.5 border-b border-[#F0F4F8] last:border-b-0 group">
@@ -207,7 +211,14 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
         ) : (
           <div>
             <div className="flex items-center gap-1.5">
-              <span className={`text-[11px] font-medium ${isEmpty ? "text-[#C0C8D4] italic" : "text-[#212833]"}`}>{displayVal}</span>
+              <span className={`text-[11px] font-medium ${isEmpty ? "text-[#C0C8D4] italic" : isInferred ? "text-amber-700" : "text-[#212833]"}`}>
+                {displayVal}
+              </span>
+              {isInferred && (
+                <span className="text-[8px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded" title="AI inferred this value — please verify">
+                  inferred
+                </span>
+              )}
               {saved && <Check size={10} className="text-emerald-500" />}
               <button
                 onClick={() => { setDraft(String(value ?? "")); setEditing(true); }}
@@ -224,9 +235,11 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
           </div>
         )}
       </div>
-      <div className={`shrink-0 text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(confidence)} opacity-70`}>
-        {Math.round(confidence * 100)}%
-      </div>
+      {showConfidence && (
+        <div className={`shrink-0 text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(confidence)}`}>
+          {Math.round(confidence * 100)}%
+        </div>
+      )}
     </div>
   );
 }
