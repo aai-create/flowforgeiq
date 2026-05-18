@@ -20,8 +20,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DocumentUpdate,
+  DocumentWithExtraction,
+  ExtractionCorrection,
+  ExtractionCorrectionInput,
   FactoryQuote,
   HealthStatus,
+  ListDocumentsParams,
   Message,
   MessageInput,
   MessageUpdate,
@@ -34,7 +39,8 @@ import type {
   StageOrderInput,
   SupplierSummary,
   Task,
-  TaskUpdate
+  TaskUpdate,
+  UploadDocumentBody
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -939,5 +945,359 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpdateTaskMutationOptions(options));
+    }
+
+export const getListDocumentsUrl = (params?: ListDocumentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/documents?${stringifiedParams}` : `/api/documents`
+}
+
+export const listDocuments = async (params?: ListDocumentsParams, options?: RequestInit): Promise<DocumentWithExtraction[]> => {
+
+  return customFetch<DocumentWithExtraction[]>(getListDocumentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentsQueryKey = (params?: ListDocumentsParams,) => {
+    return [
+    `/api/documents`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listDocuments>>, TError = ErrorType<unknown>>(params?: ListDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocuments>>> = ({ signal }) => listDocuments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listDocuments>>>
+export type ListDocumentsQueryError = ErrorType<unknown>
+
+
+
+export function useListDocuments<TData = Awaited<ReturnType<typeof listDocuments>>, TError = ErrorType<unknown>>(
+ params?: ListDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUploadDocumentUrl = () => {
+
+
+
+
+  return `/api/documents`
+}
+
+export const uploadDocument = async (uploadDocumentBody: UploadDocumentBody, options?: RequestInit): Promise<DocumentWithExtraction> => {
+    const formData = new FormData();
+formData.append(`file`, uploadDocumentBody.file);
+if(uploadDocumentBody.shipmentId !== undefined) {
+ formData.append(`shipmentId`, uploadDocumentBody.shipmentId.toString())
+ }
+if(uploadDocumentBody.sourceChannel !== undefined) {
+ formData.append(`sourceChannel`, uploadDocumentBody.sourceChannel);
+ }
+
+  return customFetch<DocumentWithExtraction>(getUploadDocumentUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getUploadDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<UploadDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<UploadDocumentBody>}, TContext> => {
+
+const mutationKey = ['uploadDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadDocument>>, {data: BodyType<UploadDocumentBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadDocument>>>
+    export type UploadDocumentMutationBody = BodyType<UploadDocumentBody>
+    export type UploadDocumentMutationError = ErrorType<unknown>
+
+    export const useUploadDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadDocument>>, TError,{data: BodyType<UploadDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadDocument>>,
+        TError,
+        {data: BodyType<UploadDocumentBody>},
+        TContext
+      > => {
+      return useMutation(getUploadDocumentMutationOptions(options));
+    }
+
+export const getGetDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documents/${id}`
+}
+
+export const getDocument = async (id: number, options?: RequestInit): Promise<DocumentWithExtraction> => {
+
+  return customFetch<DocumentWithExtraction>(getGetDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/documents/${id}`
+    ] as const;
+    }
+
+
+export const getGetDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocument>>> = ({ signal }) => getDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getDocument>>>
+export type GetDocumentQueryError = ErrorType<unknown>
+
+
+
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documents/${id}`
+}
+
+export const updateDocument = async (id: number,
+    documentUpdate: DocumentUpdate, options?: RequestInit): Promise<DocumentWithExtraction> => {
+
+  return customFetch<DocumentWithExtraction>(getUpdateDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      documentUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDocument>>, {id: number;data: BodyType<DocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocument>>>
+    export type UpdateDocumentMutationBody = BodyType<DocumentUpdate>
+    export type UpdateDocumentMutationError = ErrorType<unknown>
+
+    export const useUpdateDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDocument>>, TError,{id: number;data: BodyType<DocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDocument>>,
+        TError,
+        {id: number;data: BodyType<DocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDocumentMutationOptions(options));
+    }
+
+export const getSaveExtractionCorrectionUrl = (id: number,) => {
+
+
+
+
+  return `/api/extractions/${id}/corrections`
+}
+
+export const saveExtractionCorrection = async (id: number,
+    extractionCorrectionInput: ExtractionCorrectionInput, options?: RequestInit): Promise<ExtractionCorrection> => {
+
+  return customFetch<ExtractionCorrection>(getSaveExtractionCorrectionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      extractionCorrectionInput,)
+  }
+);}
+
+
+
+
+export const getSaveExtractionCorrectionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveExtractionCorrection>>, TError,{id: number;data: BodyType<ExtractionCorrectionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveExtractionCorrection>>, TError,{id: number;data: BodyType<ExtractionCorrectionInput>}, TContext> => {
+
+const mutationKey = ['saveExtractionCorrection'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveExtractionCorrection>>, {id: number;data: BodyType<ExtractionCorrectionInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  saveExtractionCorrection(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveExtractionCorrectionMutationResult = NonNullable<Awaited<ReturnType<typeof saveExtractionCorrection>>>
+    export type SaveExtractionCorrectionMutationBody = BodyType<ExtractionCorrectionInput>
+    export type SaveExtractionCorrectionMutationError = ErrorType<unknown>
+
+    export const useSaveExtractionCorrection = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveExtractionCorrection>>, TError,{id: number;data: BodyType<ExtractionCorrectionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveExtractionCorrection>>,
+        TError,
+        {id: number;data: BodyType<ExtractionCorrectionInput>},
+        TContext
+      > => {
+      return useMutation(getSaveExtractionCorrectionMutationOptions(options));
     }
 

@@ -5,6 +5,7 @@ import suppliersRouter from "./suppliers";
 import shipmentsRouter from "./shipments";
 import messagesRouter from "./messages";
 import tasksRouter from "./tasks";
+import documentsRouter from "./documents";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(suppliersRouter);
 router.use(shipmentsRouter);
 router.use(messagesRouter);
 router.use(tasksRouter);
+router.use(documentsRouter);
 
 export default router;

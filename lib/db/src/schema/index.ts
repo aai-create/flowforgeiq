@@ -5,3 +5,4 @@ export * from "./payments";
 export * from "./factory_quotes";
 export * from "./messages";
 export * from "./tasks";
+export * from "./documents";

@@ -131,3 +131,116 @@ export interface TaskUpdate {
   done?: boolean;
 }
 
+export interface ExtractedLineItem {
+  description?: string;
+  quantity?: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  unit?: string;
+  discrepancy?: string;
+}
+
+export interface ExtractedFields {
+  poNumber?: string;
+  supplier?: string;
+  buyer?: string;
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  currency?: string;
+  totalAmount?: number;
+  incoterms?: string;
+  paymentTerms?: string;
+  etd?: string;
+  eta?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  documentType?: string;
+  qcResult?: string;
+  qcIssues?: string[];
+  transcriptSummary?: string;
+  detectedEntities?: string[];
+}
+
+export interface ReconciliationFinding {
+  type?: string;
+  field?: string;
+  expected?: string;
+  actual?: string;
+  severity?: string;
+}
+
+export interface FieldProvenanceEntry {
+  confidence?: number;
+  snippet?: string;
+}
+
+export type ExtractionFieldProvenance = {[key: string]: FieldProvenanceEntry};
+
+export interface Extraction {
+  id: number;
+  documentId: number;
+  /** @nullable */
+  shipmentMatchId?: number | null;
+  extractedFields: ExtractedFields;
+  fieldProvenance: ExtractionFieldProvenance;
+  lineItems: ExtractedLineItem[];
+  reconciliationFindings: ReconciliationFinding[];
+  /** @nullable */
+  transcriptText?: string | null;
+  confidence: number;
+  status: string;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
+export interface DocumentWithExtraction {
+  id: number;
+  /** @nullable */
+  shipmentId?: number | null;
+  fileName: string;
+  fileType: string;
+  mimeType: string;
+  fileSize: number;
+  sourceChannel: string;
+  status: string;
+  createdAt: string;
+  extraction?: Extraction;
+}
+
+export interface DocumentUpdate {
+  /** @nullable */
+  shipmentId?: number | null;
+}
+
+export interface ExtractionCorrectionInput {
+  supplierId?: number;
+  documentType: string;
+  fieldPath: string;
+  originalValue?: string;
+  correctedValue: string;
+}
+
+export interface ExtractionCorrection {
+  id: number;
+  extractionId: number;
+  /** @nullable */
+  supplierId?: number | null;
+  documentType: string;
+  fieldPath: string;
+  /** @nullable */
+  originalValue?: string | null;
+  correctedValue: string;
+  createdAt: string;
+}
+
+export type ListDocumentsParams = {
+shipmentId?: number;
+};
+
+export type UploadDocumentBody = {
+  file: Blob;
+  shipmentId?: number;
+  sourceChannel?: string;
+};
+

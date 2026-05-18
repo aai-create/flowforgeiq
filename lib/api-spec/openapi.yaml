@@ -16,6 +16,8 @@ tags:
   - name: quotes
   - name: messages
   - name: tasks
+  - name: documents
+  - name: extractions
 paths:
   /healthz:
     get:
@@ -229,6 +231,104 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Task" }
 
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      parameters:
+        - in: query
+          name: shipmentId
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: All documents with extractions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DocumentWithExtraction" }
+    post:
+      operationId: uploadDocument
+      tags: [documents]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                shipmentId:
+                  type: integer
+                sourceChannel:
+                  type: string
+      responses:
+        "201":
+          description: Created document, extraction in progress
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentWithExtraction" }
+
+  /documents/{id}:
+    get:
+      operationId: getDocument
+      tags: [documents]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Document with extraction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentWithExtraction" }
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentUpdate" }
+      responses:
+        "200":
+          description: Updated document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentWithExtraction" }
+
+  /extractions/{id}/corrections:
+    post:
+      operationId: saveExtractionCorrection
+      tags: [extractions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExtractionCorrectionInput" }
+      responses:
+        "200":
+          description: Correction saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExtractionCorrection" }
+
 components:
   schemas:
     HealthStatus:
@@ -408,3 +508,120 @@ components:
       type: object
       properties:
         done: { type: boolean }
+
+    ExtractedLineItem:
+      type: object
+      properties:
+        description: { type: string }
+        quantity: { type: number }
+        unitPrice: { type: number }
+        totalPrice: { type: number }
+        unit: { type: string }
+        discrepancy: { type: string }
+
+    ExtractedFields:
+      type: object
+      properties:
+        poNumber: { type: string }
+        supplier: { type: string }
+        buyer: { type: string }
+        invoiceNumber: { type: string }
+        invoiceDate: { type: string }
+        currency: { type: string }
+        totalAmount: { type: number }
+        incoterms: { type: string }
+        paymentTerms: { type: string }
+        etd: { type: string }
+        eta: { type: string }
+        portOfLoading: { type: string }
+        portOfDischarge: { type: string }
+        documentType: { type: string }
+        qcResult: { type: string }
+        qcIssues:
+          type: array
+          items: { type: string }
+        transcriptSummary: { type: string }
+        detectedEntities:
+          type: array
+          items: { type: string }
+
+    ReconciliationFinding:
+      type: object
+      properties:
+        type: { type: string }
+        field: { type: string }
+        expected: { type: string }
+        actual: { type: string }
+        severity: { type: string }
+
+    FieldProvenanceEntry:
+      type: object
+      properties:
+        confidence: { type: number }
+        snippet: { type: string }
+
+    Extraction:
+      type: object
+      required: [id, documentId, confidence, status, extractedFields, fieldProvenance, lineItems, reconciliationFindings, createdAt]
+      properties:
+        id: { type: integer }
+        documentId: { type: integer }
+        shipmentMatchId: { type: ["integer", "null"] }
+        extractedFields: { $ref: "#/components/schemas/ExtractedFields" }
+        fieldProvenance:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/FieldProvenanceEntry" }
+        lineItems:
+          type: array
+          items: { $ref: "#/components/schemas/ExtractedLineItem" }
+        reconciliationFindings:
+          type: array
+          items: { $ref: "#/components/schemas/ReconciliationFinding" }
+        transcriptText: { type: ["string", "null"] }
+        confidence: { type: number }
+        status: { type: string }
+        errorMessage: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    DocumentWithExtraction:
+      type: object
+      required: [id, fileName, fileType, mimeType, fileSize, sourceChannel, status, createdAt]
+      properties:
+        id: { type: integer }
+        shipmentId: { type: ["integer", "null"] }
+        fileName: { type: string }
+        fileType: { type: string }
+        mimeType: { type: string }
+        fileSize: { type: integer }
+        sourceChannel: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        extraction: { $ref: "#/components/schemas/Extraction" }
+
+    DocumentUpdate:
+      type: object
+      properties:
+        shipmentId: { type: ["integer", "null"] }
+
+    ExtractionCorrectionInput:
+      type: object
+      required: [fieldPath, correctedValue, documentType]
+      properties:
+        supplierId: { type: integer }
+        documentType: { type: string }
+        fieldPath: { type: string }
+        originalValue: { type: string }
+        correctedValue: { type: string }
+
+    ExtractionCorrection:
+      type: object
+      required: [id, extractionId, documentType, fieldPath, correctedValue, createdAt]
+      properties:
+        id: { type: integer }
+        extractionId: { type: integer }
+        supplierId: { type: ["integer", "null"] }
+        documentType: { type: string }
+        fieldPath: { type: string }
+        originalValue: { type: ["string", "null"] }
+        correctedValue: { type: string }
+        createdAt: { type: string, format: date-time }

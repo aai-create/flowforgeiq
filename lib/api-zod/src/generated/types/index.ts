@@ -6,14 +6,25 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './documentUpdate';
+export * from './documentWithExtraction';
+export * from './extractedFields';
+export * from './extractedLineItem';
+export * from './extraction';
+export * from './extractionCorrection';
+export * from './extractionCorrectionInput';
+export * from './extractionFieldProvenance';
 export * from './factoryQuote';
+export * from './fieldProvenanceEntry';
 export * from './healthStatus';
+export * from './listDocumentsParams';
 export * from './message';
 export * from './messageInput';
 export * from './messageUpdate';
 export * from './payment';
 export * from './paymentUpdate';
 export * from './quoteSelection';
+export * from './reconciliationFinding';
 export * from './shipment';
 export * from './shipmentUpdate';
 export * from './stage';
@@ -21,3 +32,4 @@ export * from './stageOrderInput';
 export * from './supplierSummary';
 export * from './task';
 export * from './taskUpdate';
+export * from './uploadDocumentBody';

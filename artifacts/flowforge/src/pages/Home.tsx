@@ -10,11 +10,14 @@ import {
   Table2, FilePlus, Link2, ArrowUpRight,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
+import { DocumentIntake } from "./DocumentIntake";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
   updateMessage, updateTask, updateShipment, updatePayment,
   selectFactoryQuote, reorderStages, createMessage,
+  useListDocuments, getListDocumentsQueryKey,
 } from "@workspace/api-client-react";
+import type { DocumentWithExtraction } from "@workspace/api-client-react";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
@@ -736,61 +739,204 @@ function ImportView({ onDone }: { onDone: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Docs panel  (P1)
+// Docs panel  (P1) — wired to real API
 // ─────────────────────────────────────────────────────────────────────────────
-function DocsPanel({ shipmentId }: { shipmentId: string }) {
-  const docs = SHIPMENT_DOCS[shipmentId] ?? [];
-  const [preview, setPreview] = useState<Doc|null>(null);
+function DocStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    processing: "bg-amber-50 text-amber-700 border-amber-200",
+    extracted:  "bg-emerald-50 text-emerald-700 border-emerald-200",
+    unmatched:  "bg-blue-50 text-blue-600 border-blue-200",
+    failed:     "bg-red-50 text-red-600 border-red-200",
+  };
   return (
-    <div className="flex-1 overflow-y-auto p-4">
-      {preview ? (
-        <div>
-          <button onClick={()=>setPreview(null)} className="flex items-center gap-1 text-[10px] text-[#5E687B] hover:text-[#212833] mb-4"><ChevronLeft size={12}/>All documents</button>
-          <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm">
-            <div className={`h-40 flex items-center justify-center ${preview.type==="image"?"bg-gradient-to-br from-blue-50 to-blue-100":preview.type==="pdf"?"bg-gradient-to-br from-red-50 to-red-100":preview.type==="video"?"bg-gradient-to-br from-purple-50 to-purple-100":"bg-gradient-to-br from-green-50 to-green-100"}`}>
-              <div className="flex flex-col items-center gap-2 text-[#5E687B]">{docIcon(preview.type,36)}<span className="text-xs">{preview.type.toUpperCase()}</span></div>
-            </div>
-            <div className="p-4 bg-white">
-              <div className="font-semibold text-xs text-[#212833] mb-1">{preview.name}</div>
-              <div className="flex items-center gap-2 text-[9px] text-[#5E687B] mb-3">
-                <span className="bg-[#F0F4F8] px-1.5 py-0.5 rounded border border-[#E5EAF0] font-semibold">{preview.tag}</span>
-                <span>{preview.date}</span><span>·</span><span>{preview.size}</span>
-              </div>
-              <div className="flex gap-2">
-                <button className="flex-1 py-1.5 bg-[#9000FF] text-white text-[10px] font-semibold rounded-md hover:bg-[#7A00D9] flex items-center justify-center gap-1"><Eye size={10}/>Open</button>
-                <button className="px-3 py-1.5 border border-[#E5EAF0] text-[#5E687B] text-[10px] rounded-md hover:bg-[#F0F4F8] flex items-center gap-1"><Download size={10}/>Download</button>
-              </div>
-            </div>
+    <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${map[status] ?? "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+      {status}
+    </span>
+  );
+}
+
+function DocMimeIcon({ mimeType, size = 14 }: { mimeType: string; size?: number }) {
+  if (mimeType.startsWith("image/"))    return <Image size={size} className="text-blue-500" />;
+  if (mimeType === "application/pdf")   return <FileText size={size} className="text-red-500" />;
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel") || mimeType.endsWith("csv"))
+    return <FileSpreadsheet size={size} className="text-green-500" />;
+  if (mimeType.startsWith("audio/"))    return <Upload size={size} className="text-purple-500" />;
+  return <FileText size={size} className="text-[#5E687B]" />;
+}
+
+function DocMimeBg(mimeType: string) {
+  if (mimeType.startsWith("image/"))   return "bg-blue-50 border-blue-100";
+  if (mimeType === "application/pdf")  return "bg-red-50 border-red-100";
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel") || mimeType.endsWith("csv")) return "bg-green-50 border-green-100";
+  if (mimeType.startsWith("audio/"))   return "bg-purple-50 border-purple-100";
+  return "bg-[#F0F4F8] border-[#E5EAF0]";
+}
+
+function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: () => void }) {
+  const ext = doc.extraction;
+  const fields = ext?.extractedFields as Record<string, unknown> | undefined;
+  const provenance = ext?.fieldProvenance as Record<string, { confidence: number; snippet: string }> | undefined;
+  const findings = ext?.reconciliationFindings ?? [];
+
+  const FIELD_LABELS: [string, string][] = [
+    ["documentType", "Doc Type"], ["poNumber", "PO Number"], ["invoiceNumber", "Invoice #"],
+    ["supplier", "Supplier"], ["buyer", "Buyer"], ["totalAmount", "Total Amount"],
+    ["currency", "Currency"], ["incoterms", "Incoterms"], ["paymentTerms", "Payment Terms"],
+    ["etd", "ETD"], ["eta", "ETA"], ["qcResult", "QC Result"],
+  ];
+
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-1 text-[10px] text-[#5E687B] hover:text-[#212833] mb-3">
+        <ChevronLeft size={12}/>All documents
+      </button>
+      <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm bg-white">
+        <div className={`h-16 flex items-center justify-center border-b border-[#E5EAF0] ${DocMimeBg(doc.mimeType)}`}>
+          <DocMimeIcon mimeType={doc.mimeType} size={28} />
+        </div>
+        <div className="p-3 border-b border-[#F0F4F8]">
+          <p className="text-xs font-semibold text-[#212833] truncate">{doc.fileName}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <DocStatusBadge status={doc.status} />
+            {ext && <span className="text-[9px] text-[#5E687B]">{Math.round(ext.confidence * 100)}% confidence</span>}
           </div>
         </div>
+        {ext && fields && Object.keys(fields).length > 0 && (
+          <div className="divide-y divide-[#F0F4F8]">
+            {FIELD_LABELS.map(([key, label]) => {
+              const val = fields[key];
+              if (val == null || val === "") return null;
+              const prov = provenance?.[key];
+              return (
+                <div key={key} className="px-3 py-1.5 group">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[10px] text-[#5E687B] font-medium w-[100px] shrink-0 pt-0.5">{label}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[11px] font-medium text-[#212833]">{String(val)}</span>
+                      {prov?.snippet && (
+                        <p className="text-[9px] text-[#5E687B] italic mt-0.5 truncate" title={prov.snippet}>
+                          "{prov.snippet}"
+                        </p>
+                      )}
+                    </div>
+                    {prov && (
+                      <span className="text-[8px] font-bold text-[#9E9FAE] shrink-0 pt-0.5">
+                        {Math.round(prov.confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {findings.length > 0 && (
+          <div className="p-3 border-t border-[#F0F4F8]">
+            <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mb-1.5">
+              {findings.length} reconciliation issue{findings.length > 1 ? "s" : ""}
+            </p>
+            {findings.map((f, i) => {
+              const finding = f as Record<string, unknown>;
+              return (
+                <div key={i} className="text-[10px] text-[#5E687B] flex gap-1.5 mb-0.5">
+                  <AlertCircle size={10} className="text-amber-500 shrink-0 mt-0.5" />
+                  <span>{String(finding.type ?? "")}: expected {String(finding.expected ?? "?")} got {String(finding.actual ?? "?")}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {ext?.transcriptText && (
+          <div className="p-3 border-t border-[#F0F4F8]">
+            <p className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1">Transcript</p>
+            <p className="text-[10px] text-[#212833] leading-relaxed line-clamp-6">{ext.transcriptText}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DocsPanel({ shipmentId }: { shipmentId: string }) {
+  const numericId = Number(shipmentId);
+  const qParams = { shipmentId: Number.isNaN(numericId) ? undefined : numericId };
+  const { data: apiDocs, isLoading, refetch } = useListDocuments(
+    qParams,
+    { query: { queryKey: getListDocumentsQueryKey(qParams), refetchInterval: 5000 } }
+  );
+  const docs = apiDocs ?? [];
+  const [preview, setPreview] = useState<DocumentWithExtraction | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (!Number.isNaN(numericId)) form.append("shipmentId", String(numericId));
+      form.append("sourceChannel", "upload");
+      await fetch(`${import.meta.env.BASE_URL}api/documents`, { method: "POST", body: form });
+      void refetch();
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4">
+      <input ref={fileInputRef} type="file" className="hidden" accept="*/*" onChange={handleFileChange} />
+      {preview ? (
+        <DocDetailPanel doc={preview} onBack={() => setPreview(null)} />
       ) : (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{docs.length} documents</span>
-            <button className="text-[10px] text-[#9000FF] font-semibold flex items-center gap-1 hover:underline"><FilePlus size={10}/>Add file</button>
+            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">
+              {isLoading ? "Loading…" : `${docs.length} document${docs.length !== 1 ? "s" : ""}`}
+            </span>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="text-[10px] text-[#9000FF] font-semibold flex items-center gap-1 hover:underline disabled:opacity-50"
+            >
+              <FilePlus size={10}/>{uploading ? "Uploading…" : "Add file"}
+            </button>
           </div>
-          {docs.length===0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-[#5E687B] gap-2"><FileBox size={22} className="opacity-30"/><p className="text-xs">No documents attached</p></div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {docs.map(doc=>(
-                <button key={doc.name} onClick={()=>setPreview(doc)}
-                  className="flex items-center gap-3 px-3 py-2.5 bg-white border border-[#E5EAF0] rounded-lg hover:border-[#9000FF]/25 hover:shadow-sm transition-all text-left">
-                  <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${doc.type==="image"?"bg-blue-50":doc.type==="pdf"?"bg-red-50":doc.type==="video"?"bg-purple-50":"bg-green-50"}`}>
-                    {docIcon(doc.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-[#212833] truncate">{doc.name}</div>
-                    <div className="flex items-center gap-2 text-[9px] text-[#5E687B] mt-0.5">
-                      <span className="bg-[#F0F4F8] px-1.5 py-0.5 rounded border border-[#E5EAF0] font-semibold">{doc.tag}</span>
-                      <span>{doc.date}</span><span>·</span><span>{doc.size}</span>
-                    </div>
-                  </div>
-                  <Eye size={12} className="text-[#C0C8D4] shrink-0"/>
-                </button>
-              ))}
+          {!isLoading && docs.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-10 text-[#5E687B] gap-2">
+              <FileBox size={22} className="opacity-30"/>
+              <p className="text-xs">No documents attached</p>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[10px] text-[#9000FF] font-semibold hover:underline mt-1"
+              >
+                Upload a file for this PO
+              </button>
             </div>
           )}
+          <div className="flex flex-col gap-2">
+            {docs.map(doc => (
+              <button key={doc.id} onClick={() => setPreview(doc)}
+                className="flex items-center gap-3 px-3 py-2.5 bg-white border border-[#E5EAF0] rounded-lg hover:border-[#9000FF]/25 hover:shadow-sm transition-all text-left">
+                <div className={`w-8 h-8 rounded-md border flex items-center justify-center shrink-0 ${DocMimeBg(doc.mimeType)}`}>
+                  <DocMimeIcon mimeType={doc.mimeType} size={14} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-[#212833] truncate">{doc.fileName}</div>
+                  <div className="flex items-center gap-2 text-[9px] text-[#5E687B] mt-0.5">
+                    <DocStatusBadge status={doc.status} />
+                    {doc.extraction && (
+                      <span>{Math.round(doc.extraction.confidence * 100)}% confidence</span>
+                    )}
+                  </div>
+                </div>
+                <Eye size={12} className="text-[#C0C8D4] shrink-0"/>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -1098,7 +1244,7 @@ export default function Home() {
             <span className="text-[#E5EAF0]">/</span>
             <span className="text-[#5E687B] font-medium text-xs">
               {navTab==="inbox" ? (selectedShipmentId ? shipments.find(s=>s.id===selectedShipmentId)?.po : supplierFilter ?? (channelFilter!=="all" ? channelFilter[0].toUpperCase()+channelFilter.slice(1) : "Inbox"))
-                : navTab==="calendar" ? "Calendar" : navTab==="buyers" ? "Buyer Chatbot" : "Import Tracker"}
+                : navTab==="calendar" ? "Calendar" : navTab==="buyers" ? "Buyer Chatbot" : "Doc Intelligence"}
             </span>
           </div>
 
@@ -1171,7 +1317,7 @@ export default function Home() {
         {/* ── NON-INBOX VIEWS ── */}
         {navTab==="calendar"&&<CalendarView shipments={shipments}/>}
         {navTab==="buyers"&&<BuyersView/>}
-        {navTab==="import"&&<ImportView onDone={()=>setNavTab("inbox")}/>}
+        {navTab==="import"&&<DocumentIntake onDone={()=>setNavTab("inbox")}/>}
 
         {/* ── INBOX VIEW ── */}
         {navTab==="inbox"&&<>
@@ -1336,7 +1482,7 @@ export default function Home() {
 
               {/* Tabs: Message / Docs */}
               <div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
-                {([{id:"message",label:"Message"},{id:"docs",label:`Docs (${SHIPMENT_DOCS[activeShipment?.id??""]?.length??0})`}] as {id:RightTab;label:string}[]).map(t=>(
+                {([{id:"message",label:"Message"},{id:"docs",label:"Docs"}] as {id:RightTab;label:string}[]).map(t=>(
                   <button key={t.id} onClick={()=>setRightTab(t.id)}
                     className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 ${rightTab===t.id?"border-[#9000FF] text-[#9000FF]":"border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
                     {t.label}

@@ -263,3 +263,237 @@ export const UpdateTaskResponse = zod.object({
 })
 
 
+export const ListDocumentsQueryParams = zod.object({
+  "shipmentId": zod.coerce.number().optional()
+})
+
+export const ListDocumentsResponseItem = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})
+export const ListDocumentsResponse = zod.array(ListDocumentsResponseItem)
+
+
+export const UploadDocumentBody = zod.object({
+  "file": zod.instanceof(File),
+  "shipmentId": zod.number().optional(),
+  "sourceChannel": zod.string().optional()
+})
+
+
+export const GetDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDocumentResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})
+
+
+export const UpdateDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDocumentBody = zod.object({
+  "shipmentId": zod.number().nullish()
+})
+
+export const UpdateDocumentResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})
+
+
+export const SaveExtractionCorrectionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SaveExtractionCorrectionBody = zod.object({
+  "supplierId": zod.number().optional(),
+  "documentType": zod.string(),
+  "fieldPath": zod.string(),
+  "originalValue": zod.string().optional(),
+  "correctedValue": zod.string()
+})
+
+export const SaveExtractionCorrectionResponse = zod.object({
+  "id": zod.number(),
+  "extractionId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "documentType": zod.string(),
+  "fieldPath": zod.string(),
+  "originalValue": zod.string().nullish(),
+  "correctedValue": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
