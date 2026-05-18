@@ -80,7 +80,7 @@ function statusBadge(status: string) {
 }
 
 function channelBadge(sourceChannel: string) {
-  if (sourceChannel === "gmail")
+  if (sourceChannel === "email-forward" || sourceChannel === "gmail")
     return (
       <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
         <Mail size={8} />Email
@@ -464,46 +464,89 @@ interface DocRowProps {
   selected: boolean;
   shipments: { id: number; po: string; supplier: string }[];
   onClick: () => void;
+  onQuickAssign?: (docId: number, shipmentId: number) => void;
 }
 
-function DocRow({ doc, selected, shipments, onClick }: DocRowProps) {
+function DocRow({ doc, selected, shipments, onClick, onQuickAssign }: DocRowProps) {
   const ext = doc.extraction;
   const linked = shipments.find(s => s.id === doc.shipmentId);
+  const isUnlinked = doc.status === "unmatched";
+  const [assignOpen, setAssignOpen] = useState(false);
+  const { mutate: updateDoc } = useUpdateDocument();
+
+  const handleAssign = (e: React.MouseEvent, shipmentId: number) => {
+    e.stopPropagation();
+    updateDoc({ id: doc.id, data: { shipmentId } }, {
+      onSuccess: () => onQuickAssign?.(doc.id, shipmentId),
+    });
+    setAssignOpen(false);
+  };
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left flex items-start gap-3 px-3 py-2.5 border-b border-[#F0F4F8] hover:bg-[#FAFBFF] transition-colors ${selected ? "bg-[#FAFBFF] border-l-2 border-l-[#9000FF]" : ""}`}
-    >
-      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${fileTypeBg(doc.mimeType)}`}>
-        {fileTypeIcon(doc.mimeType, 14)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span className="text-[11px] font-semibold text-[#212833] truncate">{doc.fileName}</span>
-          {doc.status === "processing" && <RefreshCw size={9} className="text-blue-400 animate-spin shrink-0" />}
+    <div className={`border-b border-[#F0F4F8] ${selected ? "bg-[#FAFBFF] border-l-2 border-l-[#9000FF]" : ""}`}>
+      <button
+        onClick={onClick}
+        className="w-full text-left flex items-start gap-3 px-3 py-2.5 hover:bg-[#FAFBFF] transition-colors"
+      >
+        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${fileTypeBg(doc.mimeType)}`}>
+          {fileTypeIcon(doc.mimeType, 14)}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {statusBadge(doc.status)}
-          {channelBadge(doc.sourceChannel)}
-          {linked ? (
-            <span className="text-[9px] text-[#9000FF] flex items-center gap-0.5 font-medium"><Package size={8} />{linked.po}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[11px] font-semibold text-[#212833] truncate">{doc.fileName}</span>
+            {doc.status === "processing" && <RefreshCw size={9} className="text-blue-400 animate-spin shrink-0" />}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {statusBadge(doc.status)}
+            {channelBadge(doc.sourceChannel)}
+            {linked ? (
+              <span className="text-[9px] text-[#9000FF] flex items-center gap-0.5 font-medium"><Package size={8} />{linked.po}</span>
+            ) : (
+              <span className="text-[9px] text-amber-500 italic">unlinked</span>
+            )}
+            {ext && (
+              <span className={`text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(ext.confidence)}`}>
+                {Math.round(ext.confidence * 100)}%
+              </span>
+            )}
+            {(ext?.reconciliationFindings ?? []).length > 0 && (
+              <span className="text-[8px] text-red-600 flex items-center gap-0.5 font-medium"><AlertTriangle size={8} />{ext!.reconciliationFindings.length} issue{ext!.reconciliationFindings.length !== 1 ? "s" : ""}</span>
+            )}
+          </div>
+          <div className="text-[9px] text-[#9E9FAE] mt-0.5">{relTime(doc.createdAt)} · {fmtSize(doc.fileSize)}</div>
+        </div>
+        <ChevronRight size={13} className="text-[#C0C8D4] shrink-0 mt-1" />
+      </button>
+
+      {/* Inline quick-assign — visible for unlinked documents */}
+      {isUnlinked && (
+        <div className="px-3 pb-2.5">
+          {assignOpen ? (
+            <div className="border border-[#E5EAF0] rounded-lg overflow-hidden shadow-sm max-h-[160px] overflow-y-auto bg-white">
+              <div className="px-3 py-1.5 border-b border-[#F0F4F8] bg-[#FAFBFC] flex items-center justify-between">
+                <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Assign to PO</span>
+                <button onClick={e => { e.stopPropagation(); setAssignOpen(false); }} className="p-0.5 text-[#C0C8D4] hover:text-[#5E687B]"><X size={10} /></button>
+              </div>
+              {shipments.map(s => (
+                <button key={s.id} onClick={e => handleAssign(e, s.id)}
+                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-[#F0F4F8] border-b border-[#F0F4F8] last:border-b-0">
+                  <Package size={10} className="text-[#9000FF] shrink-0" />
+                  <span className="text-[10px] font-semibold text-[#212833]">{s.po}</span>
+                  <span className="text-[9px] text-[#5E687B] truncate">{s.supplier}</span>
+                </button>
+              ))}
+            </div>
           ) : (
-            <span className="text-[9px] text-amber-500 italic">unlinked</span>
-          )}
-          {ext && (
-            <span className={`text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(ext.confidence)}`}>
-              {Math.round(ext.confidence * 100)}%
-            </span>
-          )}
-          {(ext?.reconciliationFindings ?? []).length > 0 && (
-            <span className="text-[8px] text-red-600 flex items-center gap-0.5 font-medium"><AlertTriangle size={8} />{ext!.reconciliationFindings.length} issue{ext!.reconciliationFindings.length !== 1 ? "s" : ""}</span>
+            <button
+              onClick={e => { e.stopPropagation(); setAssignOpen(true); }}
+              className="flex items-center gap-1 text-[9px] font-semibold text-[#9000FF] hover:underline"
+            >
+              <Link2 size={9} />Assign to PO
+            </button>
           )}
         </div>
-        <div className="text-[9px] text-[#9E9FAE] mt-0.5">{relTime(doc.createdAt)} · {fmtSize(doc.fileSize)}</div>
-      </div>
-      <ChevronRight size={13} className="text-[#C0C8D4] shrink-0 mt-1" />
-    </button>
+      )}
+    </div>
   );
 }
 
@@ -569,12 +612,16 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
   };
 
   const handleLinked = (docId: number, shipmentId: number | null) => {
-    setLocalDocs(prev => prev.map(d => d.id === docId ? { ...d, shipmentId } : d));
+    setLocalDocs(prev => prev.map(d => d.id === docId ? { ...d, shipmentId, status: shipmentId ? "extracted" : "unmatched" } : d));
+  };
+
+  const handleQuickAssign = (docId: number, shipmentId: number) => {
+    handleLinked(docId, shipmentId);
   };
 
   const filteredDocs = localDocs.filter(d => {
     if (statusFilter === "all") return true;
-    if (statusFilter === "unmatched") return !d.shipmentId && d.status !== "processing";
+    if (statusFilter === "unmatched") return d.status === "unmatched";
     if (statusFilter === "issues") return (d.extraction?.reconciliationFindings ?? []).length > 0;
     return d.status === statusFilter;
   });
@@ -585,7 +632,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
     all: localDocs.length,
     processing: localDocs.filter(d => d.status === "processing").length,
     extracted: localDocs.filter(d => d.status === "extracted").length,
-    unmatched: localDocs.filter(d => !d.shipmentId && d.status !== "processing").length,
+    unmatched: localDocs.filter(d => d.status === "unmatched").length,
     issues: localDocs.filter(d => (d.extraction?.reconciliationFindings ?? []).length > 0).length,
     failed: localDocs.filter(d => d.status === "failed").length,
   };
@@ -641,6 +688,44 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
                 {statusFilter === "all" ? "No documents yet — drop files above" : `No ${statusFilter} documents`}
               </p>
             </div>
+          ) : statusFilter === "all" && counts.unmatched > 0 ? (
+            <>
+              {/* Unlinked section — prominently grouped at top */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-100 sticky top-0 z-10">
+                <AlertTriangle size={10} className="text-amber-500 shrink-0" />
+                <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider flex-1">
+                  Needs Assignment — {counts.unmatched} unlinked
+                </span>
+              </div>
+              {filteredDocs.filter(d => d.status === "unmatched").map(doc => (
+                <DocRow
+                  key={doc.id}
+                  doc={doc}
+                  selected={doc.id === selectedDocId}
+                  shipments={shipmentOptions}
+                  onClick={() => setSelectedDocId(doc.id)}
+                  onQuickAssign={handleQuickAssign}
+                />
+              ))}
+              {/* Remaining docs */}
+              {filteredDocs.filter(d => d.status !== "unmatched").length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FAFBFC] border-b border-[#E5EAF0] sticky top-0 z-10">
+                  <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">
+                    All documents
+                  </span>
+                </div>
+              )}
+              {filteredDocs.filter(d => d.status !== "unmatched").map(doc => (
+                <DocRow
+                  key={doc.id}
+                  doc={doc}
+                  selected={doc.id === selectedDocId}
+                  shipments={shipmentOptions}
+                  onClick={() => setSelectedDocId(doc.id)}
+                  onQuickAssign={handleQuickAssign}
+                />
+              ))}
+            </>
           ) : (
             filteredDocs.map(doc => (
               <DocRow
@@ -649,6 +734,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
                 selected={doc.id === selectedDocId}
                 shipments={shipmentOptions}
                 onClick={() => setSelectedDocId(doc.id)}
+                onQuickAssign={handleQuickAssign}
               />
             ))
           )}
