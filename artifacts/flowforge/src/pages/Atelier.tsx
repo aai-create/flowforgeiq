@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useListShipments, useListStages, useListTasks, updateTask } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiTask } from "@/lib/adapters";
 import {
-  Search, Bell, Plus, Inbox, LayoutGrid, Layers,
+  Search, Bell, Plus, Inbox, LayoutGrid,
   MessageCircle, Mail, FileText, CheckCircle2, Circle,
   Sparkles, AlertCircle, Clock, ChevronRight, Hash, X,
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
@@ -193,8 +193,8 @@ export function Atelier() {
       {/* TOP BAR */}
       <header className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2 w-[260px]">
-          <div className="w-5 h-5 rounded-[4px] bg-[#9000FF] flex items-center justify-center">
-            <Layers className="w-3 h-3 text-white" />
+          <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
+            <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-sm tracking-tight text-[#9000FF]">flowforge</span>
           <span className="text-[#E5EAF0] mx-1">/</span>

@@ -1218,7 +1218,9 @@ export default function Home() {
 
       {/* LEFT NAV RAIL */}
       <div className="w-[58px] bg-white border-r border-[#E5EAF0] flex flex-col items-center py-4 z-20 shrink-0">
-        <div className="w-7 h-7 bg-[#9000FF] rounded-lg flex items-center justify-center text-white font-bold text-base mb-7">f</div>
+        <div className="w-7 h-7 rounded-lg overflow-hidden mb-7 shrink-0">
+          <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
+        </div>
         <div className="flex flex-col gap-4 text-[#5E687B]">
           {NAV_ITEMS.map(({tab,icon:Icon,label})=>(
             <button key={tab} onClick={()=>setNavTab(tab)} title={label}
