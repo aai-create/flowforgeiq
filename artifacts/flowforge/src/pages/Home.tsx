@@ -888,6 +888,12 @@ export default function Home() {
   const [channelFilter, setChannelFilter] = useState<Channel|"all">("all");
   const [supplierFilter, setSupplierFilter] = useState<string|null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
+  useEffect(() => {
+    if (!showTaskPanel) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowTaskPanel(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showTaskPanel]);
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
   const [rightTab, setRightTab]           = useState<RightTab>("message");
