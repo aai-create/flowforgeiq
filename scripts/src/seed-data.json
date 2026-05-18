@@ -1191,5 +1191,175 @@
       "action": "Send Payment",
       "done": false
     }
+  ],
+  "deals": [
+    {
+      "id": "d1",
+      "buyerPoNumber": "BMAS-2026-001",
+      "customerName": "Marlowe & Sons",
+      "buyerTotalUsd": 46234,
+      "buyerUnitPrice": 5.2,
+      "buyerQuantity": 9500,
+      "currency": "USD",
+      "notes": "Chrome heavy-duty top hangers programme — 3 production runs",
+      "shipmentIds": [
+        "s1",
+        "s3",
+        "s5"
+      ]
+    },
+    {
+      "id": "d2",
+      "buyerPoNumber": "BMAS-2026-002",
+      "customerName": "Marlowe & Sons",
+      "buyerTotalUsd": 30492,
+      "buyerUnitPrice": 6.2,
+      "buyerQuantity": 5000,
+      "currency": "USD",
+      "notes": "Bronze petite hangers — 2 production batches",
+      "shipmentIds": [
+        "s7",
+        "s9"
+      ]
+    },
+    {
+      "id": "d3",
+      "buyerPoNumber": "BVS-2026-001",
+      "customerName": "Vellum Studio",
+      "buyerTotalUsd": 35048,
+      "buyerUnitPrice": 2.85,
+      "buyerQuantity": 12000,
+      "currency": "USD",
+      "notes": "Chrome slim-profile bottom hangers — 2 batches",
+      "shipmentIds": [
+        "s2",
+        "s4"
+      ]
+    },
+    {
+      "id": "d4",
+      "buyerPoNumber": "BVS-2026-002",
+      "customerName": "Vellum Studio",
+      "buyerTotalUsd": 33699,
+      "buyerUnitPrice": 18.5,
+      "buyerQuantity": 1800,
+      "currency": "USD",
+      "notes": "LED strip lighting — warm white 1.2m series",
+      "shipmentIds": [
+        "s14",
+        "s16",
+        "s18"
+      ]
+    },
+    {
+      "id": "d5",
+      "buyerPoNumber": "BVS-2026-003",
+      "customerName": "Vellum Studio",
+      "buyerTotalUsd": 19500,
+      "buyerUnitPrice": 4.1,
+      "buyerQuantity": 4800,
+      "currency": "USD",
+      "notes": "Custom packaging — Vellum Studio branded",
+      "shipmentIds": [
+        "s23"
+      ]
+    },
+    {
+      "id": "d6",
+      "buyerPoNumber": "BNBO-2026-001",
+      "customerName": "Northbound Outfitters",
+      "buyerTotalUsd": 27477,
+      "buyerUnitPrice": 4.6,
+      "buyerQuantity": 6000,
+      "currency": "USD",
+      "notes": "Powder-coat charcoal bottom hangers — 2 batches",
+      "shipmentIds": [
+        "s6",
+        "s8"
+      ]
+    },
+    {
+      "id": "d7",
+      "buyerPoNumber": "BNBO-2026-002",
+      "customerName": "Northbound Outfitters",
+      "buyerTotalUsd": 25702,
+      "buyerUnitPrice": 14.8,
+      "buyerQuantity": 1800,
+      "currency": "USD",
+      "notes": "LED strip warm white — NBO retail fit-out, 3 runs",
+      "shipmentIds": [
+        "s13",
+        "s15",
+        "s17"
+      ]
+    },
+    {
+      "id": "d8",
+      "buyerPoNumber": "BAN-2026-001",
+      "customerName": "Atelier Nord",
+      "buyerTotalUsd": 24978,
+      "buyerUnitPrice": 24.5,
+      "buyerQuantity": 900,
+      "currency": "USD",
+      "notes": "Warm white LED panels — ambient lighting range, 2 batches",
+      "shipmentIds": [
+        "s10",
+        "s12"
+      ]
+    },
+    {
+      "id": "d9",
+      "buyerPoNumber": "BPGC-2026-001",
+      "customerName": "Pioneer Goods Co.",
+      "buyerTotalUsd": 11567,
+      "buyerUnitPrice": 13.2,
+      "buyerQuantity": 880,
+      "currency": "USD",
+      "notes": "LED display cabinets — pioneer first run",
+      "shipmentIds": [
+        "s11"
+      ]
+    },
+    {
+      "id": "d10",
+      "buyerPoNumber": "BPGC-2026-002",
+      "customerName": "Pioneer Goods Co.",
+      "buyerTotalUsd": 112840,
+      "buyerUnitPrice": 4.8,
+      "buyerQuantity": 22250,
+      "currency": "USD",
+      "notes": "Solid oak dining tables — 2 production batches, Hangzhou",
+      "shipmentIds": [
+        "s19",
+        "s21"
+      ]
+    },
+    {
+      "id": "d11",
+      "buyerPoNumber": "BCHH-2026-001",
+      "customerName": "Cedar Hollow Homes",
+      "buyerTotalUsd": 146688,
+      "buyerUnitPrice": 6.2,
+      "buyerQuantity": 23000,
+      "currency": "USD",
+      "notes": "Hardwood floor boards — 2 shipments from Ningbo",
+      "shipmentIds": [
+        "s20",
+        "s22"
+      ]
+    },
+    {
+      "id": "d12",
+      "buyerPoNumber": "BCHH-2026-002",
+      "customerName": "Cedar Hollow Homes",
+      "buyerTotalUsd": 24938,
+      "buyerUnitPrice": 3.2,
+      "buyerQuantity": 7800,
+      "currency": "USD",
+      "notes": "Branded packaging for floor board range",
+      "shipmentIds": [
+        "s24"
+      ]
+    }
   ]
 }

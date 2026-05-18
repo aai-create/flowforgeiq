@@ -57,6 +57,46 @@ export interface QuoteSelection {
   quoteId: number;
 }
 
+export interface DealInput {
+  buyerPoNumber: string;
+  customerName: string;
+  buyerTotalUsd: number;
+  buyerUnitPrice: number;
+  buyerQuantity: number;
+  currency?: string;
+  notes?: string;
+}
+
+export interface DealShipmentLeg {
+  id: number;
+  poNumber: string;
+  product: string;
+  supplierName: string;
+  supplierCost: number;
+  supplierPaid?: number;
+  status: string;
+  currentStageId: string;
+  exFactoryDate: string;
+}
+
+export interface DealWithSpread {
+  id: number;
+  buyerPoNumber: string;
+  customerName: string;
+  buyerTotalUsd: number;
+  buyerUnitPrice: number;
+  buyerQuantity: number;
+  currency: string;
+  /** @nullable */
+  notes?: string | null;
+  supplierCostUsd: number;
+  supplierPaidUsd: number;
+  spreadUsd: number;
+  spreadPct: number;
+  legs: DealShipmentLeg[];
+  createdAt: string;
+}
+
 export interface Shipment {
   id: number;
   poNumber: string;
@@ -65,6 +105,8 @@ export interface Shipment {
   supplierId: number;
   supplierName: string;
   customerName: string;
+  /** @nullable */
+  dealId?: number | null;
   status: string;
   currentStageId: string;
   dueDate: string;

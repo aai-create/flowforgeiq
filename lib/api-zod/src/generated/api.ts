@@ -45,6 +45,123 @@ export const ListSuppliersResponseItem = zod.object({
 export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
 
 
+/**
+ * @summary List all deals with embedded shipments and computed spread
+ */
+export const ListDealsResponseItem = zod.object({
+  "id": zod.number(),
+  "buyerPoNumber": zod.string(),
+  "customerName": zod.string(),
+  "buyerTotalUsd": zod.number(),
+  "buyerUnitPrice": zod.number(),
+  "buyerQuantity": zod.number(),
+  "currency": zod.string(),
+  "notes": zod.string().nullish(),
+  "supplierCostUsd": zod.number(),
+  "supplierPaidUsd": zod.number(),
+  "spreadUsd": zod.number(),
+  "spreadPct": zod.number(),
+  "legs": zod.array(zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string(),
+  "product": zod.string(),
+  "supplierName": zod.string(),
+  "supplierCost": zod.number(),
+  "supplierPaid": zod.number().optional(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "exFactoryDate": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListDealsResponse = zod.array(ListDealsResponseItem)
+
+
+export const CreateDealBody = zod.object({
+  "buyerPoNumber": zod.string(),
+  "customerName": zod.string(),
+  "buyerTotalUsd": zod.number(),
+  "buyerUnitPrice": zod.number(),
+  "buyerQuantity": zod.number(),
+  "currency": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+
+export const GetDealParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDealResponse = zod.object({
+  "id": zod.number(),
+  "buyerPoNumber": zod.string(),
+  "customerName": zod.string(),
+  "buyerTotalUsd": zod.number(),
+  "buyerUnitPrice": zod.number(),
+  "buyerQuantity": zod.number(),
+  "currency": zod.string(),
+  "notes": zod.string().nullish(),
+  "supplierCostUsd": zod.number(),
+  "supplierPaidUsd": zod.number(),
+  "spreadUsd": zod.number(),
+  "spreadPct": zod.number(),
+  "legs": zod.array(zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string(),
+  "product": zod.string(),
+  "supplierName": zod.string(),
+  "supplierCost": zod.number(),
+  "supplierPaid": zod.number().optional(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "exFactoryDate": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const UpdateDealParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDealBody = zod.object({
+  "buyerPoNumber": zod.string(),
+  "customerName": zod.string(),
+  "buyerTotalUsd": zod.number(),
+  "buyerUnitPrice": zod.number(),
+  "buyerQuantity": zod.number(),
+  "currency": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateDealResponse = zod.object({
+  "id": zod.number(),
+  "buyerPoNumber": zod.string(),
+  "customerName": zod.string(),
+  "buyerTotalUsd": zod.number(),
+  "buyerUnitPrice": zod.number(),
+  "buyerQuantity": zod.number(),
+  "currency": zod.string(),
+  "notes": zod.string().nullish(),
+  "supplierCostUsd": zod.number(),
+  "supplierPaidUsd": zod.number(),
+  "spreadUsd": zod.number(),
+  "spreadPct": zod.number(),
+  "legs": zod.array(zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string(),
+  "product": zod.string(),
+  "supplierName": zod.string(),
+  "supplierCost": zod.number(),
+  "supplierPaid": zod.number().optional(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "exFactoryDate": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
 export const ListShipmentsResponseItem = zod.object({
   "id": zod.number(),
   "poNumber": zod.string(),
@@ -53,6 +170,7 @@ export const ListShipmentsResponseItem = zod.object({
   "supplierId": zod.number(),
   "supplierName": zod.string(),
   "customerName": zod.string(),
+  "dealId": zod.number().nullish(),
   "status": zod.string(),
   "currentStageId": zod.string(),
   "dueDate": zod.coerce.date(),
@@ -101,6 +219,7 @@ export const UpdateShipmentResponse = zod.object({
   "supplierId": zod.number(),
   "supplierName": zod.string(),
   "customerName": zod.string(),
+  "dealId": zod.number().nullish(),
   "status": zod.string(),
   "currentStageId": zod.string(),
   "dueDate": zod.coerce.date(),

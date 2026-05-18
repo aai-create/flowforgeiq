@@ -16,6 +16,8 @@ export interface Shipment {
   supplierId: number;
   supplierName: string;
   customerName: string;
+  /** @nullable */
+  dealId?: number | null;
   status: string;
   currentStageId: string;
   dueDate: Date;

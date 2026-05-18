@@ -16,6 +16,7 @@ tags:
   - name: quotes
   - name: messages
   - name: tasks
+  - name: deals
   - name: documents
   - name: extractions
   - name: predictions
@@ -75,6 +76,68 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/SupplierSummary" }
+
+  /deals:
+    get:
+      operationId: listDeals
+      tags: [deals]
+      summary: List all deals with embedded shipments and computed spread
+      responses:
+        "200":
+          description: All deals
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DealWithSpread" }
+    post:
+      operationId: createDeal
+      tags: [deals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DealInput" }
+      responses:
+        "201":
+          description: Created deal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DealWithSpread" }
+  /deals/{id}:
+    get:
+      operationId: getDeal
+      tags: [deals]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deal with spread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DealWithSpread" }
+    patch:
+      operationId: updateDeal
+      tags: [deals]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DealInput" }
+      responses:
+        "200":
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DealWithSpread" }
 
   /shipments:
     get:
@@ -595,6 +658,66 @@ components:
       properties:
         quoteId: { type: integer }
 
+    DealInput:
+      type: object
+      required: [buyerPoNumber, customerName, buyerTotalUsd, buyerUnitPrice, buyerQuantity]
+      properties:
+        buyerPoNumber:  { type: string }
+        customerName:   { type: string }
+        buyerTotalUsd:  { type: number }
+        buyerUnitPrice: { type: number }
+        buyerQuantity:  { type: integer }
+        currency:       { type: string }
+        notes:          { type: string }
+
+    DealShipmentLeg:
+      type: object
+      required: [id, poNumber, product, supplierName, supplierCost, status, currentStageId, exFactoryDate]
+      properties:
+        id:             { type: integer }
+        poNumber:       { type: string }
+        product:        { type: string }
+        supplierName:   { type: string }
+        supplierCost:   { type: number }
+        supplierPaid:   { type: number }
+        status:         { type: string }
+        currentStageId: { type: string }
+        exFactoryDate:  { type: string, format: date-time }
+
+    DealWithSpread:
+      type: object
+      required:
+        - id
+        - buyerPoNumber
+        - customerName
+        - buyerTotalUsd
+        - buyerUnitPrice
+        - buyerQuantity
+        - currency
+        - supplierCostUsd
+        - supplierPaidUsd
+        - spreadUsd
+        - spreadPct
+        - legs
+        - createdAt
+      properties:
+        id:              { type: integer }
+        buyerPoNumber:   { type: string }
+        customerName:    { type: string }
+        buyerTotalUsd:   { type: number }
+        buyerUnitPrice:  { type: number }
+        buyerQuantity:   { type: integer }
+        currency:        { type: string }
+        notes:           { type: ["string", "null"] }
+        supplierCostUsd: { type: number }
+        supplierPaidUsd: { type: number }
+        spreadUsd:       { type: number }
+        spreadPct:       { type: number }
+        legs:
+          type: array
+          items: { $ref: "#/components/schemas/DealShipmentLeg" }
+        createdAt: { type: string, format: date-time }
+
     Shipment:
       type: object
       required:
@@ -621,6 +744,7 @@ components:
         supplierId:     { type: integer }
         supplierName:   { type: string }
         customerName:   { type: string }
+        dealId:         { type: ["integer", "null"] }
         status:         { type: string }
         currentStageId: { type: string }
         dueDate:        { type: string, format: date-time }

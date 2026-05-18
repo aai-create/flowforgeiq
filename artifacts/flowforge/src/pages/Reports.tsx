@@ -4,7 +4,7 @@ import {
   DollarSign, TrendingUp, Users, ListTodo,
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
   ChevronsUpDown, RefreshCw, Clock, CheckCircle2, ArrowRight,
-  CalendarRange, X,
+  CalendarRange, X, Layers, ExternalLink, TrendingDown,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer,
@@ -14,8 +14,9 @@ import {
   useListTasks,
   useListSuppliers,
   useListStages,
+  useListDeals,
 } from "@workspace/api-client-react";
-import type { Shipment, Task, SupplierSummary } from "@workspace/api-client-react";
+import type { Shipment, Task, SupplierSummary, DealWithSpread } from "@workspace/api-client-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -886,12 +887,187 @@ function DateRangePicker({ rangeStart, rangeEnd, onChange }: DateRangePickerProp
   );
 }
 
+// ─── Spread Card ─────────────────────────────────────────────────────────────
+
+function spreadColor(pct: number) {
+  if (pct >= 25) return { bar: "#10B981", text: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  if (pct >= 18) return { bar: "#9000FF", text: "text-[#9000FF]",   badge: "bg-[#9000FF]/8 text-[#9000FF] border-[#9000FF]/20" };
+  return          { bar: "#F59E0B", text: "text-amber-600",   badge: "bg-amber-50 text-amber-700 border-amber-200" };
+}
+
+function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const sorted = useMemo(
+    () => [...deals].sort((a, b) => b.spreadPct - a.spreadPct),
+    [deals]
+  );
+
+  const totalBuyer    = deals.reduce((s, d) => s + d.buyerTotalUsd,   0);
+  const totalSupplier = deals.reduce((s, d) => s + d.supplierCostUsd, 0);
+  const totalSpread   = totalBuyer - totalSupplier;
+  const avgSpreadPct  = totalBuyer > 0 ? (totalSpread / totalBuyer) * 100 : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Portfolio summary row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Total Buyer Value",    value: fmtUsd(totalBuyer),    sub: `${deals.length} deals` },
+          { label: "Total Supplier Cost",  value: fmtUsd(totalSupplier), sub: "sum of all legs" },
+          { label: "Portfolio Spread",     value: fmtUsd(totalSpread),   sub: `${avgSpreadPct.toFixed(1)}% avg margin` },
+        ].map(({ label, value, sub }) => (
+          <div key={label} className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg px-3 py-2.5 text-center">
+            <p className="text-[10px] text-[#9E9FAE] font-medium uppercase tracking-wide mb-0.5">{label}</p>
+            <p className="text-base font-bold text-[#212833]">{value}</p>
+            <p className="text-[10px] text-[#9E9FAE]">{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Deal rows */}
+      <div className="border border-[#E5EAF0] rounded-xl overflow-hidden">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr className="bg-[#FAFBFC] border-b border-[#E5EAF0]">
+              <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Deal / Buyer PO</th>
+              <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Customer</th>
+              <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Buyer Value</th>
+              <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Supplier Cost</th>
+              <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Spread</th>
+              <th className="text-center text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Legs</th>
+              <th className="w-6 px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(deal => {
+              const colors = spreadColor(deal.spreadPct);
+              const isOpen = expanded === deal.id;
+              return (
+                <React.Fragment key={deal.id}>
+                  <tr
+                    className={`border-b border-[#F0F4F8] cursor-pointer transition-colors ${isOpen ? "bg-[#F8F4FF]" : "hover:bg-[#FAFBFC]"}`}
+                    onClick={() => setExpanded(isOpen ? null : deal.id)}
+                  >
+                    <td className="px-3 py-2.5">
+                      <p className="font-semibold text-[#212833]">{deal.buyerPoNumber}</p>
+                      {deal.notes && <p className="text-[9px] text-[#9E9FAE] truncate max-w-[180px]" title={deal.notes}>{deal.notes}</p>}
+                    </td>
+                    <td className="px-3 py-2.5 text-[#5E687B]">{deal.customerName}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-[#212833]">{fmtUsd(deal.buyerTotalUsd)}</td>
+                    <td className="px-3 py-2.5 text-right text-[#5E687B]">{fmtUsd(deal.supplierCostUsd)}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className={`font-bold ${colors.text}`}>{fmtUsd(deal.spreadUsd)}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${colors.badge}`}>
+                          {deal.spreadPct.toFixed(1)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-[#9E9FAE]">{deal.legs.length}</td>
+                    <td className="px-3 py-2.5">
+                      {isOpen
+                        ? <ChevronUp className="w-3 h-3 text-[#9000FF]" />
+                        : <ChevronDown className="w-3 h-3 text-[#C0C8D4]" />}
+                    </td>
+                  </tr>
+
+                  {isOpen && (
+                    <tr className="bg-[#F8F4FF] border-b border-[#E5EAF0]">
+                      <td colSpan={7} className="px-4 pb-3 pt-1">
+                        <div className="space-y-1.5">
+                          {/* unit economics row */}
+                          <div className="flex items-center gap-4 text-[10px] text-[#5E687B] pb-1 border-b border-[#E5EAF0]/60">
+                            <span>Buyer unit price: <span className="font-semibold text-[#212833]">${deal.buyerUnitPrice.toFixed(2)}</span></span>
+                            <span>·</span>
+                            <span>Qty: <span className="font-semibold text-[#212833]">{deal.buyerQuantity.toLocaleString()}</span></span>
+                            <span>·</span>
+                            <span>Currency: <span className="font-semibold text-[#212833]">{deal.currency}</span></span>
+                            <span>·</span>
+                            <span>Supplier paid: <span className="font-semibold text-[#212833]">{fmtUsd(deal.supplierPaidUsd)}</span> of {fmtUsd(deal.supplierCostUsd)}</span>
+                          </div>
+
+                          {/* spread bar */}
+                          <div className="flex items-center gap-2 py-1">
+                            <span className="text-[9px] text-[#9E9FAE] w-20 shrink-0">Margin split</span>
+                            <div className="flex-1 h-2 rounded-full bg-[#E5EAF0] overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${Math.min(deal.spreadPct, 100)}%`, background: colors.bar }}
+                              />
+                            </div>
+                            <span className={`text-[10px] font-bold w-10 text-right ${colors.text}`}>{deal.spreadPct.toFixed(1)}%</span>
+                          </div>
+
+                          {/* supplier legs */}
+                          {deal.legs.length > 0 && (
+                            <div className="mt-1 rounded-lg border border-[#E5EAF0] overflow-hidden">
+                              <table className="w-full text-[10px]">
+                                <thead>
+                                  <tr className="bg-white border-b border-[#F0F4F8]">
+                                    <th className="text-left font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Supplier PO</th>
+                                    <th className="text-left font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Product</th>
+                                    <th className="text-left font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Supplier</th>
+                                    <th className="text-right font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Cost</th>
+                                    <th className="text-right font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Paid</th>
+                                    <th className="text-center font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Stage</th>
+                                    <th className="text-center font-bold text-[#9E9FAE] uppercase tracking-wide px-3 py-1.5">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {deal.legs.map(leg => {
+                                    const paidPct = leg.supplierCost > 0 ? ((leg.supplierPaid ?? 0) / leg.supplierCost) * 100 : 0;
+                                    const statusColor = leg.status === "on-track"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : leg.status === "at-risk"
+                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200";
+                                    return (
+                                      <tr key={leg.id} className="border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#F8F4FF]/50">
+                                        <td className="px-3 py-1.5 font-mono text-[9px] text-[#5E687B]">{leg.poNumber}</td>
+                                        <td className="px-3 py-1.5 text-[#212833] max-w-[160px] truncate">{leg.product}</td>
+                                        <td className="px-3 py-1.5 text-[#5E687B]">{leg.supplierName}</td>
+                                        <td className="px-3 py-1.5 text-right font-semibold text-[#212833]">{fmtUsd(leg.supplierCost)}</td>
+                                        <td className="px-3 py-1.5 text-right">
+                                          <span className={paidPct >= 100 ? "text-emerald-600 font-semibold" : "text-[#5E687B]"}>
+                                            {fmtUsd(leg.supplierPaid ?? 0)}
+                                          </span>
+                                          <span className="text-[#C0C8D4] ml-0.5">({paidPct.toFixed(0)}%)</span>
+                                        </td>
+                                        <td className="px-3 py-1.5 text-center text-[#9E9FAE] font-mono">{leg.currentStageId}</td>
+                                        <td className="px-3 py-1.5 text-center">
+                                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${statusColor}`}>
+                                            {leg.status}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Reports page ────────────────────────────────────────────────────────
 export function Reports() {
   const { data: apiShipments, isLoading: loadingShipments } = useListShipments();
   const { data: apiTasks,     isLoading: loadingTasks     } = useListTasks();
   const { data: apiStages,    isLoading: loadingStages    } = useListStages();
   const { data: apiSuppliers, isLoading: loadingSuppliers } = useListSuppliers();
+  const { data: apiDeals,     isLoading: loadingDeals     } = useListDeals();
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
@@ -915,7 +1091,8 @@ export function Reports() {
     return [...apiStages].sort((a, b) => a.sortOrder - b.sortOrder).map(s => ({ id: s.id, label: s.label }));
   }, [apiStages]);
 
-  const isLoading = loadingShipments || loadingTasks || loadingStages || loadingSuppliers;
+  const deals = apiDeals ?? [];
+  const isLoading = loadingShipments || loadingTasks || loadingStages || loadingSuppliers || loadingDeals;
   const hasRange  = rangeStart !== null || rangeEnd !== null;
 
   // For Pipeline, Suppliers, Tasks — filter shipments by exFactoryDate
@@ -951,7 +1128,26 @@ export function Reports() {
   const openTaskCount = filteredTasks.filter(t => !t.done).length;
   const highUrgent    = filteredTasks.filter(t => !t.done && t.urgency === "high").length;
 
+  const totalBuyerKpi  = deals.reduce((s, d) => s + d.buyerTotalUsd, 0);
+  const totalSpreadKpi = deals.reduce((s, d) => s + d.spreadUsd, 0);
+  const avgSpreadPctKpi = totalBuyerKpi > 0 ? (totalSpreadKpi / totalBuyerKpi) * 100 : 0;
+
   const cards = [
+    {
+      id: "spread",
+      icon: Layers,
+      title: "Deals & Spread",
+      iconColor: "text-[#9000FF]",
+      iconBg: "bg-[#9000FF]/10",
+      kpi: (
+        <span>
+          {fmtUsd(totalSpreadKpi)}{" "}
+          <span className="text-sm font-medium text-[#5E687B]">{avgSpreadPctKpi.toFixed(1)}% margin</span>
+        </span>
+      ),
+      subtitle: `${deals.length} buyer deal${deals.length !== 1 ? "s" : ""} · ${fmtUsd(totalBuyerKpi)} total buyer value`,
+      content: <SpreadCardContent deals={deals} />,
+    },
     {
       id: "finance",
       icon: DollarSign,

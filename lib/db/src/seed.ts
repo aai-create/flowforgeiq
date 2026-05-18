@@ -2,6 +2,7 @@ import { db, pool } from "./index";
 import {
   stagesTable,
   suppliersTable,
+  dealsTable,
   shipmentsTable,
   paymentsTable,
   factoryQuotesTable,
@@ -60,8 +61,21 @@ interface SeedTask {
   done: boolean;
 }
 
+interface SeedDeal {
+  id: string;
+  buyerPoNumber: string;
+  customerName: string;
+  buyerTotalUsd: number;
+  buyerUnitPrice: number;
+  buyerQuantity: number;
+  currency: string;
+  notes: string;
+  shipmentIds: string[];
+}
+
 interface SeedData {
   stages: { id: string; label: string; sortOrder: number }[];
+  deals: SeedDeal[];
   shipments: SeedShipment[];
   messages: SeedMessage[];
   tasks: SeedTask[];
@@ -80,6 +94,7 @@ async function main() {
   await db.delete(factoryQuotesTable);
   await db.delete(paymentsTable);
   await db.delete(shipmentsTable);
+  await db.delete(dealsTable);
   await db.delete(suppliersTable);
   await db.delete(stagesTable);
 
@@ -97,6 +112,31 @@ async function main() {
     .returning();
   const supplierByName = new Map(insertedSuppliers.map(s => [s.name, s.id]));
 
+  console.log("Inserting deals...");
+  const dealIdMap = new Map<string, number>();
+  for (const d of (data.deals ?? [])) {
+    const [inserted] = await db.insert(dealsTable).values({
+      buyerPoNumber: d.buyerPoNumber,
+      customerName: d.customerName,
+      buyerTotalUsd: d.buyerTotalUsd,
+      buyerUnitPrice: d.buyerUnitPrice,
+      buyerQuantity: d.buyerQuantity,
+      currency: d.currency,
+      notes: d.notes,
+    }).returning();
+    dealIdMap.set(d.id, inserted.id);
+  }
+
+  // Build a map: seed shipment id → deal DB id
+  const shipmentSeedToDealId = new Map<string, number>();
+  for (const d of (data.deals ?? [])) {
+    const dbDealId = dealIdMap.get(d.id);
+    if (!dbDealId) continue;
+    for (const sid of d.shipmentIds) {
+      shipmentSeedToDealId.set(sid, dbDealId);
+    }
+  }
+
   console.log("Inserting shipments...");
   const shipmentIdMap = new Map<string, number>();
   for (const s of data.shipments) {
@@ -106,6 +146,7 @@ async function main() {
       category: s.category,
       supplierId: supplierByName.get(s.supplierName)!,
       customerName: s.customerName,
+      dealId: shipmentSeedToDealId.get(s.id) ?? null,
       status: s.status,
       currentStageId: s.currentStageId,
       dueDate: new Date(s.dueDate),
