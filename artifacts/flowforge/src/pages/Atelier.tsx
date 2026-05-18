@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useListShipments, useListStages, useListTasks, updateTask, useGetRiskRadar } from "@workspace/api-client-react";
-import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiTask } from "@/lib/adapters";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar } from "@workspace/api-client-react";
+import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
   MessageCircle, Mail, FileText, CheckCircle2, Circle,
@@ -151,14 +151,28 @@ export function Atelier() {
   const { data: apiTasks }     = useListTasks();
   const { data: radarData }    = useGetRiskRadar();
   const [shipments, setShipments] = useState<UiShipment[]>([]);
+  const [stages, setStages] = useState<UiStage[]>([]);
   const [tasks, setTasks] = useState<UiTask[]>([]);
   useEffect(() => {
     if (!apiStages || !apiShipments) return;
-    const stages = adaptStages(apiStages);
-    const ships = adaptShipments(apiShipments, stages);
+    const adapted = adaptStages(apiStages);
+    const ships = adaptShipments(apiShipments, adapted);
+    setStages(adapted);
     setShipments(ships);
     if (apiTasks) setTasks(adaptTasks(apiTasks, ships));
   }, [apiStages, apiShipments, apiTasks]);
+
+  const advanceStage = (shipmentId: string) => {
+    const target = shipments.find(s => s.id === shipmentId);
+    if (!target) return;
+    const idx = stages.findIndex(st => st.id === target.currentStageId);
+    const next = stages[Math.min(idx + 1, stages.length - 1)];
+    if (!next || next.id === target.currentStageId) return;
+    setShipments(prev => prev.map(s =>
+      s.id === shipmentId ? { ...s, currentStageId: next.id, currentStage: next.label, status: "on-track" } : s,
+    ));
+    updateShipment(target.shipmentId, { currentStageId: next.id, status: "on-track" }).catch(() => {});
+  };
 
   const riskByShipmentId = React.useMemo(() => {
     const map = new Map<number, number>();
@@ -489,7 +503,7 @@ export function Atelier() {
                           <button className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                             <FileText className="w-3 h-3" /> View Docs
                           </button>
-                          <button className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                          <button onClick={()=>advanceStage(shipment.id)} className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                             <MapPin className="w-3 h-3" /> Advance Stage
                           </button>
                         </div>
