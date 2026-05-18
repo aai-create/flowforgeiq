@@ -1203,8 +1203,13 @@ export default function Home() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{fontFamily:"Inter,sans-serif"}}>
         <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
-        <div className="text-sm">
-          {isLoading ? "Loading FlowForge…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
+            <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain p-1.5" />
+          </div>
+          <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
+            {isLoading ? "Loading FlowForge…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
+          </p>
         </div>
       </div>
     );
