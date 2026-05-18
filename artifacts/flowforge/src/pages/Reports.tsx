@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   DollarSign, TrendingUp, Users, ListTodo,
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
-  ChevronsUpDown, RefreshCw, Clock, CheckCircle2, ArrowRight,
+  ChevronsUpDown, RefreshCw, Clock, CheckCircle2, ArrowRight, ArrowLeft,
   CalendarRange, X, Layers, ExternalLink, TrendingDown,
 } from "lucide-react";
 import {
@@ -1199,6 +1199,13 @@ export function Reports() {
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] mb-2 transition-colors"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          <span>Back</span>
+        </button>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9000FF] to-[#B040FF] flex items-center justify-center">
