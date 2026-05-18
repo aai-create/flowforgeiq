@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useListShipments, useListStages, useListTasks, updateTask } from "@workspace/api-client-react";
+import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid, Layers,
   MessageCircle, Mail, FileText, CheckCircle2, Circle,
@@ -144,16 +146,39 @@ function stageIndex(stage: string) {
 // Component
 // ---------------------------------------------------------------------------
 export function Atelier() {
-  const [tasks, setTasks] = useState<Task[]>(INIT_TASKS);
+  const { data: apiStages }    = useListStages();
+  const { data: apiShipments } = useListShipments();
+  const { data: apiTasks }     = useListTasks();
+  const [shipments, setShipments] = useState<UiShipment[]>([]);
+  const [tasks, setTasks] = useState<UiTask[]>([]);
+  useEffect(() => {
+    if (!apiStages || !apiShipments) return;
+    const stages = adaptStages(apiStages);
+    const ships = adaptShipments(apiShipments, stages);
+    setShipments(ships);
+    if (apiTasks) setTasks(adaptTasks(apiTasks, ships));
+  }, [apiStages, apiShipments, apiTasks]);
+
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
 
-  const toggleTask = (id: string) =>
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const toggleTask = (id: string) => {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const nextDone = !t.done;
+    setTasks(prev => prev.map(x => x.id === id ? { ...x, done: nextDone } : x));
+    updateTask(t.taskId, { done: nextDone }).catch(() => {});
+  };
 
-  const visibleShipments = SHIPMENTS.filter(s => {
+  const CUSTOMERS = (() => {
+    const counts = new Map<string, number>();
+    for (const s of shipments) counts.set(s.customer, (counts.get(s.customer) ?? 0) + 1);
+    return Array.from(counts.entries()).map(([name, count], i) => ({ id: `c${i + 1}`, name, count }));
+  })();
+
+  const visibleShipments = shipments.filter(s => {
     if (customerFilter && s.customer !== customerFilter) return false;
     if (statusFilter !== "all" && s.status !== statusFilter) return false;
     return true;

@@ -1,0 +1,188 @@
+import { db, pool } from "./index";
+import {
+  stagesTable,
+  suppliersTable,
+  shipmentsTable,
+  paymentsTable,
+  factoryQuotesTable,
+  messagesTable,
+  tasksTable,
+} from "./schema";
+import * as path from "path";
+import * as fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+interface SeedShipment {
+  id: string;
+  poNumber: string;
+  product: string;
+  category: string;
+  supplierName: string;
+  supplierCountry: string;
+  customerName: string;
+  status: string;
+  currentStageId: string;
+  dueDate: string;
+  exFactoryDate: string;
+  destination: string;
+  via: string;
+  payments: { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; sortOrder: number }[];
+  quotes?: { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean }[];
+}
+
+interface SeedMessage {
+  id: string;
+  shipmentId: string;
+  supplierName: string;
+  sender: string;
+  channel: string;
+  receivedAt: string;
+  snippet: string;
+  fullBody: string;
+  unread: boolean;
+  aiTags: string[];
+  aiDraft: string;
+  aiAction: string;
+}
+
+interface SeedTask {
+  id: string;
+  shipmentId: string;
+  messageId: string | null;
+  title: string;
+  source: string;
+  sourceAge: string;
+  urgency: string;
+  action: string;
+  done: boolean;
+}
+
+interface SeedData {
+  stages: { id: string; label: string; sortOrder: number }[];
+  shipments: SeedShipment[];
+  messages: SeedMessage[];
+  tasks: SeedTask[];
+}
+
+async function main() {
+  const seedPath = path.resolve(__dirname, "../../../scripts/src/seed-data.json");
+  if (!fs.existsSync(seedPath)) {
+    throw new Error(`Seed data not found at ${seedPath}. Run scripts/src/build-seed-data.ts first.`);
+  }
+  const data: SeedData = JSON.parse(fs.readFileSync(seedPath, "utf-8"));
+
+  console.log("Clearing existing data...");
+  await db.delete(tasksTable);
+  await db.delete(messagesTable);
+  await db.delete(factoryQuotesTable);
+  await db.delete(paymentsTable);
+  await db.delete(shipmentsTable);
+  await db.delete(suppliersTable);
+  await db.delete(stagesTable);
+
+  console.log("Inserting stages...");
+  await db.insert(stagesTable).values(data.stages);
+
+  console.log("Inserting suppliers...");
+  const supplierNames = Array.from(new Set(data.shipments.map(s => s.supplierName)));
+  const insertedSuppliers = await db
+    .insert(suppliersTable)
+    .values(supplierNames.map(name => ({
+      name,
+      country: data.shipments.find(s => s.supplierName === name)?.supplierCountry ?? "CN",
+    })))
+    .returning();
+  const supplierByName = new Map(insertedSuppliers.map(s => [s.name, s.id]));
+
+  console.log("Inserting shipments...");
+  const shipmentIdMap = new Map<string, number>();
+  for (const s of data.shipments) {
+    const [inserted] = await db.insert(shipmentsTable).values({
+      poNumber: s.poNumber,
+      product: s.product,
+      category: s.category,
+      supplierId: supplierByName.get(s.supplierName)!,
+      customerName: s.customerName,
+      status: s.status,
+      currentStageId: s.currentStageId,
+      dueDate: new Date(s.dueDate),
+      exFactoryDate: new Date(s.exFactoryDate),
+      destination: s.destination,
+      via: s.via,
+    }).returning();
+    shipmentIdMap.set(s.id, inserted.id);
+
+    // Payments
+    await db.insert(paymentsTable).values(s.payments.map(p => ({
+      shipmentId: inserted.id,
+      label: p.label,
+      percent: p.percent,
+      amountUsd: p.amountUsd,
+      paid: p.paid,
+      dueDate: new Date(p.dueDate),
+      sortOrder: p.sortOrder,
+    })));
+
+    // Quotes
+    if (s.quotes && s.quotes.length > 0) {
+      await db.insert(factoryQuotesTable).values(s.quotes.map((q, i) => ({
+        shipmentId: inserted.id,
+        factory: q.factory,
+        country: q.country,
+        unitPrice: q.unitPrice,
+        leadDays: q.leadDays,
+        moq: q.moq,
+        selected: q.selected,
+        sortOrder: i,
+      })));
+    }
+  }
+
+  console.log("Inserting messages...");
+  const messageIdMap = new Map<string, number>();
+  for (const m of data.messages) {
+    const realShipmentId = shipmentIdMap.get(m.shipmentId);
+    if (!realShipmentId) continue;
+    const [inserted] = await db.insert(messagesTable).values({
+      shipmentId: realShipmentId,
+      supplierId: supplierByName.get(m.supplierName) ?? null,
+      sender: m.sender,
+      channel: m.channel,
+      snippet: m.snippet,
+      fullBody: m.fullBody,
+      aiDraft: m.aiDraft,
+      aiAction: m.aiAction,
+      aiTags: m.aiTags,
+      unread: m.unread,
+      receivedAt: new Date(m.receivedAt),
+    }).returning();
+    messageIdMap.set(m.id, inserted.id);
+  }
+
+  console.log("Inserting tasks...");
+  for (const t of data.tasks) {
+    const realShipmentId = shipmentIdMap.get(t.shipmentId);
+    if (!realShipmentId) continue;
+    await db.insert(tasksTable).values({
+      shipmentId: realShipmentId,
+      messageId: t.messageId ? messageIdMap.get(t.messageId) ?? null : null,
+      title: t.title,
+      source: t.source,
+      sourceAge: t.sourceAge,
+      urgency: t.urgency,
+      action: t.action,
+      done: t.done,
+    });
+  }
+
+  console.log(`Seed complete: ${data.shipments.length} shipments, ${data.messages.length} messages, ${data.tasks.length} tasks`);
+  await pool.end();
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Mail, MessageCircle, FileText, Sparkles, Wand2, Search,
   Bell, ChevronDown, Check, AlertCircle, Clock, MoreHorizontal,
@@ -10,6 +10,15 @@ import {
   Table2, FilePlus, Link2, ArrowUpRight,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
+import {
+  useListStages, useListShipments, useListMessages, useListTasks,
+  updateMessage, updateTask, updateShipment,
+  selectFactoryQuote,
+} from "@workspace/api-client-react";
+import {
+  adaptStages, adaptShipments, adaptMessages, adaptTasks,
+  type UiStage, type UiShipment, type UiMessage, type UiTask,
+} from "@/lib/adapters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -223,7 +232,7 @@ function ViewSwitcher({ mode, setMode }: { mode: ViewMode; setMode: (m: ViewMode
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, isDragging: false });
 
   const onPointerDown = (e: React.PointerEvent) => {
-    e.target.setPointerCapture(e.pointerId);
+    (e.target as Element).setPointerCapture(e.pointerId);
     dragRef.current = { startX: e.clientX, startY: e.clientY, initialX: posRef.current.x, initialY: posRef.current.y, isDragging: true };
     setIsDragging(true);
   };
@@ -237,7 +246,7 @@ function ViewSwitcher({ mode, setMode }: { mode: ViewMode; setMode: (m: ViewMode
     posRef.current = { x: nextX, y: nextY };
   };
   const onPointerUp = (e: React.PointerEvent) => {
-    e.target.releasePointerCapture(e.pointerId);
+    (e.target as Element).releasePointerCapture(e.pointerId);
     dragRef.current.isDragging = false;
     setIsDragging(false);
   };
@@ -848,12 +857,33 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 export default function Home() {
   const [viewMode, setViewMode]           = useState<ViewMode>("inbox");
   const [navTab, setNavTab]               = useState<NavTab>("inbox");
-  const [stages, setStages]               = useState<Stage[]>(DEFAULT_STAGES);
+  const { data: apiStages }    = useListStages();
+  const { data: apiShipments } = useListShipments();
+  const { data: apiMessages }  = useListMessages();
+  const { data: apiTasks }     = useListTasks();
+
+  const [stages, setStages]               = useState<UiStage[]>([]);
   const [showStageConfig, setShowStageConfig] = useState(false);
-  const [shipments, setShipments]         = useState<Shipment[]>(INIT_SHIPMENTS);
-  const [messages, setMessages]           = useState<Message[]>(INIT_MESSAGES);
-  const [tasks, setTasks]                 = useState<Task[]>(INIT_TASKS);
-  const [activeMessageId, setActiveMessageId] = useState("m1");
+  const [shipments, setShipments]         = useState<UiShipment[]>([]);
+  const [messages, setMessages]           = useState<UiMessage[]>([]);
+  const [tasks, setTasks]                 = useState<UiTask[]>([]);
+
+  // Hydrate from API
+  useEffect(() => { if (apiStages) setStages(adaptStages(apiStages)); }, [apiStages]);
+  useEffect(() => {
+    if (apiShipments && stages.length) setShipments(adaptShipments(apiShipments, stages));
+  }, [apiShipments, stages]);
+  useEffect(() => {
+    if (apiMessages && shipments.length) setMessages(adaptMessages(apiMessages, shipments));
+  }, [apiMessages, shipments]);
+  useEffect(() => {
+    if (apiTasks && shipments.length) setTasks(adaptTasks(apiTasks, shipments));
+  }, [apiTasks, shipments]);
+
+  const [activeMessageId, setActiveMessageId] = useState<string>("");
+  useEffect(() => {
+    if (!activeMessageId && messages.length > 0) setActiveMessageId(messages[0].id);
+  }, [messages, activeMessageId]);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string|null>(null);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">("all");
   const [supplierFilter, setSupplierFilter] = useState<string|null>(null);
@@ -868,8 +898,14 @@ export default function Home() {
   const [aiQuery, setAiQuery]             = useState("");
   const [showAiResult, setShowAiResult]   = useState(false);
 
+  const SUPPLIERS = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of shipments) counts.set(s.supplier, (counts.get(s.supplier) ?? 0) + 1);
+    return Array.from(counts.entries()).map(([name, count]) => ({ id: name, label: name, count }));
+  }, [shipments]);
+
   const activeMessage  = messages.find(m => m.id === activeMessageId) || messages[0];
-  const activeShipment = shipments.find(s => s.id === activeMessage.shipmentId);
+  const activeShipment = activeMessage ? shipments.find(s => s.id === activeMessage.shipmentId) : undefined;
   const activeStage    = activeShipment ? stages.find(s => s.id === activeShipment.currentStageId) : null;
   const activeStageIdx = activeShipment ? stages.findIndex(s => s.id === activeShipment.currentStageId) : -1;
 
@@ -882,7 +918,11 @@ export default function Home() {
 
   const openMessage = (id: string) => {
     setActiveMessageId(id); setNavTab("inbox");
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, unread:false } : m));
+    const msg = messages.find(m => m.id === id);
+    if (msg && msg.unread) {
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, unread:false } : m));
+      updateMessage(msg.messageId, { unread: false }).catch(() => {});
+    }
     setComposeText(""); setRightTab("message");
   };
   const selectShipment = (id: string) => {
@@ -891,23 +931,36 @@ export default function Home() {
     if (next) { const f = messages.find(m => m.shipmentId===next); if(f) openMessage(f.id); }
   };
   const advanceStage = (shipmentId: string) => {
-    setShipments(prev => prev.map(s => {
-      if (s.id!==shipmentId) return s;
-      const idx = stages.findIndex(st => st.id===s.currentStageId);
-      const next = stages[Math.min(idx+1, stages.length-1)];
-      return { ...s, currentStageId: next?.id ?? s.currentStageId, status:"on-track" };
-    }));
+    const target = shipments.find(s => s.id === shipmentId);
+    if (!target) return;
+    const idx = stages.findIndex(st => st.id === target.currentStageId);
+    const next = stages[Math.min(idx + 1, stages.length - 1)];
+    if (!next || next.id === target.currentStageId) return;
+    setShipments(prev => prev.map(s =>
+      s.id === shipmentId ? { ...s, currentStageId: next.id, currentStage: next.label, status: "on-track" } : s,
+    ));
+    updateShipment(target.shipmentId, { currentStageId: next.id, status: "on-track" }).catch(() => {});
   };
   const sendReply = (msgId: string) => {
     setRepliedIds(prev => new Set(prev).add(msgId));
     setMessages(prev => prev.map(m => m.id===msgId ? {...m, unread:false} : m));
     const msg = messages.find(m => m.id===msgId);
-    if (msg) { advanceStage(msg.shipmentId); setTasks(t => t.filter(tk => tk.messageId!==msgId)); }
+    if (msg) {
+      updateMessage(msg.messageId, { unread: false }).catch(() => {});
+      advanceStage(msg.shipmentId);
+      const tasksToComplete = tasks.filter(tk => tk.messageId === msgId);
+      setTasks(t => t.filter(tk => tk.messageId !== msgId));
+      Promise.all(tasksToComplete.map(tk => updateTask(tk.taskId, { done: true }))).catch(() => {});
+    }
     setComposeText(""); setComposeFocused(false);
     setToast("Reply sent — stage advanced");
   };
   const selectQuote = (shipmentId: string, idx: number) => {
-    setShipments(prev => prev.map(s => s.id!==shipmentId||!s.quotes ? s : { ...s, quotes:s.quotes.map((q,i)=>({...q,selected:i===idx})) }));
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship?.quotes?.[idx]) return;
+    const targetQuote = ship.quotes[idx];
+    setShipments(prev => prev.map(s => s.id !== shipmentId || !s.quotes ? s : { ...s, quotes: s.quotes.map((q,i) => ({...q, selected: i === idx})) }));
+    selectFactoryQuote(ship.shipmentId, { quoteId: targetQuote.quoteId }).catch(() => {});
     setToast("Factory quote selected");
   };
   const toggleChannel = (ch: Channel|"all") => {
@@ -939,6 +992,18 @@ export default function Home() {
         <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
         {showStageConfig&&<StageConfigModal stages={stages} onSave={s=>{setStages(s);setToast("Stages saved");}} onClose={()=>setShowStageConfig(false)}/>}
         <Atelier/>
+      </div>
+    );
+  }
+
+  const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
+  if (!activeMessage || !activeShipment) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{fontFamily:"Inter,sans-serif"}}>
+        <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
+        <div className="text-sm">
+          {isLoading ? "Loading FlowForge…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
+        </div>
       </div>
     );
   }

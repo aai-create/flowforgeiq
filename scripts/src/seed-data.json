@@ -1,0 +1,1195 @@
+{
+  "generatedAt": "2026-05-18T02:48:06.864Z",
+  "pretendToday": "2026-05-18T00:00:00.000Z",
+  "stages": [
+    {
+      "id": "spec",
+      "label": "Spec Sheet",
+      "sortOrder": 0
+    },
+    {
+      "id": "quotes",
+      "label": "Factory Quotes",
+      "sortOrder": 1
+    },
+    {
+      "id": "sample_ord",
+      "label": "Sample Order",
+      "sortOrder": 2
+    },
+    {
+      "id": "sample_apr",
+      "label": "Sample Approval",
+      "sortOrder": 3
+    },
+    {
+      "id": "po_issued",
+      "label": "PO Issued",
+      "sortOrder": 4
+    },
+    {
+      "id": "production",
+      "label": "Production",
+      "sortOrder": 5
+    },
+    {
+      "id": "qc",
+      "label": "QC Inspection",
+      "sortOrder": 6
+    },
+    {
+      "id": "ex_factory",
+      "label": "Ex-Factory",
+      "sortOrder": 7
+    },
+    {
+      "id": "in_transit",
+      "label": "In Transit",
+      "sortOrder": 8
+    },
+    {
+      "id": "payment",
+      "label": "Payment Clearance",
+      "sortOrder": 9
+    },
+    {
+      "id": "delivered",
+      "label": "Delivered",
+      "sortOrder": 10
+    }
+  ],
+  "shipments": [
+    {
+      "id": "s1",
+      "poNumber": "PO-1001-778143",
+      "product": "Chrome Retail Hanger — Heavy Duty Top",
+      "category": "Chrome Retail Hanger",
+      "supplierName": "Tianjin Wire Works",
+      "supplierCountry": "CN",
+      "customerName": "Marlowe & Sons",
+      "status": "on-track",
+      "currentStageId": "spec",
+      "dueDate": "2026-07-12",
+      "exFactoryDate": "2026-07-12",
+      "destination": "PA",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2280,
+          "paid": false,
+          "dueDate": "2026-05-28",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 5320,
+          "paid": false,
+          "dueDate": "2026-07-09",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "poNumber": "PO-1002-783656",
+      "product": "Chrome Retail Hanger — Slim Profile Bottom",
+      "category": "Chrome Retail Hanger",
+      "supplierName": "Guangzhou Metalworks",
+      "supplierCountry": "CN",
+      "customerName": "Vellum Studio",
+      "status": "on-track",
+      "currentStageId": "quotes",
+      "dueDate": "2026-07-09",
+      "exFactoryDate": "2026-07-09",
+      "destination": "TN",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 3090,
+          "paid": false,
+          "dueDate": "2026-05-25",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 7210,
+          "paid": false,
+          "dueDate": "2026-07-06",
+          "sortOrder": 1
+        }
+      ],
+      "quotes": [
+        {
+          "factory": "Tianjin Wire Works",
+          "country": "CN",
+          "unitPrice": 0.98,
+          "leadDays": 28,
+          "moq": 500,
+          "selected": true
+        },
+        {
+          "factory": "Guangzhou Metalworks",
+          "country": "CN",
+          "unitPrice": 1.03,
+          "leadDays": 32,
+          "moq": 1000,
+          "selected": false
+        },
+        {
+          "factory": "Ningbo Alloy Co.",
+          "country": "CN",
+          "unitPrice": 1.08,
+          "leadDays": 36,
+          "moq": 2000,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "poNumber": "PO-1003-F18SAF0259",
+      "product": "Chrome Retail Hanger — Velvet Grip",
+      "category": "Chrome Retail Hanger",
+      "supplierName": "Tianjin Wire Works",
+      "supplierCountry": "CN",
+      "customerName": "Marlowe & Sons",
+      "status": "on-track",
+      "currentStageId": "sample_ord",
+      "dueDate": "2026-06-24",
+      "exFactoryDate": "2026-06-24",
+      "destination": "Greece",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 3996,
+          "paid": false,
+          "dueDate": "2026-05-10",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 9324,
+          "paid": false,
+          "dueDate": "2026-06-21",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "poNumber": "PO-1004-792884",
+      "product": "Chrome Retail Hanger — Notched Shoulder",
+      "category": "Chrome Retail Hanger",
+      "supplierName": "Guangzhou Metalworks",
+      "supplierCountry": "CN",
+      "customerName": "Vellum Studio",
+      "status": "on-track",
+      "currentStageId": "sample_apr",
+      "dueDate": "2026-06-21",
+      "exFactoryDate": "2026-06-21",
+      "destination": "CA",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 4998,
+          "paid": false,
+          "dueDate": "2026-05-07",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 11662,
+          "paid": false,
+          "dueDate": "2026-06-18",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s5",
+      "poNumber": "PO-1005-797758-001",
+      "product": "Chrome Retail Hanger — Heavy Duty Top",
+      "category": "Chrome Retail Hanger",
+      "supplierName": "Tianjin Wire Works",
+      "supplierCountry": "CN",
+      "customerName": "Marlowe & Sons",
+      "status": "on-track",
+      "currentStageId": "po_issued",
+      "dueDate": "2026-06-06",
+      "exFactoryDate": "2026-06-06",
+      "destination": "CA",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 4560,
+          "paid": true,
+          "dueDate": "2026-04-22",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 10640,
+          "paid": false,
+          "dueDate": "2026-06-03",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s6",
+      "poNumber": "PO-1006-P201466120",
+      "product": "Powder-Coat Hanger — Charcoal Bottom",
+      "category": "Powder-Coat Hanger",
+      "supplierName": "Guangzhou Metalworks",
+      "supplierCountry": "CN",
+      "customerName": "Northbound Outfitters",
+      "status": "at-risk",
+      "currentStageId": "production",
+      "dueDate": "2026-05-23",
+      "exFactoryDate": "2026-05-23",
+      "destination": "Israel",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2340,
+          "paid": true,
+          "dueDate": "2026-04-08",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 5460,
+          "paid": false,
+          "dueDate": "2026-05-20",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s7",
+      "poNumber": "PO-1007-P201472890",
+      "product": "Powder-Coat Hanger — Bronze Petite",
+      "category": "Powder-Coat Hanger",
+      "supplierName": "Foshan Precision Parts",
+      "supplierCountry": "CN",
+      "customerName": "Marlowe & Sons",
+      "status": "on-track",
+      "currentStageId": "qc",
+      "dueDate": "2026-05-19",
+      "exFactoryDate": "2026-05-19",
+      "destination": "Russia",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 3150,
+          "paid": true,
+          "dueDate": "2026-04-04",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 7350,
+          "paid": false,
+          "dueDate": "2026-05-16",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s8",
+      "poNumber": "PO-1008-P201475383",
+      "product": "Powder-Coat Hanger — Ivory Wishbone",
+      "category": "Powder-Coat Hanger",
+      "supplierName": "Guangzhou Metalworks",
+      "supplierCountry": "CN",
+      "customerName": "Northbound Outfitters",
+      "status": "on-track",
+      "currentStageId": "ex_factory",
+      "dueDate": "2026-05-05",
+      "exFactoryDate": "2026-05-05",
+      "destination": "Chicago",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 4050,
+          "paid": true,
+          "dueDate": "2026-03-21",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 9450,
+          "paid": false,
+          "dueDate": "2026-05-02",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s9",
+      "poNumber": "PO-1009-711872",
+      "product": "Powder-Coat Hanger — Matte Black Top",
+      "category": "Powder-Coat Hanger",
+      "supplierName": "Foshan Precision Parts",
+      "supplierCountry": "CN",
+      "customerName": "Marlowe & Sons",
+      "status": "at-risk",
+      "currentStageId": "in_transit",
+      "dueDate": "2026-04-20",
+      "exFactoryDate": "2026-04-20",
+      "destination": "PA",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 3780,
+          "paid": true,
+          "dueDate": "2026-03-06",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 8820,
+          "paid": true,
+          "dueDate": "2026-04-17",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "poNumber": "PO-1010-4500096501",
+      "product": "LED Track Light — 3000K Spot — 12W",
+      "category": "LED Track Light",
+      "supplierName": "Dongguan BrightTech",
+      "supplierCountry": "CN",
+      "customerName": "Atelier Nord",
+      "status": "on-track",
+      "currentStageId": "payment",
+      "dueDate": "2026-04-17",
+      "exFactoryDate": "2026-04-17",
+      "destination": "CA",
+      "via": "AIR",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2085,
+          "paid": true,
+          "dueDate": "2026-03-03",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 4865,
+          "paid": true,
+          "dueDate": "2026-04-14",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s11",
+      "poNumber": "PO-1011-4500110188",
+      "product": "LED Track Light — 4000K Wash — 18W",
+      "category": "LED Track Light",
+      "supplierName": "Shenzhen LEDPro",
+      "supplierCountry": "CN",
+      "customerName": "Pioneer Goods Co.",
+      "status": "on-track",
+      "currentStageId": "delivered",
+      "dueDate": "2026-04-02",
+      "exFactoryDate": "2026-04-02",
+      "destination": "CA",
+      "via": "AIR",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2754,
+          "paid": true,
+          "dueDate": "2026-02-16",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 6426,
+          "paid": true,
+          "dueDate": "2026-03-30",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s12",
+      "poNumber": "PO-1012-4500110188",
+      "product": "LED Track Light — Tunable White — 24W",
+      "category": "LED Track Light",
+      "supplierName": "Dongguan BrightTech",
+      "supplierCountry": "CN",
+      "customerName": "Atelier Nord",
+      "status": "on-track",
+      "currentStageId": "spec",
+      "dueDate": "2026-07-12",
+      "exFactoryDate": "2026-07-12",
+      "destination": "CA",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 3507,
+          "paid": false,
+          "dueDate": "2026-05-28",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 8183,
+          "paid": false,
+          "dueDate": "2026-07-09",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s13",
+      "poNumber": "PO-1013-4500010009 R",
+      "product": "LED Display Cabinet — Warm White Strip — 1.2m",
+      "category": "LED Display Cabinet",
+      "supplierName": "Shenzhen LEDPro",
+      "supplierCountry": "CN",
+      "customerName": "Northbound Outfitters",
+      "status": "on-track",
+      "currentStageId": "quotes",
+      "dueDate": "2026-07-09",
+      "exFactoryDate": "2026-07-09",
+      "destination": "Shanghai",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 1512,
+          "paid": false,
+          "dueDate": "2026-05-25",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 3528,
+          "paid": false,
+          "dueDate": "2026-07-06",
+          "sortOrder": 1
+        }
+      ],
+      "quotes": [
+        {
+          "factory": "Shenzhen LEDPro",
+          "country": "CN",
+          "unitPrice": 3.99,
+          "leadDays": 28,
+          "moq": 500,
+          "selected": true
+        },
+        {
+          "factory": "Foshan LightMaster",
+          "country": "CN",
+          "unitPrice": 4.2,
+          "leadDays": 32,
+          "moq": 1000,
+          "selected": false
+        },
+        {
+          "factory": "Ningbo Alloy Co.",
+          "country": "CN",
+          "unitPrice": 4.41,
+          "leadDays": 36,
+          "moq": 2000,
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "s14",
+      "poNumber": "PO-1014-4500010022",
+      "product": "LED Display Cabinet — Cool White Bar — 900mm",
+      "category": "LED Display Cabinet",
+      "supplierName": "Foshan LightMaster",
+      "supplierCountry": "CN",
+      "customerName": "Vellum Studio",
+      "status": "on-track",
+      "currentStageId": "sample_ord",
+      "dueDate": "2026-06-24",
+      "exFactoryDate": "2026-06-24",
+      "destination": "Brazil",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2138,
+          "paid": false,
+          "dueDate": "2026-05-10",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 4987,
+          "paid": false,
+          "dueDate": "2026-06-21",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s15",
+      "poNumber": "PO-1015-4500032038",
+      "product": "LED Display Cabinet — RGB Edge — 1.8m",
+      "category": "LED Display Cabinet",
+      "supplierName": "Shenzhen LEDPro",
+      "supplierCountry": "CN",
+      "customerName": "Northbound Outfitters",
+      "status": "delayed",
+      "currentStageId": "sample_apr",
+      "dueDate": "2026-06-21",
+      "exFactoryDate": "2026-06-21",
+      "destination": "Brazil",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2862,
+          "paid": false,
+          "dueDate": "2026-05-07",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 6678,
+          "paid": false,
+          "dueDate": "2026-06-18",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s16",
+      "poNumber": "PO-1016-4500030233",
+      "product": "LED Display Cabinet — Tunable Halo — 600mm",
+      "category": "LED Display Cabinet",
+      "supplierName": "Foshan LightMaster",
+      "supplierCountry": "CN",
+      "customerName": "Vellum Studio",
+      "status": "on-track",
+      "currentStageId": "po_issued",
+      "dueDate": "2026-06-06",
+      "exFactoryDate": "2026-06-06",
+      "destination": "Brazil",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 3686,
+          "paid": true,
+          "dueDate": "2026-04-22",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 8599,
+          "paid": false,
+          "dueDate": "2026-06-03",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s17",
+      "poNumber": "PO-1017-F21-MB-002-1",
+      "product": "LED Display Cabinet — Warm White Strip — 1.2m",
+      "category": "LED Display Cabinet",
+      "supplierName": "Shenzhen LEDPro",
+      "supplierCountry": "CN",
+      "customerName": "Northbound Outfitters",
+      "status": "on-track",
+      "currentStageId": "production",
+      "dueDate": "2026-05-23",
+      "exFactoryDate": "2026-05-23",
+      "destination": "Thailand",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 1512,
+          "paid": true,
+          "dueDate": "2026-04-08",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 3528,
+          "paid": false,
+          "dueDate": "2026-05-20",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s18",
+      "poNumber": "PO-1018-4500087059",
+      "product": "LED Display Cabinet — Cool White Bar — 900mm",
+      "category": "LED Display Cabinet",
+      "supplierName": "Foshan LightMaster",
+      "supplierCountry": "CN",
+      "customerName": "Vellum Studio",
+      "status": "delayed",
+      "currentStageId": "qc",
+      "dueDate": "2026-05-19",
+      "exFactoryDate": "2026-05-19",
+      "destination": "Japan",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 2138,
+          "paid": true,
+          "dueDate": "2026-04-04",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 4987,
+          "paid": false,
+          "dueDate": "2026-05-16",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s19",
+      "poNumber": "PO-1019-P200920425",
+      "product": "Engineered Oak Flooring — Chevron — Whitewash",
+      "category": "Engineered Oak Flooring",
+      "supplierName": "Hangzhou Timber Co.",
+      "supplierCountry": "CN",
+      "customerName": "Pioneer Goods Co.",
+      "status": "on-track",
+      "currentStageId": "ex_factory",
+      "dueDate": "2026-05-05",
+      "exFactoryDate": "2026-05-05",
+      "destination": "Los Angeles",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 16920,
+          "paid": true,
+          "dueDate": "2026-03-21",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 39480,
+          "paid": false,
+          "dueDate": "2026-05-02",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s20",
+      "poNumber": "PO-1020-P201353881",
+      "product": "Engineered Oak Flooring — Plank — Coffee",
+      "category": "Engineered Oak Flooring",
+      "supplierName": "Ningbo Hardwood Mill",
+      "supplierCountry": "CN",
+      "customerName": "Cedar Hollow Homes",
+      "status": "at-risk",
+      "currentStageId": "in_transit",
+      "dueDate": "2026-04-20",
+      "exFactoryDate": "2026-04-20",
+      "destination": "Los Angeles",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 21630,
+          "paid": true,
+          "dueDate": "2026-03-06",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 50470,
+          "paid": true,
+          "dueDate": "2026-04-17",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s21",
+      "poNumber": "PO-1021-P201356135",
+      "product": "Engineered Oak Flooring — Herringbone — Natural",
+      "category": "Engineered Oak Flooring",
+      "supplierName": "Hangzhou Timber Co.",
+      "supplierCountry": "CN",
+      "customerName": "Pioneer Goods Co.",
+      "status": "delayed",
+      "currentStageId": "payment",
+      "dueDate": "2026-04-17",
+      "exFactoryDate": "2026-04-17",
+      "destination": "India",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 9120,
+          "paid": true,
+          "dueDate": "2026-03-03",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 21280,
+          "paid": false,
+          "dueDate": "2026-04-14",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s22",
+      "poNumber": "PO-1022-P201357730",
+      "product": "Engineered Oak Flooring — Plank — Smoked",
+      "category": "Engineered Oak Flooring",
+      "supplierName": "Ningbo Hardwood Mill",
+      "supplierCountry": "CN",
+      "customerName": "Cedar Hollow Homes",
+      "status": "on-track",
+      "currentStageId": "delivered",
+      "dueDate": "2026-04-02",
+      "exFactoryDate": "2026-04-02",
+      "destination": "Houston",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 12750,
+          "paid": true,
+          "dueDate": "2026-02-16",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 29750,
+          "paid": true,
+          "dueDate": "2026-03-30",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s23",
+      "poNumber": "PO-1023-P201466769",
+      "product": "Cardboard Mailer — Recycled Kraft 9x12",
+      "category": "Cardboard Mailer",
+      "supplierName": "Qingdao Packaging Group",
+      "supplierCountry": "CN",
+      "customerName": "Vellum Studio",
+      "status": "on-track",
+      "currentStageId": "spec",
+      "dueDate": "2026-07-12",
+      "exFactoryDate": "2026-07-12",
+      "destination": "Pennsylvania",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 4680,
+          "paid": false,
+          "dueDate": "2026-05-28",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 10920,
+          "paid": false,
+          "dueDate": "2026-07-09",
+          "sortOrder": 1
+        }
+      ]
+    },
+    {
+      "id": "s24",
+      "poNumber": "PO-1024-4500011121",
+      "product": "Cardboard Mailer — Tear-Strip 12x15",
+      "category": "Cardboard Mailer",
+      "supplierName": "Qingdao Packaging Group",
+      "supplierCountry": "CN",
+      "customerName": "Cedar Hollow Homes",
+      "status": "on-track",
+      "currentStageId": "quotes",
+      "dueDate": "2026-07-09",
+      "exFactoryDate": "2026-07-09",
+      "destination": "China",
+      "via": "OCEAN",
+      "payments": [
+        {
+          "label": "Deposit (30%)",
+          "percent": 30,
+          "amountUsd": 5985,
+          "paid": false,
+          "dueDate": "2026-05-25",
+          "sortOrder": 0
+        },
+        {
+          "label": "Balance (70%)",
+          "percent": 70,
+          "amountUsd": 13965,
+          "paid": false,
+          "dueDate": "2026-07-06",
+          "sortOrder": 1
+        }
+      ],
+      "quotes": [
+        {
+          "factory": "Qingdao Packaging Group",
+          "country": "CN",
+          "unitPrice": 0.54,
+          "leadDays": 28,
+          "moq": 500,
+          "selected": true
+        },
+        {
+          "factory": "Ningbo Alloy Co.",
+          "country": "CN",
+          "unitPrice": 0.57,
+          "leadDays": 32,
+          "moq": 1000,
+          "selected": false
+        },
+        {
+          "factory": "Foshan Grid Factory",
+          "country": "CN",
+          "unitPrice": 0.6,
+          "leadDays": 36,
+          "moq": 2000,
+          "selected": false
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "shipmentId": "s4",
+      "supplierName": "Guangzhou Metalworks",
+      "sender": "Guangzhou Metalworks",
+      "channel": "whatsapp",
+      "timestamp": "Thu",
+      "receivedAt": "2026-05-15T00:00:00.000Z",
+      "snippet": "Strike-off finish coat needs +2 days, polishing line backed up. Please advise.",
+      "fullBody": "Hi team, quick update on PO-1004-792884. The sample approval finish coat needs +2 days — our polishing line is backed up. Please advise if we can proceed. If we push this, Ex-Factory moves by 2 days.",
+      "unread": false,
+      "aiTags": [
+        "risk: delay 2d",
+        "milestone: sample approval"
+      ],
+      "aiDraft": "Understood — please proceed with the delay. We'll update PO-1004-792884 ex-factory accordingly. Please confirm revised schedule in writing.",
+      "aiAction": "Approve delay and update PO-1004-792884 timeline"
+    },
+    {
+      "id": "m2",
+      "shipmentId": "s7",
+      "supplierName": "Foshan Precision Parts",
+      "sender": "Foshan Precision Parts",
+      "channel": "pdf",
+      "timestamp": "Wed",
+      "receivedAt": "2026-05-16T00:00:00.000Z",
+      "snippet": "QC inspection passed — AQL 2.5. SGS report attached. Balance payment $7,350 required.",
+      "fullBody": "Please find attached the SGS inspection report.\n\nQC result: PASSED\nAQL 2.5 standard · 2 minor defects · 0 major\n\nBalance payment of $7,350 required before container release.",
+      "unread": false,
+      "aiTags": [
+        "milestone: QC passed",
+        "payment: balance due"
+      ],
+      "aiDraft": "Thank you — SGS report received and QC pass confirmed. We will arrange the balance wire shortly.",
+      "aiAction": "Confirm QC pass and schedule balance payment"
+    },
+    {
+      "id": "m3",
+      "shipmentId": "s8",
+      "supplierName": "Guangzhou Metalworks",
+      "sender": "Guangzhou Metalworks",
+      "channel": "whatsapp",
+      "timestamp": "Thu",
+      "receivedAt": "2026-05-15T00:00:00.000Z",
+      "snippet": "Port congestion — export delay 4 days. Revised ex-factory shifting.",
+      "fullBody": "Heads up — major port congestion at our terminal. Our freight forwarder has revised our export slot by 4 days. Please advise buyer and update the tracker.",
+      "unread": false,
+      "aiTags": [
+        "risk: port congestion",
+        "delay: 4d"
+      ],
+      "aiDraft": "Understood on the congestion. Please send revised packing schedule. We'll notify the buyer.",
+      "aiAction": "Approve 4-day delay and notify buyer"
+    },
+    {
+      "id": "m4",
+      "shipmentId": "s13",
+      "supplierName": "Shenzhen LEDPro",
+      "sender": "Cost Sheet — PO-1013-4500010009 R",
+      "channel": "sheets",
+      "timestamp": "10:43 AM",
+      "receivedAt": "2026-05-18T00:00:00.000Z",
+      "snippet": "Quote comparison updated. Shenzhen LEDPro leads at $3.99/unit. Margin: 34.2%",
+      "fullBody": "Automated update from Google Sheets — Costing Tracker:\n\nQuote comparison for LED Display Cabinet — Warm White Strip — 1.2m:\n  • Shenzhen LEDPro: $3.99/unit, 28d lead, MOQ 500\n  • Foshan LightMaster: $4.2/unit, 32d lead, MOQ 1000\n  • Ningbo Alloy Co.: $4.41/unit, 36d lead, MOQ 2000\n\nRecommended selection: Shenzhen LEDPro",
+      "unread": true,
+      "aiTags": [
+        "update: quote ready",
+        "margin: 34.2%"
+      ],
+      "aiDraft": "Confirming selection of the recommended factory. Please issue PI for deposit.",
+      "aiAction": "Select factory quote and issue deposit invoice"
+    },
+    {
+      "id": "m5",
+      "shipmentId": "s15",
+      "supplierName": "Shenzhen LEDPro",
+      "sender": "Shenzhen LEDPro",
+      "channel": "whatsapp",
+      "timestamp": "Wed",
+      "receivedAt": "2026-05-16T00:00:00.000Z",
+      "snippet": "Strike-off finish coat needs +2 days, polishing line backed up. Please advise.",
+      "fullBody": "Hi team, quick update on PO-1015-4500032038. The sample approval finish coat needs +2 days — our polishing line is backed up. Please advise if we can proceed. If we push this, Ex-Factory moves by 2 days.",
+      "unread": false,
+      "aiTags": [
+        "risk: delay 2d",
+        "milestone: sample approval"
+      ],
+      "aiDraft": "Understood — please proceed with the delay. We'll update PO-1015-4500032038 ex-factory accordingly. Please confirm revised schedule in writing.",
+      "aiAction": "Approve delay and update PO-1015-4500032038 timeline"
+    },
+    {
+      "id": "m6",
+      "shipmentId": "s17",
+      "supplierName": "Shenzhen LEDPro",
+      "sender": "Shenzhen LEDPro",
+      "channel": "gmail",
+      "timestamp": "12:57 AM",
+      "receivedAt": "2026-05-18T00:00:00.000Z",
+      "snippet": "Production update: assembly 60% complete, on track for ex-factory.",
+      "fullBody": "Hello,\n\nProduction update on PO-1017-F21-MB-002-1. Assembly is now 60% complete and we remain on track for the ex-factory window.\n\nBalance payment of $3,528 will be due before release.\n\nBest regards,\nFactory Team",
+      "unread": true,
+      "aiTags": [
+        "milestone: production",
+        "payment: balance due"
+      ],
+      "aiDraft": "Thanks for the update. Please send final QC photos before ex-factory release.",
+      "aiAction": "Acknowledge update and schedule QC inspection"
+    },
+    {
+      "id": "m7",
+      "shipmentId": "s19",
+      "supplierName": "Hangzhou Timber Co.",
+      "sender": "Hangzhou Timber Co.",
+      "channel": "whatsapp",
+      "timestamp": "Wed",
+      "receivedAt": "2026-05-16T00:00:00.000Z",
+      "snippet": "Port congestion — export delay 4 days. Revised ex-factory shifting.",
+      "fullBody": "Heads up — major port congestion at our terminal. Our freight forwarder has revised our export slot by 4 days. Please advise buyer and update the tracker.",
+      "unread": false,
+      "aiTags": [
+        "risk: port congestion",
+        "delay: 4d"
+      ],
+      "aiDraft": "Understood on the congestion. Please send revised packing schedule. We'll notify the buyer.",
+      "aiAction": "Approve 4-day delay and notify buyer"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "shipmentId": "s4",
+      "messageId": "m1",
+      "title": "Approve 2-day delay — Guangzhou Metalworks (PO-1004-792884)",
+      "source": "WhatsApp · Guangzhou Metalworks",
+      "sourceAge": "3d ago",
+      "urgency": "high",
+      "action": "Reply & Update",
+      "done": false
+    },
+    {
+      "id": "t2",
+      "shipmentId": "s7",
+      "messageId": "m2",
+      "title": "Arrange balance wire $7,350 — Foshan Precision Parts (PO-1007-P201472890)",
+      "source": "PDF · SGS · Foshan Precision Parts",
+      "sourceAge": "2d ago",
+      "urgency": "medium",
+      "action": "Initiate Wire",
+      "done": false
+    },
+    {
+      "id": "t3",
+      "shipmentId": "s8",
+      "messageId": "m3",
+      "title": "Port congestion reply needed — Guangzhou Metalworks (PO-1008-P201475383)",
+      "source": "WhatsApp · Guangzhou Metalworks",
+      "sourceAge": "3d ago",
+      "urgency": "high",
+      "action": "Reply",
+      "done": false
+    },
+    {
+      "id": "t4",
+      "shipmentId": "s13",
+      "messageId": "m4",
+      "title": "Select factory quote — PO-1013-4500010009 R (LED Display Cabinet)",
+      "source": "Costing Sheet · Shenzhen LEDPro",
+      "sourceAge": "5h ago",
+      "urgency": "medium",
+      "action": "Review Quotes",
+      "done": false
+    },
+    {
+      "id": "t5",
+      "shipmentId": "s15",
+      "messageId": "m5",
+      "title": "Approve 2-day delay — Shenzhen LEDPro (PO-1015-4500032038)",
+      "source": "WhatsApp · Shenzhen LEDPro",
+      "sourceAge": "2d ago",
+      "urgency": "high",
+      "action": "Reply & Update",
+      "done": false
+    },
+    {
+      "id": "t6",
+      "shipmentId": "s17",
+      "messageId": "m6",
+      "title": "Schedule QC inspection — Shenzhen LEDPro (PO-1017-F21-MB-002-1)",
+      "source": "Gmail · Shenzhen LEDPro",
+      "sourceAge": "1h ago",
+      "urgency": "medium",
+      "action": "Book Inspection",
+      "done": false
+    },
+    {
+      "id": "t7",
+      "shipmentId": "s19",
+      "messageId": "m7",
+      "title": "Port congestion reply needed — Hangzhou Timber Co. (PO-1019-P200920425)",
+      "source": "WhatsApp · Hangzhou Timber Co.",
+      "sourceAge": "2d ago",
+      "urgency": "high",
+      "action": "Reply",
+      "done": false
+    },
+    {
+      "id": "t8",
+      "shipmentId": "s7",
+      "messageId": null,
+      "title": "Balance payment overdue — PO-1007-P201472890 ($7,350) was due 2026-05-16",
+      "source": "Payment tracker",
+      "sourceAge": "Today",
+      "urgency": "high",
+      "action": "Send Payment",
+      "done": false
+    },
+    {
+      "id": "t9",
+      "shipmentId": "s8",
+      "messageId": null,
+      "title": "Balance payment overdue — PO-1008-P201475383 ($9,450) was due 2026-05-02",
+      "source": "Payment tracker",
+      "sourceAge": "Today",
+      "urgency": "high",
+      "action": "Send Payment",
+      "done": false
+    },
+    {
+      "id": "t10",
+      "shipmentId": "s18",
+      "messageId": null,
+      "title": "Balance payment overdue — PO-1018-4500087059 ($4,987) was due 2026-05-16",
+      "source": "Payment tracker",
+      "sourceAge": "Today",
+      "urgency": "high",
+      "action": "Send Payment",
+      "done": false
+    },
+    {
+      "id": "t11",
+      "shipmentId": "s19",
+      "messageId": null,
+      "title": "Balance payment overdue — PO-1019-P200920425 ($39,480) was due 2026-05-02",
+      "source": "Payment tracker",
+      "sourceAge": "Today",
+      "urgency": "high",
+      "action": "Send Payment",
+      "done": false
+    },
+    {
+      "id": "t12",
+      "shipmentId": "s21",
+      "messageId": null,
+      "title": "Balance payment overdue — PO-1021-P201356135 ($21,280) was due 2026-04-14",
+      "source": "Payment tracker",
+      "sourceAge": "Today",
+      "urgency": "high",
+      "action": "Send Payment",
+      "done": false
+    }
+  ]
+}

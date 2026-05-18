@@ -9,28 +9,402 @@ servers:
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: stages
+  - name: suppliers
+  - name: shipments
+  - name: payments
+  - name: quotes
+  - name: messages
+  - name: tasks
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+
+  /stages:
+    get:
+      operationId: listStages
+      tags: [stages]
+      responses:
+        "200":
+          description: Stages
+          content:
+            application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                type: array
+                items: { $ref: "#/components/schemas/Stage" }
+  /stages/reorder:
+    post:
+      operationId: reorderStages
+      tags: [stages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StageOrderInput" }
+      responses:
+        "200":
+          description: Reordered
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Stage" }
+
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      responses:
+        "200":
+          description: Suppliers with thread counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SupplierSummary" }
+
+  /shipments:
+    get:
+      operationId: listShipments
+      tags: [shipments]
+      responses:
+        "200":
+          description: All shipments with embedded payments and quotes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Shipment" }
+  /shipments/{id}:
+    patch:
+      operationId: updateShipment
+      tags: [shipments]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipmentUpdate" }
+      responses:
+        "200":
+          description: Updated shipment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+
+  /payments/{id}:
+    patch:
+      operationId: updatePayment
+      tags: [payments]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentUpdate" }
+      responses:
+        "200":
+          description: Updated payment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+
+  /shipments/{id}/select-quote:
+    post:
+      operationId: selectFactoryQuote
+      tags: [quotes]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteSelection" }
+      responses:
+        "200":
+          description: Updated quotes for shipment
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FactoryQuote" }
+
+  /messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      responses:
+        "200":
+          description: All messages newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Message" }
+    post:
+      operationId: createMessage
+      tags: [messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+  /messages/{id}:
+    patch:
+      operationId: updateMessage
+      tags: [messages]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      responses:
+        "200":
+          description: All tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Task" }
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
 
+    Stage:
+      type: object
+      required: [id, label, sortOrder]
+      properties:
+        id:        { type: string }
+        label:     { type: string }
+        sortOrder: { type: integer }
+    StageOrderInput:
+      type: object
+      required: [stageIds]
+      properties:
+        stageIds:
+          type: array
+          items: { type: string }
+
+    SupplierSummary:
+      type: object
+      required: [id, name, country, threadCount]
+      properties:
+        id:          { type: integer }
+        name:        { type: string }
+        country:     { type: string }
+        threadCount: { type: integer }
+
+    Payment:
+      type: object
+      required: [id, shipmentId, label, percent, amountUsd, paid, dueDate, sortOrder]
+      properties:
+        id:         { type: integer }
+        shipmentId: { type: integer }
+        label:      { type: string }
+        percent:    { type: integer }
+        amountUsd:  { type: integer }
+        paid:       { type: boolean }
+        dueDate:    { type: string, format: date-time }
+        sortOrder:  { type: integer }
+    PaymentUpdate:
+      type: object
+      properties:
+        paid: { type: boolean }
+
+    FactoryQuote:
+      type: object
+      required: [id, shipmentId, factory, country, unitPrice, leadDays, moq, selected, sortOrder]
+      properties:
+        id:         { type: integer }
+        shipmentId: { type: integer }
+        factory:    { type: string }
+        country:    { type: string }
+        unitPrice:  { type: number }
+        leadDays:   { type: integer }
+        moq:        { type: integer }
+        selected:   { type: boolean }
+        sortOrder:  { type: integer }
+    QuoteSelection:
+      type: object
+      required: [quoteId]
+      properties:
+        quoteId: { type: integer }
+
+    Shipment:
+      type: object
+      required:
+        - id
+        - poNumber
+        - product
+        - category
+        - supplierId
+        - supplierName
+        - customerName
+        - status
+        - currentStageId
+        - dueDate
+        - exFactoryDate
+        - destination
+        - via
+        - payments
+        - quotes
+      properties:
+        id:             { type: integer }
+        poNumber:       { type: string }
+        product:        { type: string }
+        category:       { type: string }
+        supplierId:     { type: integer }
+        supplierName:   { type: string }
+        customerName:   { type: string }
+        status:         { type: string }
+        currentStageId: { type: string }
+        dueDate:        { type: string, format: date-time }
+        exFactoryDate:  { type: string, format: date-time }
+        destination:    { type: string }
+        via:            { type: string }
+        payments:
+          type: array
+          items: { $ref: "#/components/schemas/Payment" }
+        quotes:
+          type: array
+          items: { $ref: "#/components/schemas/FactoryQuote" }
+    ShipmentUpdate:
+      type: object
+      properties:
+        status:         { type: string }
+        currentStageId: { type: string }
+
+    Message:
+      type: object
+      required:
+        - id
+        - shipmentId
+        - sender
+        - channel
+        - snippet
+        - fullBody
+        - aiDraft
+        - aiAction
+        - aiTags
+        - unread
+        - receivedAt
+      properties:
+        id:         { type: integer }
+        shipmentId: { type: integer }
+        supplierId: { type: ["integer", "null"] }
+        sender:     { type: string }
+        channel:    { type: string }
+        snippet:    { type: string }
+        fullBody:   { type: string }
+        aiDraft:    { type: string }
+        aiAction:   { type: string }
+        aiTags:
+          type: array
+          items: { type: string }
+        unread:     { type: boolean }
+        receivedAt: { type: string, format: date-time }
+    MessageInput:
+      type: object
+      required: [shipmentId, sender, channel, snippet, fullBody]
+      properties:
+        shipmentId: { type: integer }
+        supplierId: { type: ["integer", "null"] }
+        sender:     { type: string }
+        channel:    { type: string }
+        snippet:    { type: string }
+        fullBody:   { type: string }
+        aiDraft:    { type: string }
+        aiAction:   { type: string }
+        aiTags:
+          type: array
+          items: { type: string }
+    MessageUpdate:
+      type: object
+      properties:
+        unread:  { type: boolean }
+        aiDraft: { type: string }
+
+    Task:
+      type: object
+      required: [id, shipmentId, title, source, sourceAge, urgency, action, done]
+      properties:
+        id:         { type: integer }
+        shipmentId: { type: integer }
+        messageId:  { type: ["integer", "null"] }
+        title:      { type: string }
+        source:     { type: string }
+        sourceAge:  { type: string }
+        urgency:    { type: string }
+        action:     { type: string }
+        done:       { type: boolean }
+    TaskUpdate:
+      type: object
+      properties:
+        done: { type: boolean }
