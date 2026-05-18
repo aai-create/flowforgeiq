@@ -10,6 +10,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
-    "xlsx": "^0.18.5"
+    "@e965/xlsx": "^0.20.3"
   }
 }
