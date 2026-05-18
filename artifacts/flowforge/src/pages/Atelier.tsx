@@ -186,6 +186,34 @@ export function Atelier() {
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
+  const [aiMessages, setAiMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
+
+  const sendMessage = () => {
+    const text = aiInput.trim();
+    if (!text) return;
+    const lower = text.toLowerCase();
+    const reply = lower.includes("wire") || lower.includes("payment")
+      ? "I'll prepare the wire transfer details for PO-0160 ($21,700 to Hangzhou Timber Co.). Shall I also draft the remittance advice email?"
+      : lower.includes("draft") || lower.includes("repl")
+      ? "Drafting replies for PO-0142 (2-day delay approval) and PO-0165 (port congestion). I'll have both ready in a moment."
+      : lower.includes("tianjin") || lower.includes("delay")
+      ? "The Tianjin port congestion is adding an estimated 4-day delay to PO-0165. I can draft an approval message to Tianjin Wire Works — want me to proceed?"
+      : lower.includes("quote") || lower.includes("po-0168")
+      ? "PO-0168 has 3 factory quotes awaiting review. Guangzhou Metalworks is lowest at $7,230 vs the $7,500 target. Want me to pre-select it?"
+      : "I'll look into that across your active POs. Give me a moment to check the latest data.";
+    setAiMessages(prev => [...prev, { role: "user", text }, { role: "ai", text: reply }]);
+    setAiInput("");
+  };
+
+  const handleChipClick = (chip: string) => {
+    setAiInput(chip);
+  };
+
+  const focusShipment = (shipmentId: string) => {
+    setActiveShipmentId(shipmentId);
+    document.getElementById(`shipment-${shipmentId}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
 
   const toggleTask = (id: string) => {
     const t = tasks.find(x => x.id === id);
@@ -309,8 +337,9 @@ export function Atelier() {
               <div className="space-y-1">
                 {tasks.map(task => (
                   <div key={task.id}
-                    className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white hover:shadow-sm border border-transparent hover:border-[#E5EAF0] cursor-pointer transition-all ${task.done ? "opacity-50" : ""}`}>
-                    <button onClick={() => toggleTask(task.id)}
+                    onClick={() => focusShipment(task.shipmentId)}
+                    className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white hover:shadow-sm border border-transparent hover:border-[#9000FF]/20 cursor-pointer transition-all ${task.done ? "opacity-50" : ""} ${activeShipmentId === task.shipmentId ? "bg-white border-[#9000FF]/20 shadow-sm" : ""}`}>
+                    <button onClick={e => { e.stopPropagation(); toggleTask(task.id); }}
                       className={`mt-0.5 shrink-0 transition-colors ${task.done ? "text-[#9000FF]" : "text-[#D6E3EB] hover:text-[#9000FF]"}`}>
                       {task.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
                     </button>
@@ -373,7 +402,8 @@ export function Atelier() {
 
                 return (
                   <div key={shipment.id}
-                    onClick={() => setActiveShipmentId(isActive ? null : shipment.id)}
+                    id={`shipment-${shipment.id}`}
+                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); setMoreMenuId(null); }}
                     className={`border rounded-xl p-4 transition-all cursor-pointer ${isActive ? "border-[#9000FF]/30 shadow-md bg-[#FAFBFF]" : "border-[#E5EAF0] bg-white hover:border-[#D6E3EB] hover:shadow-sm"}`}>
 
                     {/* Header row */}
@@ -498,17 +528,46 @@ export function Atelier() {
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <button className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
+                          <button
+                            onClick={e => { e.stopPropagation(); window.location.assign(import.meta.env.BASE_URL); }}
+                            className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
                             <MessageCircle className="w-3 h-3" /> Open Threads
                           </button>
-                          <button className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                          <button
+                            onClick={e => { e.stopPropagation(); window.location.assign(import.meta.env.BASE_URL); }}
+                            className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                             <FileText className="w-3 h-3" /> View Docs
                           </button>
-                          <button onClick={()=>advanceStage(shipment.id)} className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                          <button
+                            onClick={e => { e.stopPropagation(); advanceStage(shipment.id); }}
+                            className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                             <MapPin className="w-3 h-3" /> Advance Stage
                           </button>
                         </div>
-                        <button className="text-[#5E687B] hover:text-[#212833] p-1"><MoreHorizontal className="w-4 h-4" /></button>
+                        <div className="relative">
+                          <button
+                            onClick={e => { e.stopPropagation(); setMoreMenuId(moreMenuId === shipment.id ? null : shipment.id); }}
+                            className="text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] p-1 rounded transition-colors">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                          {moreMenuId === shipment.id && (
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
+                              {[
+                                { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
+                                { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
+                                { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
+                                { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); } },
+                              ].map(({ label, action }) => (
+                                <button key={label} onClick={action}
+                                  className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#212833] transition-colors">
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -546,10 +605,10 @@ export function Atelier() {
                   <span className="font-medium text-[#212833]">PO-0160</span> QC has passed — balance wire of $21,700 needed to release the container.
                 </p>
                 <div className="mt-2.5 flex gap-2">
-                  <button className="text-[9px] bg-[#9000FF] text-white px-2.5 py-1 rounded-full font-semibold hover:bg-[#7A00D9] transition-colors">
+                  <button onClick={() => handleChipClick("Draft all replies for overdue POs")} className="text-[9px] bg-[#9000FF] text-white px-2.5 py-1 rounded-full font-semibold hover:bg-[#7A00D9] transition-colors">
                     Draft all replies
                   </button>
-                  <button className="text-[9px] bg-[#F0F4F8] text-[#5E687B] px-2.5 py-1 rounded-full font-medium hover:bg-[#E5EAF0] transition-colors">
+                  <button onClick={() => handleChipClick("Show payment plan for all active POs")} className="text-[9px] bg-[#F0F4F8] text-[#5E687B] px-2.5 py-1 rounded-full font-medium hover:bg-[#E5EAF0] transition-colors">
                     Show payment plan
                   </button>
                 </div>
@@ -573,10 +632,28 @@ export function Atelier() {
                 </div>
               ))}
 
+              {/* Additional messages */}
+              {aiMessages.map((msg, i) => (
+                <div key={`extra-${i}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {msg.role === "ai" && (
+                    <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0 mt-1 mr-2">
+                      <Sparkles className="w-3 h-3 text-[#9000FF]" />
+                    </div>
+                  )}
+                  <div className={`max-w-[88%] px-3 py-2.5 rounded-2xl text-[12px] leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-[#F0F4F8] text-[#212833] rounded-tr-sm"
+                      : "bg-white border border-[#E5EAF0] shadow-sm text-[#212833] rounded-tl-sm"
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+
               {/* Action chips */}
               <div className="flex flex-wrap gap-2 ml-8">
                 {["Draft reply to Guangzhou", "Approve Tianjin delay", "Initiate wire $21,700", "Show PO-0168 quotes"].map(c => (
-                  <button key={c} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
+                  <button key={c} onClick={() => handleChipClick(c)} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
                     {c}
                   </button>
                 ))}
@@ -591,9 +668,10 @@ export function Atelier() {
                 <Paperclip className="w-4 h-4" />
               </button>
               <input type="text" value={aiInput} onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") sendMessage(); }}
                 placeholder="Ask about a shipment, supplier..."
                 className="flex-1 bg-transparent text-xs h-10 focus:outline-none placeholder:text-[#A0ABB8]" />
-              <button className={`h-7 w-7 rounded-lg mr-1 shrink-0 flex items-center justify-center transition-colors ${aiInput.trim() ? "bg-[#9000FF] hover:bg-[#7A00D9]" : "bg-[#E5EAF0]"}`}>
+              <button onClick={sendMessage} className={`h-7 w-7 rounded-lg mr-1 shrink-0 flex items-center justify-center transition-colors ${aiInput.trim() ? "bg-[#9000FF] hover:bg-[#7A00D9]" : "bg-[#E5EAF0]"}`}>
                 <Send className={`w-3.5 h-3.5 ${aiInput.trim() ? "text-white" : "text-[#9E9FAE]"}`} />
               </button>
             </div>
