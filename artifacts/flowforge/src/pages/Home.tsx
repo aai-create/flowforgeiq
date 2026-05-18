@@ -17,7 +17,7 @@ import {
   selectFactoryQuote, reorderStages, createMessage,
   useListDocuments, getListDocumentsQueryKey,
 } from "@workspace/api-client-react";
-import type { DocumentWithExtraction } from "@workspace/api-client-react";
+import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
@@ -918,27 +918,101 @@ function DocsPanel({ shipmentId }: { shipmentId: string }) {
             </div>
           )}
           <div className="flex flex-col gap-2">
-            {docs.map(doc => (
-              <button key={doc.id} onClick={() => setPreview(doc)}
-                className="flex items-center gap-3 px-3 py-2.5 bg-white border border-[#E5EAF0] rounded-lg hover:border-[#9000FF]/25 hover:shadow-sm transition-all text-left">
-                <div className={`w-8 h-8 rounded-md border flex items-center justify-center shrink-0 ${DocMimeBg(doc.mimeType)}`}>
-                  <DocMimeIcon mimeType={doc.mimeType} size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-[#212833] truncate">{doc.fileName}</div>
-                  <div className="flex items-center gap-2 text-[9px] text-[#5E687B] mt-0.5">
-                    <DocStatusBadge status={doc.status} />
-                    {doc.extraction && (
-                      <span>{Math.round(doc.extraction.confidence * 100)}% confidence</span>
-                    )}
+            {docs.map(doc => {
+              const fields = doc.extraction?.extractedFields as Record<string, unknown> | undefined;
+              const docType = fields?.documentType as string | undefined;
+              const keyLabel = fields?.totalAmount != null
+                ? `${fields.currency ?? ""}${fields.totalAmount}`.trim()
+                : fields?.eta
+                  ? `ETA ${fields.eta}`
+                  : fields?.etd
+                    ? `ETD ${fields.etd}`
+                    : fields?.qcResult
+                      ? String(fields.qcResult)
+                      : null;
+              const confidence = doc.extraction?.confidence;
+              const confidenceCls = confidence == null ? "" : confidence >= 0.8 ? "text-emerald-600 bg-emerald-50 border-emerald-200" : confidence >= 0.5 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-red-600 bg-red-50 border-red-200";
+              return (
+                <button key={doc.id} onClick={() => setPreview(doc)}
+                  className="flex items-center gap-3 px-3 py-2.5 bg-white border border-[#E5EAF0] rounded-lg hover:border-[#9000FF]/25 hover:shadow-sm transition-all text-left">
+                  <div className={`w-8 h-8 rounded-md border flex items-center justify-center shrink-0 ${DocMimeBg(doc.mimeType)}`}>
+                    <DocMimeIcon mimeType={doc.mimeType} size={14} />
                   </div>
-                </div>
-                <Eye size={12} className="text-[#C0C8D4] shrink-0"/>
-              </button>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-medium text-[#212833] truncate">{doc.fileName}</span>
+                      {docType && (
+                        <span className="shrink-0 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#F0F0FF] text-[#9000FF] border border-[#9000FF]/15">{docType}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[9px] text-[#5E687B]">
+                      <DocStatusBadge status={doc.status} />
+                      {keyLabel && (
+                        <span className="font-medium text-[#212833] truncate max-w-[80px]">{keyLabel}</span>
+                      )}
+                      {confidence != null && (
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${confidenceCls}`}>
+                          {Math.round(confidence * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Eye size={12} className="text-[#C0C8D4] shrink-0"/>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reconciliation chips — surfaces document flags inline in the message thread
+// ─────────────────────────────────────────────────────────────────────────────
+function ReconciliationChips({ shipmentId }: { shipmentId: string }) {
+  const numericId = Number(shipmentId);
+  const qParams = { shipmentId: Number.isNaN(numericId) ? undefined : numericId };
+  const { data: apiDocs } = useListDocuments(
+    qParams,
+    { query: { queryKey: getListDocumentsQueryKey(qParams), staleTime: 30000 } }
+  );
+  const docs = apiDocs ?? [];
+
+  type FindingWithMeta = { finding: ReconciliationFinding; docName: string; docId: number };
+  const findings: FindingWithMeta[] = docs.flatMap(doc =>
+    (doc.extraction?.reconciliationFindings ?? []).map(f => ({
+      finding: f,
+      docName: doc.fileName,
+      docId: doc.id,
+    }))
+  );
+
+  if (findings.length === 0) return null;
+
+  return (
+    <div className="mb-3 flex flex-wrap gap-1.5">
+      {findings.map(({ finding: f, docName }, i) => {
+        const severity = f.severity ?? "warning";
+        const chipCls = severity === "error"
+          ? "bg-red-50 border-red-200 text-red-700"
+          : "bg-amber-50 border-amber-200 text-amber-700";
+        const icon = severity === "error"
+          ? <AlertCircle size={9} className="shrink-0 mt-px"/>
+          : <AlertCircle size={9} className="shrink-0 mt-px text-amber-500"/>;
+        const label = f.type ?? "mismatch";
+        const detail = f.expected != null && f.actual != null
+          ? `expected ${f.expected}, got ${f.actual}`
+          : f.field ?? "";
+        return (
+          <span key={i} className={`inline-flex items-start gap-1 text-[9px] font-semibold px-2 py-1 rounded-full border ${chipCls}`}
+            title={`${docName}: ${label}${detail ? " — " + detail : ""}`}>
+            {icon}
+            <span>{label}{detail ? `: ${detail}` : ""}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -1519,6 +1593,7 @@ export default function Home() {
                       {repliedIds.has(activeMessage.id)&&<span className="ml-auto text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
                     </div>
                     <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
+                    {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
                     {activeMessage.aiAction&&(
                       <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">
                         <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
