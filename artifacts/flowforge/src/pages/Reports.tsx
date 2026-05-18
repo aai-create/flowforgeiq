@@ -23,6 +23,9 @@ import {
 import { shortDate } from "@/lib/adapters";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Matches the project-wide demo seed date (see scripts/src/build-seed-data.ts and adapters.ts).
+// All shipment dates are shifted relative to this anchor, so runtime Date.now() would make
+// every bucket appear "overdue". Update here and in adapters.ts if the seed anchor changes.
 const TODAY = new Date("2026-05-18T00:00:00Z");
 
 function fmtUsd(n: number) {
@@ -227,6 +230,8 @@ const pipelineChartConfig: ChartConfig = {
 };
 
 function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[]; stageOrder: { id: string; label: string }[] }) {
+  // shipment.status is the authoritative backend field (set by the seed/API layer based on
+  // delay flags and stage progress). Using it directly avoids divergence from the source of truth.
   const onTime  = shipments.filter(s => s.status === "on-track").length;
   const atRisk  = shipments.filter(s => s.status === "at-risk").length;
   const delayed = shipments.filter(s => s.status === "delayed").length;
