@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "oEk5lB0XsL7acdJS7t-3l"
+uri = "file://attached_assets/flowforge-logo-branded.png"
+type = "image"
+title = "flowforge-logo-branded"
