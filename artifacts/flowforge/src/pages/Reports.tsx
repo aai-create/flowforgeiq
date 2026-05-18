@@ -1,20 +1,27 @@
 import React, { useState, useMemo } from "react";
 import {
   DollarSign, TrendingUp, Users, ListTodo,
-  ChevronDown, ChevronUp, ArrowUpRight, Clock,
-  CheckCircle2, AlertCircle, BarChart3, Package,
-  ChevronsUpDown, RefreshCw,
+  ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
+  ChevronsUpDown, RefreshCw, Clock, CheckCircle2,
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer,
+} from "recharts";
 import {
   useListShipments,
   useListTasks,
   useListSuppliers,
   useListStages,
 } from "@workspace/api-client-react";
-import type { Shipment, Task } from "@workspace/api-client-react";
+import type { Shipment, Task, SupplierSummary } from "@workspace/api-client-react";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { shortDate } from "@/lib/adapters";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 
 const TODAY = new Date("2026-05-18T00:00:00Z");
 
@@ -30,18 +37,9 @@ function daysDiff(iso: string) {
 }
 
 function trafficLight(days: number) {
-  if (days < 0)  return { bar: "bg-red-500",    text: "text-red-600",    badge: "bg-red-50 text-red-700 border-red-100",    label: "Overdue"  };
-  if (days <= 7) return { bar: "bg-amber-500",  text: "text-amber-600",  badge: "bg-amber-50 text-amber-700 border-amber-100",  label: `${days}d`  };
-  return               { bar: "bg-emerald-500", text: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700 border-emerald-100", label: `${days}d` };
-}
-
-// ─── Shared mini bar component ───────────────────────────────────────────────
-function MiniBar({ pct, color }: { pct: number; color: string }) {
-  return (
-    <div className="flex-1 h-1.5 bg-[#F0F4F8] rounded-full overflow-hidden">
-      <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(pct, 100)}%`, transition: "width 0.6s ease" }} />
-    </div>
-  );
+  if (days < 0)  return { badge: "bg-red-50 text-red-700 border-red-100",       label: `${Math.abs(days)}d late` };
+  if (days <= 7) return { badge: "bg-amber-50 text-amber-700 border-amber-100", label: `${days}d`               };
+  return               { badge: "bg-emerald-50 text-emerald-700 border-emerald-100", label: `${days}d`          };
 }
 
 // ─── SortableHeader ──────────────────────────────────────────────────────────
@@ -69,27 +67,16 @@ function SortHeader({
 }
 
 // ─── ReportCard ──────────────────────────────────────────────────────────────
-interface ReportCardProps {
-  id: string;
-  icon: React.ElementType;
-  title: string;
-  iconColor: string;
-  iconBg: string;
-  kpi: React.ReactNode;
-  subtitle: string;
-  expanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
-
-function ReportCard({ icon: Icon, title, iconColor, iconBg, kpi, subtitle, expanded, onToggle, children }: ReportCardProps) {
+function ReportCard({
+  icon: Icon, title, iconColor, iconBg, kpi, subtitle, expanded, onToggle, children,
+}: {
+  icon: React.ElementType; title: string; iconColor: string; iconBg: string;
+  kpi: React.ReactNode; subtitle: string;
+  expanded: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
   return (
     <div className={`border rounded-xl bg-white transition-all ${expanded ? "border-[#9000FF]/25 shadow-md" : "border-[#E5EAF0] hover:border-[#D6E3EB] hover:shadow-sm"}`}>
-      {/* Collapsed header — always visible */}
-      <button
-        className="w-full text-left p-5 flex items-center gap-4"
-        onClick={onToggle}
-      >
+      <button className="w-full text-left p-5 flex items-center gap-4" onClick={onToggle}>
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
@@ -98,12 +85,10 @@ function ReportCard({ icon: Icon, title, iconColor, iconBg, kpi, subtitle, expan
           <div className="text-xl font-bold text-[#212833] leading-none">{kpi}</div>
           <div className="text-[11px] text-[#9E9FAE] mt-0.5">{subtitle}</div>
         </div>
-        <div className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${expanded ? "border-[#9000FF]/30 bg-[#9000FF]/5 text-[#9000FF]" : "border-[#E5EAF0] text-[#9E9FAE]"}`}>
+        <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${expanded ? "border-[#9000FF]/30 bg-[#9000FF]/5 text-[#9000FF]" : "border-[#E5EAF0] text-[#9E9FAE]"}`}>
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </div>
       </button>
-
-      {/* Expanded detail */}
       {expanded && (
         <div className="border-t border-[#E5EAF0] p-5 pt-4">
           {children}
@@ -114,59 +99,63 @@ function ReportCard({ icon: Icon, title, iconColor, iconBg, kpi, subtitle, expan
 }
 
 // ─── Finance Card ─────────────────────────────────────────────────────────────
+const financeChartConfig: ChartConfig = {
+  paid:   { label: "Paid",   color: "#10B981" },
+  unpaid: { label: "Unpaid", color: "#9000FF" },
+};
+
 function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
   const allPayments = useMemo(() => shipments.flatMap(s => s.payments), [shipments]);
 
   const totalUnpaid  = allPayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
   const totalPaid    = allPayments.filter(p =>  p.paid).reduce((s, p) => s + p.amountUsd, 0);
-  const totalExposure = totalUnpaid + totalPaid;
 
-  const buckets = useMemo(() => {
-    const overdue: typeof allPayments = [];
-    const within30: typeof allPayments = [];
-    const within60: typeof allPayments = [];
-    const within90: typeof allPayments = [];
-    for (const p of allPayments.filter(x => !x.paid)) {
+  // Bucket payments by due-date proximity
+  const chartData = useMemo(() => {
+    const buckets: Record<string, { paid: number; unpaid: number }> = {
+      "Overdue":    { paid: 0, unpaid: 0 },
+      "≤ 30 days":  { paid: 0, unpaid: 0 },
+      "31–60 days": { paid: 0, unpaid: 0 },
+      "61–90 days": { paid: 0, unpaid: 0 },
+    };
+    for (const p of allPayments) {
       const d = daysDiff(p.dueDate);
-      if (d < 0)       overdue.push(p);
-      else if (d <= 30) within30.push(p);
-      else if (d <= 60) within60.push(p);
-      else if (d <= 90) within90.push(p);
+      const key =
+        d < 0         ? "Overdue"
+        : d <= 30     ? "≤ 30 days"
+        : d <= 60     ? "31–60 days"
+        : d <= 90     ? "61–90 days"
+        : null;
+      if (!key) continue;
+      if (p.paid) buckets[key].paid   += p.amountUsd;
+      else        buckets[key].unpaid += p.amountUsd;
     }
-    return { overdue, within30, within60, within90 };
+    return Object.entries(buckets).map(([name, v]) => ({ name, ...v }));
   }, [allPayments]);
 
+  // Unpaid ranked by supplier
   const bySupplier = useMemo(() => {
     const map = new Map<string, { supplier: string; unpaid: number; overdue: number }>();
     for (const s of shipments) {
       for (const p of s.payments) {
         if (p.paid) continue;
-        const existing = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0 };
-        existing.unpaid += p.amountUsd;
-        if (daysDiff(p.dueDate) < 0) existing.overdue += p.amountUsd;
-        map.set(s.supplierName, existing);
+        const e = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0 };
+        e.unpaid += p.amountUsd;
+        if (daysDiff(p.dueDate) < 0) e.overdue += p.amountUsd;
+        map.set(s.supplierName, e);
       }
     }
     return [...map.values()].sort((a, b) => b.unpaid - a.unpaid);
   }, [shipments]);
 
-  const bucketRows = [
-    { label: "Overdue",    items: buckets.overdue,  barColor: "bg-red-500",    textColor: "text-red-600"    },
-    { label: "≤ 30 days",  items: buckets.within30, barColor: "bg-amber-500",  textColor: "text-amber-600"  },
-    { label: "31–60 days", items: buckets.within60, barColor: "bg-blue-400",   textColor: "text-blue-600"   },
-    { label: "61–90 days", items: buckets.within90, barColor: "bg-emerald-400",textColor: "text-emerald-600"},
-  ];
-
-  const maxBucket = Math.max(...bucketRows.map(b => b.items.reduce((s, p) => s + p.amountUsd, 0)), 1);
-
   return (
     <div className="space-y-5">
-      {/* Headline KPIs */}
+      {/* KPI trio */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Total Unpaid",  value: fmtUsd(totalUnpaid),  color: "text-[#212833]" },
-          { label: "Total Paid",    value: fmtUsd(totalPaid),    color: "text-emerald-600" },
-          { label: "Total Exposure",value: fmtUsd(totalExposure),color: "text-[#5E687B]"  },
+          { label: "Total Unpaid",  value: fmtUsd(totalUnpaid),           color: "text-[#212833]"   },
+          { label: "Total Paid",    value: fmtUsd(totalPaid),             color: "text-emerald-600" },
+          { label: "Total Exposure",value: fmtUsd(totalUnpaid + totalPaid), color: "text-[#5E687B]" },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3 text-center">
             <div className={`text-lg font-bold ${color}`}>{value}</div>
@@ -175,26 +164,28 @@ function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
         ))}
       </div>
 
-      {/* Cash flow buckets */}
+      {/* Paid vs Unpaid bar chart per time bucket */}
       <div>
-        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">Cash Flow by Due Date</div>
-        <div className="space-y-2">
-          {bucketRows.map(({ label, items, barColor, textColor }) => {
-            const total = items.reduce((s, p) => s + p.amountUsd, 0);
-            const pct   = (total / maxBucket) * 100;
-            return (
-              <div key={label} className="flex items-center gap-3 text-[12px]">
-                <span className="w-20 shrink-0 text-[#5E687B]">{label}</span>
-                <MiniBar pct={pct} color={barColor} />
-                <span className={`w-16 text-right font-semibold shrink-0 ${textColor}`}>{fmtUsd(total)}</span>
-                <span className="w-8 text-right text-[10px] text-[#9E9FAE] shrink-0">({items.length})</span>
-              </div>
-            );
-          })}
+        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-3">
+          Cash Flow by Due Date — Paid vs Unpaid
+        </div>
+        <ChartContainer config={financeChartConfig} className="h-[180px] w-full">
+          <BarChart data={chartData} barCategoryGap="30%" barGap={4}>
+            <CartesianGrid vertical={false} stroke="#F0F4F8" />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#5E687B" }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={v => fmtUsd(Number(v))} tick={{ fontSize: 10, fill: "#9E9FAE" }} axisLine={false} tickLine={false} width={52} />
+            <ChartTooltip content={<ChartTooltipContent formatter={(v, n) => [`${fmtUsd(Number(v))}`, n === "paid" ? "Paid" : "Unpaid"]} />} />
+            <Bar dataKey="paid"   fill="var(--color-paid)"   radius={[3, 3, 0, 0]} />
+            <Bar dataKey="unpaid" fill="var(--color-unpaid)" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ChartContainer>
+        <div className="flex items-center gap-4 justify-center mt-1">
+          <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Paid</span>
+          <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-[#9000FF] inline-block" />Unpaid</span>
         </div>
       </div>
 
-      {/* Unpaid by supplier */}
+      {/* Unpaid by supplier table */}
       <div>
         <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">Unpaid by Supplier</div>
         {bySupplier.length === 0
@@ -203,9 +194,9 @@ function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="border-b border-[#E5EAF0]">
-                  <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-0 py-2">Supplier</th>
-                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-0 py-2">Unpaid</th>
-                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-0 py-2 pr-0">Overdue</th>
+                  <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Supplier</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Unpaid</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Overdue</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,7 +204,7 @@ function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
                   <tr key={row.supplier} className="border-b border-[#F0F4F8] last:border-0">
                     <td className="py-2 text-[#212833] font-medium">{row.supplier}</td>
                     <td className="py-2 text-right font-semibold text-[#212833]">{fmtUsd(row.unpaid)}</td>
-                    <td className="py-2 text-right pr-0">
+                    <td className="py-2 text-right">
                       {row.overdue > 0
                         ? <span className="text-red-600 font-semibold">{fmtUsd(row.overdue)}</span>
                         : <span className="text-[#9E9FAE]">—</span>
@@ -231,29 +222,25 @@ function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
 }
 
 // ─── Pipeline Card ────────────────────────────────────────────────────────────
-function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[]; stageOrder: string[] }) {
-  const onTime   = shipments.filter(s => s.status === "on-track").length;
-  const atRisk   = shipments.filter(s => s.status === "at-risk").length;
-  const delayed  = shipments.filter(s => s.status === "delayed").length;
-  const total    = shipments.length || 1;
+const pipelineChartConfig: ChartConfig = {
+  count: { label: "Shipments", color: "#9000FF" },
+};
 
-  const stageCounts = useMemo(() => {
-    const map = new Map<string, { count: number; label: string }>();
+function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[]; stageOrder: { id: string; label: string }[] }) {
+  const onTime  = shipments.filter(s => s.status === "on-track").length;
+  const atRisk  = shipments.filter(s => s.status === "at-risk").length;
+  const delayed = shipments.filter(s => s.status === "delayed").length;
+  const total   = shipments.length || 1;
+
+  const stageChartData = useMemo(() => {
+    const countById = new Map<string, number>();
     for (const s of shipments) {
-      const e = map.get(s.currentStageId) ?? { count: 0, label: s.currentStageId };
-      e.count++;
-      map.set(s.currentStageId, e);
+      countById.set(s.currentStageId, (countById.get(s.currentStageId) ?? 0) + 1);
     }
-    return map;
-  }, [shipments]);
-
-  const sortedStages = useMemo(() => {
     return stageOrder
-      .map(id => ({ id, count: stageCounts.get(id)?.count ?? 0 }))
+      .map(({ id, label }) => ({ name: label.length > 12 ? label.slice(0, 11) + "…" : label, count: countById.get(id) ?? 0 }))
       .filter(s => s.count > 0);
-  }, [stageOrder, stageCounts]);
-
-  const maxCount = Math.max(...sortedStages.map(s => s.count), 1);
+  }, [shipments, stageOrder]);
 
   const exFactoryList = useMemo(() => {
     return [...shipments]
@@ -267,11 +254,11 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
       {/* Status breakdown */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "On Track", count: onTime,  pct: Math.round((onTime / total)  * 100), bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-700", dot: "bg-emerald-500" },
-          { label: "At Risk",  count: atRisk,  pct: Math.round((atRisk / total)  * 100), bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-700",   dot: "bg-amber-500"   },
-          { label: "Delayed",  count: delayed, pct: Math.round((delayed / total) * 100), bg: "bg-red-50",     border: "border-red-100",     text: "text-red-700",     dot: "bg-red-500"     },
-        ].map(({ label, count, pct, bg, border, text, dot }) => (
-          <div key={label} className={`${bg} border ${border} rounded-lg p-3`}>
+          { label: "On Track", count: onTime,  pct: Math.round((onTime / total)  * 100), bg: "bg-emerald-50 border-emerald-100", dot: "bg-emerald-500", text: "text-emerald-700" },
+          { label: "At Risk",  count: atRisk,  pct: Math.round((atRisk / total)  * 100), bg: "bg-amber-50 border-amber-100",   dot: "bg-amber-500",   text: "text-amber-700"   },
+          { label: "Delayed",  count: delayed, pct: Math.round((delayed / total) * 100), bg: "bg-red-50 border-red-100",       dot: "bg-red-500",     text: "text-red-700"     },
+        ].map(({ label, count, pct, bg, dot, text }) => (
+          <div key={label} className={`border rounded-lg p-3 ${bg}`}>
             <div className="flex items-center gap-1.5 mb-1">
               <div className={`w-2 h-2 rounded-full ${dot}`} />
               <span className={`text-[10px] font-bold ${text} uppercase tracking-wide`}>{label}</span>
@@ -282,21 +269,22 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
         ))}
       </div>
 
-      {/* Stage funnel */}
+      {/* Stage distribution bar chart */}
       <div>
-        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">Stage Distribution</div>
-        <div className="space-y-1.5">
-          {sortedStages.map(({ id, count }) => {
-            const pct = (count / maxCount) * 100;
-            return (
-              <div key={id} className="flex items-center gap-3 text-[12px]">
-                <span className="w-32 shrink-0 truncate text-[#5E687B] text-[11px]">{id.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
-                <MiniBar pct={pct} color="bg-[#9000FF]/50" />
-                <span className="w-6 text-right font-semibold text-[#212833] shrink-0">{count}</span>
-              </div>
-            );
-          })}
-        </div>
+        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-3">Stage Distribution</div>
+        <ChartContainer config={pipelineChartConfig} className="h-[160px] w-full">
+          <BarChart data={stageChartData} layout="vertical" barCategoryGap="25%">
+            <CartesianGrid horizontal={false} stroke="#F0F4F8" />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: "#9E9FAE" }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#5E687B" }} axisLine={false} tickLine={false} width={80} />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Bar dataKey="count" fill="var(--color-count)" radius={[0, 3, 3, 0]}>
+              {stageChartData.map((entry, index) => (
+                <Cell key={index} fill={`rgba(144, 0, 255, ${0.3 + (entry.count / (Math.max(...stageChartData.map(d => d.count)) || 1)) * 0.7})`} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
       </div>
 
       {/* Ex-factory countdown */}
@@ -326,7 +314,7 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
                   <td className="py-1.5 text-right text-[#5E687B]">{shortDate(s.exFactoryDate)}</td>
                   <td className="py-1.5 text-right">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tl.badge}`}>
-                      {days < 0 ? `${Math.abs(days)}d late` : tl.label}
+                      {tl.label}
                     </span>
                   </td>
                 </tr>
@@ -341,6 +329,7 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
 
 // ─── Suppliers Card ───────────────────────────────────────────────────────────
 interface SupplierRow {
+  id: number;
   name: string;
   country: string;
   active: number;
@@ -349,63 +338,73 @@ interface SupplierRow {
   avgUnitPrice: number | null;
 }
 
-function SuppliersCardContent({ shipments, tasks }: { shipments: Shipment[]; tasks: Task[] }) {
+function SuppliersCardContent({
+  shipments, tasks, suppliers,
+}: { shipments: Shipment[]; tasks: Task[]; suppliers: SupplierSummary[] }) {
   const [sort, setSort] = useState<{ col: string; dir: SortDir }>({ col: "active", dir: "desc" });
 
   const rows: SupplierRow[] = useMemo(() => {
-    const map = new Map<string, SupplierRow>();
+    const countryById = new Map(suppliers.map(s => [s.id, s.country]));
+
+    const map = new Map<number, SupplierRow>();
     for (const s of shipments) {
-      const r = map.get(s.supplierName) ?? {
-        name: s.supplierName, country: "CN",
+      const r = map.get(s.supplierId) ?? {
+        id: s.supplierId,
+        name: s.supplierName,
+        country: countryById.get(s.supplierId) ?? "—",
         active: 0, onTimePct: 0, openTasks: 0, avgUnitPrice: null,
       };
       r.active++;
-      map.set(s.supplierName, r);
+      map.set(s.supplierId, r);
     }
+
     // on-time %
-    const onTimeCount = new Map<string, { on: number; total: number }>();
+    const onTimeCount = new Map<number, { on: number; total: number }>();
     for (const s of shipments) {
-      const e = onTimeCount.get(s.supplierName) ?? { on: 0, total: 0 };
+      const e = onTimeCount.get(s.supplierId) ?? { on: 0, total: 0 };
       e.total++;
       if (s.status === "on-track") e.on++;
-      onTimeCount.set(s.supplierName, e);
+      onTimeCount.set(s.supplierId, e);
     }
-    for (const [name, { on, total }] of onTimeCount) {
-      const r = map.get(name);
+    for (const [id, { on, total }] of onTimeCount) {
+      const r = map.get(id);
       if (r) r.onTimePct = total > 0 ? Math.round((on / total) * 100) : 0;
     }
-    // open tasks per supplier (match by shipment)
-    const supplierShipIds = new Map<string, Set<number>>();
+
+    // open tasks per supplier keyed by supplierId on the shipment
+    const supplierShipIds = new Map<number, Set<number>>();
     for (const s of shipments) {
-      const set = supplierShipIds.get(s.supplierName) ?? new Set();
+      const set = supplierShipIds.get(s.supplierId) ?? new Set();
       set.add(s.id);
-      supplierShipIds.set(s.supplierName, set);
+      supplierShipIds.set(s.supplierId, set);
     }
     for (const t of tasks) {
       if (t.done) continue;
-      for (const [name, ids] of supplierShipIds) {
+      for (const [suppId, ids] of supplierShipIds) {
         if (ids.has(t.shipmentId)) {
-          const r = map.get(name);
+          const r = map.get(suppId);
           if (r) r.openTasks++;
         }
       }
     }
+
     // avg unit price from selected quotes
-    const priceAccum = new Map<string, { sum: number; n: number }>();
+    const priceAccum = new Map<number, { sum: number; n: number }>();
     for (const s of shipments) {
       const selected = s.quotes.find(q => q.selected);
       if (!selected) continue;
-      const e = priceAccum.get(s.supplierName) ?? { sum: 0, n: 0 };
+      const e = priceAccum.get(s.supplierId) ?? { sum: 0, n: 0 };
       e.sum += selected.unitPrice;
       e.n++;
-      priceAccum.set(s.supplierName, e);
+      priceAccum.set(s.supplierId, e);
     }
-    for (const [name, { sum, n }] of priceAccum) {
-      const r = map.get(name);
+    for (const [id, { sum, n }] of priceAccum) {
+      const r = map.get(id);
       if (r) r.avgUnitPrice = n > 0 ? sum / n : null;
     }
+
     return [...map.values()];
-  }, [shipments, tasks]);
+  }, [shipments, tasks, suppliers]);
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -415,9 +414,7 @@ function SuppliersCardContent({ shipments, tasks }: { shipments: Shipment[]; tas
       if (sort.col === "onTimePct")  return mul * (a.onTimePct - b.onTimePct);
       if (sort.col === "openTasks")  return mul * (a.openTasks - b.openTasks);
       if (sort.col === "avgUnit") {
-        const ap = a.avgUnitPrice ?? -1;
-        const bp = b.avgUnitPrice ?? -1;
-        return mul * (ap - bp);
+        return mul * ((a.avgUnitPrice ?? -1) - (b.avgUnitPrice ?? -1));
       }
       return 0;
     });
@@ -431,50 +428,51 @@ function SuppliersCardContent({ shipments, tasks }: { shipments: Shipment[]; tas
   }
 
   return (
-    <div>
-      <table className="w-full text-[12px]">
-        <thead>
-          <tr className="border-b border-[#E5EAF0]">
-            <SortHeader label="Supplier"   col="name"      sort={sort} onSort={toggleSort} />
-            <SortHeader label="Active POs" col="active"    sort={sort} onSort={toggleSort} />
-            <SortHeader label="On-Time %"  col="onTimePct" sort={sort} onSort={toggleSort} />
-            <SortHeader label="Open Tasks" col="openTasks" sort={sort} onSort={toggleSort} />
-            <SortHeader label="Avg Unit $" col="avgUnit"   sort={sort} onSort={toggleSort} />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(row => {
-            const otColor = row.onTimePct >= 70 ? "text-emerald-600" : row.onTimePct >= 40 ? "text-amber-600" : "text-red-600";
-            return (
-              <tr key={row.name} className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] transition-colors">
-                <td className="px-3 py-2.5 font-medium text-[#212833]">
-                  <span>{row.name}</span>
-                  <span className="ml-1.5 text-[9px] text-[#9E9FAE] font-normal">{row.country}</span>
-                </td>
-                <td className="px-3 py-2.5 text-center">
-                  <span className="text-[#212833] font-semibold">{row.active}</span>
-                </td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <MiniBar pct={row.onTimePct} color={row.onTimePct >= 70 ? "bg-emerald-500" : row.onTimePct >= 40 ? "bg-amber-500" : "bg-red-500"} />
-                    <span className={`w-10 text-right font-semibold text-[11px] shrink-0 ${otColor}`}>{row.onTimePct}%</span>
+    <table className="w-full text-[12px]">
+      <thead>
+        <tr className="border-b border-[#E5EAF0]">
+          <SortHeader label="Supplier"   col="name"      sort={sort} onSort={toggleSort} />
+          <SortHeader label="Active POs" col="active"    sort={sort} onSort={toggleSort} />
+          <SortHeader label="On-Time %"  col="onTimePct" sort={sort} onSort={toggleSort} />
+          <SortHeader label="Open Tasks" col="openTasks" sort={sort} onSort={toggleSort} />
+          <SortHeader label="Avg Unit $" col="avgUnit"   sort={sort} onSort={toggleSort} />
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map(row => {
+          const otColor = row.onTimePct >= 70 ? "text-emerald-600" : row.onTimePct >= 40 ? "text-amber-600" : "text-red-600";
+          return (
+            <tr key={row.id} className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] transition-colors">
+              <td className="px-3 py-2.5 font-medium text-[#212833]">
+                {row.name}
+                <span className="ml-1.5 text-[9px] text-[#9E9FAE] font-normal">{row.country}</span>
+              </td>
+              <td className="px-3 py-2.5 text-center font-semibold text-[#212833]">{row.active}</td>
+              <td className="px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-[#F0F4F8] rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${row.onTimePct >= 70 ? "bg-emerald-500" : row.onTimePct >= 40 ? "bg-amber-500" : "bg-red-500"}`}
+                      style={{ width: `${row.onTimePct}%`, transition: "width 0.6s ease" }}
+                    />
                   </div>
-                </td>
-                <td className="px-3 py-2.5 text-center">
-                  {row.openTasks > 0
-                    ? <span className={`font-bold ${row.openTasks >= 3 ? "text-red-600" : row.openTasks >= 1 ? "text-amber-600" : "text-[#212833]"}`}>{row.openTasks}</span>
-                    : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mx-auto" />
-                  }
-                </td>
-                <td className="px-3 py-2.5 text-right text-[#5E687B]">
-                  {row.avgUnitPrice != null ? `$${row.avgUnitPrice.toFixed(2)}` : "—"}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  <span className={`w-10 text-right font-semibold text-[11px] shrink-0 ${otColor}`}>{row.onTimePct}%</span>
+                </div>
+              </td>
+              <td className="px-3 py-2.5 text-center">
+                {row.openTasks > 0
+                  ? <span className={`font-bold ${row.openTasks >= 3 ? "text-red-600" : "text-amber-600"}`}>{row.openTasks}</span>
+                  : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mx-auto" />
+                }
+              </td>
+              <td className="px-3 py-2.5 text-right text-[#5E687B]">
+                {row.avgUnitPrice != null ? `$${row.avgUnitPrice.toFixed(2)}` : "—"}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
@@ -482,82 +480,145 @@ function SuppliersCardContent({ shipments, tasks }: { shipments: Shipment[]; tas
 function isAging(sourceAge: string): boolean {
   const match = sourceAge.match(/^(\d+)d\s+ago$/i);
   if (match && parseInt(match[1]) >= 3) return true;
-  const dowPattern = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/i;
-  return dowPattern.test(sourceAge.trim());
+  return /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/i.test(sourceAge.trim());
+}
+
+function urgencyBadgeCls(u: string) {
+  if (u === "high")   return "bg-red-50 text-red-700 border-red-100";
+  if (u === "medium") return "bg-amber-50 text-amber-700 border-amber-100";
+  return "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]";
 }
 
 function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Shipment[] }) {
-  const shipMap = useMemo(() => new Map(shipments.map(s => [s.id, s.poNumber])), [shipments]);
+  const [collapsedShipments, setCollapsedShipments] = useState<Set<number>>(new Set());
+
+  const shipMap = useMemo(() => new Map(shipments.map(s => [s.id, s])), [shipments]);
+  const urgencyOrder = { high: 0, medium: 1, low: 2 };
 
   const incomplete = tasks.filter(t => !t.done);
   const actionable = incomplete.filter(t => !isAging(t.sourceAge));
   const aging      = incomplete.filter(t =>  isAging(t.sourceAge));
 
-  const urgencyOrder = { high: 0, medium: 1, low: 2 };
-  const sorted = [...actionable].sort((a, b) =>
-    urgencyOrder[a.urgency as keyof typeof urgencyOrder] - urgencyOrder[b.urgency as keyof typeof urgencyOrder]
-  );
-
-  function urgencyBadge(u: string) {
-    if (u === "high")   return "bg-red-50 text-red-700 border-red-100";
-    if (u === "medium") return "bg-amber-50 text-amber-700 border-amber-100";
-    return "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]";
+  // Group tasks by shipmentId
+  function groupByShipment(list: Task[]) {
+    const map = new Map<number, Task[]>();
+    for (const t of list) {
+      const arr = map.get(t.shipmentId) ?? [];
+      arr.push(t);
+      map.set(t.shipmentId, arr);
+    }
+    // Sort within each group by urgency
+    for (const [id, arr] of map) {
+      arr.sort((a, b) =>
+        urgencyOrder[a.urgency as keyof typeof urgencyOrder] - urgencyOrder[b.urgency as keyof typeof urgencyOrder]
+      );
+      map.set(id, arr);
+    }
+    // Sort groups: group with highest-urgency task first
+    return [...map.entries()].sort(([, a], [, b]) => {
+      const topA = urgencyOrder[a[0].urgency as keyof typeof urgencyOrder];
+      const topB = urgencyOrder[b[0].urgency as keyof typeof urgencyOrder];
+      return topA - topB;
+    });
   }
 
-  function TaskRow({ task }: { task: Task }) {
-    const po = shipMap.get(task.shipmentId);
+  function toggleShipment(id: number) {
+    setCollapsedShipments(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function ShipmentGroup({ shipmentId, tasks: groupTasks }: { shipmentId: number; tasks: Task[] }) {
+    const ship = shipMap.get(shipmentId);
+    const collapsed = collapsedShipments.has(shipmentId);
+    const topUrgency = groupTasks[0]?.urgency ?? "low";
+    const dotColor = topUrgency === "high" ? "bg-red-500" : topUrgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]";
+
     return (
-      <div className="flex items-start gap-3 py-2 border-b border-[#F0F4F8] last:border-0">
-        <div className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-medium text-[#212833] leading-snug line-clamp-2">{task.title}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            {po && <span className="font-mono text-[9px] bg-[#FAFBFC] border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B]">{po}</span>}
-            <span className="text-[10px] text-[#9E9FAE]">{task.source}</span>
-            <span className="text-[10px] text-[#9E9FAE] opacity-50">·</span>
-            <span className={`text-[10px] ${task.urgency === "high" ? "text-red-500 font-semibold" : "text-[#9E9FAE]"}`}>{task.sourceAge}</span>
+      <div className="border border-[#E5EAF0] rounded-lg overflow-hidden mb-2 last:mb-0">
+        {/* Shipment header */}
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 bg-[#FAFBFC] hover:bg-[#F0F4F8] transition-colors text-left"
+          onClick={() => toggleShipment(shipmentId)}
+        >
+          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+          <span className="font-mono text-[10px] bg-white border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B] shrink-0">
+            {ship?.poNumber ?? `#${shipmentId}`}
+          </span>
+          {ship && (
+            <span className="text-[11px] font-medium text-[#212833] truncate flex-1">{ship.product}</span>
+          )}
+          <span className="text-[10px] text-[#9E9FAE] shrink-0 ml-auto mr-1">{groupTasks.length} task{groupTasks.length > 1 ? "s" : ""}</span>
+          {collapsed ? <ChevronDown className="w-3 h-3 text-[#9E9FAE] shrink-0" /> : <ChevronUp className="w-3 h-3 text-[#9E9FAE] shrink-0" />}
+        </button>
+        {/* Tasks within shipment */}
+        {!collapsed && (
+          <div className="divide-y divide-[#F0F4F8]">
+            {groupTasks.map(task => (
+              <div key={task.id} className="flex items-start gap-3 px-3 py-2.5">
+                <div className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-medium text-[#212833] leading-snug line-clamp-2">{task.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-[#9E9FAE]">{task.source}</span>
+                    <span className="text-[10px] text-[#9E9FAE] opacity-40">·</span>
+                    <span className={`text-[10px] ${task.urgency === "high" ? "text-red-500 font-semibold" : "text-[#9E9FAE]"}`}>{task.sourceAge}</span>
+                  </div>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${urgencyBadgeCls(task.urgency)}`}>
+                  {task.urgency}
+                </span>
+              </div>
+            ))}
           </div>
-        </div>
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${urgencyBadge(task.urgency)}`}>
-          {task.urgency}
-        </span>
+        )}
       </div>
     );
   }
 
+  const actionableGroups = groupByShipment(actionable);
+  const agingGroups      = groupByShipment(aging);
+
   return (
     <div className="space-y-4">
-      {/* Summary KPIs */}
+      {/* KPI trio */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "High Urgency",  count: incomplete.filter(t => t.urgency === "high").length,   color: "text-red-600",     bg: "bg-red-50",     border: "border-red-100"     },
-          { label: "Medium",        count: incomplete.filter(t => t.urgency === "medium").length, color: "text-amber-600",   bg: "bg-amber-50",   border: "border-amber-100"   },
-          { label: "Aging (3d+)",   count: aging.length,                                          color: "text-[#5E687B]",   bg: "bg-[#FAFBFC]",  border: "border-[#E5EAF0]"   },
-        ].map(({ label, count, color, bg, border }) => (
-          <div key={label} className={`${bg} border ${border} rounded-lg p-3 text-center`}>
+          { label: "High Urgency", count: incomplete.filter(t => t.urgency === "high").length,   bg: "bg-red-50 border-red-100",       color: "text-red-600"   },
+          { label: "Medium",       count: incomplete.filter(t => t.urgency === "medium").length, bg: "bg-amber-50 border-amber-100",   color: "text-amber-600" },
+          { label: "Aging (3d+)",  count: aging.length,                                          bg: "bg-[#FAFBFC] border-[#E5EAF0]",  color: "text-[#5E687B]" },
+        ].map(({ label, count, bg, color }) => (
+          <div key={label} className={`border rounded-lg p-3 text-center ${bg}`}>
             <div className={`text-xl font-bold ${color}`}>{count}</div>
             <div className="text-[10px] text-[#5E687B] mt-0.5">{label}</div>
           </div>
         ))}
       </div>
 
-      {/* Needs action */}
-      {sorted.length > 0 && (
+      {/* Needs Action — grouped by shipment */}
+      {actionableGroups.length > 0 && (
         <div>
           <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <AlertCircle className="w-3 h-3 text-[#9000FF]" /> Needs Action
           </div>
-          <div>{sorted.map(t => <TaskRow key={t.id} task={t} />)}</div>
+          {actionableGroups.map(([shipmentId, groupTasks]) => (
+            <ShipmentGroup key={shipmentId} shipmentId={shipmentId} tasks={groupTasks} />
+          ))}
         </div>
       )}
 
-      {/* Aging */}
-      {aging.length > 0 && (
+      {/* Aging — grouped by shipment */}
+      {agingGroups.length > 0 && (
         <div>
           <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-amber-500" /> Aging — Not Touched in 3+ Days
           </div>
-          <div>{aging.map(t => <TaskRow key={t.id} task={t} />)}</div>
+          {agingGroups.map(([shipmentId, groupTasks]) => (
+            <ShipmentGroup key={shipmentId} shipmentId={shipmentId} tasks={groupTasks} />
+          ))}
         </div>
       )}
 
@@ -576,6 +637,7 @@ export function Reports() {
   const { data: apiShipments, isLoading: loadingShipments } = useListShipments();
   const { data: apiTasks,     isLoading: loadingTasks     } = useListTasks();
   const { data: apiStages,    isLoading: loadingStages    } = useListStages();
+  const { data: apiSuppliers, isLoading: loadingSuppliers } = useListSuppliers();
 
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -583,20 +645,22 @@ export function Reports() {
     setExpanded(prev => prev === id ? null : id);
   }
 
-  const shipments = apiShipments ?? [];
-  const tasks     = apiTasks ?? [];
+  const shipments  = apiShipments ?? [];
+  const tasks      = apiTasks     ?? [];
+  const suppliers  = apiSuppliers ?? [];
+
   const stageOrder = useMemo(() => {
     if (!apiStages) return [];
-    return [...apiStages].sort((a, b) => a.sortOrder - b.sortOrder).map(s => s.id);
+    return [...apiStages].sort((a, b) => a.sortOrder - b.sortOrder).map(s => ({ id: s.id, label: s.label }));
   }, [apiStages]);
 
-  const isLoading = loadingShipments || loadingTasks || loadingStages;
+  const isLoading = loadingShipments || loadingTasks || loadingStages || loadingSuppliers;
 
-  // headline KPIs for collapsed cards
-  const totalUnpaid = (apiShipments ?? []).flatMap(s => s.payments).filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
-  const onTimeCount = shipments.filter(s => s.status === "on-track").length;
-  const onTimePct   = shipments.length > 0 ? Math.round((onTimeCount / shipments.length) * 100) : 0;
-  const supplierSet = new Set(shipments.map(s => s.supplierName));
+  // Collapsed KPIs
+  const totalUnpaid   = shipments.flatMap(s => s.payments).filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
+  const onTimeCount   = shipments.filter(s => s.status === "on-track").length;
+  const onTimePct     = shipments.length > 0 ? Math.round((onTimeCount / shipments.length) * 100) : 0;
+  const supplierCount = new Set(shipments.map(s => s.supplierId)).size;
   const openTaskCount = tasks.filter(t => !t.done).length;
   const highUrgent    = tasks.filter(t => !t.done && t.urgency === "high").length;
 
@@ -627,9 +691,9 @@ export function Reports() {
       title: "Suppliers",
       iconColor: "text-[#9000FF]",
       iconBg: "bg-[#9000FF]/10",
-      kpi: supplierSet.size,
+      kpi: supplierCount,
       subtitle: "active suppliers in portfolio",
-      content: <SuppliersCardContent shipments={shipments} tasks={tasks} />,
+      content: <SuppliersCardContent shipments={shipments} tasks={tasks} suppliers={suppliers} />,
     },
     {
       id: "tasks",
@@ -640,9 +704,7 @@ export function Reports() {
       kpi: (
         <span>
           {openTaskCount}{" "}
-          {highUrgent > 0 && (
-            <span className="text-sm font-medium text-red-500">{highUrgent} high</span>
-          )}
+          {highUrgent > 0 && <span className="text-sm font-medium text-red-500">{highUrgent} high</span>}
         </span>
       ),
       subtitle: "open tasks across all shipments",
@@ -652,7 +714,6 @@ export function Reports() {
 
   return (
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
-
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4">
         <div className="flex items-center justify-between">
@@ -685,7 +746,6 @@ export function Reports() {
             cards.map(card => (
               <ReportCard
                 key={card.id}
-                id={card.id}
                 icon={card.icon}
                 title={card.title}
                 iconColor={card.iconColor}
