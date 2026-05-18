@@ -270,7 +270,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                         </div>
                         <div className="mt-3 flex items-center gap-2">
                           <button
-                            onClick={e => { e.stopPropagation(); onNavigateToShipment?.(item.poNumber); }}
+                            onClick={e => { e.stopPropagation(); onNavigateToShipment?.(String(item.shipmentId)); }}
                             className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
                             <ArrowUpRight className="w-3 h-3" /> Open Shipment
                           </button>

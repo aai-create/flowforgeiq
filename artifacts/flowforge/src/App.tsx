@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,7 +11,8 @@ import { Reports } from "@/pages/Reports";
 const queryClient = new QueryClient();
 
 function RiskRadarPage() {
-  return <RiskRadar />;
+  const [, navigate] = useLocation();
+  return <RiskRadar onNavigateToShipment={id => navigate(`/?shipment=${id}`)} />;
 }
 
 function ReportsPage() {
