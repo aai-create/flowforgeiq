@@ -107,6 +107,12 @@ export interface MessageInput {
   aiDraft?: string;
   aiAction?: string;
   aiTags?: string[];
+  /** Base64-encoded file content (WhatsApp media) */
+  attachmentBase64?: string;
+  /** MIME type of the attachment */
+  attachmentMimeType?: string;
+  /** Original filename of the attachment */
+  attachmentName?: string;
 }
 
 export interface MessageUpdate {
@@ -385,6 +391,28 @@ export interface AutonomyPolicyInput {
   supplierName?: string;
   actionType?: string;
   policy: string;
+}
+
+export interface InboundEmailAttachment {
+  Name: string;
+  /** Base64-encoded file content */
+  Content: string;
+  ContentType: string;
+  ContentLength?: number;
+}
+
+export interface InboundEmailWebhook {
+  From?: string;
+  FromName?: string;
+  Subject?: string;
+  TextBody?: string;
+  HtmlBody?: string;
+  Attachments?: InboundEmailAttachment[];
+}
+
+export interface InboundEmailWebhookResponse {
+  accepted: boolean;
+  documentIds: number[];
 }
 
 export type ListDocumentsParams = {

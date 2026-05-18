@@ -33,6 +33,8 @@ import type {
   ExtractionCorrectionInput,
   FactoryQuote,
   HealthStatus,
+  InboundEmailWebhook,
+  InboundEmailWebhookResponse,
   ListCopilotProposalsParams,
   ListDocumentsParams,
   Message,
@@ -2078,6 +2080,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpsertAutonomyPolicyMutationOptions(options));
+    }
+
+export const getInboundEmailWebhookUrl = () => {
+
+
+
+
+  return `/api/webhooks/email`
+}
+
+/**
+ * @summary Inbound email webhook (Postmark / SendGrid)
+ */
+export const inboundEmailWebhook = async (inboundEmailWebhook: InboundEmailWebhook, options?: RequestInit): Promise<InboundEmailWebhookResponse> => {
+
+  return customFetch<InboundEmailWebhookResponse>(getInboundEmailWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      inboundEmailWebhook,)
+  }
+);}
+
+
+
+
+export const getInboundEmailWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inboundEmailWebhook>>, TError,{data: BodyType<InboundEmailWebhook>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof inboundEmailWebhook>>, TError,{data: BodyType<InboundEmailWebhook>}, TContext> => {
+
+const mutationKey = ['inboundEmailWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inboundEmailWebhook>>, {data: BodyType<InboundEmailWebhook>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  inboundEmailWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InboundEmailWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof inboundEmailWebhook>>>
+    export type InboundEmailWebhookMutationBody = BodyType<InboundEmailWebhook>
+    export type InboundEmailWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbound email webhook (Postmark / SendGrid)
+ */
+export const useInboundEmailWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inboundEmailWebhook>>, TError,{data: BodyType<InboundEmailWebhook>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof inboundEmailWebhook>>,
+        TError,
+        {data: BodyType<InboundEmailWebhook>},
+        TContext
+      > => {
+      return useMutation(getInboundEmailWebhookMutationOptions(options));
     }
 
 export const getSaveExtractionCorrectionUrl = (id: number,) => {

@@ -163,7 +163,7 @@ async function parsePdf(buffer: Buffer): Promise<string> {
 async function parseSpreadsheet(buffer: Buffer, filename: string): Promise<string> {
   if (/\.csv$/i.test(filename)) return buffer.toString("utf-8");
   try {
-    const XLSX = await import("xlsx");
+    const XLSX = await import("@e965/xlsx");
     const wb = XLSX.read(buffer, { type: "buffer" });
     const sheets: string[] = [];
     for (const sheetName of wb.SheetNames.slice(0, 5)) {

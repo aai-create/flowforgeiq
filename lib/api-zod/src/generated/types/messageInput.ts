@@ -17,4 +17,10 @@ export interface MessageInput {
   aiDraft?: string;
   aiAction?: string;
   aiTags?: string[];
+  /** Base64-encoded file content (WhatsApp media) */
+  attachmentBase64?: string;
+  /** MIME type of the attachment */
+  attachmentMimeType?: string;
+  /** Original filename of the attachment */
+  attachmentName?: string;
 }

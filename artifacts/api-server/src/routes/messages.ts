@@ -7,6 +7,7 @@ import {
   UpdateMessageBody,
   UpdateMessageResponse,
 } from "@workspace/api-zod";
+import { ingestDocumentFromBase64 } from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -33,6 +34,23 @@ router.post("/messages", async (req, res) => {
       receivedAt: new Date(),
     })
     .returning();
+
+  if (
+    input.channel === "whatsapp" &&
+    input.attachmentBase64 &&
+    input.attachmentMimeType
+  ) {
+    const fileName = input.attachmentName ?? `whatsapp-media-${Date.now()}`;
+    setImmediate(async () => {
+      await ingestDocumentFromBase64({
+        fileName,
+        mimeType: input.attachmentMimeType!,
+        base64Content: input.attachmentBase64!,
+        sourceChannel: "whatsapp",
+      });
+    });
+  }
+
   res.status(201).json(ListMessagesResponseItem.parse(inserted));
 });
 

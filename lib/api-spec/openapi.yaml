@@ -489,6 +489,23 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AutonomyPolicy" }
 
+  /webhooks/email:
+    post:
+      operationId: inboundEmailWebhook
+      tags: [documents]
+      summary: Inbound email webhook (Postmark / SendGrid)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InboundEmailWebhook" }
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InboundEmailWebhookResponse" }
+
   /extractions/{id}/corrections:
     post:
       operationId: saveExtractionCorrection
@@ -655,17 +672,20 @@ components:
       type: object
       required: [shipmentId, sender, channel, snippet, fullBody]
       properties:
-        shipmentId: { type: integer }
-        supplierId: { type: ["integer", "null"] }
-        sender:     { type: string }
-        channel:    { type: string }
-        snippet:    { type: string }
-        fullBody:   { type: string }
-        aiDraft:    { type: string }
-        aiAction:   { type: string }
+        shipmentId:        { type: integer }
+        supplierId:        { type: ["integer", "null"] }
+        sender:            { type: string }
+        channel:           { type: string }
+        snippet:           { type: string }
+        fullBody:          { type: string }
+        aiDraft:           { type: string }
+        aiAction:          { type: string }
         aiTags:
           type: array
           items: { type: string }
+        attachmentBase64:  { type: string, description: "Base64-encoded file content (WhatsApp media)" }
+        attachmentMimeType: { type: string, description: "MIME type of the attachment" }
+        attachmentName:    { type: string, description: "Original filename of the attachment" }
     MessageUpdate:
       type: object
       properties:
@@ -980,3 +1000,33 @@ components:
         supplierName: { type: string }
         actionType:   { type: string }
         policy:       { type: string }
+
+    InboundEmailAttachment:
+      type: object
+      required: [Name, Content, ContentType]
+      properties:
+        Name: { type: string }
+        Content: { type: string, description: "Base64-encoded file content" }
+        ContentType: { type: string }
+        ContentLength: { type: integer }
+
+    InboundEmailWebhook:
+      type: object
+      properties:
+        From: { type: string }
+        FromName: { type: string }
+        Subject: { type: string }
+        TextBody: { type: string }
+        HtmlBody: { type: string }
+        Attachments:
+          type: array
+          items: { $ref: "#/components/schemas/InboundEmailAttachment" }
+
+    InboundEmailWebhookResponse:
+      type: object
+      required: [accepted, documentIds]
+      properties:
+        accepted: { type: boolean }
+        documentIds:
+          type: array
+          items: { type: integer }

@@ -199,7 +199,10 @@ export const CreateMessageBody = zod.object({
   "fullBody": zod.string(),
   "aiDraft": zod.string().optional(),
   "aiAction": zod.string().optional(),
-  "aiTags": zod.array(zod.string()).optional()
+  "aiTags": zod.array(zod.string()).optional(),
+  "attachmentBase64": zod.string().optional().describe('Base64-encoded file content (WhatsApp media)'),
+  "attachmentMimeType": zod.string().optional().describe('MIME type of the attachment'),
+  "attachmentName": zod.string().optional().describe('Original filename of the attachment')
 })
 
 
@@ -734,6 +737,29 @@ export const UpsertAutonomyPolicyResponse = zod.object({
   "policy": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Inbound email webhook (Postmark / SendGrid)
+ */
+export const InboundEmailWebhookBody = zod.object({
+  "From": zod.string().optional(),
+  "FromName": zod.string().optional(),
+  "Subject": zod.string().optional(),
+  "TextBody": zod.string().optional(),
+  "HtmlBody": zod.string().optional(),
+  "Attachments": zod.array(zod.object({
+  "Name": zod.string(),
+  "Content": zod.string().describe('Base64-encoded file content'),
+  "ContentType": zod.string(),
+  "ContentLength": zod.number().optional()
+})).optional()
+})
+
+export const InboundEmailWebhookResponse = zod.object({
+  "accepted": zod.boolean(),
+  "documentIds": zod.array(zod.number())
 })
 
 

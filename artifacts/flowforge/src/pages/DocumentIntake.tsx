@@ -3,7 +3,7 @@ import {
   Upload, FileText, Image, FileSpreadsheet, Mic, X, CheckCircle2,
   AlertCircle, Clock, ChevronRight, ChevronDown, Edit2, Check,
   Sparkles, RefreshCw, Link2, Package, AlertTriangle, Info,
-  FileBox, Zap, Eye, ChevronLeft, CornerDownRight,
+  FileBox, Zap, Eye, ChevronLeft, CornerDownRight, Mail, MessageSquare,
 } from "lucide-react";
 import {
   useListDocuments, useUploadDocument, useUpdateDocument,
@@ -77,6 +77,22 @@ function statusBadge(status: string) {
   if (status === "unmatched")
     return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-600 border-amber-200"><AlertTriangle size={8} />Unmatched</span>;
   return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"><Clock size={8} />{status}</span>;
+}
+
+function channelBadge(sourceChannel: string) {
+  if (sourceChannel === "gmail")
+    return (
+      <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
+        <Mail size={8} />Email
+      </span>
+    );
+  if (sourceChannel === "whatsapp")
+    return (
+      <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
+        <MessageSquare size={8} />WhatsApp
+      </span>
+    );
+  return null;
 }
 
 // ─── DropZone ───────────────────────────────────────────────────────────────
@@ -456,6 +472,7 @@ function DocRow({ doc, selected, shipments, onClick }: DocRowProps) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {statusBadge(doc.status)}
+          {channelBadge(doc.sourceChannel)}
           {linked ? (
             <span className="text-[9px] text-[#9000FF] flex items-center gap-0.5 font-medium"><Package size={8} />{linked.po}</span>
           ) : (
@@ -505,10 +522,11 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
     if (rawDocs) setLocalDocs(rawDocs);
   }, [rawDocs]);
 
-  // Poll while any doc is processing
+  // Poll quickly while any doc is processing; poll every 30s otherwise
+  // to catch new inbound email / WhatsApp attachments as they arrive.
   useEffect(() => {
     const hasProcessing = localDocs.some(d => d.status === "processing");
-    setPollInterval(hasProcessing ? 2000 : false);
+    setPollInterval(hasProcessing ? 2000 : 30000);
   }, [localDocs]);
 
   const handleFiles = (files: File[]) => {
