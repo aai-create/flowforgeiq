@@ -378,10 +378,15 @@ export function CopilotQueue() {
   const { data: summary } = useGetCopilotSummary();
   const { data: policies = [] } = useListAutonomyPolicies();
 
+  const [triggerResult, setTriggerResult] = useState<{ created: number; autoExecuted: number; scanned: number } | null>(null);
+
   const { mutate: triggerEngine, isPending: isTriggering } = useTriggerCopilot({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        const result = data as { created: number; autoExecuted: number; scanned: number };
+        setTriggerResult(result);
         void queryClient.invalidateQueries({ queryKey: getListCopilotProposalsQueryKey() });
+        setTimeout(() => setTriggerResult(null), 6000);
       },
     },
   });
@@ -573,6 +578,32 @@ export function CopilotQueue() {
             {isTriggering ? "Scanning…" : "Run Copilot"}
           </button>
         </div>
+
+        {/* Trigger result feedback */}
+        {triggerResult && (
+          <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium border ${
+            triggerResult.created > 0
+              ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+              : "bg-[#F0F4F8] border-[#E5EAF0] text-[#5E687B]"
+          }`}>
+            {triggerResult.created > 0 ? (
+              <>
+                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                <span>
+                  <span className="font-bold">{triggerResult.created} new proposal{triggerResult.created > 1 ? "s" : ""}</span> queued
+                  {triggerResult.autoExecuted > 0 && <>, {triggerResult.autoExecuted} auto-executed</>}
+                  {" "}· {triggerResult.scanned} shipments scanned
+                </span>
+              </>
+            ) : (
+              <>
+                <Eye size={13} className="shrink-0" />
+                <span>Already up to date — no new proposals. All {triggerResult.scanned} shipments scanned, existing proposals still pending.</span>
+              </>
+            )}
+            <button onClick={() => setTriggerResult(null)} className="ml-auto shrink-0 hover:opacity-70"><X size={11} /></button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 flex overflow-hidden">

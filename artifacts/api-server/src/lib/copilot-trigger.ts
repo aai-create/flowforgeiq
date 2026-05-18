@@ -1,5 +1,5 @@
-import { db, shipmentsTable, messagesTable, paymentsTable, copilotProposalsTable, autonomyPoliciesTable } from "@workspace/db";
-import { desc, eq, and, inArray, isNull, sql } from "drizzle-orm";
+import { db, shipmentsTable, messagesTable, paymentsTable, copilotProposalsTable, autonomyPoliciesTable, suppliersTable } from "@workspace/db";
+import { desc, eq, inArray } from "drizzle-orm";
 
 export type ProposalCandidate = {
   shipmentId: number;
@@ -30,12 +30,14 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
       poNumber: shipmentsTable.poNumber,
       product: shipmentsTable.product,
       supplierId: shipmentsTable.supplierId,
+      supplierName: suppliersTable.name,
       status: shipmentsTable.status,
       currentStageId: shipmentsTable.currentStageId,
       dueDate: shipmentsTable.dueDate,
       exFactoryDate: shipmentsTable.exFactoryDate,
     })
     .from(shipmentsTable)
+    .leftJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .where(
       inArray(shipmentsTable.status, ["on-track", "at-risk", "delayed"])
     );
@@ -54,7 +56,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
   for (const s of shipments) {
     const shipMessages = allMessages.filter(m => m.shipmentId === s.id);
     const shipPayments = allPayments.filter(p => p.shipmentId === s.id);
-    const supplierName = `Supplier #${s.supplierId}`;
+    const supplierName = s.supplierName ?? `Supplier #${s.supplierId}`;
 
     // 1. Unread messages that have an AI draft ready
     for (const msg of shipMessages.filter(m => m.unread && m.aiDraft)) {
@@ -66,6 +68,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
         triggerRef: `message:${msg.id}`,
         actionType: "reply",
         payload: {
+          poNumber: s.poNumber,
           draftBody: msg.aiDraft,
           channel: msg.channel,
           sender: msg.sender,
@@ -89,6 +92,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           triggerRef: `payment:${pmt.id}`,
           actionType: "payment_reminder",
           payload: {
+            poNumber: s.poNumber,
             paymentLabel: pmt.label,
             amountUsd: pmt.amountUsd,
             dueDate: pmt.dueDate,
@@ -106,6 +110,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           triggerRef: `payment:${pmt.id}`,
           actionType: "payment_reminder",
           payload: {
+            poNumber: s.poNumber,
             paymentLabel: pmt.label,
             amountUsd: pmt.amountUsd,
             dueDate: pmt.dueDate,
@@ -131,6 +136,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           triggerRef: `message:${lastMsg.id}`,
           actionType: "nudge",
           payload: {
+            poNumber: s.poNumber,
             daysSilent: daysSinceLastMsg,
             currentStage: s.currentStageId,
             draftBody: `Hi, following up on ${s.poNumber} — could you provide an update on the current ${stageLabel} stage? We want to ensure we're on track for the ex-factory date.`,
@@ -154,6 +160,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           triggerRef: null,
           actionType: "escalation",
           payload: {
+            poNumber: s.poNumber,
             daysToExFactory,
             currentStage: s.currentStageId,
             draftBody: `URGENT: ${s.poNumber} is currently delayed with only ${daysToExFactory} days to ex-factory. Immediate action required to mitigate impact on customer delivery.`,
@@ -176,6 +183,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           triggerRef: null,
           actionType: "doc_request",
           payload: {
+            poNumber: s.poNumber,
             currentStage: s.currentStageId,
             daysToExFactory,
             requiredDocs: ["Commercial Invoice", "Packing List", "Certificate of Origin", "B/L Draft"],
