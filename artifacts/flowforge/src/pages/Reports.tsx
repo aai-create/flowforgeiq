@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import {
   DollarSign, TrendingUp, Users, ListTodo,
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
-  ChevronsUpDown, RefreshCw, Clock, CheckCircle2,
+  ChevronsUpDown, RefreshCw, Clock, CheckCircle2, ArrowRight,
   CalendarRange, X,
 } from "lucide-react";
 import {
@@ -125,6 +126,7 @@ const financeChartConfig: ChartConfig = {
 function FinanceCardContent({
   shipments, rangeStart, rangeEnd,
 }: { shipments: Shipment[]; rangeStart: Date | null; rangeEnd: Date | null }) {
+  const [, navigate] = useLocation();
   const allPayments = useMemo(() => {
     const payments = shipments.flatMap(s => s.payments);
     if (!rangeStart && !rangeEnd) return payments;
@@ -226,8 +228,18 @@ function FinanceCardContent({
               </thead>
               <tbody>
                 {bySupplier.map(row => (
-                  <tr key={row.supplier} className="border-b border-[#F0F4F8] last:border-0">
-                    <td className="py-2 text-[#212833] font-medium">{row.supplier}</td>
+                  <tr
+                    key={row.supplier}
+                    className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] cursor-pointer transition-colors group"
+                    onClick={() => navigate(`/?supplier=${encodeURIComponent(row.supplier)}`)}
+                    title={`Open inbox filtered by ${row.supplier}`}
+                  >
+                    <td className="py-2 text-[#212833] font-medium">
+                      <span className="flex items-center gap-1.5">
+                        {row.supplier}
+                        <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </span>
+                    </td>
                     <td className="py-2 text-right font-semibold text-[#212833]">{fmtUsd(row.unpaid)}</td>
                     <td className="py-2 text-right">
                       {row.overdue > 0
@@ -252,6 +264,7 @@ const pipelineChartConfig: ChartConfig = {
 };
 
 function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[]; stageOrder: { id: string; label: string }[] }) {
+  const [, navigate] = useLocation();
   // shipment.status is the authoritative backend field (set by the seed/API layer based on
   // delay flags and stage progress). Using it directly avoids divergence from the source of truth.
   const onTime  = shipments.filter(s => s.status === "on-track").length;
@@ -334,13 +347,23 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
                   const days = daysDiff(s.exFactoryDate);
                   const tl   = trafficLight(days);
                   return (
-                    <tr key={s.id} className="border-b border-[#F0F4F8] last:border-0">
+                    <tr
+                      key={s.id}
+                      className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] cursor-pointer transition-colors group"
+                      onClick={() => navigate(`/?shipment=${s.id}`)}
+                      title={`Open ${s.poNumber} in inbox`}
+                    >
                       <td className="py-1.5">
-                        <span className="font-mono text-[10px] bg-[#FAFBFC] border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B]">
+                        <span className="font-mono text-[10px] bg-[#FAFBFC] border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B] group-hover:border-[#9000FF]/30 group-hover:text-[#9000FF] transition-colors">
                           {s.poNumber}
                         </span>
                       </td>
-                      <td className="py-1.5 pl-2 text-[#212833] font-medium max-w-[180px] truncate">{s.product}</td>
+                      <td className="py-1.5 pl-2 text-[#212833] font-medium max-w-[180px] truncate">
+                        <span className="flex items-center gap-1.5">
+                          {s.product}
+                          <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </span>
+                      </td>
                       <td className="py-1.5 text-right text-[#5E687B]">{shortDate(s.exFactoryDate)}</td>
                       <td className="py-1.5 text-right">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tl.badge}`}>
@@ -373,6 +396,7 @@ interface SupplierRow {
 function SuppliersCardContent({
   shipments, tasks, suppliers,
 }: { shipments: Shipment[]; tasks: Task[]; suppliers: SupplierSummary[] }) {
+  const [, navigate] = useLocation();
   const [sort, setSort] = useState<{ col: string; dir: SortDir }>({ col: "active", dir: "desc" });
 
   const rows: SupplierRow[] = useMemo(() => {
@@ -478,10 +502,18 @@ function SuppliersCardContent({
         {sorted.map(row => {
           const otColor = row.onTimePct >= 70 ? "text-emerald-600" : row.onTimePct >= 40 ? "text-amber-600" : "text-red-600";
           return (
-            <tr key={row.id} className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] transition-colors">
+            <tr
+              key={row.id}
+              className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] transition-colors cursor-pointer group"
+              onClick={() => navigate(`/?supplier=${encodeURIComponent(row.name)}`)}
+              title={`Open inbox filtered by ${row.name}`}
+            >
               <td className="px-3 py-2.5 font-medium text-[#212833]">
-                {row.name}
-                <span className="ml-1.5 text-[9px] text-[#9E9FAE] font-normal">{row.country}</span>
+                <span className="flex items-center gap-1.5">
+                  {row.name}
+                  <span className="ml-0.5 text-[9px] text-[#9E9FAE] font-normal">{row.country}</span>
+                  <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </span>
               </td>
               <td className="px-3 py-2.5 text-center font-semibold text-[#212833]">{row.active}</td>
               <td className="px-3 py-2.5">
@@ -538,6 +570,7 @@ function urgencyBadgeCls(u: string) {
 }
 
 function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Shipment[] }) {
+  const [, navigate] = useLocation();
   const [collapsedShipments, setCollapsedShipments] = useState<Set<number>>(new Set());
 
   const shipMap = useMemo(() => new Map(shipments.map(s => [s.id, s])), [shipments]);
@@ -588,38 +621,57 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
     return (
       <div className="border border-[#E5EAF0] rounded-lg overflow-hidden mb-2 last:mb-0">
         {/* Shipment header */}
-        <button
-          className="w-full flex items-center gap-2.5 px-3 py-2 bg-[#FAFBFC] hover:bg-[#F0F4F8] transition-colors text-left"
-          onClick={() => toggleShipment(shipmentId)}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
-          <span className="font-mono text-[10px] bg-white border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B] shrink-0">
-            {ship?.poNumber ?? `#${shipmentId}`}
-          </span>
-          {ship && (
-            <span className="text-[11px] font-medium text-[#212833] truncate flex-1">{ship.product}</span>
-          )}
-          <span className="text-[10px] text-[#9E9FAE] shrink-0 ml-auto mr-1">{groupTasks.length} task{groupTasks.length > 1 ? "s" : ""}</span>
-          {collapsed ? <ChevronDown className="w-3 h-3 text-[#9E9FAE] shrink-0" /> : <ChevronUp className="w-3 h-3 text-[#9E9FAE] shrink-0" />}
-        </button>
+        <div className="flex items-center bg-[#FAFBFC] hover:bg-[#F0F4F8] transition-colors group/header">
+          <button
+            className="flex-1 flex items-center gap-2.5 px-3 py-2 text-left"
+            onClick={() => toggleShipment(shipmentId)}
+          >
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+            <span className="font-mono text-[10px] bg-white border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B] shrink-0">
+              {ship?.poNumber ?? `#${shipmentId}`}
+            </span>
+            {ship && (
+              <span className="text-[11px] font-medium text-[#212833] truncate flex-1">{ship.product}</span>
+            )}
+            <span className="text-[10px] text-[#9E9FAE] shrink-0 ml-auto mr-1">{groupTasks.length} task{groupTasks.length > 1 ? "s" : ""}</span>
+            {collapsed ? <ChevronDown className="w-3 h-3 text-[#9E9FAE] shrink-0" /> : <ChevronUp className="w-3 h-3 text-[#9E9FAE] shrink-0" />}
+          </button>
+          <button
+            className="px-2 py-2 opacity-0 group-hover/header:opacity-100 transition-opacity text-[#9000FF] hover:text-[#7A00D9] shrink-0"
+            onClick={() => navigate(`/?shipment=${shipmentId}`)}
+            title={`Open ${ship?.poNumber ?? `shipment #${shipmentId}`} in inbox`}
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
         {/* Tasks within shipment */}
         {!collapsed && (
           <div className="divide-y divide-[#F0F4F8]">
             {groupTasks.map(task => (
-              <div key={task.id} className="flex items-start gap-3 px-3 py-2.5">
-                <div className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
+              <button
+                key={task.id}
+                className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-[#FAFBFC] transition-colors group/row"
+                onClick={() => navigate(`/?shipment=${shipmentId}`)}
+                title={`Open ${ship?.poNumber ?? `shipment #${shipmentId}`} in inbox`}
+              >
+                <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-medium text-[#212833] leading-snug line-clamp-2">{task.title}</p>
+                  <p className="text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 group-hover/row:text-[#9000FF] transition-colors">
+                    {task.title}
+                  </p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-[#9E9FAE]">{task.source}</span>
                     <span className="text-[10px] text-[#9E9FAE] opacity-40">·</span>
                     <span className={`text-[10px] ${task.urgency === "high" ? "text-red-500 font-semibold" : "text-[#9E9FAE]"}`}>{task.sourceAge}</span>
                   </div>
                 </div>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${urgencyBadgeCls(task.urgency)}`}>
-                  {task.urgency}
-                </span>
-              </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover/row:opacity-100 transition-opacity" />
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${urgencyBadgeCls(task.urgency)}`}>
+                    {task.urgency}
+                  </span>
+                </div>
+              </button>
             ))}
           </div>
         )}

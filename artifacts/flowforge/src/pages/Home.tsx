@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useSearch } from "wouter";
 import {
   Mail, MessageCircle, FileText, Sparkles, Wand2, Search,
   Bell, ChevronDown, Check, AlertCircle, Clock, MoreHorizontal,
@@ -1078,6 +1079,7 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
+  const search = useSearch();
   const [viewMode, setViewMode]           = useState<ViewMode>("inbox");
   const [navTab, setNavTab]               = useState<NavTab>("inbox");
   const { data: apiStages }    = useListStages();
@@ -1127,6 +1129,33 @@ export default function Home() {
   const [searchQuery, setSearchQuery]     = useState("");
   const [aiQuery, setAiQuery]             = useState("");
   const [showAiResult, setShowAiResult]   = useState(false);
+
+  // Apply deep-link URL params (?supplier= or ?shipment=) once messages are loaded.
+  // Reports navigates here with these params so users land on the right filtered view.
+  const urlParamsApplied = useRef(false);
+  useEffect(() => {
+    if (urlParamsApplied.current || !messages.length) return;
+    const params = new URLSearchParams(search);
+    const supplierParam = params.get("supplier");
+    const shipmentParam = params.get("shipment");
+    if (!supplierParam && !shipmentParam) return;
+    urlParamsApplied.current = true;
+    setNavTab("inbox");
+    if (shipmentParam) {
+      const uiId = `s${shipmentParam}`;
+      setSelectedShipmentId(uiId);
+      setChannelFilter("all");
+      setSupplierFilter(null);
+      const first = messages.find(m => m.shipmentId === uiId);
+      if (first) setActiveMessageId(first.id);
+    } else if (supplierParam) {
+      setSupplierFilter(supplierParam);
+      setSelectedShipmentId(null);
+      setChannelFilter("all");
+      const first = messages.find(m => m.supplierId === supplierParam);
+      if (first) setActiveMessageId(first.id);
+    }
+  }, [messages, search]);
 
   const SUPPLIERS = useMemo(() => {
     const counts = new Map<string, number>();
