@@ -1453,12 +1453,12 @@ export default function Home() {
               </div>
 
               {/* Purchase Orders — scrollable list, same style as Suppliers */}
-              <div className="p-3 border-b border-[#E5EAF0] shrink-0">
-                <div className="flex items-center justify-between mb-2">
+              <div className="p-3 border-b border-[#E5EAF0] flex flex-col min-h-0 max-h-[45vh]">
+                <div className="flex items-center justify-between mb-2 shrink-0">
                   <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Purchase Orders</div>
                   {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
                 </div>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0.5 overflow-y-auto">
                   {shipments.map(s=>{
                     const isSelected=selectedShipmentId===s.id;
                     const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
