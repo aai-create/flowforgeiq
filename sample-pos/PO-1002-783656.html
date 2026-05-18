@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Purchase Order PO-1002-783656</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Arial, sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; padding: 48px; }
+  .page { max-width: 800px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  .logo { font-size: 22px; font-weight: 700; color: #1a4fa0; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .po-block { text-align: right; }
+  .po-number { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+  .po-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #1a4fa0; }
+  .po-date { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .divider { border: none; border-top: 2px solid #1a4fa0; margin-bottom: 28px; opacity: 0.2; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .party-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; }
+  .party-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #1a4fa0; margin-bottom: 8px; }
+  .party-name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .party-detail { font-size: 11px; color: #5e687b; line-height: 1.6; }
+  .meta-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .meta-cell { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 6px; padding: 10px 12px; }
+  .meta-cell-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #9e9fae; margin-bottom: 4px; }
+  .meta-cell-value { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #5e687b; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead th { background: #f0f4f8; text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #5e687b; }
+  thead th:last-child, thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; font-size: 12px; color: #1a1a2e; vertical-align: top; }
+  tbody td:last-child, tbody td:nth-child(3), tbody td:nth-child(4) { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  .desc-main { font-weight: 500; }
+  .desc-sub { font-size: 10px; color: #9e9fae; margin-top: 2px; }
+  .totals-block { display: flex; justify-content: flex-end; margin-bottom: 28px; }
+  .totals-table { width: 280px; }
+  .totals-table tr td { padding: 5px 0; font-size: 12px; color: #5e687b; }
+  .totals-table tr td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
+  .totals-table .grand-total td { font-size: 14px; font-weight: 700; color: #1a1a2e; border-top: 2px solid #e5eaf0; padding-top: 10px; }
+  .totals-table .grand-total td:last-child { color: #1a4fa0; }
+  .payment-box { border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 28px; }
+  .payment-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f4f8; }
+  .payment-row:last-child { border-bottom: none; }
+  .payment-label { font-size: 12px; color: #1a1a2e; }
+  .payment-amount { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .payment-due { font-size: 10px; color: #9e9fae; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+  .badge-pending { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .badge-paid { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .notes-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 36px; }
+  .notes-text { font-size: 11px; color: #5e687b; line-height: 1.7; }
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; }
+  .sig-block { border-top: 1px solid #d1d5db; padding-top: 8px; }
+  .sig-name { font-size: 11px; font-weight: 600; color: #1a1a2e; margin-top: 4px; }
+  .sig-title { font-size: 10px; color: #9e9fae; }
+  .footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #e5eaf0; text-align: center; font-size: 10px; color: #9e9fae; }
+  @media print { body { padding: 20px; } @page { margin: 20mm; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="logo">Vellum Studio</div>
+      <div class="logo-sub">Contemporary Retail Environments</div>
+      <div style="font-size:10px;color:#9e9fae;margin-top:6px;">
+        12 Meridian Plaza, Floor 7<br/>
+        New York, NY 10013 · USA<br/>
+        procurement@vellumstudio.com
+      </div>
+    </div>
+    <div class="po-block">
+      <div class="po-label">Purchase Order</div>
+      <div class="po-number">PO-1002-783656</div>
+      <div class="po-date">Issued: May 15, 2026</div>
+      <div class="po-date" style="color:#1a4fa0;font-weight:600;">Ex-Factory: Jul 9, 2026</div>
+    </div>
+  </div>
+  <hr class="divider" />
+
+  <div class="parties">
+    <div class="party-box">
+      <div class="party-label">Bill To (Buyer)</div>
+      <div class="party-name">Vellum Studio</div>
+      <div class="party-detail">
+        12 Meridian Plaza, Floor 7<br/>
+        New York, NY 10013<br/>
+        United States<br/>
+        procurement@vellumstudio.com<br/>
+        +1 (212) 555-0087
+      </div>
+    </div>
+    <div class="party-box">
+      <div class="party-label">Vendor (Supplier)</div>
+      <div class="party-name">Guangzhou Metalworks</div>
+      <div class="party-detail">
+        22 Panyu Industrial Blvd<br/>
+        Guangzhou 511400<br/>
+        China (CN)<br/>
+        export@gzmetalworks.cn<br/>
+        +86 20 8441 7765
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <div class="meta-cell">
+      <div class="meta-cell-label">PO Date</div>
+      <div class="meta-cell-value">May 15, 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Incoterms</div>
+      <div class="meta-cell-value">FOB Guangzhou</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Currency</div>
+      <div class="meta-cell-value">USD</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Payment Terms</div>
+      <div class="meta-cell-value">30 / 70</div>
+    </div>
+  </div>
+
+  <div class="section-title">Line Items</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">Description</th>
+        <th>SKU / Item No.</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Total (USD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="desc-main">Chrome Retail Hanger — Slim Profile Bottom</div>
+          <div class="desc-sub">Polished chrome finish · Slim bottom bar · 14-gauge wire · Trouser/skirt display</div>
+        </td>
+        <td>GZM-SPB-CH-14G</td>
+        <td>5,000</td>
+        <td>$0.98</td>
+        <td>$4,900.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Anti-Slip Foam Inserts (pair)</div>
+          <div class="desc-sub">Foam padding on bottom bar to prevent garment slipping</div>
+        </td>
+        <td>GZM-FOAM-INS</td>
+        <td>5,000</td>
+        <td>$0.27</td>
+        <td>$1,350.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Branded Hang Tag — Vellum Studio</div>
+          <div class="desc-sub">Full-colour printed, PMS matched, attached at hook</div>
+        </td>
+        <td>VS-TAG-PREM</td>
+        <td>5,000</td>
+        <td>$0.41</td>
+        <td>$2,050.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Master Carton — 100 units/ctn</div>
+          <div class="desc-sub">50 cartons, double-wall corrugated, stencilled</div>
+        </td>
+        <td>PKG-CTN-DW100</td>
+        <td>50</td>
+        <td>$4.00</td>
+        <td>$200.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals-block">
+    <table class="totals-table">
+      <tr><td>Subtotal (goods)</td><td>$8,500.00</td></tr>
+      <tr><td>Subtotal (packaging)</td><td>$2,050.00</td></tr>
+      <tr><td>Cartons</td><td>$200.00</td></tr>
+      <tr><td>Freight allowance</td><td>$(450.00)</td></tr>
+      <tr class="grand-total"><td><strong>TOTAL</strong></td><td><strong>$10,300.00</strong></td></tr>
+    </table>
+  </div>
+
+  <div class="section-title">Payment Schedule</div>
+  <div class="payment-box">
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Deposit — 30% upon PO confirmation</span>
+        <div class="payment-due">Due: May 25, 2026</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$3,090.00</div>
+        <span class="badge badge-pending">Pending</span>
+      </div>
+    </div>
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Balance — 70% against copy B/L</span>
+        <div class="payment-due">Due: Jul 6, 2026 (3 days before ex-factory)</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$7,210.00</div>
+        <span class="badge badge-pending">Pending</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Terms &amp; Notes</div>
+  <div class="notes-box">
+    <div class="notes-text">
+      1. Supplier to provide golden sample within 10 business days of PO confirmation. Approval in writing required before bulk production.<br/>
+      2. AQL 2.5 Level II inspection mandatory. Vellum Studio inspection team or appointed third-party (SGS / Bureau Veritas).<br/>
+      3. Cartons to be stencilled with PO number, item description, quantity, country of origin, and gross/net weight.<br/>
+      4. Supplier must share weekly production status photos via WhatsApp or email every Friday 5 PM CST.<br/>
+      5. Late delivery penalty: 1% of PO value per week of delay, capped at 5%. Force majeure provisions apply per standard ICC clause.
+    </div>
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-name">Authorized Buyer Signature</div>
+      <div class="sig-title">Vellum Studio — Procurement</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-name">Supplier Acceptance</div>
+      <div class="sig-title">Guangzhou Metalworks — Export Sales</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    PO-1002-783656 · Vellum Studio · Confidential — For authorized parties only · Page 1 of 1
+  </div>
+
+</div>
+</body>
+</html>

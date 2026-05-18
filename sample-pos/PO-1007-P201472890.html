@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Purchase Order PO-1007-P201472890</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Arial, sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; padding: 48px; }
+  .page { max-width: 800px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  .logo { font-size: 22px; font-weight: 700; color: #7c2d12; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .po-block { text-align: right; }
+  .po-number { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+  .po-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #7c2d12; }
+  .po-date { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .divider { border: none; border-top: 2px solid #7c2d12; margin-bottom: 28px; opacity: 0.2; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .party-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; }
+  .party-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #7c2d12; margin-bottom: 8px; }
+  .party-name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .party-detail { font-size: 11px; color: #5e687b; line-height: 1.6; }
+  .meta-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .meta-cell { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 6px; padding: 10px 12px; }
+  .meta-cell-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #9e9fae; margin-bottom: 4px; }
+  .meta-cell-value { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #5e687b; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead th { background: #f0f4f8; text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #5e687b; }
+  thead th:last-child, thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; font-size: 12px; color: #1a1a2e; vertical-align: top; }
+  tbody td:last-child, tbody td:nth-child(3), tbody td:nth-child(4) { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  .desc-main { font-weight: 500; }
+  .desc-sub { font-size: 10px; color: #9e9fae; margin-top: 2px; }
+  .totals-block { display: flex; justify-content: flex-end; margin-bottom: 28px; }
+  .totals-table { width: 280px; }
+  .totals-table tr td { padding: 5px 0; font-size: 12px; color: #5e687b; }
+  .totals-table tr td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
+  .totals-table .grand-total td { font-size: 14px; font-weight: 700; color: #1a1a2e; border-top: 2px solid #e5eaf0; padding-top: 10px; }
+  .totals-table .grand-total td:last-child { color: #7c2d12; }
+  .payment-box { border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 28px; }
+  .payment-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f4f8; }
+  .payment-row:last-child { border-bottom: none; }
+  .payment-label { font-size: 12px; color: #1a1a2e; }
+  .payment-amount { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .payment-due { font-size: 10px; color: #9e9fae; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+  .badge-pending { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .badge-paid { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .notes-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 36px; }
+  .notes-text { font-size: 11px; color: #5e687b; line-height: 1.7; }
+  .spec-table { width: 100%; margin-bottom: 16px; }
+  .spec-table td { padding: 5px 0; font-size: 11px; border-bottom: 1px solid #f0f4f8; }
+  .spec-table td:first-child { color: #9e9fae; width: 40%; }
+  .spec-table td:last-child { font-weight: 500; color: #1a1a2e; }
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; }
+  .sig-block { border-top: 1px solid #d1d5db; padding-top: 8px; }
+  .sig-name { font-size: 11px; font-weight: 600; color: #1a1a2e; margin-top: 4px; }
+  .sig-title { font-size: 10px; color: #9e9fae; }
+  .footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #e5eaf0; text-align: center; font-size: 10px; color: #9e9fae; }
+  @media print { body { padding: 20px; } @page { margin: 20mm; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="logo">Marlowe &amp; Sons</div>
+      <div class="logo-sub">Retail Fixtures &amp; Display Hardware</div>
+      <div style="font-size:10px;color:#9e9fae;margin-top:6px;">
+        48 Commerce Drive, Suite 300<br/>
+        Chicago, IL 60601 · USA<br/>
+        buyers@marloweandsons.com
+      </div>
+    </div>
+    <div class="po-block">
+      <div class="po-label">Purchase Order</div>
+      <div class="po-number">PO-1007-P201472890</div>
+      <div class="po-date">Issued: Apr 22, 2026</div>
+      <div class="po-date" style="color:#7c2d12;font-weight:600;">Ex-Factory: Jun 14, 2026</div>
+    </div>
+  </div>
+  <hr class="divider" />
+
+  <div class="parties">
+    <div class="party-box">
+      <div class="party-label">Bill To (Buyer)</div>
+      <div class="party-name">Marlowe &amp; Sons</div>
+      <div class="party-detail">
+        48 Commerce Drive, Suite 300<br/>
+        Chicago, IL 60601<br/>
+        United States<br/>
+        buyers@marloweandsons.com<br/>
+        +1 (312) 555-0194
+      </div>
+    </div>
+    <div class="party-box">
+      <div class="party-label">Vendor (Supplier)</div>
+      <div class="party-name">Foshan Precision Parts</div>
+      <div class="party-detail">
+        41 Nanhai Avenue, Guicheng<br/>
+        Foshan, Guangdong 528200<br/>
+        China (CN)<br/>
+        sales@foshanprecision.com<br/>
+        +86 757 8822 6601
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <div class="meta-cell">
+      <div class="meta-cell-label">PO Date</div>
+      <div class="meta-cell-value">Apr 22, 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Incoterms</div>
+      <div class="meta-cell-value">FOB Foshan</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Currency</div>
+      <div class="meta-cell-value">USD</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Payment Terms</div>
+      <div class="meta-cell-value">30 / 70</div>
+    </div>
+  </div>
+
+  <!-- Product Spec callout -->
+  <div class="section-title">Product Specification — Bronze Petite Hanger</div>
+  <div style="background:#fafbfc;border:1px solid #e5eaf0;border-radius:8px;padding:16px;margin-bottom:24px;">
+    <table class="spec-table">
+      <tr><td>Finish</td><td>Antiqued bronze powder-coat, matte</td></tr>
+      <tr><td>Wire gauge</td><td>14-gauge (2.0 mm), cold-drawn steel</td></tr>
+      <tr><td>Hook diameter</td><td>8 mm chrome-plated swivel hook</td></tr>
+      <tr><td>Dimensions</td><td>390 mm wide × 220 mm drop (petite/junior sizing)</td></tr>
+      <tr><td>Weight capacity</td><td>≥ 2.5 kg per unit</td></tr>
+      <tr><td>Surface treatment</td><td>Zinc phosphate pre-treatment + 2-coat powder-coat</td></tr>
+      <tr><td>Approved ref. sample</td><td>MS-FPP-BRNZ-S22 (held at Foshan facility)</td></tr>
+    </table>
+  </div>
+
+  <div class="section-title">Line Items</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">Description</th>
+        <th>SKU / Item No.</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Total (USD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="desc-main">Powder-Coat Hanger — Bronze Petite</div>
+          <div class="desc-sub">Antiqued bronze · Petite frame · Swivel hook · 390 mm</div>
+        </td>
+        <td>FPP-PC-BRNZ-390</td>
+        <td>2,500</td>
+        <td>$3.76</td>
+        <td>$9,400.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Individual tissue paper wrapping</div>
+          <div class="desc-sub">Acid-free tissue wrap per unit, M&amp;S branded</div>
+        </td>
+        <td>PKG-TISSUE-MS</td>
+        <td>2,500</td>
+        <td>$0.04</td>
+        <td>$100.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Master Carton — 50 units/ctn</div>
+          <div class="desc-sub">50 cartons, single-wall corrugated, moisture barrier inner liner</div>
+        </td>
+        <td>PKG-CTN-SW50</td>
+        <td>50</td>
+        <td>$3.80</td>
+        <td>$190.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals-block">
+    <table class="totals-table">
+      <tr><td>Goods subtotal</td><td>$9,400.00</td></tr>
+      <tr><td>Packaging</td><td>$290.00</td></tr>
+      <tr><td>Third-party inspection (SGS)</td><td>Buyer's account</td></tr>
+      <tr class="grand-total"><td><strong>TOTAL</strong></td><td><strong>$9,690.00</strong></td></tr>
+    </table>
+  </div>
+
+  <div class="section-title">Payment Schedule</div>
+  <div class="payment-box">
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Deposit — 30% upon factory sample approval</span>
+        <div class="payment-due">Due: Apr 30, 2026 · Wire ref: MS-DEP-1007</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$2,907.00</div>
+        <span class="badge badge-paid">✓ Paid May 1</span>
+      </div>
+    </div>
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Balance — 70% prior to loading, against QC pass</span>
+        <div class="payment-due">Due: Jun 11, 2026 · Wire ref: MS-BAL-1007</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$6,783.00</div>
+        <span class="badge badge-pending">Pending</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Terms &amp; Quality Requirements</div>
+  <div class="notes-box">
+    <div class="notes-text">
+      1. <strong>Sample approval:</strong> Supplier must submit 6 production-grade samples for approval. Approval in writing required before bulk. Reference sample MS-FPP-BRNZ-S22 is the benchmark.<br/>
+      2. <strong>Inspection:</strong> SGS AQL 2.5 Level II. Buyer to schedule within 5 days of supplier's production-complete notification. Supplier to provide 72-hour access window.<br/>
+      3. <strong>Finish consistency:</strong> Bronze tone must fall within Delta-E ≤ 2.0 of approved reference under D65 illuminant. Colorimeter readings to be included in QC report.<br/>
+      4. <strong>Hook pull-out test:</strong> Minimum 25 kg pull force per ASTM A228. Supplier to provide test certificate per production batch.<br/>
+      5. <strong>Carton labelling:</strong> PO number, item code, qty, gross/net weight, country of origin, dimensions (LxWxH in cm). Labels in both English and Simplified Chinese.<br/>
+      6. Supplier warrants goods are free from defects in material and workmanship for 12 months from date of delivery.
+    </div>
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-name">Authorized Buyer Signature</div>
+      <div class="sig-title">Marlowe &amp; Sons — Purchasing Department</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-name">Supplier Acceptance</div>
+      <div class="sig-title">Foshan Precision Parts — Sales Manager</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    PO-1007-P201472890 · Marlowe &amp; Sons · Confidential — For authorized parties only · Page 1 of 1
+  </div>
+
+</div>
+</body>
+</html>

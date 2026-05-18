@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Purchase Order PO-1006-P201466120</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Arial, sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; padding: 48px; }
+  .page { max-width: 800px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  .logo { font-size: 22px; font-weight: 700; color: #0f5736; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .po-block { text-align: right; }
+  .po-number { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+  .po-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #0f5736; }
+  .po-date { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .divider { border: none; border-top: 2px solid #0f5736; margin-bottom: 28px; opacity: 0.2; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .party-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; }
+  .party-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #0f5736; margin-bottom: 8px; }
+  .party-name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .party-detail { font-size: 11px; color: #5e687b; line-height: 1.6; }
+  .meta-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .meta-cell { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 6px; padding: 10px 12px; }
+  .meta-cell-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #9e9fae; margin-bottom: 4px; }
+  .meta-cell-value { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #5e687b; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead th { background: #f0f4f8; text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #5e687b; }
+  thead th:last-child, thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; font-size: 12px; color: #1a1a2e; vertical-align: top; }
+  tbody td:last-child, tbody td:nth-child(3), tbody td:nth-child(4) { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  .desc-main { font-weight: 500; }
+  .desc-sub { font-size: 10px; color: #9e9fae; margin-top: 2px; }
+  .totals-block { display: flex; justify-content: flex-end; margin-bottom: 28px; }
+  .totals-table { width: 280px; }
+  .totals-table tr td { padding: 5px 0; font-size: 12px; color: #5e687b; }
+  .totals-table tr td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
+  .totals-table .grand-total td { font-size: 14px; font-weight: 700; color: #1a1a2e; border-top: 2px solid #e5eaf0; padding-top: 10px; }
+  .totals-table .grand-total td:last-child { color: #0f5736; }
+  .payment-box { border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 28px; }
+  .payment-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f4f8; }
+  .payment-row:last-child { border-bottom: none; }
+  .payment-label { font-size: 12px; color: #1a1a2e; }
+  .payment-amount { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .payment-due { font-size: 10px; color: #9e9fae; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+  .badge-pending { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .badge-paid { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .notes-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 36px; }
+  .notes-text { font-size: 11px; color: #5e687b; line-height: 1.7; }
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; }
+  .sig-block { border-top: 1px solid #d1d5db; padding-top: 8px; }
+  .sig-name { font-size: 11px; font-weight: 600; color: #1a1a2e; margin-top: 4px; }
+  .sig-title { font-size: 10px; color: #9e9fae; }
+  .footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #e5eaf0; text-align: center; font-size: 10px; color: #9e9fae; }
+  .alert-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 11px; color: #92400e; }
+  @media print { body { padding: 20px; } @page { margin: 20mm; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="logo">Northbound Outfitters</div>
+      <div class="logo-sub">Outdoor &amp; Active Lifestyle Retail</div>
+      <div style="font-size:10px;color:#9e9fae;margin-top:6px;">
+        200 Ridgeline Way, Suite 110<br/>
+        Denver, CO 80202 · USA<br/>
+        sourcing@northboundoutfitters.com
+      </div>
+    </div>
+    <div class="po-block">
+      <div class="po-label">Purchase Order</div>
+      <div class="po-number">PO-1006-P201466120</div>
+      <div class="po-date">Issued: Apr 8, 2026</div>
+      <div class="po-date" style="color:#0f5736;font-weight:600;">Ex-Factory: May 23, 2026</div>
+    </div>
+  </div>
+  <hr class="divider" />
+
+  <div class="alert-box">
+    ⚠ <strong>Urgent:</strong> Balance payment due May 20, 2026 — 3 days before ex-factory. Please ensure wire transfer is initiated by May 19.
+  </div>
+
+  <div class="parties">
+    <div class="party-box">
+      <div class="party-label">Bill To (Buyer)</div>
+      <div class="party-name">Northbound Outfitters</div>
+      <div class="party-detail">
+        200 Ridgeline Way, Suite 110<br/>
+        Denver, CO 80202<br/>
+        United States<br/>
+        sourcing@northboundoutfitters.com<br/>
+        +1 (720) 555-0311
+      </div>
+    </div>
+    <div class="party-box">
+      <div class="party-label">Vendor (Supplier)</div>
+      <div class="party-name">Guangzhou Metalworks</div>
+      <div class="party-detail">
+        22 Panyu Industrial Blvd<br/>
+        Guangzhou 511400<br/>
+        China (CN)<br/>
+        export@gzmetalworks.cn<br/>
+        +86 20 8441 7765
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <div class="meta-cell">
+      <div class="meta-cell-label">PO Date</div>
+      <div class="meta-cell-value">Apr 8, 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Incoterms</div>
+      <div class="meta-cell-value">FOB Guangzhou</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Currency</div>
+      <div class="meta-cell-value">USD</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Payment Terms</div>
+      <div class="meta-cell-value">30 / 70</div>
+    </div>
+  </div>
+
+  <div class="section-title">Line Items</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">Description</th>
+        <th>SKU / Item No.</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Total (USD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="desc-main">Powder-Coat Hanger — Charcoal Bottom</div>
+          <div class="desc-sub">Charcoal powder-coat finish · Flat bottom bar · Heavy-duty 16-gauge · Outerwear rated</div>
+        </td>
+        <td>GZM-PC-CHR-BTM</td>
+        <td>3,000</td>
+        <td>$2.60</td>
+        <td>$7,800.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Rubber Anti-Slip Bar Coating</div>
+          <div class="desc-sub">Applied to bottom bar — garment protection spec NBO-RS-01</div>
+        </td>
+        <td>GZM-RSLIP-NBO</td>
+        <td>3,000</td>
+        <td>Included</td>
+        <td>$0.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals-block">
+    <table class="totals-table">
+      <tr><td>Subtotal</td><td>$7,800.00</td></tr>
+      <tr><td>QC Inspection allowance</td><td>$0.00</td></tr>
+      <tr><td>Freight (FOB, buyer's carrier)</td><td>$0.00</td></tr>
+      <tr class="grand-total"><td><strong>TOTAL</strong></td><td><strong>$7,800.00</strong></td></tr>
+    </table>
+  </div>
+
+  <div class="section-title">Payment Schedule</div>
+  <div class="payment-box">
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Deposit — 30% upon PO confirmation</span>
+        <div class="payment-due">Due: Apr 8, 2026 · Wire ref: NBO-DEP-1006</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$2,340.00</div>
+        <span class="badge badge-paid">✓ Paid Apr 9</span>
+      </div>
+    </div>
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Balance — 70% prior to loading</span>
+        <div class="payment-due">Due: May 20, 2026 · Wire ref: NBO-BAL-1006</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$5,460.00</div>
+        <span class="badge badge-pending">⚠ Due in 2 days</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Shipping &amp; Compliance Instructions</div>
+  <div class="notes-box">
+    <div class="notes-text">
+      1. <strong>Loading port:</strong> Guangzhou Nansha — carrier nomination from buyer's freight forwarder (Apex Global Logistics).<br/>
+      2. <strong>Destination:</strong> Long Beach, CA (LAX) — consignee: Northbound Outfitters Distribution Center.<br/>
+      3. Hanger must meet ASTM F963 safety standard. Certificate of Compliance required with each shipment.<br/>
+      4. Country of Origin labelling "Made in China" must appear on both product and master carton per CBP requirements.<br/>
+      5. Commercial invoice, packing list, and B/L to be issued within 48 hours of vessel departure. Originals couriered to Denver office.<br/>
+      6. Any port congestion or loading delay must be flagged immediately — buyer will arrange alternate vessel if delay exceeds 5 days.
+    </div>
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-name">Authorized Buyer Signature</div>
+      <div class="sig-title">Northbound Outfitters — Global Sourcing</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-name">Supplier Acceptance</div>
+      <div class="sig-title">Guangzhou Metalworks — Export Sales</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    PO-1006-P201466120 · Northbound Outfitters · Confidential — For authorized parties only · Page 1 of 1
+  </div>
+
+</div>
+</body>
+</html>

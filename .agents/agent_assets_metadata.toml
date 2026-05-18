@@ -1,8 +1,31 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "oEk5lB0XsL7acdJS7t-3l"
 uri = "file://attached_assets/flowforge-logo-branded.png"
 type = "image"
 title = "flowforge-logo-branded"
+
+[[outputs]]
+id = "_9ZvNMjB4OrocZCpIN4zd"
+uri = "file://sample-pos/PO-1001-778143.pdf"
+type = "pdf"
+title = "PO-1001-778143 — Chrome Retail Hanger Heavy Duty Top (Marlowe & Sons → Tianjin Wire Works)"
+
+[[outputs]]
+id = "5iUfazw9pjuA8Irx-6fwg"
+uri = "file://sample-pos/PO-1002-783656.pdf"
+type = "pdf"
+title = "PO-1002-783656 — Chrome Retail Hanger Slim Profile Bottom (Vellum Studio → Guangzhou Metalworks)"
+
+[[outputs]]
+id = "rVDUsOCbX5_qw2abY0swq"
+uri = "file://sample-pos/PO-1006-P201466120.pdf"
+type = "pdf"
+title = "PO-1006-P201466120 — Powder-Coat Hanger Charcoal Bottom (Northbound Outfitters → Guangzhou Metalworks)"
+
+[[outputs]]
+id = "KxVGwz_-aiPzwFrNB2ft0"
+uri = "file://sample-pos/PO-1007-P201472890.pdf"
+type = "pdf"
+title = "PO-1007-P201472890 — Powder-Coat Hanger Bronze Petite (Marlowe & Sons → Foshan Precision Parts)"

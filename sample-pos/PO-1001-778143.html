@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Purchase Order PO-1001-778143</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Arial, sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; padding: 48px; }
+  .page { max-width: 800px; margin: 0 auto; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  .logo-block { display: flex; flex-direction: column; }
+  .logo { font-size: 22px; font-weight: 700; color: #9000FF; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .po-block { text-align: right; }
+  .po-number { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+  .po-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #9000FF; }
+  .po-date { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+  .divider { border: none; border-top: 2px solid #9000FF; margin-bottom: 28px; opacity: 0.2; }
+
+  /* Parties */
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .party-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; }
+  .party-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #9000FF; margin-bottom: 8px; }
+  .party-name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .party-detail { font-size: 11px; color: #5e687b; line-height: 1.6; }
+
+  /* Meta row */
+  .meta-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .meta-cell { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 6px; padding: 10px 12px; }
+  .meta-cell-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #9e9fae; margin-bottom: 4px; }
+  .meta-cell-value { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+
+  /* Line items */
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #5e687b; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead th { background: #f0f4f8; text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #5e687b; }
+  thead th:last-child, thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; font-size: 12px; color: #1a1a2e; vertical-align: top; }
+  tbody td:last-child, tbody td:nth-child(3), tbody td:nth-child(4) { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  .desc-main { font-weight: 500; }
+  .desc-sub { font-size: 10px; color: #9e9fae; margin-top: 2px; }
+
+  /* Totals */
+  .totals-block { display: flex; justify-content: flex-end; margin-bottom: 28px; }
+  .totals-table { width: 280px; }
+  .totals-table tr td { padding: 5px 0; font-size: 12px; color: #5e687b; }
+  .totals-table tr td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
+  .totals-table .grand-total td { font-size: 14px; font-weight: 700; color: #1a1a2e; border-top: 2px solid #e5eaf0; padding-top: 10px; margin-top: 4px; }
+  .totals-table .grand-total td:last-child { color: #9000FF; }
+
+  /* Payment terms */
+  .payment-box { border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 28px; }
+  .payment-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f4f8; }
+  .payment-row:last-child { border-bottom: none; }
+  .payment-label { font-size: 12px; color: #1a1a2e; }
+  .payment-amount { font-size: 12px; font-weight: 600; color: #1a1a2e; }
+  .payment-due { font-size: 10px; color: #9e9fae; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+  .badge-pending { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .badge-paid { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+
+  /* Notes */
+  .notes-box { background: #fafbfc; border: 1px solid #e5eaf0; border-radius: 8px; padding: 16px; margin-bottom: 36px; }
+  .notes-text { font-size: 11px; color: #5e687b; line-height: 1.7; }
+
+  /* Signatures */
+  .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; }
+  .sig-block { border-top: 1px solid #d1d5db; padding-top: 8px; }
+  .sig-name { font-size: 11px; font-weight: 600; color: #1a1a2e; margin-top: 4px; }
+  .sig-title { font-size: 10px; color: #9e9fae; }
+
+  /* Footer */
+  .footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #e5eaf0; text-align: center; font-size: 10px; color: #9e9fae; }
+
+  @media print {
+    body { padding: 20px; }
+    @page { margin: 20mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-block">
+      <div class="logo">Marlowe &amp; Sons</div>
+      <div class="logo-sub">Retail Fixtures &amp; Display Hardware</div>
+      <div style="font-size:10px;color:#9e9fae;margin-top:6px;">
+        48 Commerce Drive, Suite 300<br/>
+        Chicago, IL 60601 · USA<br/>
+        buyers@marloweandsons.com
+      </div>
+    </div>
+    <div class="po-block">
+      <div class="po-label">Purchase Order</div>
+      <div class="po-number">PO-1001-778143</div>
+      <div class="po-date">Issued: May 18, 2026</div>
+      <div class="po-date" style="color:#9000FF;font-weight:600;">Ex-Factory: Jul 12, 2026</div>
+    </div>
+  </div>
+  <hr class="divider" />
+
+  <!-- Parties -->
+  <div class="parties">
+    <div class="party-box">
+      <div class="party-label">Bill To (Buyer)</div>
+      <div class="party-name">Marlowe &amp; Sons</div>
+      <div class="party-detail">
+        48 Commerce Drive, Suite 300<br/>
+        Chicago, IL 60601<br/>
+        United States<br/>
+        buyers@marloweandsons.com<br/>
+        +1 (312) 555-0194
+      </div>
+    </div>
+    <div class="party-box">
+      <div class="party-label">Vendor (Supplier)</div>
+      <div class="party-name">Tianjin Wire Works</div>
+      <div class="party-detail">
+        88 Binhai Industrial Zone<br/>
+        Tianjin 300308<br/>
+        China (CN)<br/>
+        orders@tianjinwireworks.cn<br/>
+        +86 22 5912 0033
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta -->
+  <div class="meta-row">
+    <div class="meta-cell">
+      <div class="meta-cell-label">PO Date</div>
+      <div class="meta-cell-value">May 18, 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Incoterms</div>
+      <div class="meta-cell-value">FOB Tianjin</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Currency</div>
+      <div class="meta-cell-value">USD</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-cell-label">Payment Terms</div>
+      <div class="meta-cell-value">30 / 70</div>
+    </div>
+  </div>
+
+  <!-- Line Items -->
+  <div class="section-title">Line Items</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">Description</th>
+        <th>SKU / Item No.</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Total (USD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="desc-main">Chrome Retail Hanger — Heavy Duty Top</div>
+          <div class="desc-sub">Polished chrome finish · 16-gauge wire · Top-load design</div>
+        </td>
+        <td>TWW-HDT-CH-16G</td>
+        <td>2,000</td>
+        <td>$3.80</td>
+        <td>$7,600.00</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="desc-main">Packaging — Poly Bag + Barcode Label</div>
+          <div class="desc-sub">Per-unit retail poly bag with EAN-13 barcode</div>
+        </td>
+        <td>PKG-POLY-EAN</td>
+        <td>2,000</td>
+        <td>$0.00</td>
+        <td>Included</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Totals -->
+  <div class="totals-block">
+    <table class="totals-table">
+      <tr><td>Subtotal</td><td>$7,600.00</td></tr>
+      <tr><td>Freight (estimate, FOB)</td><td>$0.00</td></tr>
+      <tr><td>Quality Inspection</td><td>Buyer's account</td></tr>
+      <tr class="grand-total"><td><strong>TOTAL</strong></td><td><strong>$7,600.00</strong></td></tr>
+    </table>
+  </div>
+
+  <!-- Payment Terms -->
+  <div class="section-title">Payment Schedule</div>
+  <div class="payment-box">
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Deposit — 30% of order value</span>
+        <div class="payment-due">Due: May 28, 2026</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$2,280.00</div>
+        <span class="badge badge-pending">Pending</span>
+      </div>
+    </div>
+    <div class="payment-row">
+      <div>
+        <span class="payment-label">Balance — 70% prior to shipment</span>
+        <div class="payment-due">Due: Jul 9, 2026 (3 days before ex-factory)</div>
+      </div>
+      <div style="text-align:right">
+        <div class="payment-amount">$5,320.00</div>
+        <span class="badge badge-pending">Pending</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="section-title">Terms &amp; Notes</div>
+  <div class="notes-box">
+    <div class="notes-text">
+      1. Supplier must submit pre-production samples for approval before commencing full production.<br/>
+      2. AQL 2.5 inspection required prior to shipment. Buyer reserves the right to appoint a third-party inspector.<br/>
+      3. All goods must be labelled and packaged as per Marlowe &amp; Sons Packaging Specification v3.2.<br/>
+      4. Any delay beyond the ex-factory date must be communicated in writing with a revised production schedule within 48 hours.<br/>
+      5. This PO is governed by the laws of the State of Illinois. Disputes shall be submitted to binding arbitration in Chicago, IL.
+    </div>
+  </div>
+
+  <!-- Signatures -->
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-name">Authorized Buyer Signature</div>
+      <div class="sig-title">Marlowe &amp; Sons — Purchasing Department</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-name">Supplier Acceptance</div>
+      <div class="sig-title">Tianjin Wire Works — Sales Representative</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    PO-1001-778143 · Marlowe &amp; Sons · Confidential — For authorized parties only · Page 1 of 1
+  </div>
+
+</div>
+</body>
+</html>
