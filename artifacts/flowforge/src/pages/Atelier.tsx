@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
@@ -146,6 +147,7 @@ function stageIndex(stage: string) {
 // Component
 // ---------------------------------------------------------------------------
 export function Atelier() {
+  const [, navigate] = useLocation();
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
   const { data: apiTasks }     = useListTasks();
@@ -245,7 +247,7 @@ export function Atelier() {
       <header className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2 w-[260px]">
           <button
-            onClick={() => window.history.back()}
+            onClick={() => window.history.length <= 1 ? navigate("/") : window.history.back()}
             className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] transition-colors mr-1"
           >
             <ArrowLeft className="w-3 h-3" />

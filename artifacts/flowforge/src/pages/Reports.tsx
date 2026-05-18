@@ -1063,6 +1063,7 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
 
 // ─── Main Reports page ────────────────────────────────────────────────────────
 export function Reports() {
+  const [, navigate] = useLocation();
   const { data: apiShipments, isLoading: loadingShipments } = useListShipments();
   const { data: apiTasks,     isLoading: loadingTasks     } = useListTasks();
   const { data: apiStages,    isLoading: loadingStages    } = useListStages();
@@ -1200,7 +1201,7 @@ export function Reports() {
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4">
         <button
-          onClick={() => window.history.back()}
+          onClick={() => window.history.length <= 1 ? navigate("/") : window.history.back()}
           className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] mb-2 transition-colors"
         >
           <ArrowLeft className="w-3 h-3" />
