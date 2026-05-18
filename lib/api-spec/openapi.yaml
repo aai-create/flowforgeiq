@@ -19,6 +19,7 @@ tags:
   - name: documents
   - name: extractions
   - name: predictions
+  - name: copilot
 paths:
   /healthz:
     get:
@@ -380,6 +381,113 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PredictionAccuracyReport" }
+
+  /copilot/proposals:
+    get:
+      operationId: listCopilotProposals
+      tags: [copilot]
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema: { type: string }
+        - in: query
+          name: shipmentId
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: List of copilot proposals
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CopilotProposal" }
+    post:
+      operationId: createCopilotProposal
+      tags: [copilot]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CopilotProposalInput" }
+      responses:
+        "201":
+          description: Created proposal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotProposal" }
+
+  /copilot/proposals/{id}:
+    patch:
+      operationId: updateCopilotProposal
+      tags: [copilot]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CopilotProposalUpdate" }
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotProposal" }
+
+  /copilot/trigger:
+    post:
+      operationId: triggerCopilot
+      tags: [copilot]
+      summary: Scan all active shipments and generate new proposals
+      responses:
+        "200":
+          description: Trigger result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotTriggerResult" }
+
+  /copilot/summary:
+    get:
+      operationId: getCopilotSummary
+      tags: [copilot]
+      responses:
+        "200":
+          description: Daily summary of copilot activity
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotSummary" }
+
+  /copilot/policies:
+    get:
+      operationId: listAutonomyPolicies
+      tags: [copilot]
+      responses:
+        "200":
+          description: List of autonomy policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AutonomyPolicy" }
+    put:
+      operationId: upsertAutonomyPolicy
+      tags: [copilot]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AutonomyPolicyInput" }
+      responses:
+        "200":
+          description: Upserted policy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutonomyPolicy" }
 
   /extractions/{id}/corrections:
     post:
@@ -788,3 +896,87 @@ components:
         originalValue: { type: ["string", "null"] }
         correctedValue: { type: string }
         createdAt: { type: string, format: date-time }
+
+    CopilotProposal:
+      type: object
+      required: [id, shipmentId, triggerType, actionType, payload, reasoning, confidence, status, createdAt, updatedAt]
+      properties:
+        id:             { type: integer }
+        shipmentId:     { type: integer }
+        triggerType:    { type: string }
+        triggerRef:     { type: ["string", "null"] }
+        actionType:     { type: string }
+        payload:        { type: object, additionalProperties: true }
+        reasoning:      { type: string }
+        confidence:     { type: number }
+        status:         { type: string }
+        snoozedUntil:   { type: ["string", "null"], format: date-time }
+        editedPayload:  { type: ["object", "null"], additionalProperties: true }
+        auditTrail:     { type: array, items: { type: object, additionalProperties: true } }
+        createdAt:      { type: string, format: date-time }
+        updatedAt:      { type: string, format: date-time }
+
+    CopilotProposalInput:
+      type: object
+      required: [shipmentId, triggerType, actionType, payload, reasoning]
+      properties:
+        shipmentId:  { type: integer }
+        triggerType: { type: string }
+        triggerRef:  { type: string }
+        actionType:  { type: string }
+        payload:     { type: object, additionalProperties: true }
+        reasoning:   { type: string }
+        confidence:  { type: number }
+
+    CopilotProposalUpdate:
+      type: object
+      properties:
+        status:        { type: string }
+        editedPayload: { type: object, additionalProperties: true }
+        snoozedUntil:  { type: string, format: date-time }
+
+    CopilotTriggerResult:
+      type: object
+      required: [scanned, created, autoExecuted]
+      properties:
+        scanned:      { type: integer }
+        created:      { type: integer }
+        autoExecuted: { type: integer }
+        proposals:
+          type: array
+          items: { $ref: "#/components/schemas/CopilotProposal" }
+
+    CopilotSummary:
+      type: object
+      required: [pending, autoExecuted, snoozed, rejected, watched]
+      properties:
+        pending:      { type: integer }
+        autoExecuted: { type: integer }
+        snoozed:      { type: integer }
+        rejected:     { type: integer }
+        watched:      { type: integer }
+        highlights:
+          type: array
+          items: { type: string }
+        recentActions:
+          type: array
+          items: { $ref: "#/components/schemas/CopilotProposal" }
+
+    AutonomyPolicy:
+      type: object
+      required: [id, policy, createdAt, updatedAt]
+      properties:
+        id:           { type: integer }
+        supplierName: { type: ["string", "null"] }
+        actionType:   { type: ["string", "null"] }
+        policy:       { type: string }
+        createdAt:    { type: string, format: date-time }
+        updatedAt:    { type: string, format: date-time }
+
+    AutonomyPolicyInput:
+      type: object
+      required: [policy]
+      properties:
+        supplierName: { type: string }
+        actionType:   { type: string }
+        policy:       { type: string }

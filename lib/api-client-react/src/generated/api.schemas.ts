@@ -304,6 +304,89 @@ export interface ExtractionCorrection {
   createdAt: string;
 }
 
+export type CopilotProposalPayload = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type CopilotProposalEditedPayload = { [key: string]: unknown } | null;
+
+export type CopilotProposalAuditTrailItem = { [key: string]: unknown };
+
+export interface CopilotProposal {
+  id: number;
+  shipmentId: number;
+  triggerType: string;
+  /** @nullable */
+  triggerRef?: string | null;
+  actionType: string;
+  payload: CopilotProposalPayload;
+  reasoning: string;
+  confidence: number;
+  status: string;
+  /** @nullable */
+  snoozedUntil?: string | null;
+  /** @nullable */
+  editedPayload?: CopilotProposalEditedPayload;
+  auditTrail?: CopilotProposalAuditTrailItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CopilotProposalInputPayload = { [key: string]: unknown };
+
+export interface CopilotProposalInput {
+  shipmentId: number;
+  triggerType: string;
+  triggerRef?: string;
+  actionType: string;
+  payload: CopilotProposalInputPayload;
+  reasoning: string;
+  confidence?: number;
+}
+
+export type CopilotProposalUpdateEditedPayload = { [key: string]: unknown };
+
+export interface CopilotProposalUpdate {
+  status?: string;
+  editedPayload?: CopilotProposalUpdateEditedPayload;
+  snoozedUntil?: string;
+}
+
+export interface CopilotTriggerResult {
+  scanned: number;
+  created: number;
+  autoExecuted: number;
+  proposals?: CopilotProposal[];
+}
+
+export interface CopilotSummary {
+  pending: number;
+  autoExecuted: number;
+  snoozed: number;
+  rejected: number;
+  watched: number;
+  highlights?: string[];
+  recentActions?: CopilotProposal[];
+}
+
+export interface AutonomyPolicy {
+  id: number;
+  /** @nullable */
+  supplierName?: string | null;
+  /** @nullable */
+  actionType?: string | null;
+  policy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutonomyPolicyInput {
+  supplierName?: string;
+  actionType?: string;
+  policy: string;
+}
+
 export type ListDocumentsParams = {
 shipmentId?: number;
 };
@@ -312,5 +395,10 @@ export type UploadDocumentBody = {
   file: Blob;
   shipmentId?: number;
   sourceChannel?: string;
+};
+
+export type ListCopilotProposalsParams = {
+status?: string;
+shipmentId?: number;
 };
 

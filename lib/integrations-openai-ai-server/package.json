@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "tsc --build"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./batch": "./src/batch/index.ts",
@@ -10,7 +13,7 @@
     "./audio": "./src/audio/index.ts"
   },
   "dependencies": {
-    "openai": "^6.27.0",
+    "openai": "^6.38.0",
     "p-limit": "^7.3.0",
     "p-retry": "^7.1.1"
   },

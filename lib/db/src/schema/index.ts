@@ -7,3 +7,4 @@ export * from "./messages";
 export * from "./tasks";
 export * from "./documents";
 export * from "./predictions";
+export * from "./copilot";

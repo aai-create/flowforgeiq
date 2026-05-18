@@ -1,0 +1,37 @@
+import { pgTable, text, serial, integer, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+
+export const copilotProposalsTable = pgTable("copilot_proposals", {
+  id: serial("id").primaryKey(),
+  shipmentId: integer("shipment_id").notNull(),
+  triggerType: text("trigger_type").notNull(), // message_received | payment_overdue | stage_idle | port_delay | no_response_48h | doc_missing
+  triggerRef: text("trigger_ref"), // e.g. "message:42" or "payment:7"
+  actionType: text("action_type").notNull(), // reply | nudge | stage_advance | payment_reminder | doc_request | escalation
+  payload: jsonb("payload").notNull().default({}), // e.g. { draftBody, channel, stageId, amount }
+  reasoning: text("reasoning").notNull().default(""),
+  confidence: real("confidence").notNull().default(0.8),
+  status: text("status").notNull().default("pending"), // pending | approved | edited | rejected | snoozed | auto_executed
+  snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
+  editedPayload: jsonb("edited_payload"), // user's modified version of payload
+  auditTrail: jsonb("audit_trail").notNull().default([]), // array of { at, actor, action, note }
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const autonomyPoliciesTable = pgTable("autonomy_policies", {
+  id: serial("id").primaryKey(),
+  supplierName: text("supplier_name"), // null = global
+  actionType: text("action_type"), // null = all types
+  policy: text("policy").notNull().default("always_ask"), // always_ask | auto_ack | full_auto
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const insertCopilotProposalSchema = createInsertSchema(copilotProposalsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCopilotProposal = z.infer<typeof insertCopilotProposalSchema>;
+export type CopilotProposal = typeof copilotProposalsTable.$inferSelect;
+
+export const insertAutonomyPolicySchema = createInsertSchema(autonomyPoliciesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAutonomyPolicy = z.infer<typeof insertAutonomyPolicySchema>;
+export type AutonomyPolicy = typeof autonomyPoliciesTable.$inferSelect;

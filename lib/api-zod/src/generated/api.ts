@@ -595,6 +595,148 @@ export const GetPredictionAccuracyResponse = zod.object({
 })
 
 
+export const ListCopilotProposalsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "shipmentId": zod.coerce.number().optional()
+})
+
+export const ListCopilotProposalsResponseItem = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListCopilotProposalsResponse = zod.array(ListCopilotProposalsResponseItem)
+
+
+export const CreateCopilotProposalBody = zod.object({
+  "shipmentId": zod.number(),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().optional(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number().optional()
+})
+
+
+export const UpdateCopilotProposalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCopilotProposalBody = zod.object({
+  "status": zod.string().optional(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).optional(),
+  "snoozedUntil": zod.coerce.date().optional()
+})
+
+export const UpdateCopilotProposalResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Scan all active shipments and generate new proposals
+ */
+export const TriggerCopilotResponse = zod.object({
+  "scanned": zod.number(),
+  "created": zod.number(),
+  "autoExecuted": zod.number(),
+  "proposals": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})).optional()
+})
+
+
+export const GetCopilotSummaryResponse = zod.object({
+  "pending": zod.number(),
+  "autoExecuted": zod.number(),
+  "snoozed": zod.number(),
+  "rejected": zod.number(),
+  "watched": zod.number(),
+  "highlights": zod.array(zod.string()).optional(),
+  "recentActions": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})).optional()
+})
+
+
+export const ListAutonomyPoliciesResponseItem = zod.object({
+  "id": zod.number(),
+  "supplierName": zod.string().nullish(),
+  "actionType": zod.string().nullish(),
+  "policy": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListAutonomyPoliciesResponse = zod.array(ListAutonomyPoliciesResponseItem)
+
+
+export const UpsertAutonomyPolicyBody = zod.object({
+  "supplierName": zod.string().optional(),
+  "actionType": zod.string().optional(),
+  "policy": zod.string()
+})
+
+export const UpsertAutonomyPolicyResponse = zod.object({
+  "id": zod.number(),
+  "supplierName": zod.string().nullish(),
+  "actionType": zod.string().nullish(),
+  "policy": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const SaveExtractionCorrectionParams = zod.object({
   "id": zod.coerce.number()
 })

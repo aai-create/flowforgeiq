@@ -660,7 +660,7 @@ importers:
   lib/integrations-openai-ai-server:
     dependencies:
       openai:
-        specifier: ^6.27.0
+        specifier: ^6.38.0
         version: 6.38.0(zod@3.25.76)
       p-limit:
         specifier: ^7.3.0

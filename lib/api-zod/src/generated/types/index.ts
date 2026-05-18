@@ -7,7 +7,19 @@
  */
 
 export * from './accuracyBucket';
+export * from './autonomyPolicy';
+export * from './autonomyPolicyInput';
 export * from './contributingSignal';
+export * from './copilotProposal';
+export * from './copilotProposalAuditTrailItem';
+export * from './copilotProposalEditedPayload';
+export * from './copilotProposalInput';
+export * from './copilotProposalInputPayload';
+export * from './copilotProposalPayload';
+export * from './copilotProposalUpdate';
+export * from './copilotProposalUpdateEditedPayload';
+export * from './copilotSummary';
+export * from './copilotTriggerResult';
 export * from './documentUpdate';
 export * from './documentWithExtraction';
 export * from './extractedFields';
@@ -19,6 +31,7 @@ export * from './extractionFieldProvenance';
 export * from './factoryQuote';
 export * from './fieldProvenanceEntry';
 export * from './healthStatus';
+export * from './listCopilotProposalsParams';
 export * from './listDocumentsParams';
 export * from './message';
 export * from './messageInput';

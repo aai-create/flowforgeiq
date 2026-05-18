@@ -7,16 +7,18 @@ import {
   GripVertical, Plus, Trash2, DollarSign, CreditCard, CalendarClock,
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
-  Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert,
+  Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
 import { ShipmentRiskDetail } from "./ShipmentRiskDetail";
+import { CopilotQueue } from "./CopilotQueue";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
   updateMessage, updateTask, updateShipment, updatePayment,
   selectFactoryQuote, reorderStages, createMessage,
   useListDocuments, getListDocumentsQueryKey,
+  useListCopilotProposals,
 } from "@workspace/api-client-react";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
 import {
@@ -28,7 +30,7 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 type ViewMode   = "inbox" | "command";
-type NavTab     = "inbox" | "calendar" | "buyers" | "import";
+type NavTab     = "inbox" | "calendar" | "buyers" | "import" | "copilot";
 type RightTab   = "message" | "docs" | "risk";
 type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
@@ -1082,6 +1084,7 @@ export default function Home() {
   const { data: apiShipments } = useListShipments();
   const { data: apiMessages }  = useListMessages();
   const { data: apiTasks }     = useListTasks();
+  const { data: apiProposals } = useListCopilotProposals({});
 
   const [stages, setStages]               = useState<UiStage[]>([]);
   const [showStageConfig, setShowStageConfig] = useState(false);
@@ -1269,10 +1272,11 @@ export default function Home() {
 
   // Nav rail items
   const NAV_ITEMS: { tab: NavTab; icon: React.ElementType; label: string }[] = [
-    { tab:"inbox",    icon:Inbox,    label:"Inbox"    },
-    { tab:"calendar", icon:Calendar, label:"Calendar" },
-    { tab:"buyers",   icon:Users,    label:"Buyers"   },
-    { tab:"import",   icon:Upload,   label:"Import"   },
+    { tab:"inbox",    icon:Inbox,         label:"Inbox"          },
+    { tab:"copilot",  icon:BrainCircuit,  label:"Copilot Queue"  },
+    { tab:"calendar", icon:Calendar,      label:"Calendar"       },
+    { tab:"buyers",   icon:Users,         label:"Buyers"         },
+    { tab:"import",   icon:Upload,        label:"Import"         },
   ];
 
   if (viewMode==="command") {
@@ -1319,6 +1323,7 @@ export default function Home() {
               className={`p-2 rounded-md transition-colors relative ${navTab===tab?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
               <Icon size={17}/>
               {tab==="inbox"&&unreadCount>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-[#9000FF] rounded-full border border-white"/>}
+              {tab==="copilot"&&(apiProposals??[]).filter(p=>p.status==="pending").length>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full border border-white"/>}
               {tab==="buyers"&&<span className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full border border-white"/>}
             </button>
           ))}
@@ -1338,7 +1343,7 @@ export default function Home() {
             <span className="text-[#E5EAF0]">/</span>
             <span className="text-[#5E687B] font-medium text-xs">
               {navTab==="inbox" ? (selectedShipmentId ? shipments.find(s=>s.id===selectedShipmentId)?.po : supplierFilter ?? (channelFilter!=="all" ? channelFilter[0].toUpperCase()+channelFilter.slice(1) : "Inbox"))
-                : navTab==="calendar" ? "Calendar" : navTab==="buyers" ? "Buyer Chatbot" : "Doc Intelligence"}
+                : navTab==="copilot" ? "Copilot Queue" : navTab==="calendar" ? "Calendar" : navTab==="buyers" ? "Buyer Chatbot" : "Doc Intelligence"}
             </span>
           </div>
 
@@ -1409,6 +1414,7 @@ export default function Home() {
         </div>
 
         {/* ── NON-INBOX VIEWS ── */}
+        {navTab==="copilot"&&<CopilotQueue/>}
         {navTab==="calendar"&&<CalendarView shipments={shipments}/>}
         {navTab==="buyers"&&<BuyersView/>}
         {navTab==="import"&&<DocumentIntake onDone={()=>setNavTab("inbox")}/>}

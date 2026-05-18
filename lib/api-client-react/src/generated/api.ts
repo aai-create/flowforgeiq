@@ -20,12 +20,20 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AutonomyPolicy,
+  AutonomyPolicyInput,
+  CopilotProposal,
+  CopilotProposalInput,
+  CopilotProposalUpdate,
+  CopilotSummary,
+  CopilotTriggerResult,
   DocumentUpdate,
   DocumentWithExtraction,
   ExtractionCorrection,
   ExtractionCorrectionInput,
   FactoryQuote,
   HealthStatus,
+  ListCopilotProposalsParams,
   ListDocumentsParams,
   Message,
   MessageInput,
@@ -1585,6 +1593,492 @@ export function useGetPredictionAccuracy<TData = Awaited<ReturnType<typeof getPr
 
 
 
+
+export const getListCopilotProposalsUrl = (params?: ListCopilotProposalsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/copilot/proposals?${stringifiedParams}` : `/api/copilot/proposals`
+}
+
+export const listCopilotProposals = async (params?: ListCopilotProposalsParams, options?: RequestInit): Promise<CopilotProposal[]> => {
+
+  return customFetch<CopilotProposal[]>(getListCopilotProposalsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCopilotProposalsQueryKey = (params?: ListCopilotProposalsParams,) => {
+    return [
+    `/api/copilot/proposals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListCopilotProposalsQueryOptions = <TData = Awaited<ReturnType<typeof listCopilotProposals>>, TError = ErrorType<unknown>>(params?: ListCopilotProposalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCopilotProposals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCopilotProposalsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCopilotProposals>>> = ({ signal }) => listCopilotProposals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCopilotProposals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCopilotProposalsQueryResult = NonNullable<Awaited<ReturnType<typeof listCopilotProposals>>>
+export type ListCopilotProposalsQueryError = ErrorType<unknown>
+
+
+
+export function useListCopilotProposals<TData = Awaited<ReturnType<typeof listCopilotProposals>>, TError = ErrorType<unknown>>(
+ params?: ListCopilotProposalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCopilotProposals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCopilotProposalsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCopilotProposalUrl = () => {
+
+
+
+
+  return `/api/copilot/proposals`
+}
+
+export const createCopilotProposal = async (copilotProposalInput: CopilotProposalInput, options?: RequestInit): Promise<CopilotProposal> => {
+
+  return customFetch<CopilotProposal>(getCreateCopilotProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      copilotProposalInput,)
+  }
+);}
+
+
+
+
+export const getCreateCopilotProposalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCopilotProposal>>, TError,{data: BodyType<CopilotProposalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCopilotProposal>>, TError,{data: BodyType<CopilotProposalInput>}, TContext> => {
+
+const mutationKey = ['createCopilotProposal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCopilotProposal>>, {data: BodyType<CopilotProposalInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCopilotProposal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCopilotProposalMutationResult = NonNullable<Awaited<ReturnType<typeof createCopilotProposal>>>
+    export type CreateCopilotProposalMutationBody = BodyType<CopilotProposalInput>
+    export type CreateCopilotProposalMutationError = ErrorType<unknown>
+
+    export const useCreateCopilotProposal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCopilotProposal>>, TError,{data: BodyType<CopilotProposalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCopilotProposal>>,
+        TError,
+        {data: BodyType<CopilotProposalInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCopilotProposalMutationOptions(options));
+    }
+
+export const getUpdateCopilotProposalUrl = (id: number,) => {
+
+
+
+
+  return `/api/copilot/proposals/${id}`
+}
+
+export const updateCopilotProposal = async (id: number,
+    copilotProposalUpdate: CopilotProposalUpdate, options?: RequestInit): Promise<CopilotProposal> => {
+
+  return customFetch<CopilotProposal>(getUpdateCopilotProposalUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      copilotProposalUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateCopilotProposalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCopilotProposal>>, TError,{id: number;data: BodyType<CopilotProposalUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCopilotProposal>>, TError,{id: number;data: BodyType<CopilotProposalUpdate>}, TContext> => {
+
+const mutationKey = ['updateCopilotProposal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCopilotProposal>>, {id: number;data: BodyType<CopilotProposalUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCopilotProposal(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCopilotProposalMutationResult = NonNullable<Awaited<ReturnType<typeof updateCopilotProposal>>>
+    export type UpdateCopilotProposalMutationBody = BodyType<CopilotProposalUpdate>
+    export type UpdateCopilotProposalMutationError = ErrorType<unknown>
+
+    export const useUpdateCopilotProposal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCopilotProposal>>, TError,{id: number;data: BodyType<CopilotProposalUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCopilotProposal>>,
+        TError,
+        {id: number;data: BodyType<CopilotProposalUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCopilotProposalMutationOptions(options));
+    }
+
+export const getTriggerCopilotUrl = () => {
+
+
+
+
+  return `/api/copilot/trigger`
+}
+
+/**
+ * @summary Scan all active shipments and generate new proposals
+ */
+export const triggerCopilot = async ( options?: RequestInit): Promise<CopilotTriggerResult> => {
+
+  return customFetch<CopilotTriggerResult>(getTriggerCopilotUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTriggerCopilotMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerCopilot>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof triggerCopilot>>, TError,void, TContext> => {
+
+const mutationKey = ['triggerCopilot'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerCopilot>>, void> = () => {
+
+
+          return  triggerCopilot(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriggerCopilotMutationResult = NonNullable<Awaited<ReturnType<typeof triggerCopilot>>>
+
+    export type TriggerCopilotMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Scan all active shipments and generate new proposals
+ */
+export const useTriggerCopilot = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerCopilot>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof triggerCopilot>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getTriggerCopilotMutationOptions(options));
+    }
+
+export const getGetCopilotSummaryUrl = () => {
+
+
+
+
+  return `/api/copilot/summary`
+}
+
+export const getCopilotSummary = async ( options?: RequestInit): Promise<CopilotSummary> => {
+
+  return customFetch<CopilotSummary>(getGetCopilotSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCopilotSummaryQueryKey = () => {
+    return [
+    `/api/copilot/summary`
+    ] as const;
+    }
+
+
+export const getGetCopilotSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getCopilotSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCopilotSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCopilotSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCopilotSummary>>> = ({ signal }) => getCopilotSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCopilotSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCopilotSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getCopilotSummary>>>
+export type GetCopilotSummaryQueryError = ErrorType<unknown>
+
+
+
+export function useGetCopilotSummary<TData = Awaited<ReturnType<typeof getCopilotSummary>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCopilotSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCopilotSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListAutonomyPoliciesUrl = () => {
+
+
+
+
+  return `/api/copilot/policies`
+}
+
+export const listAutonomyPolicies = async ( options?: RequestInit): Promise<AutonomyPolicy[]> => {
+
+  return customFetch<AutonomyPolicy[]>(getListAutonomyPoliciesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAutonomyPoliciesQueryKey = () => {
+    return [
+    `/api/copilot/policies`
+    ] as const;
+    }
+
+
+export const getListAutonomyPoliciesQueryOptions = <TData = Awaited<ReturnType<typeof listAutonomyPolicies>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAutonomyPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAutonomyPoliciesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAutonomyPolicies>>> = ({ signal }) => listAutonomyPolicies({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAutonomyPolicies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAutonomyPoliciesQueryResult = NonNullable<Awaited<ReturnType<typeof listAutonomyPolicies>>>
+export type ListAutonomyPoliciesQueryError = ErrorType<unknown>
+
+
+
+export function useListAutonomyPolicies<TData = Awaited<ReturnType<typeof listAutonomyPolicies>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAutonomyPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAutonomyPoliciesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertAutonomyPolicyUrl = () => {
+
+
+
+
+  return `/api/copilot/policies`
+}
+
+export const upsertAutonomyPolicy = async (autonomyPolicyInput: AutonomyPolicyInput, options?: RequestInit): Promise<AutonomyPolicy> => {
+
+  return customFetch<AutonomyPolicy>(getUpsertAutonomyPolicyUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      autonomyPolicyInput,)
+  }
+);}
+
+
+
+
+export const getUpsertAutonomyPolicyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAutonomyPolicy>>, TError,{data: BodyType<AutonomyPolicyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertAutonomyPolicy>>, TError,{data: BodyType<AutonomyPolicyInput>}, TContext> => {
+
+const mutationKey = ['upsertAutonomyPolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertAutonomyPolicy>>, {data: BodyType<AutonomyPolicyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  upsertAutonomyPolicy(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertAutonomyPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof upsertAutonomyPolicy>>>
+    export type UpsertAutonomyPolicyMutationBody = BodyType<AutonomyPolicyInput>
+    export type UpsertAutonomyPolicyMutationError = ErrorType<unknown>
+
+    export const useUpsertAutonomyPolicy = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAutonomyPolicy>>, TError,{data: BodyType<AutonomyPolicyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertAutonomyPolicy>>,
+        TError,
+        {data: BodyType<AutonomyPolicyInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertAutonomyPolicyMutationOptions(options));
+    }
 
 export const getSaveExtractionCorrectionUrl = (id: number,) => {
 
