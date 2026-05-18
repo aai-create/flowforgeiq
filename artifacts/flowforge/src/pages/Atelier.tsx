@@ -231,7 +231,7 @@ export function Atelier() {
                 {[
                   { icon: Inbox,      label: "Inbox",         count: "5",  active: false },
                   { icon: ListTodo,   label: "Today",         count: String(tasks.filter(t => !t.done).length), active: true },
-                  { icon: LayoutGrid, label: "All Shipments", count: String(SHIPMENTS.length), active: false },
+                  { icon: LayoutGrid, label: "All Shipments", count: String(shipments.length), active: false },
                   { icon: Calendar,   label: "Calendar",      count: null, active: false },
                 ].map(({ icon: Icon, label, count, active }) => (
                   <button key={label}
@@ -313,7 +313,7 @@ export function Atelier() {
             <div className="flex items-center gap-3">
               <h1 className="text-sm font-bold text-[#212833]">Command Horizon</h1>
               <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
-                {visibleShipments.length} of {SHIPMENTS.length} POs
+                {visibleShipments.length} of {shipments.length} POs
               </span>
             </div>
             <div className="flex items-center gap-2">

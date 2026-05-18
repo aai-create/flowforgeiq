@@ -12,8 +12,8 @@ import {
 import { Atelier } from "./Atelier";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
-  updateMessage, updateTask, updateShipment,
-  selectFactoryQuote,
+  updateMessage, updateTask, updateShipment, updatePayment,
+  selectFactoryQuote, reorderStages,
 } from "@workspace/api-client-react";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks,
@@ -955,6 +955,25 @@ export default function Home() {
     setComposeText(""); setComposeFocused(false);
     setToast("Reply sent — stage advanced");
   };
+  const togglePaymentPaid = (shipmentId: string, paymentIdx: 0 | 1) => {
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship) return;
+    const payment = ship.payments[paymentIdx];
+    const nextPaid = !payment.paid;
+    setShipments(prev => prev.map(s => {
+      if (s.id !== shipmentId) return s;
+      const newPayments: [typeof s.payments[0], typeof s.payments[1]] = [...s.payments] as any;
+      newPayments[paymentIdx] = { ...newPayments[paymentIdx], paid: nextPaid };
+      return { ...s, payments: newPayments };
+    }));
+    updatePayment(payment.paymentId, { paid: nextPaid }).catch(() => {});
+    setToast(nextPaid ? "Payment marked paid" : "Payment marked unpaid");
+  };
+  const saveStages = (next: UiStage[]) => {
+    setStages(next);
+    setToast("Stages saved");
+    reorderStages({ stageIds: next.map(s => s.id) }).catch(() => {});
+  };
   const selectQuote = (shipmentId: string, idx: number) => {
     const ship = shipments.find(s => s.id === shipmentId);
     if (!ship?.quotes?.[idx]) return;
@@ -990,7 +1009,7 @@ export default function Home() {
     return (
       <div className="relative h-screen w-full">
         <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
-        {showStageConfig&&<StageConfigModal stages={stages} onSave={s=>{setStages(s);setToast("Stages saved");}} onClose={()=>setShowStageConfig(false)}/>}
+        {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
         <Atelier/>
       </div>
     );
@@ -1012,7 +1031,7 @@ export default function Home() {
     <div className="flex h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{fontFamily:"Inter,sans-serif",fontSize:13}}>
       <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
       {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
-      {showStageConfig&&<StageConfigModal stages={stages} onSave={s=>{setStages(s);setToast("Stages saved");}} onClose={()=>setShowStageConfig(false)}/>}
+      {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
 
       {/* LEFT NAV RAIL */}
       <div className="w-[58px] bg-white border-r border-[#E5EAF0] flex flex-col items-center py-4 z-20 shrink-0">
@@ -1250,7 +1269,7 @@ export default function Home() {
                   </div>
                   {/* Payment inline */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    {activeShipment.payments.map((p,i)=>{const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();return<div key={i} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>{p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}{p.label}: ${p.amountUsd.toLocaleString()} {p.paid?"paid":ov?"OVERDUE":`due ${p.dueDate}`}</div>;})}
+                    {activeShipment.payments.map((p,i)=>{const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();return<button key={i} type="button" onClick={()=>togglePaymentPaid(activeShipment.id, i as 0|1)} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border transition-opacity hover:opacity-80 ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`} title={p.paid?"Click to mark unpaid":"Click to mark paid"}>{p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}{p.label}: ${p.amountUsd.toLocaleString()} {p.paid?"paid":ov?"OVERDUE":`due ${p.dueDate}`}</button>;})}
                   </div>
                 </div>
               )}
