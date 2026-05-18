@@ -1136,6 +1136,18 @@ export default function Home() {
   const activeStage    = activeShipment ? stages.find(s => s.id === activeShipment.currentStageId) : null;
   const activeStageIdx = activeShipment ? stages.findIndex(s => s.id === activeShipment.currentStageId) : -1;
 
+  // Docs badge — lifted query so the tab label can show count + amber indicator
+  const activeDocShipmentId = activeShipment?.id ? Number(activeShipment.id) : undefined;
+  const docsQParams = { shipmentId: Number.isNaN(activeDocShipmentId) ? undefined : activeDocShipmentId };
+  const { data: docsTabData } = useListDocuments(
+    docsQParams,
+    { query: { queryKey: getListDocumentsQueryKey(docsQParams), refetchInterval: 5000 } }
+  );
+  const docsCount = docsTabData?.length ?? 0;
+  const docsHasFindings = (docsTabData ?? []).some(
+    doc => (doc.extraction?.reconciliationFindings?.length ?? 0) > 0
+  );
+
   const visibleMessages = messages.filter(m => {
     if (selectedShipmentId && m.shipmentId !== selectedShipmentId) return false;
     if (channelFilter !== "all" && m.channel !== channelFilter) return false;
@@ -1567,7 +1579,15 @@ export default function Home() {
                 {([{id:"message",label:"Message"},{id:"docs",label:"Docs"},{id:"risk",label:"Risk",icon:ShieldAlert}] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
                   <button key={t.id} onClick={()=>setRightTab(t.id)}
                     className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id?"border-[#9000FF] text-[#9000FF]":"border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
-                    {t.icon&&<t.icon size={10}/>}{t.label}
+                    {t.icon&&<t.icon size={10}/>}
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      {t.label}
+                      {t.id==="docs"&&docsCount>0&&(
+                        <span className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none ${docsHasFindings?"bg-amber-100 text-amber-700 border border-amber-300":"bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0]"} ${rightTab==="docs"?"opacity-100":"opacity-80"}`}>
+                          {docsCount}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 ))}
               </div>
