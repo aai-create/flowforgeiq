@@ -13,7 +13,7 @@ import { Atelier } from "./Atelier";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
   updateMessage, updateTask, updateShipment, updatePayment,
-  selectFactoryQuote, reorderStages,
+  selectFactoryQuote, reorderStages, createMessage,
 } from "@workspace/api-client-react";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks,
@@ -951,6 +951,36 @@ export default function Home() {
       const tasksToComplete = tasks.filter(tk => tk.messageId === msgId);
       setTasks(t => t.filter(tk => tk.messageId !== msgId));
       Promise.all(tasksToComplete.map(tk => updateTask(tk.taskId, { done: true }))).catch(() => {});
+      const ship = shipments.find(s => s.id === msg.shipmentId);
+      const body = composeText.trim() || msg.aiDraft || "(reply sent)";
+      if (ship) {
+        createMessage({
+          shipmentId: ship.shipmentId,
+          sender: "You",
+          channel: msg.channel,
+          snippet: body.slice(0, 140),
+          fullBody: body,
+        })
+          .then(created => {
+            const newUi: UiMessage = {
+              id: `m-srv-${created.id}`,
+              messageId: created.id,
+              sender: created.sender,
+              channel: created.channel as UiMessage["channel"],
+              timestamp: "Just now",
+              snippet: created.snippet,
+              fullBody: created.fullBody,
+              unread: false,
+              aiTags: created.aiTags ?? [],
+              shipmentId: msg.shipmentId,
+              supplierId: msg.supplierId,
+              aiDraft: created.aiDraft ?? "",
+              aiAction: created.aiAction ?? "",
+            };
+            setMessages(prev => [newUi, ...prev]);
+          })
+          .catch(() => {});
+      }
     }
     setComposeText(""); setComposeFocused(false);
     setToast("Reply sent — stage advanced");
@@ -962,9 +992,10 @@ export default function Home() {
     const nextPaid = !payment.paid;
     setShipments(prev => prev.map(s => {
       if (s.id !== shipmentId) return s;
-      const newPayments: [typeof s.payments[0], typeof s.payments[1]] = [...s.payments] as any;
-      newPayments[paymentIdx] = { ...newPayments[paymentIdx], paid: nextPaid };
-      return { ...s, payments: newPayments };
+      const [dep, bal] = s.payments;
+      const newDep = paymentIdx === 0 ? { ...dep, paid: nextPaid } : dep;
+      const newBal = paymentIdx === 1 ? { ...bal, paid: nextPaid } : bal;
+      return { ...s, payments: [newDep, newBal] };
     }));
     updatePayment(payment.paymentId, { paid: nextPaid }).catch(() => {});
     setToast(nextPaid ? "Payment marked paid" : "Payment marked unpaid");
