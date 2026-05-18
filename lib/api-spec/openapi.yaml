@@ -18,6 +18,7 @@ tags:
   - name: tasks
   - name: documents
   - name: extractions
+  - name: predictions
 paths:
   /healthz:
     get:
@@ -307,6 +308,78 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DocumentWithExtraction" }
+
+  /shipments/{id}/prediction:
+    get:
+      operationId: getShipmentPrediction
+      tags: [predictions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Latest prediction for shipment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipmentPrediction" }
+        "404":
+          description: No prediction yet
+    post:
+      operationId: computeShipmentPrediction
+      tags: [predictions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Freshly computed prediction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipmentPrediction" }
+
+  /shipments/{id}/prediction/history:
+    get:
+      operationId: getShipmentPredictionHistory
+      tags: [predictions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Prediction history for shipment
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ShipmentPrediction" }
+
+  /risk-radar:
+    get:
+      operationId: getRiskRadar
+      tags: [predictions]
+      responses:
+        "200":
+          description: Portfolio risk view
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RiskRadarResponse" }
+
+  /predictions/accuracy:
+    get:
+      operationId: getPredictionAccuracy
+      tags: [predictions]
+      responses:
+        "200":
+          description: Accuracy report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PredictionAccuracyReport" }
 
   /extractions/{id}/corrections:
     post:
@@ -612,6 +685,96 @@ components:
         fieldPath: { type: string }
         originalValue: { type: string }
         correctedValue: { type: string }
+
+    ContributingSignal:
+      type: object
+      required: [signal, description, weight, direction]
+      properties:
+        signal:      { type: string }
+        description: { type: string }
+        weight:      { type: number }
+        direction:   { type: string }
+
+    RecommendedMitigation:
+      type: object
+      required: [action, rationale]
+      properties:
+        action:           { type: string }
+        rationale:        { type: string }
+        estimatedCostUsd: { type: ["number", "null"] }
+        recoveryDays:     { type: ["integer", "null"] }
+
+    ShipmentPrediction:
+      type: object
+      required: [id, shipmentId, riskScore, predictedEtaMin, predictedEtaMax, confidence, contributingSignals, recommendedMitigations, computedAt]
+      properties:
+        id:                    { type: integer }
+        shipmentId:            { type: integer }
+        riskScore:             { type: integer }
+        predictedEtaMin:       { type: string, format: date-time }
+        predictedEtaMax:       { type: string, format: date-time }
+        confidence:            { type: number }
+        contributingSignals:
+          type: array
+          items: { $ref: "#/components/schemas/ContributingSignal" }
+        recommendedMitigations:
+          type: array
+          items: { $ref: "#/components/schemas/RecommendedMitigation" }
+        computedAt:            { type: string, format: date-time }
+
+    RiskRadarItem:
+      type: object
+      required: [shipmentId, poNumber, product, supplierName, customerName, status, riskScore, predictedEtaMin, predictedEtaMax, confidence, financialExposureUsd, riskExposureUsd, topSignal, computedAt]
+      properties:
+        shipmentId:          { type: integer }
+        poNumber:            { type: string }
+        product:             { type: string }
+        supplierName:        { type: string }
+        customerName:        { type: string }
+        status:              { type: string }
+        riskScore:           { type: integer }
+        predictedEtaMin:     { type: string, format: date-time }
+        predictedEtaMax:     { type: string, format: date-time }
+        confidence:          { type: number }
+        financialExposureUsd: { type: number }
+        riskExposureUsd:     { type: number }
+        topSignal:           { type: string }
+        computedAt:          { type: string, format: date-time }
+
+    RiskRadarResponse:
+      type: object
+      required: [items, totalExposureUsd, highRiskCount, generatedAt]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RiskRadarItem" }
+        totalExposureUsd:  { type: number }
+        highRiskCount:     { type: integer }
+        generatedAt:       { type: string, format: date-time }
+
+    AccuracyBucket:
+      type: object
+      required: [leadTimeDays, totalPredictions, withinOneDayCount, withinThreeDayCount, withinSevenDayCount]
+      properties:
+        leadTimeDays:       { type: string }
+        totalPredictions:   { type: integer }
+        withinOneDayCount:  { type: integer }
+        withinThreeDayCount: { type: integer }
+        withinSevenDayCount: { type: integer }
+
+    PredictionAccuracyReport:
+      type: object
+      required: [totalPredictions, resolvedPredictions, overallWithinThreeDaysPct, overallWithinSevenDaysPct, buckets, lastUpdated, disclaimer]
+      properties:
+        totalPredictions:           { type: integer }
+        resolvedPredictions:        { type: integer }
+        overallWithinThreeDaysPct:  { type: number }
+        overallWithinSevenDaysPct:  { type: number }
+        buckets:
+          type: array
+          items: { $ref: "#/components/schemas/AccuracyBucket" }
+        lastUpdated: { type: string, format: date-time }
+        disclaimer:  { type: string }
 
     ExtractionCorrection:
       type: object

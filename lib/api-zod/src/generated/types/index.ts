@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accuracyBucket';
+export * from './contributingSignal';
 export * from './documentUpdate';
 export * from './documentWithExtraction';
 export * from './extractedFields';
@@ -23,9 +25,14 @@ export * from './messageInput';
 export * from './messageUpdate';
 export * from './payment';
 export * from './paymentUpdate';
+export * from './predictionAccuracyReport';
 export * from './quoteSelection';
+export * from './recommendedMitigation';
 export * from './reconciliationFinding';
+export * from './riskRadarItem';
+export * from './riskRadarResponse';
 export * from './shipment';
+export * from './shipmentPrediction';
 export * from './shipmentUpdate';
 export * from './stage';
 export * from './stageOrderInput';

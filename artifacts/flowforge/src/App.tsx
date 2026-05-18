@@ -5,14 +5,20 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { Atelier } from "@/pages/Atelier";
+import { RiskRadar } from "@/pages/RiskRadar";
 
 const queryClient = new QueryClient();
+
+function RiskRadarPage() {
+  return <RiskRadar />;
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/command" component={Atelier} />
+      <Route path="/risk-radar" component={RiskRadarPage} />
       <Route component={NotFound} />
     </Switch>
   );

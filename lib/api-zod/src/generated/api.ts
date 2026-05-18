@@ -473,6 +473,128 @@ export const UpdateDocumentResponse = zod.object({
 })
 
 
+export const GetShipmentPredictionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetShipmentPredictionResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "riskScore": zod.number(),
+  "predictedEtaMin": zod.coerce.date(),
+  "predictedEtaMax": zod.coerce.date(),
+  "confidence": zod.number(),
+  "contributingSignals": zod.array(zod.object({
+  "signal": zod.string(),
+  "description": zod.string(),
+  "weight": zod.number(),
+  "direction": zod.string()
+})),
+  "recommendedMitigations": zod.array(zod.object({
+  "action": zod.string(),
+  "rationale": zod.string(),
+  "estimatedCostUsd": zod.number().nullish(),
+  "recoveryDays": zod.number().nullish()
+})),
+  "computedAt": zod.coerce.date()
+})
+
+
+export const ComputeShipmentPredictionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ComputeShipmentPredictionResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "riskScore": zod.number(),
+  "predictedEtaMin": zod.coerce.date(),
+  "predictedEtaMax": zod.coerce.date(),
+  "confidence": zod.number(),
+  "contributingSignals": zod.array(zod.object({
+  "signal": zod.string(),
+  "description": zod.string(),
+  "weight": zod.number(),
+  "direction": zod.string()
+})),
+  "recommendedMitigations": zod.array(zod.object({
+  "action": zod.string(),
+  "rationale": zod.string(),
+  "estimatedCostUsd": zod.number().nullish(),
+  "recoveryDays": zod.number().nullish()
+})),
+  "computedAt": zod.coerce.date()
+})
+
+
+export const GetShipmentPredictionHistoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetShipmentPredictionHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "riskScore": zod.number(),
+  "predictedEtaMin": zod.coerce.date(),
+  "predictedEtaMax": zod.coerce.date(),
+  "confidence": zod.number(),
+  "contributingSignals": zod.array(zod.object({
+  "signal": zod.string(),
+  "description": zod.string(),
+  "weight": zod.number(),
+  "direction": zod.string()
+})),
+  "recommendedMitigations": zod.array(zod.object({
+  "action": zod.string(),
+  "rationale": zod.string(),
+  "estimatedCostUsd": zod.number().nullish(),
+  "recoveryDays": zod.number().nullish()
+})),
+  "computedAt": zod.coerce.date()
+})
+export const GetShipmentPredictionHistoryResponse = zod.array(GetShipmentPredictionHistoryResponseItem)
+
+
+export const GetRiskRadarResponse = zod.object({
+  "items": zod.array(zod.object({
+  "shipmentId": zod.number(),
+  "poNumber": zod.string(),
+  "product": zod.string(),
+  "supplierName": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.string(),
+  "riskScore": zod.number(),
+  "predictedEtaMin": zod.coerce.date(),
+  "predictedEtaMax": zod.coerce.date(),
+  "confidence": zod.number(),
+  "financialExposureUsd": zod.number(),
+  "riskExposureUsd": zod.number(),
+  "topSignal": zod.string(),
+  "computedAt": zod.coerce.date()
+})),
+  "totalExposureUsd": zod.number(),
+  "highRiskCount": zod.number(),
+  "generatedAt": zod.coerce.date()
+})
+
+
+export const GetPredictionAccuracyResponse = zod.object({
+  "totalPredictions": zod.number(),
+  "resolvedPredictions": zod.number(),
+  "overallWithinThreeDaysPct": zod.number(),
+  "overallWithinSevenDaysPct": zod.number(),
+  "buckets": zod.array(zod.object({
+  "leadTimeDays": zod.string(),
+  "totalPredictions": zod.number(),
+  "withinOneDayCount": zod.number(),
+  "withinThreeDayCount": zod.number(),
+  "withinSevenDayCount": zod.number()
+})),
+  "lastUpdated": zod.coerce.date(),
+  "disclaimer": zod.string()
+})
+
+
 export const SaveExtractionCorrectionParams = zod.object({
   "id": zod.coerce.number()
 })

@@ -1,5 +1,7 @@
 export * from "./generated/api";
 export type {
+  AccuracyBucket,
+  ContributingSignal,
   DocumentUpdate,
   DocumentWithExtraction,
   ExtractedFields,
@@ -17,9 +19,14 @@ export type {
   MessageUpdate,
   Payment,
   PaymentUpdate,
+  PredictionAccuracyReport,
   QuoteSelection,
   ReconciliationFinding,
+  RecommendedMitigation,
+  RiskRadarItem,
+  RiskRadarResponse,
   Shipment,
+  ShipmentPrediction,
   ShipmentUpdate,
   Stage,
   StageOrderInput,

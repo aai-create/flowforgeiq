@@ -7,10 +7,11 @@ import {
   GripVertical, Plus, Trash2, DollarSign, CreditCard, CalendarClock,
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
-  Table2, FilePlus, Link2, ArrowUpRight,
+  Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
+import { ShipmentRiskDetail } from "./ShipmentRiskDetail";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
   updateMessage, updateTask, updateShipment, updatePayment,
@@ -28,7 +29,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 type ViewMode   = "inbox" | "command";
 type NavTab     = "inbox" | "calendar" | "buyers" | "import";
-type RightTab   = "message" | "docs";
+type RightTab   = "message" | "docs" | "risk";
 type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -1561,18 +1562,25 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Tabs: Message / Docs */}
+              {/* Tabs: Message / Docs / Risk */}
               <div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
-                {([{id:"message",label:"Message"},{id:"docs",label:"Docs"}] as {id:RightTab;label:string}[]).map(t=>(
+                {([{id:"message",label:"Message"},{id:"docs",label:"Docs"},{id:"risk",label:"Risk",icon:ShieldAlert}] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
                   <button key={t.id} onClick={()=>setRightTab(t.id)}
-                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 ${rightTab===t.id?"border-[#9000FF] text-[#9000FF]":"border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
-                    {t.label}
+                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id?"border-[#9000FF] text-[#9000FF]":"border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
+                    {t.icon&&<t.icon size={10}/>}{t.label}
                   </button>
                 ))}
               </div>
 
               {/* Docs tab */}
               {rightTab==="docs"&&<DocsPanel shipmentId={activeShipment?.id??""}/>}
+
+              {/* Risk tab */}
+              {rightTab==="risk"&&activeShipment&&(
+                <div className="flex-1 overflow-y-auto p-4">
+                  <ShipmentRiskDetail shipmentId={activeShipment.shipmentId}/>
+                </div>
+              )}
 
               {/* Message tab */}
               {rightTab==="message"&&<>

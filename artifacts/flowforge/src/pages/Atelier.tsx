@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useListShipments, useListStages, useListTasks, updateTask } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, useGetRiskRadar } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
@@ -7,7 +7,7 @@ import {
   Sparkles, AlertCircle, Clock, ChevronRight, Hash, X,
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
-  MapPin, Filter, SlidersHorizontal, Calendar,
+  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -149,6 +149,7 @@ export function Atelier() {
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
   const { data: apiTasks }     = useListTasks();
+  const { data: radarData }    = useGetRiskRadar();
   const [shipments, setShipments] = useState<UiShipment[]>([]);
   const [tasks, setTasks] = useState<UiTask[]>([]);
   useEffect(() => {
@@ -158,6 +159,14 @@ export function Atelier() {
     setShipments(ships);
     if (apiTasks) setTasks(adaptTasks(apiTasks, ships));
   }, [apiStages, apiShipments, apiTasks]);
+
+  const riskByShipmentId = React.useMemo(() => {
+    const map = new Map<number, number>();
+    for (const item of radarData?.items ?? []) {
+      map.set(item.shipmentId, item.riskScore);
+    }
+    return map;
+  }, [radarData]);
 
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
@@ -229,14 +238,16 @@ export function Atelier() {
               {/* Nav links */}
               <div className="space-y-0.5 mb-5">
                 {[
-                  { icon: Inbox,      label: "Inbox",         count: "5",  active: false },
-                  { icon: ListTodo,   label: "Today",         count: String(tasks.filter(t => !t.done).length), active: true },
-                  { icon: LayoutGrid, label: "All Shipments", count: String(shipments.length), active: false },
-                  { icon: Calendar,   label: "Calendar",      count: null, active: false },
-                ].map(({ icon: Icon, label, count, active }) => (
+                  { icon: Inbox,       label: "Inbox",         count: "5",  active: false, href: null },
+                  { icon: ListTodo,    label: "Today",         count: String(tasks.filter(t => !t.done).length), active: true, href: null },
+                  { icon: LayoutGrid,  label: "All Shipments", count: String(shipments.length), active: false, href: null },
+                  { icon: Calendar,    label: "Calendar",      count: null, active: false, href: null },
+                  { icon: ShieldAlert, label: "Risk Radar",    count: radarData ? String(radarData.items.filter(i => i.riskScore >= 70).length) : null, active: false, href: `${import.meta.env.BASE_URL}risk-radar` },
+                ].map(({ icon: Icon, label, count, active, href }) => (
                   <button key={label}
+                    onClick={() => { if (href) window.location.assign(href); }}
                     className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                    <span className="flex items-center gap-2"><Icon className={`w-4 h-4 ${active ? "text-[#9000FF]" : ""}`} />{label}</span>
+                    <span className="flex items-center gap-2"><Icon className={`w-4 h-4 ${active ? "text-[#9000FF]" : label === "Risk Radar" ? "text-[#9000FF]" : ""}`} />{label}</span>
                     {count && (
                       <span className={`text-[10px] px-1.5 rounded-full font-bold ${active ? "bg-[#9000FF] text-white" : "bg-[#E5EAF0] text-[#5E687B]"}`}>{count}</span>
                     )}
@@ -380,6 +391,14 @@ export function Atelier() {
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusCls(shipment.status)}`}>
                           {shipment.status === "at-risk" ? "At Risk" : shipment.status === "delayed" ? "Delayed" : "On Track"}
                         </span>
+                        {riskByShipmentId.has(shipment.shipmentId) && (() => {
+                          const score = riskByShipmentId.get(shipment.shipmentId)!;
+                          return (
+                            <span className={`flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${score >= 70 ? "bg-red-50 text-red-600 border-red-100" : score >= 45 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}>
+                              <ShieldAlert className="w-2.5 h-2.5" />{score}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 

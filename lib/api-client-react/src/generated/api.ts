@@ -32,8 +32,11 @@ import type {
   MessageUpdate,
   Payment,
   PaymentUpdate,
+  PredictionAccuracyReport,
   QuoteSelection,
+  RiskRadarResponse,
   Shipment,
+  ShipmentPrediction,
   ShipmentUpdate,
   Stage,
   StageOrderInput,
@@ -1234,6 +1237,354 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getUpdateDocumentMutationOptions(options));
     }
+
+export const getGetShipmentPredictionUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/prediction`
+}
+
+export const getShipmentPrediction = async (id: number, options?: RequestInit): Promise<ShipmentPrediction> => {
+
+  return customFetch<ShipmentPrediction>(getGetShipmentPredictionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetShipmentPredictionQueryKey = (id: number,) => {
+    return [
+    `/api/shipments/${id}/prediction`
+    ] as const;
+    }
+
+
+export const getGetShipmentPredictionQueryOptions = <TData = Awaited<ReturnType<typeof getShipmentPrediction>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentPrediction>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetShipmentPredictionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShipmentPrediction>>> = ({ signal }) => getShipmentPrediction(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShipmentPrediction>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetShipmentPredictionQueryResult = NonNullable<Awaited<ReturnType<typeof getShipmentPrediction>>>
+export type GetShipmentPredictionQueryError = ErrorType<void>
+
+
+
+export function useGetShipmentPrediction<TData = Awaited<ReturnType<typeof getShipmentPrediction>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentPrediction>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetShipmentPredictionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getComputeShipmentPredictionUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/prediction`
+}
+
+export const computeShipmentPrediction = async (id: number, options?: RequestInit): Promise<ShipmentPrediction> => {
+
+  return customFetch<ShipmentPrediction>(getComputeShipmentPredictionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getComputeShipmentPredictionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof computeShipmentPrediction>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof computeShipmentPrediction>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['computeShipmentPrediction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof computeShipmentPrediction>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  computeShipmentPrediction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ComputeShipmentPredictionMutationResult = NonNullable<Awaited<ReturnType<typeof computeShipmentPrediction>>>
+
+    export type ComputeShipmentPredictionMutationError = ErrorType<unknown>
+
+    export const useComputeShipmentPrediction = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof computeShipmentPrediction>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof computeShipmentPrediction>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getComputeShipmentPredictionMutationOptions(options));
+    }
+
+export const getGetShipmentPredictionHistoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/prediction/history`
+}
+
+export const getShipmentPredictionHistory = async (id: number, options?: RequestInit): Promise<ShipmentPrediction[]> => {
+
+  return customFetch<ShipmentPrediction[]>(getGetShipmentPredictionHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetShipmentPredictionHistoryQueryKey = (id: number,) => {
+    return [
+    `/api/shipments/${id}/prediction/history`
+    ] as const;
+    }
+
+
+export const getGetShipmentPredictionHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getShipmentPredictionHistory>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentPredictionHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetShipmentPredictionHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShipmentPredictionHistory>>> = ({ signal }) => getShipmentPredictionHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShipmentPredictionHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetShipmentPredictionHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getShipmentPredictionHistory>>>
+export type GetShipmentPredictionHistoryQueryError = ErrorType<unknown>
+
+
+
+export function useGetShipmentPredictionHistory<TData = Awaited<ReturnType<typeof getShipmentPredictionHistory>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentPredictionHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetShipmentPredictionHistoryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRiskRadarUrl = () => {
+
+
+
+
+  return `/api/risk-radar`
+}
+
+export const getRiskRadar = async ( options?: RequestInit): Promise<RiskRadarResponse> => {
+
+  return customFetch<RiskRadarResponse>(getGetRiskRadarUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRiskRadarQueryKey = () => {
+    return [
+    `/api/risk-radar`
+    ] as const;
+    }
+
+
+export const getGetRiskRadarQueryOptions = <TData = Awaited<ReturnType<typeof getRiskRadar>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskRadar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRiskRadarQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRiskRadar>>> = ({ signal }) => getRiskRadar({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRiskRadar>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRiskRadarQueryResult = NonNullable<Awaited<ReturnType<typeof getRiskRadar>>>
+export type GetRiskRadarQueryError = ErrorType<unknown>
+
+
+
+export function useGetRiskRadar<TData = Awaited<ReturnType<typeof getRiskRadar>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRiskRadar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRiskRadarQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPredictionAccuracyUrl = () => {
+
+
+
+
+  return `/api/predictions/accuracy`
+}
+
+export const getPredictionAccuracy = async ( options?: RequestInit): Promise<PredictionAccuracyReport> => {
+
+  return customFetch<PredictionAccuracyReport>(getGetPredictionAccuracyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPredictionAccuracyQueryKey = () => {
+    return [
+    `/api/predictions/accuracy`
+    ] as const;
+    }
+
+
+export const getGetPredictionAccuracyQueryOptions = <TData = Awaited<ReturnType<typeof getPredictionAccuracy>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPredictionAccuracy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPredictionAccuracyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPredictionAccuracy>>> = ({ signal }) => getPredictionAccuracy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPredictionAccuracy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPredictionAccuracyQueryResult = NonNullable<Awaited<ReturnType<typeof getPredictionAccuracy>>>
+export type GetPredictionAccuracyQueryError = ErrorType<unknown>
+
+
+
+export function useGetPredictionAccuracy<TData = Awaited<ReturnType<typeof getPredictionAccuracy>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPredictionAccuracy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPredictionAccuracyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getSaveExtractionCorrectionUrl = (id: number,) => {
 

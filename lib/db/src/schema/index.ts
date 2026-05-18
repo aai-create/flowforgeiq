@@ -6,3 +6,4 @@ export * from "./factory_quotes";
 export * from "./messages";
 export * from "./tasks";
 export * from "./documents";
+export * from "./predictions";

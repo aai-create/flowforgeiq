@@ -221,6 +221,76 @@ export interface ExtractionCorrectionInput {
   correctedValue: string;
 }
 
+export interface ContributingSignal {
+  signal: string;
+  description: string;
+  weight: number;
+  direction: string;
+}
+
+export interface RecommendedMitigation {
+  action: string;
+  rationale: string;
+  /** @nullable */
+  estimatedCostUsd?: number | null;
+  /** @nullable */
+  recoveryDays?: number | null;
+}
+
+export interface ShipmentPrediction {
+  id: number;
+  shipmentId: number;
+  riskScore: number;
+  predictedEtaMin: string;
+  predictedEtaMax: string;
+  confidence: number;
+  contributingSignals: ContributingSignal[];
+  recommendedMitigations: RecommendedMitigation[];
+  computedAt: string;
+}
+
+export interface RiskRadarItem {
+  shipmentId: number;
+  poNumber: string;
+  product: string;
+  supplierName: string;
+  customerName: string;
+  status: string;
+  riskScore: number;
+  predictedEtaMin: string;
+  predictedEtaMax: string;
+  confidence: number;
+  financialExposureUsd: number;
+  riskExposureUsd: number;
+  topSignal: string;
+  computedAt: string;
+}
+
+export interface RiskRadarResponse {
+  items: RiskRadarItem[];
+  totalExposureUsd: number;
+  highRiskCount: number;
+  generatedAt: string;
+}
+
+export interface AccuracyBucket {
+  leadTimeDays: string;
+  totalPredictions: number;
+  withinOneDayCount: number;
+  withinThreeDayCount: number;
+  withinSevenDayCount: number;
+}
+
+export interface PredictionAccuracyReport {
+  totalPredictions: number;
+  resolvedPredictions: number;
+  overallWithinThreeDaysPct: number;
+  overallWithinSevenDaysPct: number;
+  buckets: AccuracyBucket[];
+  lastUpdated: string;
+  disclaimer: string;
+}
+
 export interface ExtractionCorrection {
   id: number;
   extractionId: number;
