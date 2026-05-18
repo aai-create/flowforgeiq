@@ -887,7 +887,7 @@ export default function Home() {
   const [selectedShipmentId, setSelectedShipmentId] = useState<string|null>(null);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">("all");
   const [supplierFilter, setSupplierFilter] = useState<string|null>(null);
-  const [briefingExpanded, setBriefingExpanded] = useState(false);
+  const [showTaskPanel, setShowTaskPanel] = useState(false);
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
   const [rightTab, setRightTab]           = useState<RightTab>("message");
@@ -1135,6 +1135,29 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3 text-[#5E687B]">
+            {/* Today's Tasks popover trigger */}
+            <div className="relative">
+              <button onClick={()=>setShowTaskPanel(v=>!v)} className="hover:text-[#212833] p-1 relative" title="Today's Tasks">
+                <ListTodo size={15}/>
+                {highCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}
+              </button>
+              {showTaskPanel&&<>
+                <div className="fixed inset-0 z-40" onClick={()=>setShowTaskPanel(false)}/>
+                <div className="absolute top-full right-0 mt-1 w-[340px] bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#E5EAF0] overflow-hidden z-50 flex flex-col max-h-[420px]">
+                  <div className="flex items-center justify-between bg-gradient-to-r from-[#9000FF]/5 to-transparent px-3.5 py-3 shrink-0 border-b border-[#E5EAF0]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF] shrink-0"><ListTodo size={14}/></div>
+                      <div>
+                        <div className="text-[11px] font-bold text-[#212833]">Today's Tasks</div>
+                        <div className="text-[9px] text-[#5E687B]">{highCount>0?<span className="text-red-500 font-semibold">{highCount} urgent</span>:null}{highCount>0&&tasks.length>highCount?" · ":null}{tasks.length>highCount?`${tasks.length-highCount} more`:null}{tasks.length===0?"All clear!":null}</div>
+                      </div>
+                    </div>
+                    <button onClick={()=>setShowTaskPanel(false)} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={13}/></button>
+                  </div>
+                  <TaskList tasks={tasks} onOpenMessage={id=>{openMessage(id);setShowTaskPanel(false);}} onDismiss={id=>setTasks(t=>t.filter(tk=>tk.id!==id))} onClose={()=>setShowTaskPanel(false)}/>
+                </div>
+              </>}
+            </div>
             <button className="hover:text-[#212833] p-1 relative"><Bell size={15}/>{unreadCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}</button>
           </div>
         </div>
@@ -1397,20 +1420,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* AI Task List floating card */}
-          <div className={`fixed bottom-5 right-5 w-[340px] bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#E5EAF0] overflow-hidden transition-all duration-300 z-40 flex flex-col ${briefingExpanded?"h-[420px]":"h-[54px]"}`}>
-            <div onClick={()=>setBriefingExpanded(v=>!v)} className="flex items-center justify-between cursor-pointer bg-gradient-to-r from-[#9000FF]/5 to-transparent hover:bg-[#FAFBFC] transition-colors shrink-0 px-3.5 py-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF] shrink-0"><ListTodo size={14}/></div>
-                <div>
-                  <div className="text-[11px] font-bold text-[#212833]">Today's Tasks</div>
-                  {!briefingExpanded&&<div className="text-[9px] text-[#5E687B]">{highCount>0?<span className="text-red-500 font-semibold">{highCount} urgent</span>:null}{highCount>0&&tasks.length>highCount?" · ":null}{tasks.length>highCount?`${tasks.length-highCount} more`:null}{tasks.length===0?"All clear!":null}</div>}
-                </div>
-              </div>
-              <ChevronDown size={13} className={`text-[#5E687B] transition-transform ${briefingExpanded?"rotate-0":"rotate-180"}`}/>
-            </div>
-            {briefingExpanded&&<TaskList tasks={tasks} onOpenMessage={openMessage} onDismiss={id=>setTasks(t=>t.filter(tk=>tk.id!==id))} onClose={()=>setBriefingExpanded(false)}/>}
-          </div>
         </>}
       </div>
     </div>
