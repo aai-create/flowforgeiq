@@ -7,7 +7,7 @@ import {
   Sparkles, AlertCircle, Clock, ChevronRight, Hash, X,
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
-  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3,
+  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -244,6 +244,14 @@ export function Atelier() {
       {/* TOP BAR */}
       <header className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2 w-[260px]">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] transition-colors mr-1"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            <span>Back</span>
+          </button>
+          <span className="text-[#E5EAF0]">|</span>
           <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
             <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
           </div>
