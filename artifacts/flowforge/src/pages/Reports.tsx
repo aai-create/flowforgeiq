@@ -477,10 +477,22 @@ function SuppliersCardContent({
 }
 
 // ─── Tasks Card ───────────────────────────────────────────────────────────────
+const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const TODAY_DOW = new Date("2026-05-18T00:00:00Z").getUTCDay(); // 1 = Monday
+
 function isAging(sourceAge: string): boolean {
-  const match = sourceAge.match(/^(\d+)d\s+ago$/i);
-  if (match && parseInt(match[1]) >= 3) return true;
-  return /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/i.test(sourceAge.trim());
+  // "Xd ago" for X >= 3 (7+ days old)
+  const numericMatch = sourceAge.match(/^(\d+)d\s+ago$/i);
+  if (numericMatch) return parseInt(numericMatch[1]) >= 3;
+
+  // Weekday names cover days 2–6 old. Calculate exact delta from today's DOW.
+  // "Just now", "Xh ago", "Yesterday" → not aging.
+  const dow = WEEKDAY_NAMES.indexOf(sourceAge.trim());
+  if (dow === -1) return false;
+
+  let daysAgo = (TODAY_DOW - dow + 7) % 7;
+  if (daysAgo === 0) daysAgo = 7; // same weekday name wraps to 7 (would be "7d ago" but guard anyway)
+  return daysAgo >= 3;
 }
 
 function urgencyBadgeCls(u: string) {
