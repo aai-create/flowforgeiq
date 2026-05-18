@@ -199,12 +199,6 @@ const INIT_TASKS: Task[] = [
   { id:"t6", title:"Arrange balance wire $21,700 — Hangzhou Timber (PO-0160)",      source:"PDF · SGS Report",                sourceAge:"Mon",       urgency:"medium", shipmentId:"s3", messageId:"m5", action:"Initiate Wire"  },
 ];
 
-const SUPPLIERS = [
-  { id:"Guangzhou Metalworks", label:"Guangzhou Metalworks", count:4 },
-  { id:"Shenzhen LEDPro",      label:"Shenzhen LEDPro",       count:2 },
-  { id:"Tianjin Wire Works",   label:"Tianjin Wire Works",    count:2 },
-  { id:"Hangzhou Timber Co.",  label:"Hangzhou Timber Co.",   count:1 },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -1161,9 +1155,9 @@ export default function Home() {
 
   const SUPPLIERS = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const s of shipments) counts.set(s.supplier, (counts.get(s.supplier) ?? 0) + 1);
+    for (const m of messages) counts.set(m.supplierId, (counts.get(m.supplierId) ?? 0) + 1);
     return Array.from(counts.entries()).map(([name, count]) => ({ id: name, label: name, count }));
-  }, [shipments]);
+  }, [messages]);
 
   const activeMessage  = messages.find(m => m.id === activeMessageId) || messages[0];
   const activeShipment = activeMessage ? shipments.find(s => s.id === activeMessage.shipmentId) : undefined;
