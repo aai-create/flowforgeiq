@@ -1141,8 +1141,8 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3 text-[#5E687B]">
-            {/* Today's Tasks popover trigger */}
-            <div className="relative">
+            {/* Today's Tasks popover trigger — inbox tab only */}
+            {navTab==="inbox"&&<div className="relative">
               <button onClick={()=>setShowTaskPanel(v=>!v)} className="hover:text-[#212833] p-1 relative" title="Today's Tasks">
                 <ListTodo size={15}/>
                 {highCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}
@@ -1163,7 +1163,7 @@ export default function Home() {
                   <TaskList tasks={tasks} onOpenMessage={id=>{openMessage(id);setShowTaskPanel(false);}} onDismiss={id=>setTasks(t=>t.filter(tk=>tk.id!==id))} onClose={()=>setShowTaskPanel(false)}/>
                 </div>
               </>}
-            </div>
+            </div>}
             <button className="hover:text-[#212833] p-1 relative"><Bell size={15}/>{unreadCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}</button>
           </div>
         </div>
