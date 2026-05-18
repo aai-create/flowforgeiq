@@ -3,6 +3,7 @@ import {
   DollarSign, TrendingUp, Users, ListTodo,
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
   ChevronsUpDown, RefreshCw, Clock, CheckCircle2,
+  CalendarRange, X,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer,
@@ -22,6 +23,9 @@ import {
 } from "@/components/ui/chart";
 import { shortDate } from "@/lib/adapters";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
 
 // Matches the project-wide demo seed date (see scripts/src/build-seed-data.ts and adapters.ts).
 // All shipment dates are shifted relative to this anchor, so runtime Date.now() would make
@@ -43,6 +47,17 @@ function trafficLight(days: number) {
   if (days < 0)  return { badge: "bg-red-50 text-red-700 border-red-100",       label: `${Math.abs(days)}d late` };
   if (days <= 7) return { badge: "bg-amber-50 text-amber-700 border-amber-100", label: `${days}d`               };
   return               { badge: "bg-emerald-50 text-emerald-700 border-emerald-100", label: `${days}d`          };
+}
+
+function inRange(iso: string, start: Date | null, end: Date | null): boolean {
+  const d = new Date(iso);
+  if (start && d < start) return false;
+  if (end) {
+    // Extend to end-of-day in UTC so the end date is inclusive
+    const endOfDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate(), 23, 59, 59, 999));
+    if (d > endOfDay) return false;
+  }
+  return true;
 }
 
 // ─── SortableHeader ──────────────────────────────────────────────────────────
@@ -107,8 +122,14 @@ const financeChartConfig: ChartConfig = {
   unpaid: { label: "Unpaid", color: "#9000FF" },
 };
 
-function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
-  const allPayments = useMemo(() => shipments.flatMap(s => s.payments), [shipments]);
+function FinanceCardContent({
+  shipments, rangeStart, rangeEnd,
+}: { shipments: Shipment[]; rangeStart: Date | null; rangeEnd: Date | null }) {
+  const allPayments = useMemo(() => {
+    const payments = shipments.flatMap(s => s.payments);
+    if (!rangeStart && !rangeEnd) return payments;
+    return payments.filter(p => inRange(p.dueDate, rangeStart, rangeEnd));
+  }, [shipments, rangeStart, rangeEnd]);
 
   const totalUnpaid  = allPayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
   const totalPaid    = allPayments.filter(p =>  p.paid).reduce((s, p) => s + p.amountUsd, 0);
@@ -142,6 +163,7 @@ function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
     for (const s of shipments) {
       for (const p of s.payments) {
         if (p.paid) continue;
+        if (!inRange(p.dueDate, rangeStart, rangeEnd)) continue;
         const e = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0 };
         e.unpaid += p.amountUsd;
         if (daysDiff(p.dueDate) < 0) e.overdue += p.amountUsd;
@@ -149,7 +171,7 @@ function FinanceCardContent({ shipments }: { shipments: Shipment[] }) {
       }
     }
     return [...map.values()].sort((a, b) => b.unpaid - a.unpaid);
-  }, [shipments]);
+  }, [shipments, rangeStart, rangeEnd]);
 
   return (
     <div className="space-y-5">
@@ -295,38 +317,43 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
       {/* Ex-factory countdown */}
       <div>
         <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">Ex-Factory Countdown</div>
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-[#E5EAF0]">
-              <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">PO</th>
-              <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2 pl-2">Product</th>
-              <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Ex-Factory</th>
-              <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Days</th>
-            </tr>
-          </thead>
-          <tbody>
-            {exFactoryList.map(s => {
-              const days = daysDiff(s.exFactoryDate);
-              const tl   = trafficLight(days);
-              return (
-                <tr key={s.id} className="border-b border-[#F0F4F8] last:border-0">
-                  <td className="py-1.5">
-                    <span className="font-mono text-[10px] bg-[#FAFBFC] border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B]">
-                      {s.poNumber}
-                    </span>
-                  </td>
-                  <td className="py-1.5 pl-2 text-[#212833] font-medium max-w-[180px] truncate">{s.product}</td>
-                  <td className="py-1.5 text-right text-[#5E687B]">{shortDate(s.exFactoryDate)}</td>
-                  <td className="py-1.5 text-right">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tl.badge}`}>
-                      {tl.label}
-                    </span>
-                  </td>
+        {exFactoryList.length === 0
+          ? <p className="text-xs text-[#9E9FAE]">No shipments with ex-factory dates in this window.</p>
+          : (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-b border-[#E5EAF0]">
+                  <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">PO</th>
+                  <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2 pl-2">Product</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Ex-Factory</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Days</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {exFactoryList.map(s => {
+                  const days = daysDiff(s.exFactoryDate);
+                  const tl   = trafficLight(days);
+                  return (
+                    <tr key={s.id} className="border-b border-[#F0F4F8] last:border-0">
+                      <td className="py-1.5">
+                        <span className="font-mono text-[10px] bg-[#FAFBFC] border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B]">
+                          {s.poNumber}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pl-2 text-[#212833] font-medium max-w-[180px] truncate">{s.product}</td>
+                      <td className="py-1.5 text-right text-[#5E687B]">{shortDate(s.exFactoryDate)}</td>
+                      <td className="py-1.5 text-right">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tl.badge}`}>
+                          {tl.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )
+        }
       </div>
     </div>
   );
@@ -430,6 +457,10 @@ function SuppliersCardContent({
       ? { col, dir: prev.dir === "asc" ? "desc" : "asc" }
       : { col, dir: "desc" }
     );
+  }
+
+  if (sorted.length === 0) {
+    return <p className="text-xs text-[#9E9FAE] py-2">No suppliers have shipments in this window.</p>;
   }
 
   return (
@@ -649,6 +680,160 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
   );
 }
 
+// ─── DateRangePicker ──────────────────────────────────────────────────────────
+function formatDateShort(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+const PRESETS = [
+  {
+    label: "Next 30 days",
+    getRange: () => {
+      const start = new Date(TODAY);
+      const end   = new Date(TODAY);
+      end.setUTCDate(end.getUTCDate() + 30);
+      return { start, end };
+    },
+  },
+  {
+    label: "Next 60 days",
+    getRange: () => {
+      const start = new Date(TODAY);
+      const end   = new Date(TODAY);
+      end.setUTCDate(end.getUTCDate() + 60);
+      return { start, end };
+    },
+  },
+  {
+    label: "This quarter",
+    getRange: () => {
+      // Q2 2026: Apr 1 – Jun 30
+      const year = TODAY.getUTCFullYear();
+      const month = TODAY.getUTCMonth(); // 0-indexed
+      const quarterStart = Math.floor(month / 3) * 3;
+      const start = new Date(Date.UTC(year, quarterStart, 1));
+      const end   = new Date(Date.UTC(year, quarterStart + 3, 0));
+      return { start, end };
+    },
+  },
+];
+
+interface DateRangePickerProps {
+  rangeStart: Date | null;
+  rangeEnd:   Date | null;
+  onChange: (start: Date | null, end: Date | null) => void;
+}
+
+function DateRangePicker({ rangeStart, rangeEnd, onChange }: DateRangePickerProps) {
+  const [calOpen, setCalOpen] = useState(false);
+  const hasRange = rangeStart !== null || rangeEnd !== null;
+
+  const activePreset = PRESETS.find(p => {
+    const r = p.getRange();
+    return (
+      rangeStart?.getTime() === r.start.getTime() &&
+      rangeEnd?.getTime()   === r.end.getTime()
+    );
+  });
+
+  function applyPreset(preset: typeof PRESETS[0]) {
+    const r = preset.getRange();
+    onChange(r.start, r.end);
+    setCalOpen(false);
+  }
+
+  function handleCalendarSelect(range: DateRange | undefined) {
+    onChange(range?.from ?? null, range?.to ?? null);
+  }
+
+  function clearRange() {
+    onChange(null, null);
+    setCalOpen(false);
+  }
+
+  const calValue: DateRange | undefined =
+    rangeStart || rangeEnd
+      ? { from: rangeStart ?? undefined, to: rangeEnd ?? undefined }
+      : undefined;
+
+  const buttonLabel = rangeStart && rangeEnd
+    ? `${formatDateShort(rangeStart)} – ${formatDateShort(rangeEnd)}`
+    : rangeStart
+      ? `From ${formatDateShort(rangeStart)}`
+      : "Select date range";
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Preset chips */}
+      {PRESETS.map(preset => (
+        <button
+          key={preset.label}
+          onClick={() => applyPreset(preset)}
+          className={`text-[11px] font-medium px-3 py-1.5 rounded-full border transition-all ${
+            activePreset?.label === preset.label
+              ? "bg-[#9000FF] text-white border-[#9000FF] shadow-sm"
+              : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#9000FF]/40 hover:text-[#9000FF]"
+          }`}
+        >
+          {preset.label}
+        </button>
+      ))}
+
+      <div className="w-px h-4 bg-[#E5EAF0]" />
+
+      {/* Calendar popover trigger */}
+      <Popover open={calOpen} onOpenChange={setCalOpen}>
+        <PopoverTrigger asChild>
+          <button
+            className={`flex items-center gap-2 text-[11px] font-medium px-3 py-1.5 rounded-full border transition-all ${
+              hasRange && !activePreset
+                ? "bg-[#9000FF]/8 text-[#9000FF] border-[#9000FF]/30"
+                : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#9000FF]/40 hover:text-[#9000FF]"
+            }`}
+          >
+            <CalendarRange className="w-3.5 h-3.5" />
+            <span>{buttonLabel}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3" align="start">
+          <Calendar
+            mode="range"
+            selected={calValue}
+            onSelect={handleCalendarSelect}
+            numberOfMonths={2}
+            defaultMonth={rangeStart ?? TODAY}
+          />
+          <div className="border-t border-[#E5EAF0] mt-2 pt-2 flex justify-between items-center">
+            <span className="text-[11px] text-[#9E9FAE]">
+              {rangeStart && rangeEnd
+                ? `${formatDateShort(rangeStart)} – ${formatDateShort(rangeEnd)}`
+                : "Pick a start and end date"}
+            </span>
+            <button
+              onClick={() => { onChange(null, null); setCalOpen(false); }}
+              className="text-[11px] text-[#5E687B] hover:text-[#212833] underline"
+            >
+              Clear
+            </button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Clear badge — shown when any range active */}
+      {hasRange && (
+        <button
+          onClick={clearRange}
+          className="flex items-center gap-1 text-[11px] text-[#9E9FAE] hover:text-[#212833] transition-colors"
+          title="Clear filter"
+        >
+          <X className="w-3.5 h-3.5" />
+          <span>Clear</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Reports page ────────────────────────────────────────────────────────
 export function Reports() {
   const { data: apiShipments, isLoading: loadingShipments } = useListShipments();
@@ -657,14 +842,21 @@ export function Reports() {
   const { data: apiSuppliers, isLoading: loadingSuppliers } = useListSuppliers();
 
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [rangeStart, setRangeStart] = useState<Date | null>(null);
+  const [rangeEnd,   setRangeEnd]   = useState<Date | null>(null);
 
   function toggle(id: string) {
     setExpanded(prev => prev === id ? null : id);
   }
 
-  const shipments  = apiShipments ?? [];
-  const tasks      = apiTasks     ?? [];
-  const suppliers  = apiSuppliers ?? [];
+  function handleRangeChange(start: Date | null, end: Date | null) {
+    setRangeStart(start);
+    setRangeEnd(end);
+  }
+
+  const allShipments = apiShipments ?? [];
+  const allTasks     = apiTasks     ?? [];
+  const suppliers    = apiSuppliers ?? [];
 
   const stageOrder = useMemo(() => {
     if (!apiStages) return [];
@@ -672,14 +864,40 @@ export function Reports() {
   }, [apiStages]);
 
   const isLoading = loadingShipments || loadingTasks || loadingStages || loadingSuppliers;
+  const hasRange  = rangeStart !== null || rangeEnd !== null;
 
-  // Collapsed KPIs
-  const totalUnpaid   = shipments.flatMap(s => s.payments).filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
-  const onTimeCount   = shipments.filter(s => s.status === "on-track").length;
-  const onTimePct     = shipments.length > 0 ? Math.round((onTimeCount / shipments.length) * 100) : 0;
-  const supplierCount = new Set(shipments.map(s => s.supplierId)).size;
-  const openTaskCount = tasks.filter(t => !t.done).length;
-  const highUrgent    = tasks.filter(t => !t.done && t.urgency === "high").length;
+  // For Pipeline, Suppliers, Tasks — filter shipments by exFactoryDate
+  const filteredShipments = useMemo(() => {
+    if (!hasRange) return allShipments;
+    return allShipments.filter(s => {
+      if (!s.exFactoryDate) return false;
+      return inRange(s.exFactoryDate, rangeStart, rangeEnd);
+    });
+  }, [allShipments, rangeStart, rangeEnd, hasRange]);
+
+  // For Tasks — only tasks belonging to filtered shipments
+  const filteredShipmentIds = useMemo(
+    () => new Set(filteredShipments.map(s => s.id)),
+    [filteredShipments]
+  );
+  const filteredTasks = useMemo(() => {
+    if (!hasRange) return allTasks;
+    return allTasks.filter(t => filteredShipmentIds.has(t.shipmentId));
+  }, [allTasks, filteredShipmentIds, hasRange]);
+
+  // Collapsed KPIs — use filtered data to reflect the selected range
+  const financePayments = useMemo(() => {
+    const payments = allShipments.flatMap(s => s.payments);
+    if (!hasRange) return payments;
+    return payments.filter(p => inRange(p.dueDate, rangeStart, rangeEnd));
+  }, [allShipments, rangeStart, rangeEnd, hasRange]);
+
+  const totalUnpaid   = financePayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
+  const onTimeCount   = filteredShipments.filter(s => s.status === "on-track").length;
+  const onTimePct     = filteredShipments.length > 0 ? Math.round((onTimeCount / filteredShipments.length) * 100) : 0;
+  const supplierCount = new Set(filteredShipments.map(s => s.supplierId)).size;
+  const openTaskCount = filteredTasks.filter(t => !t.done).length;
+  const highUrgent    = filteredTasks.filter(t => !t.done && t.urgency === "high").length;
 
   const cards = [
     {
@@ -689,8 +907,8 @@ export function Reports() {
       iconColor: "text-emerald-600",
       iconBg: "bg-emerald-50",
       kpi: fmtUsd(totalUnpaid),
-      subtitle: "total unpaid across all shipments",
-      content: <FinanceCardContent shipments={shipments} />,
+      subtitle: hasRange ? "unpaid payments due in selected window" : "total unpaid across all shipments",
+      content: <FinanceCardContent shipments={allShipments} rangeStart={rangeStart} rangeEnd={rangeEnd} />,
     },
     {
       id: "pipeline",
@@ -699,8 +917,8 @@ export function Reports() {
       iconColor: "text-blue-600",
       iconBg: "bg-blue-50",
       kpi: <span>{onTimePct}% <span className="text-sm font-medium text-[#5E687B]">on-time</span></span>,
-      subtitle: `${shipments.length} active shipments across ${stageOrder.length} stages`,
-      content: <PipelineCardContent shipments={shipments} stageOrder={stageOrder} />,
+      subtitle: `${filteredShipments.length} shipment${filteredShipments.length !== 1 ? "s" : ""} across ${stageOrder.length} stages${hasRange ? " in window" : ""}`,
+      content: <PipelineCardContent shipments={filteredShipments} stageOrder={stageOrder} />,
     },
     {
       id: "suppliers",
@@ -709,8 +927,8 @@ export function Reports() {
       iconColor: "text-[#9000FF]",
       iconBg: "bg-[#9000FF]/10",
       kpi: supplierCount,
-      subtitle: "active suppliers in portfolio",
-      content: <SuppliersCardContent shipments={shipments} tasks={tasks} suppliers={suppliers} />,
+      subtitle: hasRange ? "suppliers with shipments in window" : "active suppliers in portfolio",
+      content: <SuppliersCardContent shipments={filteredShipments} tasks={filteredTasks} suppliers={suppliers} />,
     },
     {
       id: "tasks",
@@ -724,8 +942,8 @@ export function Reports() {
           {highUrgent > 0 && <span className="text-sm font-medium text-red-500">{highUrgent} high</span>}
         </span>
       ),
-      subtitle: "open tasks across all shipments",
-      content: <TasksCardContent tasks={tasks} shipments={shipments} />,
+      subtitle: hasRange ? "open tasks for shipments in window" : "open tasks across all shipments",
+      content: <TasksCardContent tasks={filteredTasks} shipments={filteredShipments} />,
     },
   ];
 
@@ -745,7 +963,7 @@ export function Reports() {
           </div>
           <div className="flex items-center gap-2 text-[11px] text-[#5E687B]">
             <Package className="w-3.5 h-3.5" />
-            <span className="font-medium">{shipments.length} shipments</span>
+            <span className="font-medium">{filteredShipments.length}{hasRange ? ` / ${allShipments.length}` : ""} shipments</span>
             <span className="text-[#D6E3EB]">·</span>
             <span>as of {shortDate(TODAY)}</span>
           </div>
@@ -754,6 +972,25 @@ export function Reports() {
 
       <ScrollArea className="flex-1">
         <div className="p-6 max-w-4xl mx-auto space-y-4">
+          {/* Date range filter bar */}
+          <div className="bg-white border border-[#E5EAF0] rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#5E687B] uppercase tracking-wide shrink-0">
+              <CalendarRange className="w-3.5 h-3.5" />
+              <span>Date range</span>
+            </div>
+            <div className="w-px h-4 bg-[#E5EAF0] shrink-0" />
+            <DateRangePicker
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              onChange={handleRangeChange}
+            />
+            {hasRange && (
+              <span className="ml-auto text-[11px] text-[#9000FF] font-medium bg-[#9000FF]/8 px-2.5 py-1 rounded-full border border-[#9000FF]/20 shrink-0">
+                Filtered
+              </span>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-24 gap-2 text-[#9E9FAE]">
               <RefreshCw className="w-4 h-4 animate-spin" />
