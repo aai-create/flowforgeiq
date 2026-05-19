@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSearch } from "wouter";
 import {
   Mail, MessageCircle, FileText, Sparkles, Wand2, Search,
@@ -1456,10 +1457,11 @@ export default function Home() {
         {navTab==="inbox"&&<>
 
           {/* 3-COLUMN INBOX */}
-          <div className="flex-1 flex overflow-hidden">
+          <ResizablePanelGroup direction="horizontal" autoSaveId="inbox-panels" className="flex-1 overflow-hidden">
 
             {/* Col 1 — Filters */}
-            <div className="w-[228px] bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col shrink-0">
+            <ResizablePanel defaultSize={16} minSize={11} className="bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col min-w-0">
+            <div className="flex flex-col h-full overflow-hidden">
 
               {/* Channels */}
               <div className="p-3 border-b border-[#E5EAF0] shrink-0">
@@ -1545,9 +1547,13 @@ export default function Home() {
                 )}
               </div>
             </div>
+            </ResizablePanel>
+
+            <ResizableHandle className="w-1 bg-[#E5EAF0] hover:bg-[#9000FF]/20 transition-colors cursor-col-resize data-[resize-handle-active]:bg-[#9000FF]/30" />
 
             {/* Col 2 — Thread list */}
-            <div className="flex-1 min-w-[270px] bg-white border-r border-[#E5EAF0] flex flex-col">
+            <ResizablePanel defaultSize={51} minSize={16} className="bg-white flex flex-col min-w-0">
+            <div className="flex flex-col h-full overflow-hidden">
               <div className="border-b border-[#E5EAF0] px-3 flex items-center justify-between shrink-0" style={{height:38}}>
                 <div className="font-semibold text-[11px] text-[#212833]">{visibleMessages.length} thread{visibleMessages.length!==1?"s":""}{(selectedShipmentId||supplierFilter||channelFilter!=="all")&&<span className="ml-1 text-[#9000FF] font-normal">— filtered</span>}</div>
                 <button className="p-1 hover:bg-[#F0F4F8] rounded text-[#5E687B]"><MoreHorizontal size={13}/></button>
@@ -1580,9 +1586,13 @@ export default function Home() {
                 })}
               </div>
             </div>
+            </ResizablePanel>
+
+            <ResizableHandle className="w-1 bg-[#E5EAF0] hover:bg-[#9000FF]/20 transition-colors cursor-col-resize data-[resize-handle-active]:bg-[#9000FF]/30" />
 
             {/* Col 3 — Thread detail */}
-            <div className="w-[455px] bg-white flex flex-col shrink-0 border-l border-[#E5EAF0]">
+            <ResizablePanel defaultSize={33} minSize={24} className="bg-white flex flex-col min-w-0 border-l border-[#E5EAF0]">
+            <div className="flex flex-col h-full overflow-hidden">
               {/* Shipment context */}
               {activeShipment&&(
                 <div className="border-b border-[#E5EAF0] p-4 bg-[#FAFBFC] shrink-0">
@@ -1719,7 +1729,8 @@ export default function Home() {
                 </div>
               </>}
             </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
 
         </>}
       </div>
