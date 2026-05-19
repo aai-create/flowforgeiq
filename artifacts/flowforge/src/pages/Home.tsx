@@ -16,6 +16,8 @@ import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
 import { ShipmentRiskDetail } from "./ShipmentRiskDetail";
 import { CopilotQueue } from "./CopilotQueue";
+import { RiskRadar } from "./RiskRadar";
+import { Reports } from "./Reports";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
   updateMessage, updateTask, updateShipment, updatePayment,
@@ -31,11 +33,26 @@ import {
 } from "@/lib/adapters";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Radar icon (custom SVG — concentric arcs + sweep line + blip)
+// ─────────────────────────────────────────────────────────────────────────────
+function RadarIcon({ size = 16, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="2" fill="currentColor" fillOpacity="0.25" strokeWidth="0"/>
+      <path d="M12 4a8 8 0 0 1 8 8" opacity="0.35"/>
+      <path d="M12 7a5 5 0 0 1 5 5" opacity="0.6"/>
+      <path d="M12 10a2 2 0 0 1 2 2" opacity="0.9"/>
+      <line x1="12" y1="12" x2="19.5" y2="4.5"/>
+      <circle cx="18" cy="6" r="1.2" fill="currentColor" stroke="none"/>
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type ViewMode   = "inbox" | "command";
-type NavTab     = "inbox" | "calendar" | "buyers" | "import" | "copilot";
-type RightTab   = "message" | "docs" | "risk";
+type ActiveView = "inbox" | "shipments" | "risk" | "reports" | "calendar" | "buyers" | "import" | "copilot";
+type RightTab   = "message" | "docs" | "risk" | "copilot";
 type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
