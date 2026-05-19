@@ -10,7 +10,7 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
-  Pencil,
+  Pencil, Package,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
@@ -243,49 +243,6 @@ const eventColor = (e: CalendarEvent) => {
   return "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]";
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ViewSwitcher (draggable)
-// ─────────────────────────────────────────────────────────────────────────────
-function ViewSwitcher({ mode, setMode }: { mode: ViewMode; setMode: (m: ViewMode) => void }) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [pos, setPos] = useState({ x: 20, y: 20 });
-  const posRef = useRef(pos);
-  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, isDragging: false });
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    (e.target as Element).setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, initialX: posRef.current.x, initialY: posRef.current.y, isDragging: true };
-    setIsDragging(true);
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current.isDragging) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    const nextX = Math.max(0, Math.min(window.innerWidth - 200, dragRef.current.initialX + dx));
-    const nextY = Math.max(0, Math.min(window.innerHeight - 50, dragRef.current.initialY + dy));
-    setPos({ x: nextX, y: nextY });
-    posRef.current = { x: nextX, y: nextY };
-  };
-  const onPointerUp = (e: React.PointerEvent) => {
-    (e.target as Element).releasePointerCapture(e.pointerId);
-    dragRef.current.isDragging = false;
-    setIsDragging(false);
-  };
-
-  return (
-    <div
-      className={`fixed z-[9999] flex items-center bg-white border border-[#E5EAF0] shadow-xl rounded-full p-1 transition-shadow ${isDragging ? "shadow-2xl cursor-grabbing" : "cursor-grab"}`}
-      style={{ left: pos.x, top: pos.y, touchAction: "none" }}
-      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-    >
-      <div className="px-2 text-[#C0C8D4] hover:text-[#5E687B]"><GripVertical size={14} /></div>
-      <div className="flex bg-[#F0F4F8] rounded-full p-0.5" onPointerDown={e => e.stopPropagation()}>
-        <button onClick={() => setMode("inbox")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${mode === "inbox" ? "bg-white text-[#212833] shadow-sm" : "text-[#5E687B] hover:text-[#212833]"}`}><MessagesSquare size={13} />Inbox</button>
-        <button onClick={() => setMode("command")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${mode === "command" ? "bg-white text-[#212833] shadow-sm" : "text-[#5E687B] hover:text-[#212833]"}`}><LayoutGrid size={13} />Command</button>
-      </div>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Toast
@@ -1094,8 +1051,7 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const search = useSearch();
-  const [viewMode, setViewMode]           = useState<ViewMode>("inbox");
-  const [navTab, setNavTab]               = useState<NavTab>("inbox");
+  const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
   const { data: apiMessages }  = useListMessages();
@@ -1164,7 +1120,7 @@ export default function Home() {
     const shipmentParam = params.get("shipment");
     if (!supplierParam && !shipmentParam) return;
     urlParamsApplied.current = true;
-    setNavTab("inbox");
+    setActiveView("inbox");
     if (shipmentParam) {
       const uiId = `s${shipmentParam}`;
       setSelectedShipmentId(uiId);
@@ -1259,7 +1215,7 @@ export default function Home() {
   });
 
   const openMessage = (id: string) => {
-    setActiveMessageId(id); setNavTab("inbox");
+    setActiveMessageId(id); setActiveView("inbox");
     const msg = messages.find(m => m.id === id);
     if (msg && msg.unread) {
       setMessages(prev => prev.map(m => m.id === id ? { ...m, unread:false } : m));
@@ -1370,30 +1326,19 @@ export default function Home() {
   const highCount      = tasks.filter(t=>t.urgency==="high").length;
   const isQuotesStage  = activeShipment?.currentStageId === "quotes";
 
-  // Nav rail items
-  const NAV_ITEMS: { tab: NavTab; icon: React.ElementType; label: string }[] = [
-    { tab:"inbox",    icon:Inbox,         label:"Inbox"          },
-    { tab:"copilot",  icon:BrainCircuit,  label:"Copilot Queue"  },
-    { tab:"calendar", icon:Calendar,      label:"Calendar"       },
-    { tab:"buyers",   icon:Users,         label:"Buyers"         },
-    { tab:"import",   icon:Upload,        label:"Import"         },
+  // VIEWS nav items (persistent left panel)
+  const VIEWS_NAV: { id: ActiveView; Icon: React.ElementType; label: string }[] = [
+    { id: "risk",      Icon: RadarIcon, label: "Risk Radar"  },
+    { id: "shipments", Icon: Package,   label: "Shipments"   },
+    { id: "reports",   Icon: BarChart3, label: "Reports"     },
+    { id: "calendar",  Icon: Calendar,  label: "Calendar"    },
   ];
-
-  if (viewMode==="command") {
-    return (
-      <div className="relative h-screen w-full">
-        <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
-        {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
-        <Atelier/>
-      </div>
-    );
-  }
 
   const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
   if (!activeMessage || !activeShipment) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{fontFamily:"Inter,sans-serif"}}>
-        <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
+        {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
         <div className="flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
             <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain p-1.5" />
@@ -1408,35 +1353,158 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{fontFamily:"Inter,sans-serif",fontSize:13}}>
-      <ViewSwitcher mode={viewMode} setMode={setViewMode}/>
       {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
       {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
 
-      {/* LEFT NAV RAIL */}
+      {/* ── FAR LEFT ICON STRIP ── */}
       <div className="w-[58px] bg-white border-r border-[#E5EAF0] flex flex-col items-center py-4 z-20 shrink-0">
-        <div className="w-7 h-7 rounded-lg overflow-hidden mb-7 shrink-0">
+        <div className="w-7 h-7 rounded-lg overflow-hidden mb-5 shrink-0">
           <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
         </div>
-        <div className="flex flex-col gap-4 text-[#5E687B]">
-          {NAV_ITEMS.map(({tab,icon:Icon,label})=>(
-            <button key={tab} onClick={()=>setNavTab(tab)} title={label}
-              className={`p-2 rounded-md transition-colors relative ${navTab===tab?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
+        <div className="flex flex-col gap-2 text-[#5E687B]">
+          {([
+            { view:"inbox"     as ActiveView, Icon:Inbox,     label:"Inbox"     },
+            { view:"shipments" as ActiveView, Icon:Package,   label:"Shipments" },
+            { view:"risk"      as ActiveView, Icon:RadarIcon, label:"Risk Radar"},
+            { view:"reports"   as ActiveView, Icon:BarChart3, label:"Reports"   },
+            { view:"calendar"  as ActiveView, Icon:Calendar,  label:"Calendar"  },
+          ] as const).map(({view,Icon,label})=>(
+            <button key={view} onClick={()=>setActiveView(view)} title={label}
+              className={`p-2 rounded-md transition-colors relative ${activeView===view?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
               <Icon size={17}/>
-              {tab==="inbox"&&unreadCount>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-[#9000FF] rounded-full border border-white"/>}
-              {tab==="copilot"&&(apiProposals??[]).filter(p=>p.status==="pending").length>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full border border-white"/>}
-              {tab==="buyers"&&<span className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full border border-white"/>}
+              {view==="inbox"&&unreadCount>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-[#9000FF] rounded-full border border-white"/>}
             </button>
           ))}
           <div className="w-6 h-px bg-[#E5EAF0] mx-auto my-1"/>
-          <button onClick={()=>window.location.assign(`${import.meta.env.BASE_URL}reports`)} title="Reports"
-            className="p-2 rounded-md hover:bg-[#F0F4F8] text-[#5E687B] hover:text-[#9000FF] transition-colors"><BarChart3 size={17}/></button>
+          <button onClick={()=>setActiveView("copilot")} title="Copilot Queue"
+            className={`p-2 rounded-md transition-colors relative ${activeView==="copilot"?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
+            <BrainCircuit size={17}/>
+          </button>
+          <button onClick={()=>setActiveView("import")} title="Import Documents"
+            className={`p-2 rounded-md transition-colors ${activeView==="import"?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
+            <Upload size={17}/>
+          </button>
+          <button onClick={()=>setActiveView("buyers")} title="Buyer Chatbot"
+            className={`p-2 rounded-md transition-colors ${activeView==="buyers"?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
+            <Users size={17}/>
+          </button>
           <button onClick={()=>setShowStageConfig(true)} title="Workflow Stages"
-            className="p-2 rounded-md hover:bg-[#F0F4F8] text-[#5E687B] hover:text-[#9000FF] transition-colors"><SlidersHorizontal size={17}/></button>
+            className="p-2 rounded-md hover:bg-[#F0F4F8] text-[#5E687B] hover:text-[#9000FF] transition-colors">
+            <SlidersHorizontal size={17}/>
+          </button>
         </div>
         <div className="mt-auto"><img src="https://i.pravatar.cc/100?img=33" alt="Avatar" className="w-7 h-7 rounded-full border border-[#E5EAF0] object-cover"/></div>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* ── MAIN AREA: persistent filter panel + content ── */}
+      <div className="flex-1 flex min-w-0 overflow-hidden">
+
+        {/* ── PERSISTENT LEFT FILTER PANEL ── */}
+        <div className="w-[195px] shrink-0 bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col overflow-hidden z-10">
+          <div className="px-2.5 pt-2.5 pb-2 shrink-0">
+            <div className="flex items-center gap-1.5 bg-white border border-[#E5EAF0] rounded-lg px-2 py-1.5">
+              <Search size={11} className="text-[#9E9FAE] shrink-0"/>
+              <input placeholder="Search…" className="flex-1 text-[10px] bg-transparent outline-none text-[#212833] placeholder:text-[#C0C8D4] min-w-0"/>
+            </div>
+          </div>
+          <div className="px-2.5 pb-2 border-b border-[#E5EAF0] shrink-0">
+            <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5">Messages</div>
+            <div className="flex flex-col gap-0.5">
+              {([
+                {id:"all"      as Channel|"all",label:"All Inbox",icon:<Inbox size={12}/>,        count:messages.length},
+                {id:"gmail"    as Channel,       label:"Gmail",   icon:<Mail size={12}/>,          count:messages.filter(m=>m.channel==="gmail").length},
+                {id:"whatsapp" as Channel,       label:"WhatsApp",icon:<MessageCircle size={12}/>, count:messages.filter(m=>m.channel==="whatsapp").length},
+                {id:"sheets"   as Channel,       label:"Sheets",  icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>,count:messages.filter(m=>m.channel==="sheets").length},
+                {id:"pdf"      as Channel,       label:"PDFs",    icon:<FileText size={12}/>,      count:messages.filter(m=>m.channel==="pdf").length},
+              ]).map(f=>{
+                const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter&&activeView==="inbox";
+                const unread=f.id==="all"?messages.filter(m=>m.unread).length:messages.filter(m=>m.channel===f.id&&m.unread).length;
+                return (
+                  <button key={String(f.id)} onClick={()=>{setActiveView("inbox");toggleChannel(f.id);}}
+                    className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors ${active?"bg-white border border-[#E5EAF0] text-[#212833] font-semibold shadow-sm":"text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
+                    <span className="flex items-center gap-2">{f.icon}{f.label}</span>
+                    {unread>0?<span className="text-[9px] bg-[#9000FF] text-white px-1.5 rounded-full font-bold">{unread}</span>:<span className="text-[9px] text-[#5E687B]">{f.count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="px-2.5 py-2 border-b border-[#E5EAF0] shrink-0">
+            <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5">Views</div>
+            <div className="flex flex-col gap-0.5">
+              {VIEWS_NAV.map(({id,Icon,label})=>(
+                <button key={id} onClick={()=>setActiveView(id)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] transition-colors ${activeView===id?"bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm":"text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
+                  <Icon size={13} className={activeView===id?"text-[#9000FF]":"text-[#9E9FAE]"}/>
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="px-2.5 py-2 border-b border-[#E5EAF0] flex flex-col min-h-0 overflow-y-auto" style={{maxHeight:"35vh"}}>
+            <div className="flex items-center justify-between mb-1.5 shrink-0">
+              <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Purchase Orders</div>
+              {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {shipments.map(s=>{
+                const isSelected=selectedShipmentId===s.id;
+                const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
+                const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
+                const cur=stages.find(st=>st.id===s.currentStageId);
+                const dotCls=s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400";
+                return (
+                  <button key={s.id} onClick={()=>{setActiveView("inbox");selectShipment(s.id);}}
+                    className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#F0F4F8]"}`}>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
+                      <span className={`text-[10px] font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
+                    </div>
+                    <div className="text-[9px] text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
+                    <div className="pl-3">
+                      <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-[8px] text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
+                        <span className="text-[8px] text-[#9E9FAE] shrink-0">{pct}%</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="px-2.5 py-2 flex-1 overflow-y-auto">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Suppliers</div>
+              {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {SUPPLIERS.map(s=>(
+                <button key={s.id} onClick={()=>{setActiveView("inbox");toggleSupplier(s.id);}}
+                  className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors ${supplierFilter===s.id?"bg-white border border-[#9000FF]/30 text-[#9000FF] font-semibold shadow-sm":"text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                  <span className="truncate pr-2">{s.label}</span>
+                  <span className="text-[9px] bg-white border border-[#E5EAF0] px-1.5 rounded shrink-0">{s.count}</span>
+                </button>
+              ))}
+            </div>
+            {(selectedShipmentId||supplierFilter||channelFilter!=="all")&&activeView==="inbox"&&(
+              <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");}}
+                className="mt-3 w-full text-[9px] text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
+                <X size={9}/>Clear all filters
+              </button>
+            )}
+          </div>
+          <div className="shrink-0 p-2 border-t border-[#E5EAF0]">
+            <button onClick={()=>setActiveView("import")} className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-[10px] font-semibold text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors">
+              <Upload size={12}/>Import Documents
+            </button>
+          </div>
+        </div>
+
+        {/* ── CONTENT AREA ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* TOP BAR */}
         <div className="bg-white border-b border-[#E5EAF0] flex items-center justify-between px-5 shrink-0 relative" style={{height:50}}>
@@ -1444,8 +1512,16 @@ export default function Home() {
             <span className="text-[#9000FF] tracking-tight">flowforge</span>
             <span className="text-[#E5EAF0]">/</span>
             <span className="text-[#5E687B] font-medium text-xs">
-              {navTab==="inbox" ? (selectedShipmentId ? shipments.find(s=>s.id===selectedShipmentId)?.po : supplierFilter ?? (channelFilter!=="all" ? channelFilter[0].toUpperCase()+channelFilter.slice(1) : "Inbox"))
-                : navTab==="copilot" ? "Copilot Queue" : navTab==="calendar" ? "Calendar" : navTab==="buyers" ? "Buyer Chatbot" : "Doc Intelligence"}
+              {activeView==="inbox"
+                  ? (selectedShipmentId ? shipments.find(s=>s.id===selectedShipmentId)?.po
+                    : supplierFilter ?? (channelFilter!=="all" ? channelFilter[0].toUpperCase()+channelFilter.slice(1) : "Inbox"))
+                  : activeView==="shipments" ? "Shipments"
+                  : activeView==="risk"      ? "Risk Radar"
+                  : activeView==="reports"   ? "Reports"
+                  : activeView==="calendar"  ? "Calendar"
+                  : activeView==="copilot"   ? "Copilot Queue"
+                  : activeView==="buyers"    ? "Buyer Chatbot"
+                  : "Doc Intelligence"}
             </span>
           </div>
 
@@ -1494,8 +1570,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3 text-[#5E687B]">
-            {/* Today's Tasks popover trigger — inbox tab only */}
-            {navTab==="inbox"&&<div className="relative">
+            {activeView==="inbox"&&<div className="relative">
               <button onClick={()=>setShowTaskPanel(v=>!v)} className="hover:text-[#212833] p-1 relative" title="Today's Tasks">
                 <ListTodo size={15}/>
                 {highCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}
@@ -1521,112 +1596,28 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── NON-INBOX VIEWS ── */}
-        {navTab==="copilot"&&<CopilotQueue/>}
-        {navTab==="calendar"&&<CalendarView shipments={shipments}/>}
-        {navTab==="buyers"&&<BuyersView/>}
-        {navTab==="import"&&<DocumentIntake onDone={()=>setNavTab("inbox")}/>}
+          {/* ── FULL-PAGE VIEWS ── */}
+          {activeView==="copilot"&&<CopilotQueue/>}
+          {activeView==="calendar"&&<CalendarView shipments={shipments}/>}
+          {activeView==="buyers"&&<BuyersView/>}
+          {activeView==="import"&&<DocumentIntake onDone={()=>setActiveView("inbox")}/>}
+          {activeView==="shipments"&&<div className="flex-1 overflow-auto h-full min-h-0"><Atelier/></div>}
+          {activeView==="reports"&&<div className="flex-1 overflow-auto h-full min-h-0"><Reports/></div>}
+          {activeView==="risk"&&<div className="flex-1 overflow-auto h-full min-h-0"><RiskRadar onNavigateToShipment={id=>{
+            const uiId=`s${id}`;
+            setActiveView("inbox");
+            setSelectedShipmentId(uiId);
+            setChannelFilter("all");
+            setSupplierFilter(null);
+            const first=messages.find(m=>m.shipmentId===uiId);
+            if(first) setActiveMessageId(first.id);
+          }}/></div>}
 
-        {/* ── INBOX VIEW ── */}
-        {navTab==="inbox"&&<>
+          {/* ── INBOX VIEW: thread list + detail ── */}
+          {activeView==="inbox"&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
 
-          {/* 3-COLUMN INBOX */}
-          <ResizablePanelGroup direction="horizontal" autoSaveId="inbox-panels" className="flex-1 overflow-hidden">
-
-            {/* Col 1 — Filters */}
-            <ResizablePanel defaultSize={16} minSize={11} className="bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col min-w-0">
-            <div className="flex flex-col h-full overflow-hidden">
-
-              {/* Channels */}
-              <div className="p-3 border-b border-[#E5EAF0] shrink-0">
-                <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Channels</div>
-                <div className="flex flex-col gap-0.5">
-                  {([
-                    {id:"all",label:"All Inbox",icon:<Inbox size={12}/>,count:messages.length},
-                    {id:"gmail",label:"Gmail",icon:<Mail size={12}/>,count:messages.filter(m=>m.channel==="gmail").length},
-                    {id:"whatsapp",label:"WhatsApp",icon:<MessageCircle size={12}/>,count:messages.filter(m=>m.channel==="whatsapp").length},
-                    {id:"sheets",label:"Sheets",icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>,count:messages.filter(m=>m.channel==="sheets").length},
-                    {id:"pdf",label:"PDFs",icon:<FileText size={12}/>,count:messages.filter(m=>m.channel==="pdf").length},
-                  ] as {id:Channel|"all";label:string;icon:React.ReactNode;count:number}[]).map(f=>{
-                    const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter;
-                    const unread=f.id==="all"?messages.filter(m=>m.unread).length:messages.filter(m=>m.channel===f.id&&m.unread).length;
-                    return (
-                      <button key={f.id} onClick={()=>toggleChannel(f.id)}
-                        className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors ${active?"bg-white border border-[#E5EAF0] text-[#212833] font-semibold shadow-sm":"text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
-                        <span className="flex items-center gap-2">{f.icon}{f.label}</span>
-                        {unread>0?<span className="text-[9px] bg-[#9000FF] text-white px-1.5 rounded-full font-bold">{unread}</span>:<span className="text-[9px] text-[#5E687B]">{f.count}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Purchase Orders — scrollable list, same style as Suppliers */}
-              <div className="p-3 border-b border-[#E5EAF0] flex flex-col min-h-0 max-h-[45vh]">
-                <div className="flex items-center justify-between mb-2 shrink-0">
-                  <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Purchase Orders</div>
-                  {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
-                </div>
-                <div className="flex flex-col gap-0.5 overflow-y-auto">
-                  {shipments.map(s=>{
-                    const isSelected=selectedShipmentId===s.id;
-                    const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
-                    const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
-                    const cur=stages.find(st=>st.id===s.currentStageId);
-                    const dotCls=s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400";
-                    return (
-                      <button key={s.id} onClick={()=>selectShipment(s.id)}
-                        className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#F0F4F8]"}`}>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
-                          <span className={`text-[10px] font-bold leading-none ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
-                          <span className="text-[8px] text-[#9E9FAE] ml-auto shrink-0">{s.dueDate}</span>
-                        </div>
-                        <div className="text-[9px] text-[#5E687B] truncate pl-3 mb-1.5 leading-tight">{s.product}</div>
-                        <div className="pl-3">
-                          <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
-                          </div>
-                          <div className="flex items-center justify-between mt-0.5">
-                            <span className="text-[8px] text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
-                            <span className="text-[8px] text-[#9E9FAE] shrink-0">{pct}%</span>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Suppliers */}
-              <div className="p-3 flex-1 overflow-y-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Suppliers</div>
-                  {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  {SUPPLIERS.map(s=>(
-                    <button key={s.id} onClick={()=>toggleSupplier(s.id)}
-                      className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors ${supplierFilter===s.id?"bg-white border border-[#9000FF]/30 text-[#9000FF] font-semibold shadow-sm":"text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                      <span className="truncate pr-2">{s.label}</span>
-                      <span className="text-[9px] bg-white border border-[#E5EAF0] px-1.5 rounded shrink-0">{s.count}</span>
-                    </button>
-                  ))}
-                </div>
-                {(selectedShipmentId||supplierFilter||channelFilter!=="all")&&(
-                  <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");}}
-                    className="mt-3 w-full text-[9px] text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md hover:border-[#D6E3EB]">
-                    <X size={9}/>Clear all filters
-                  </button>
-                )}
-              </div>
-            </div>
-            </ResizablePanel>
-
-            <ResizableHandle className="w-1 bg-[#E5EAF0] hover:bg-[#9000FF]/20 transition-colors cursor-col-resize data-[resize-handle-active]:bg-[#9000FF]/30" />
-
-            {/* Col 2 — Thread list */}
-            <ResizablePanel defaultSize={51} minSize={16} className="bg-white flex flex-col min-w-0">
+            {/* Col A — Thread list */}
+            <ResizablePanel defaultSize={38} minSize={22} className="bg-white flex flex-col min-w-0">
             <div className="flex flex-col h-full overflow-hidden">
               <div className="border-b border-[#E5EAF0] px-3 flex items-center justify-between shrink-0" style={{height:38}}>
                 <div className="font-semibold text-[11px] text-[#212833]">{visibleMessages.length} thread{visibleMessages.length!==1?"s":""}{(selectedShipmentId||supplierFilter||channelFilter!=="all")&&<span className="ml-1 text-[#9000FF] font-normal">— filtered</span>}</div>
@@ -1664,8 +1655,8 @@ export default function Home() {
 
             <ResizableHandle className="w-1 bg-[#E5EAF0] hover:bg-[#9000FF]/20 transition-colors cursor-col-resize data-[resize-handle-active]:bg-[#9000FF]/30" />
 
-            {/* Col 3 — Thread detail */}
-            <ResizablePanel defaultSize={33} minSize={24} className="bg-white flex flex-col min-w-0 border-l border-[#E5EAF0]">
+            {/* Col B — Thread detail */}
+            <ResizablePanel defaultSize={62} minSize={30} className="bg-white flex flex-col min-w-0 border-l border-[#E5EAF0]">
             <div className="flex flex-col h-full overflow-hidden">
               {/* Shipment context */}
               {activeShipment&&(
@@ -1738,17 +1729,29 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Tabs: Message / Docs / Risk */}
+              {/* Tabs: Message / Docs / Risk / Copilot */}
               <div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
-                {([{id:"message",label:"Message"},{id:"docs",label:"Docs"},{id:"risk",label:"Risk",icon:ShieldAlert}] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
+                {([
+                  {id:"message" as RightTab, label:"Message"},
+                  {id:"docs"    as RightTab, label:"Docs"},
+                  {id:"risk"    as RightTab, label:"Risk",    icon:ShieldAlert},
+                  {id:"copilot" as RightTab, label:"Copilot", icon:Sparkles},
+                ] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
                   <button key={t.id} onClick={()=>setRightTab(t.id)}
-                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id?"border-[#9000FF] text-[#9000FF]":"border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
+                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id
+                      ? t.id==="copilot" ? "border-amber-400 text-amber-700" : "border-[#9000FF] text-[#9000FF]"
+                      : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
                     {t.icon&&<t.icon size={10}/>}
                     <span className="inline-flex items-center justify-center gap-1.5">
                       {t.label}
                       {t.id==="docs"&&docsCount>0&&(
                         <span className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none ${docsHasFindings?"bg-amber-100 text-amber-700 border border-amber-300":"bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0]"} ${rightTab==="docs"?"opacity-100":"opacity-80"}`}>
                           {docsCount}
+                        </span>
+                      )}
+                      {t.id==="copilot"&&(apiProposals??[]).filter(p=>p.status==="pending").length>0&&(
+                        <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none bg-amber-100 text-amber-700 border border-amber-200">
+                          {(apiProposals??[]).filter(p=>p.status==="pending").length}
                         </span>
                       )}
                     </span>
@@ -1758,6 +1761,49 @@ export default function Home() {
 
               {/* Docs tab */}
               {rightTab==="docs"&&<DocsPanel shipmentId={activeShipment?.id??""}/>}
+
+              {/* Copilot tab */}
+              {rightTab==="copilot"&&(
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                  <div className="bg-[#9000FF]/5 border border-[#9000FF]/15 rounded-xl p-3 flex items-start gap-2 shrink-0">
+                    <Sparkles size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold text-[#9000FF] mb-0.5">Copilot — {activeShipment?.po}</p>
+                      <p className="text-[10px] text-[#5E687B]">AI-generated actions for the active thread.</p>
+                    </div>
+                    <button onClick={()=>setActiveView("copilot")} className="text-[9px] text-[#5E687B] hover:text-[#212833] shrink-0 flex items-center gap-0.5 whitespace-nowrap">Full queue<ArrowUpRight size={9}/></button>
+                  </div>
+                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).slice(0,4).map(p=>{
+                    const payload=(p.payload??{}) as Record<string,unknown>;
+                    const draftBody=String(payload.draftBody??payload.messageSnippet??"");
+                    const displayTitle=(p.actionType||"action").replace(/_/g," ");
+                    const conf=p.confidence??0;
+                    const priorityLabel=conf>=0.7?"high":conf>=0.4?"medium":"low";
+                    return (
+                      <div key={p.id} className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm">
+                        <div className="flex items-start gap-2.5 p-3">
+                          <div className="w-6 h-6 rounded-lg bg-[#F8F9FB] border border-[#E5EAF0] flex items-center justify-center shrink-0"><Sparkles size={11} className="text-[#9000FF]"/></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[11px] font-bold text-[#212833] capitalize">{displayTitle}</span>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${priorityLabel==="high"?"bg-red-50 text-red-600 border-red-100":priorityLabel==="medium"?"bg-amber-50 text-amber-600 border-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>{priorityLabel}</span>
+                            </div>
+                            <p className="text-[10px] text-[#5E687B]">{p.reasoning}</p>
+                          </div>
+                        </div>
+                        {draftBody&&<div className="mx-3 mb-3 bg-[#9000FF]/4 border border-[#9000FF]/15 rounded-lg p-2.5"><p className="text-[9px] font-bold text-[#9000FF] mb-1">Draft</p><p className="text-[10px] text-[#212833] leading-relaxed line-clamp-3">{draftBody}</p></div>}
+                      </div>
+                    );
+                  })}
+                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).length===0&&(
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]">
+                      <Sparkles size={28} className="opacity-30 mb-2"/>
+                      <p className="text-sm font-semibold text-[#212833]">No pending actions</p>
+                      <p className="text-[11px] mt-1">Copilot will surface suggestions as new messages arrive.</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Risk tab */}
               {rightTab==="risk"&&activeShipment&&(
@@ -1845,10 +1891,10 @@ export default function Home() {
               </>}
             </div>
             </ResizablePanel>
-          </ResizablePanelGroup>
+          </ResizablePanelGroup>}
 
-        </>}
-      </div>
+        </div>{/* end CONTENT AREA */}
+      </div>{/* end MAIN AREA */}
     </div>
   );
 }
