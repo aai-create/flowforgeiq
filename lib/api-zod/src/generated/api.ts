@@ -40,9 +40,30 @@ export const ListSuppliersResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "country": zod.string(),
+  "contactEmail": zod.string().nullish(),
   "threadCount": zod.number()
 })
 export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
+
+
+/**
+ * @summary Update supplier fields (e.g. contactEmail)
+ */
+export const UpdateSupplierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSupplierBody = zod.object({
+  "contactEmail": zod.string().nullish()
+})
+
+export const UpdateSupplierResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "contactEmail": zod.string().nullish(),
+  "threadCount": zod.number()
+})
 
 
 /**

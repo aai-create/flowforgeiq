@@ -53,6 +53,7 @@ import type {
   Stage,
   StageOrderInput,
   SupplierSummary,
+  SupplierUpdate,
   Task,
   TaskUpdate,
   UploadDocumentBody
@@ -353,6 +354,78 @@ export function useListSuppliers<TData = Awaited<ReturnType<typeof listSuppliers
 
 
 
+
+export const getUpdateSupplierUrl = (id: number,) => {
+
+
+
+
+  return `/api/suppliers/${id}`
+}
+
+/**
+ * @summary Update supplier fields (e.g. contactEmail)
+ */
+export const updateSupplier = async (id: number,
+    supplierUpdate: SupplierUpdate, options?: RequestInit): Promise<SupplierSummary> => {
+
+  return customFetch<SupplierSummary>(getUpdateSupplierUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      supplierUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateSupplierMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSupplier>>, TError,{id: number;data: BodyType<SupplierUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSupplier>>, TError,{id: number;data: BodyType<SupplierUpdate>}, TContext> => {
+
+const mutationKey = ['updateSupplier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSupplier>>, {id: number;data: BodyType<SupplierUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSupplier(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSupplierMutationResult = NonNullable<Awaited<ReturnType<typeof updateSupplier>>>
+    export type UpdateSupplierMutationBody = BodyType<SupplierUpdate>
+    export type UpdateSupplierMutationError = ErrorType<void>
+
+    /**
+ * @summary Update supplier fields (e.g. contactEmail)
+ */
+export const useUpdateSupplier = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSupplier>>, TError,{id: number;data: BodyType<SupplierUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSupplier>>,
+        TError,
+        {id: number;data: BodyType<SupplierUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSupplierMutationOptions(options));
+    }
 
 export const getListDealsUrl = () => {
 

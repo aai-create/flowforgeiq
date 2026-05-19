@@ -23,7 +23,12 @@ export interface SupplierSummary {
   id: number;
   name: string;
   country: string;
+  contactEmail?: string | null;
   threadCount: number;
+}
+
+export interface SupplierUpdate {
+  contactEmail?: string | null;
 }
 
 export interface Payment {

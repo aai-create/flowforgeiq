@@ -56,6 +56,7 @@ export * from './shipmentUpdate';
 export * from './stage';
 export * from './stageOrderInput';
 export * from './supplierSummary';
+export * from './supplierUpdate';
 export * from './task';
 export * from './taskUpdate';
 export * from './uploadDocumentBody';

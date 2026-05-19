@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SupplierSummary {
-  id: number;
-  name: string;
-  country: string;
+export interface SupplierUpdate {
   contactEmail?: string | null;
-  threadCount: number;
 }

@@ -96,20 +96,59 @@ function extractForwardedFrom(textBody: string): string | null {
 // ─── Party type resolution ─────────────────────────────────────────────────────
 
 type PartyType = "supplier" | "buyer" | "unknown";
+type SupplierMatchMethod = "exact-email" | "exact-domain" | "fuzzy-name";
 
-interface SupplierRecord { id: number; name: string }
+interface SupplierRecord { id: number; name: string; contactEmail: string | null }
 interface ShipmentRecord { id: number; poNumber: string; product: string; customerName: string; supplierId: number }
 
+interface SupplierMatch {
+  supplier: SupplierRecord;
+  matchedBy: SupplierMatchMethod;
+}
+
 /**
- * Attempts to match an email address to a known supplier by comparing the
- * normalised domain token against normalised supplier names.
+ * Attempts to match an email address to a known supplier.
+ *
+ * Resolution order (most → least specific):
+ *  1. Exact email address match against `contactEmail`
+ *  2. Exact domain match (sender's domain == domain part of `contactEmail`)
+ *  3. Fuzzy domain-token overlap against supplier name (legacy heuristic)
+ *
+ * Returns a match object that includes how the match was made so callers can
+ * log when the fuzzy fallback is used.
  */
-function matchEmailToSupplier(email: string, suppliers: SupplierRecord[]): SupplierRecord | null {
+function matchEmailToSupplier(email: string, suppliers: SupplierRecord[]): SupplierMatch | null {
+  const senderEmail = email.toLowerCase();
+  const senderDomain = (senderEmail.split("@")[1] ?? "").toLowerCase();
+
+  // ── 1. Exact email match ────────────────────────────────────────────────────
+  for (const s of suppliers) {
+    if (s.contactEmail && s.contactEmail.toLowerCase() === senderEmail) {
+      return { supplier: s, matchedBy: "exact-email" };
+    }
+  }
+
+  // ── 2. Exact domain match ───────────────────────────────────────────────────
+  if (senderDomain) {
+    for (const s of suppliers) {
+      if (s.contactEmail) {
+        const contactDomain = (s.contactEmail.split("@")[1] ?? "").toLowerCase();
+        if (contactDomain && contactDomain === senderDomain) {
+          return { supplier: s, matchedBy: "exact-domain" };
+        }
+      }
+    }
+  }
+
+  // ── 3. Fuzzy name heuristic (legacy fallback) ───────────────────────────────
   const token = domainToken(email);
   if (!token || token.length < 3) return null;
   for (const s of suppliers) {
-    if (tokenOverlaps(token, normaliseName(s.name))) return s;
+    if (tokenOverlaps(token, normaliseName(s.name))) {
+      return { supplier: s, matchedBy: "fuzzy-name" };
+    }
   }
+
   return null;
 }
 
@@ -194,6 +233,10 @@ interface EmailRoutingContext {
   unresolvable: boolean;
   /** Customer name matched from outer sender (the "account") */
   resolvedCustomerName: string | null;
+  /** How the supplier was matched (null when no supplier was matched) */
+  supplierMatchedBy: SupplierMatchMethod | null;
+  /** Name of the matched supplier for logging purposes */
+  matchedSupplierName: string | null;
 }
 
 async function resolveEmailRoutingContext(
@@ -202,7 +245,9 @@ async function resolveEmailRoutingContext(
   textBody: string | undefined,
 ): Promise<EmailRoutingContext> {
   const [suppliers, allShipments] = await Promise.all([
-    db.select({ id: suppliersTable.id, name: suppliersTable.name }).from(suppliersTable),
+    db
+      .select({ id: suppliersTable.id, name: suppliersTable.name, contactEmail: suppliersTable.contactEmail })
+      .from(suppliersTable),
     db
       .select({
         id: shipmentsTable.id,
@@ -218,12 +263,16 @@ async function resolveEmailRoutingContext(
   let outerSenderType: PartyType = "unknown";
   let resolvedCustomerName: string | null = null;
   let supplierId: number | null = null;
+  let supplierMatchedBy: SupplierMatchMethod | null = null;
+  let matchedSupplierName: string | null = null;
 
   if (from) {
-    const matchedSupplier = matchEmailToSupplier(from, suppliers);
-    if (matchedSupplier) {
+    const outerMatch = matchEmailToSupplier(from, suppliers);
+    if (outerMatch) {
       outerSenderType = "supplier";
-      supplierId = matchedSupplier.id;
+      supplierId = outerMatch.supplier.id;
+      supplierMatchedBy = outerMatch.matchedBy;
+      matchedSupplierName = outerMatch.supplier.name;
     } else {
       const matchedCustomer = matchEmailToBuyer(from, allShipments);
       if (matchedCustomer) {
@@ -239,11 +288,15 @@ async function resolveEmailRoutingContext(
   let innerSenderType: PartyType = "unknown";
 
   if (forwardedFromEmail) {
-    const matchedInnerSupplier = matchEmailToSupplier(forwardedFromEmail, suppliers);
-    if (matchedInnerSupplier) {
+    const innerMatch = matchEmailToSupplier(forwardedFromEmail, suppliers);
+    if (innerMatch) {
       innerSenderType = "supplier";
       // If we didn't get a supplier from the outer sender, derive it from the inner
-      if (supplierId === null) supplierId = matchedInnerSupplier.id;
+      if (supplierId === null) {
+        supplierId = innerMatch.supplier.id;
+        supplierMatchedBy = innerMatch.matchedBy;
+        matchedSupplierName = innerMatch.supplier.name;
+      }
     } else {
       const matchedInnerCustomer = matchEmailToBuyer(forwardedFromEmail, allShipments);
       if (matchedInnerCustomer) {
@@ -294,6 +347,8 @@ async function resolveEmailRoutingContext(
     innerSenderType,
     unresolvable,
     resolvedCustomerName,
+    supplierMatchedBy,
+    matchedSupplierName,
   };
 }
 
@@ -463,11 +518,23 @@ router.post("/webhooks/email", async (req, res) => {
         forwardedFrom: ctx.forwardedFromEmail,
         innerSenderType: ctx.innerSenderType,
         supplierId: ctx.supplierId,
+        supplierMatchedBy: ctx.supplierMatchedBy,
         resolvedCustomer: ctx.resolvedCustomerName,
         preMatchedShipmentId: ctx.preMatchedShipmentId,
       },
       "email-webhook: routing context resolved",
     );
+
+    if (ctx.supplierMatchedBy === "fuzzy-name") {
+      req.log.warn(
+        {
+          from: From,
+          supplierId: ctx.supplierId,
+          supplierName: ctx.matchedSupplierName,
+        },
+        "email-webhook: supplier matched via fuzzy name heuristic — consider setting contactEmail on this supplier to make routing deterministic",
+      );
+    }
   }
 
   if (!Attachments || Attachments.length === 0) {

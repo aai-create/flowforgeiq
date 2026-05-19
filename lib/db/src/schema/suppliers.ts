@@ -6,6 +6,7 @@ export const suppliersTable = pgTable("suppliers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   country: text("country").notNull().default("CN"),
+  contactEmail: text("contact_email"),
 });
 
 export const insertSupplierSchema = createInsertSchema(suppliersTable).omit({ id: true });
