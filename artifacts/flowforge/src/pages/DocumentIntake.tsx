@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   Upload, FileText, Image, FileSpreadsheet, Mic, X, CheckCircle2,
-  AlertCircle, Clock, ChevronRight, ChevronDown, Edit2, Check,
+  AlertCircle, Clock, ChevronRight, ChevronDown, ChevronUp, Edit2, Check,
   Sparkles, RefreshCw, Link2, Package, AlertTriangle, Info,
   FileBox, Zap, Eye, ChevronLeft, CornerDownRight, Mail, MessageSquare,
 } from "lucide-react";
@@ -158,6 +158,52 @@ function DropZone({ onFiles, uploading }: DropZoneProps) {
   );
 }
 
+// ─── PDF snippet card (inline expand) ────────────────────────────────────────
+
+function PdfSnippetCard({ snippet, label, isInferred }: { snippet: string; label: string; isInferred: boolean }) {
+  return (
+    <div className="mx-3 mb-2 rounded-xl overflow-hidden border border-amber-200 shadow-sm">
+      <div className="bg-amber-50 border-b border-amber-100 px-3 py-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <FileText className="w-3 h-3 text-amber-600" />
+          <span className="text-[10px] font-semibold text-amber-800">PDF source · {label}</span>
+        </div>
+        {isInferred && (
+          <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">inferred — not in PDF</span>
+        )}
+      </div>
+      <div className="bg-white px-4 py-4">
+        <div className="flex gap-3 items-start">
+          <div className="w-12 shrink-0 space-y-2 pt-1">
+            <div className="h-2 bg-gray-100 rounded" />
+            <div className="h-2 bg-gray-100 rounded w-8" />
+            <div className="h-2 bg-gray-100 rounded" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="space-y-1.5 mb-3">
+              <div className="h-2 bg-gray-100 rounded w-3/4" />
+              <div className="h-2 bg-gray-100 rounded w-1/2" />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 flex items-center gap-2 mb-3">
+              <div className="w-1 rounded self-stretch bg-amber-400 shrink-0" style={{ minHeight: 20 }} />
+              <mark className="bg-amber-300 text-amber-900 rounded-sm px-0.5 font-bold font-mono text-[12px] not-italic">
+                {snippet}
+              </mark>
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-2 bg-gray-100 rounded w-5/6" />
+              <div className="h-2 bg-gray-100 rounded w-2/3" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="bg-gray-50 border-t border-gray-100 px-3 py-1.5">
+        <p className="text-[10px] text-gray-500 italic">Extracted value: <span className="font-semibold not-italic text-gray-700">{snippet}</span></p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Field editor ────────────────────────────────────────────────────────────
 
 interface FieldRowProps {
@@ -173,6 +219,7 @@ interface FieldRowProps {
 
 function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, documentType, onCorrect }: FieldRowProps) {
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(String(value ?? ""));
   const [saved, setSaved] = useState(false);
   const { mutate: saveCorrection } = useSaveExtractionCorrection();
@@ -187,29 +234,28 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
 
   const displayVal = String(value ?? "—");
   const isEmpty = !value;
-  // Only show confidence badge when there is an actual extracted value
   const showConfidence = !isEmpty;
-  // Values with per-field confidence below 0.65 were inferred rather than directly read
   const isInferred = !isEmpty && confidence < 0.65;
+  const hasSnippet = !!snippet && !isEmpty;
 
   return (
-    <div className="flex items-start gap-2 py-1.5 border-b border-[#F0F4F8] last:border-b-0 group">
-      <div className="w-[130px] shrink-0 text-[10px] text-[#5E687B] font-medium pt-0.5">{label}</div>
-      <div className="flex-1 min-w-0">
-        {editing ? (
-          <div className="flex items-center gap-1">
-            <input
-              autoFocus
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setEditing(false); }}
-              className="flex-1 text-[11px] border border-[#9000FF]/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-[#9000FF]/30 bg-white"
-            />
-            <button onClick={handleSave} className="p-0.5 text-emerald-600 hover:text-emerald-700"><Check size={12} /></button>
-            <button onClick={() => setEditing(false)} className="p-0.5 text-[#5E687B] hover:text-[#212833]"><X size={12} /></button>
-          </div>
-        ) : (
-          <div>
+    <div className={`border-b border-[#F0F4F8] last:border-b-0 transition-colors ${expanded ? "bg-amber-50/40 border-l-2 border-l-amber-400" : ""}`}>
+      <div className={`flex items-center gap-2 py-2 group ${expanded ? "px-[calc(0.75rem-2px)]" : "px-3"}`}>
+        <div className="w-[130px] shrink-0 text-[10px] text-[#5E687B] font-medium">{label}</div>
+        <div className="flex-1 min-w-0">
+          {editing ? (
+            <div className="flex items-center gap-1">
+              <input
+                autoFocus
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setEditing(false); }}
+                className="flex-1 text-[11px] border border-[#9000FF]/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-[#9000FF]/30 bg-white"
+              />
+              <button onClick={handleSave} className="p-0.5 text-emerald-600 hover:text-emerald-700"><Check size={12} /></button>
+              <button onClick={() => setEditing(false)} className="p-0.5 text-[#5E687B] hover:text-[#212833]"><X size={12} /></button>
+            </div>
+          ) : (
             <div className="flex items-center gap-1.5">
               <span className={`text-[11px] font-medium ${isEmpty ? "text-[#C0C8D4] italic" : isInferred ? "text-amber-700" : "text-[#212833]"}`}>
                 {displayVal}
@@ -220,25 +266,41 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
                 </span>
               )}
               {saved && <Check size={10} className="text-emerald-500" />}
-              <button
-                onClick={() => { setDraft(String(value ?? "")); setEditing(true); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#9E9FAE] hover:text-[#9000FF]"
-              >
-                <Edit2 size={10} />
-              </button>
+              {!editing && (
+                <button
+                  onClick={() => { setDraft(String(value ?? "")); setEditing(true); }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#9E9FAE] hover:text-[#9000FF]"
+                >
+                  <Edit2 size={10} />
+                </button>
+              )}
             </div>
-            {snippet && !isEmpty && (
-              <p className="text-[9px] text-[#5E687B] italic mt-0.5 truncate" title={snippet}>
-                "{snippet}"
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-      {showConfidence && (
-        <div className={`shrink-0 text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(confidence)}`}>
-          {Math.round(confidence * 100)}%
+          )}
         </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {showConfidence && (
+            <div className={`text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(confidence)}`}>
+              {Math.round(confidence * 100)}%
+            </div>
+          )}
+          {hasSnippet && (
+            <button
+              onClick={() => setExpanded(v => !v)}
+              className={`flex items-center gap-0.5 text-[10px] font-semibold rounded-full px-2 py-0.5 border transition-colors ${
+                expanded
+                  ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+              }`}
+            >
+              <FileText size={10} />
+              <span>View in PDF</span>
+              {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+            </button>
+          )}
+        </div>
+      </div>
+      {expanded && hasSnippet && (
+        <PdfSnippetCard snippet={snippet!} label={label} isInferred={isInferred} />
       )}
     </div>
   );
@@ -380,9 +442,12 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
           <div className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 border-b border-[#F0F4F8] bg-[#FAFBFC]">
               <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={10} className="text-[#9000FF]" />Extracted Fields</span>
-              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${confidenceColor(ext.confidence)}`}>
-                {Math.round(ext.confidence * 100)}% confidence
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-[#9E9FAE] hidden sm:block">Click any field with a source to expand its PDF excerpt</span>
+                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${confidenceColor(ext.confidence)}`}>
+                  {Math.round(ext.confidence * 100)}% confidence
+                </span>
+              </div>
             </div>
             <div className="px-3 py-2">
               {fieldMap.map(({ label, key }) => (
