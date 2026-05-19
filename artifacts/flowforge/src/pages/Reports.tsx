@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
   ChevronsUpDown, RefreshCw, Clock, CheckCircle2, ArrowRight, ArrowLeft,
   CalendarRange, X, Layers, ExternalLink, TrendingDown,
+  Inbox, ShieldAlert,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer,
@@ -1063,14 +1064,14 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
 
 // ─── Main Reports page ────────────────────────────────────────────────────────
 export function Reports() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { data: apiShipments, isLoading: loadingShipments } = useListShipments();
   const { data: apiTasks,     isLoading: loadingTasks     } = useListTasks();
   const { data: apiStages,    isLoading: loadingStages    } = useListStages();
   const { data: apiSuppliers, isLoading: loadingSuppliers } = useListSuppliers();
   const { data: apiDeals,     isLoading: loadingDeals     } = useListDeals();
 
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>("spread");
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [rangeEnd,   setRangeEnd]   = useState<Date | null>(null);
 
@@ -1196,17 +1197,45 @@ export function Reports() {
     },
   ];
 
+  const navItems = [
+    { icon: Package,     label: "My Orders",  to: "/"           },
+    { icon: Inbox,       label: "Inbox",      to: "/inbox"      },
+    { icon: ShieldAlert, label: "Risk Radar", to: "/risk-radar" },
+    { icon: BarChart3,   label: "Reports",    to: "/reports"    },
+  ] as { icon: React.ElementType; label: string; to: string }[];
+
   return (
-    <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+    <div className="h-full flex bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+
+      {/* Persistent nav sidebar */}
+      <div className="w-[180px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
+        <div className="px-3 py-3.5 border-b border-[#E5EAF0] flex items-center gap-2">
+          <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
+            <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
+          </div>
+          <span className="font-bold text-sm tracking-tight text-[#9000FF]">flowforge</span>
+        </div>
+        <div className="p-2 flex flex-col gap-0.5 mt-1">
+          {navItems.map(({ icon: Icon, label, to }) => (
+            <button key={label}
+              onClick={() => navigate(to)}
+              className={`w-full flex items-center gap-2.5 px-2.5 h-8 rounded-md text-[12px] transition-colors ${
+                location === to
+                  ? "bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm"
+                  : "text-[#5E687B] hover:text-[#212833] hover:bg-white"
+              }`}>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4">
-        <button
-          onClick={() => window.history.length <= 1 ? navigate("/") : window.history.back()}
-          className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] mb-2 transition-colors"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          <span>Back</span>
-        </button>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9000FF] to-[#B040FF] flex items-center justify-center">
@@ -1271,6 +1300,7 @@ export function Reports() {
           )}
         </div>
       </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 
 function RiskRadarPage() {
   const [, navigate] = useLocation();
-  return <RiskRadar onNavigateToShipment={id => navigate(`/?shipment=${id}`)} />;
+  return <RiskRadar onNavigateToShipment={id => navigate(`/inbox?shipment=${id}`)} />;
 }
 
 function ReportsPage() {
@@ -22,7 +22,8 @@ function ReportsPage() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Atelier} />
+      <Route path="/inbox" component={Home} />
       <Route path="/command" component={Atelier} />
       <Route path="/risk-radar" component={RiskRadarPage} />
       <Route path="/reports" component={ReportsPage} />

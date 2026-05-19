@@ -259,11 +259,11 @@ export function Atelier() {
       <header className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2 w-[260px]">
           <button
-            onClick={() => window.history.length <= 1 ? navigate("/") : window.history.back()}
+            onClick={() => navigate("/inbox")}
             className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] transition-colors mr-1"
           >
             <ArrowLeft className="w-3 h-3" />
-            <span>Back</span>
+            <span>Inbox</span>
           </button>
           <span className="text-[#E5EAF0]">|</span>
           <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
@@ -271,7 +271,7 @@ export function Atelier() {
           </div>
           <span className="font-bold text-sm tracking-tight text-[#9000FF]">flowforge</span>
           <span className="text-[#E5EAF0] mx-1">/</span>
-          <span className="text-[#5E687B] font-medium text-xs">Command Center</span>
+          <span className="text-[#5E687B] font-medium text-xs">My Orders</span>
         </div>
 
         <div className="flex-1 flex justify-center max-w-lg">
@@ -302,15 +302,14 @@ export function Atelier() {
               {/* Nav links */}
               <div className="space-y-0.5 mb-5">
                 {[
-                  { icon: Inbox,       label: "Inbox",         count: "5",  active: false, href: null },
-                  { icon: ListTodo,    label: "Today",         count: String(tasks.filter(t => !t.done).length), active: true, href: null },
-                  { icon: LayoutGrid,  label: "All Shipments", count: String(shipments.length), active: false, href: null },
-                  { icon: Calendar,    label: "Calendar",      count: null, active: false, href: null },
-                  { icon: ShieldAlert, label: "Risk Radar",    count: radarData ? String(radarData.items.filter(i => i.riskScore >= 70).length) : null, active: false, href: `${import.meta.env.BASE_URL}risk-radar` },
-                  { icon: BarChart3,  label: "Reports",       count: null, active: false, href: `${import.meta.env.BASE_URL}reports` },
+                  { icon: Inbox,       label: "Inbox",      count: null,                    active: false, href: "/inbox"      },
+                  { icon: LayoutGrid,  label: "My Orders",  count: String(shipments.length), active: true,  href: null         },
+                  { icon: Calendar,    label: "Calendar",   count: null,                    active: false, href: null         },
+                  { icon: ShieldAlert, label: "Risk Radar", count: radarData ? String(radarData.items.filter(i => i.riskScore >= 70).length) : null, active: false, href: "/risk-radar" },
+                  { icon: BarChart3,   label: "Reports",    count: null,                    active: false, href: "/reports"   },
                 ].map(({ icon: Icon, label, count, active, href }) => (
                   <button key={label}
-                    onClick={() => { if (href) window.location.assign(href); }}
+                    onClick={() => { if (href) navigate(href); }}
                     className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
                     <span className="flex items-center gap-2"><Icon className={`w-4 h-4 ${active ? "text-[#9000FF]" : label === "Risk Radar" ? "text-[#9000FF]" : ""}`} />{label}</span>
                     {count && (
@@ -388,7 +387,7 @@ export function Atelier() {
         <div className="flex-1 bg-white flex flex-col min-w-0">
           <div className="h-12 border-b border-[#E5EAF0] flex items-center justify-between px-5 shrink-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-sm font-bold text-[#212833]">Command Horizon</h1>
+              <h1 className="text-sm font-bold text-[#212833]">My Orders</h1>
               <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
                 {visibleShipments.length} of {shipments.length} POs
               </span>

@@ -1084,6 +1084,7 @@ export default function Home() {
   const [channelFilter, setChannelFilter] = useState<Channel|"all">("all");
   const [supplierFilter, setSupplierFilter] = useState<string|null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
+  const [shipmentContextExpanded, setShipmentContextExpanded] = useState(true);
   useEffect(() => {
     if (!showTaskPanel) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowTaskPanel(false); };
@@ -1429,18 +1430,6 @@ export default function Home() {
               })}
             </div>
           </div>
-          <div className="px-2.5 py-2 border-b border-[#E5EAF0] shrink-0">
-            <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5">Views</div>
-            <div className="flex flex-col gap-0.5">
-              {VIEWS_NAV.map(({id,Icon,label})=>(
-                <button key={id} onClick={()=>setActiveView(id)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] transition-colors ${activeView===id?"bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm":"text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
-                  <Icon size={13} className={activeView===id?"text-[#9000FF]":"text-[#9E9FAE]"}/>
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="px-2.5 py-2 border-b border-[#E5EAF0] flex flex-col min-h-0 overflow-y-auto" style={{maxHeight:"35vh"}}>
             <div className="flex items-center justify-between mb-1.5 shrink-0">
               <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Purchase Orders</div>
@@ -1670,8 +1659,14 @@ export default function Home() {
                       </div>
                       <div className="text-[11px] text-[#5E687B]">{activeShipment.product}</div>
                     </div>
-                    <div className="text-right shrink-0"><div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
+                    <div className="flex items-start gap-1.5 shrink-0">
+                      <div className="text-right"><div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
+                      <button onClick={()=>setShipmentContextExpanded(v=>!v)} className="p-1 rounded hover:bg-[#E5EAF0] text-[#5E687B] transition-colors mt-0.5" title={shipmentContextExpanded?"Collapse details":"Expand details"}>
+                        {shipmentContextExpanded?<ChevronUp size={11}/>:<ChevronDown size={11}/>}
+                      </button>
+                    </div>
                   </div>
+                  {shipmentContextExpanded&&<>
                   {/* Stage bar */}
                   <div className="bg-white rounded-lg border border-[#E5EAF0] p-2.5 mb-2.5">
                     <div className="flex items-center justify-between text-[9px] mb-1.5">
@@ -1686,7 +1681,7 @@ export default function Home() {
                     {activeShipment.payments.map((p,i)=>{const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();return<button key={i} type="button" onClick={()=>togglePaymentPaid(activeShipment.id, i as 0|1)} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border transition-opacity hover:opacity-80 ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`} title={p.paid?"Click to mark unpaid":"Click to mark paid"}>{p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}{p.label}: ${p.amountUsd.toLocaleString()} {p.paid?"paid":ov?"OVERDUE":`due ${p.dueDate}`}</button>;})}
                   </div>
                   {/* Supplier contact email */}
-                  {activeSupplier && (
+                  {activeSupplier ? (
                     <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
                       <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
                         <Mail size={8}/>Supplier Contact
@@ -1725,7 +1720,8 @@ export default function Home() {
                         </button>
                       )}
                     </div>
-                  )}
+                  ) : null}
+                  </>}
                 </div>
               )}
 
