@@ -10,6 +10,7 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
+  Pencil,
 } from "lucide-react";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
@@ -21,6 +22,7 @@ import {
   selectFactoryQuote, reorderStages, createMessage,
   useListDocuments, getListDocumentsQueryKey,
   useListCopilotProposals,
+  useListSuppliers, useUpdateSupplier,
 } from "@workspace/api-client-react";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
 import {
@@ -1127,6 +1129,14 @@ export default function Home() {
   const [aiResult, setAiResult]           = useState("");
   const [aiResultLoading, setAiResultLoading] = useState(false);
 
+  // Supplier email editing
+  const { data: suppliersData, refetch: refetchSuppliers } = useListSuppliers();
+  const apiSuppliers = suppliersData ?? [];
+  const updateSupplierMutation = useUpdateSupplier();
+  const [editingEmail, setEditingEmail]   = useState(false);
+  const [emailDraft, setEmailDraft]       = useState("");
+  const [supplierEmailOverrides, setSupplierEmailOverrides] = useState<Map<number, string | null>>(new Map());
+
   // Apply deep-link URL params (?supplier= or ?shipment=) once messages are loaded.
   // Reports navigates here with these params so users land on the right filtered view.
   const urlParamsApplied = useRef(false);
@@ -1164,6 +1174,53 @@ export default function Home() {
   const activeShipment = activeMessage ? shipments.find(s => s.id === activeMessage.shipmentId) : undefined;
   const activeStage    = activeShipment ? stages.find(s => s.id === activeShipment.currentStageId) : null;
   const activeStageIdx = activeShipment ? stages.findIndex(s => s.id === activeShipment.currentStageId) : -1;
+
+  const activeSupplier = useMemo(
+    () => apiSuppliers.find(s => s.name === (activeMessage?.supplierId ?? "")),
+    [apiSuppliers, activeMessage?.supplierId],
+  );
+
+  useEffect(() => {
+    setEditingEmail(false);
+    setEmailDraft("");
+  }, [activeMessageId]);
+
+  const saveEmail = () => {
+    if (!activeSupplier) return;
+    const trimmed = emailDraft.trim() || null;
+    const supplierId = activeSupplier.id;
+    setSupplierEmailOverrides(prev => new Map(prev).set(supplierId, trimmed));
+    setEditingEmail(false);
+    updateSupplierMutation.mutate(
+      { id: supplierId, data: { contactEmail: trimmed } },
+      {
+        onSuccess: () => {
+          setSupplierEmailOverrides(prev => {
+            const next = new Map(prev);
+            next.delete(supplierId);
+            return next;
+          });
+          refetchSuppliers();
+        },
+        onError: () => {
+          setSupplierEmailOverrides(prev => {
+            const next = new Map(prev);
+            next.delete(supplierId);
+            return next;
+          });
+          refetchSuppliers();
+          setToast("Failed to save email — please try again");
+          setTimeout(() => setToast(null), 3000);
+        },
+      },
+    );
+  };
+
+  const activeSupplierEmail = activeSupplier
+    ? (supplierEmailOverrides.has(activeSupplier.id)
+        ? supplierEmailOverrides.get(activeSupplier.id)
+        : activeSupplier.contactEmail)
+    : undefined;
 
   // Docs badge — lifted query so the tab label can show count + amber indicator
   const activeDocShipmentId = activeShipment?.id ? Number(activeShipment.id) : undefined;
@@ -1620,6 +1677,47 @@ export default function Home() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {activeShipment.payments.map((p,i)=>{const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();return<button key={i} type="button" onClick={()=>togglePaymentPaid(activeShipment.id, i as 0|1)} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border transition-opacity hover:opacity-80 ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`} title={p.paid?"Click to mark unpaid":"Click to mark paid"}>{p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}{p.label}: ${p.amountUsd.toLocaleString()} {p.paid?"paid":ov?"OVERDUE":`due ${p.dueDate}`}</button>;})}
                   </div>
+                  {/* Supplier contact email */}
+                  {activeSupplier && (
+                    <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
+                      <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        <Mail size={8}/>Supplier Contact
+                      </div>
+                      {editingEmail ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            autoFocus
+                            type="email"
+                            value={emailDraft}
+                            onChange={e => setEmailDraft(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") saveEmail(); if (e.key === "Escape") setEditingEmail(false); }}
+                            placeholder="supplier@example.com"
+                            className="flex-1 px-2 py-1 text-[10px] border border-[#9000FF]/40 rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/20 text-[#212833]"
+                          />
+                          <button onClick={saveEmail} disabled={updateSupplierMutation.isPending} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">Save</button>
+                          <button onClick={() => setEditingEmail(false)} className="text-[9px] text-[#5E687B] px-1.5 py-1 rounded-md hover:bg-[#F0F4F8] shrink-0">✕</button>
+                        </div>
+                      ) : activeSupplierEmail ? (
+                        <div className="flex items-center gap-1.5 group">
+                          <span className="text-[10px] text-[#212833] truncate">{activeSupplierEmail}</span>
+                          <button
+                            onClick={() => { setEmailDraft(activeSupplierEmail ?? ""); setEditingEmail(true); }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#5E687B] shrink-0"
+                            title="Edit contact email"
+                          >
+                            <Pencil size={9}/>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEmailDraft(""); setEditingEmail(true); }}
+                          className="text-[9px] text-[#9000FF] hover:underline flex items-center gap-1"
+                        >
+                          <Plus size={8}/>Add contact email to improve routing
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

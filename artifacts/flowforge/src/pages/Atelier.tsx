@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
@@ -152,6 +152,8 @@ export function Atelier() {
   const { data: apiShipments } = useListShipments();
   const { data: apiTasks }     = useListTasks();
   const { data: radarData }    = useGetRiskRadar();
+  const { data: suppliersData } = useListSuppliers();
+  const apiSuppliers = suppliersData ?? [];
   const [shipments, setShipments] = useState<UiShipment[]>([]);
   const [stages, setStages] = useState<UiStage[]>([]);
   const [tasks, setTasks] = useState<UiTask[]>([]);
@@ -443,11 +445,19 @@ export function Atelier() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <div className="flex items-center gap-1.5 text-[11px] text-[#5E687B]">
-                          <div className="w-4 h-4 rounded bg-[#F0F4F8] flex items-center justify-center text-[9px] font-bold text-[#5E687B]">
-                            {shipment.supplier.charAt(0)}
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#5E687B]">
+                            <div className="w-4 h-4 rounded bg-[#F0F4F8] flex items-center justify-center text-[9px] font-bold text-[#5E687B]">
+                              {shipment.supplier.charAt(0)}
+                            </div>
+                            {shipment.supplier}
                           </div>
-                          {shipment.supplier}
+                          {(() => {
+                            const sup = apiSuppliers.find(s => s.name === shipment.supplier);
+                            return sup?.contactEmail
+                              ? <span className="text-[9px] text-[#9E9FAE] truncate max-w-[140px]">{sup.contactEmail}</span>
+                              : null;
+                          })()}
                         </div>
                         <span className="text-[#D6E3EB]">·</span>
                         <div className="flex items-center gap-1 text-[10px] text-[#5E687B]">
