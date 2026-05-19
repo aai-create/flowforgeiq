@@ -258,14 +258,6 @@ export function Atelier() {
       {/* TOP BAR */}
       <header className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2 w-[260px]">
-          <button
-            onClick={() => navigate("/inbox")}
-            className="flex items-center gap-1 text-[11px] text-[#5E687B] hover:text-[#212833] transition-colors mr-1"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            <span>Inbox</span>
-          </button>
-          <span className="text-[#E5EAF0]">|</span>
           <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
             <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
           </div>
@@ -304,7 +296,7 @@ export function Atelier() {
                 {[
                   { icon: Inbox,       label: "Inbox",      count: null,                    active: false, href: "/inbox"      },
                   { icon: LayoutGrid,  label: "My Orders",  count: String(shipments.length), active: true,  href: null         },
-                  { icon: Calendar,    label: "Calendar",   count: null,                    active: false, href: null         },
+                  { icon: Calendar,    label: "Calendar",   count: null,                    active: false, href: "/inbox"     },
                   { icon: ShieldAlert, label: "Risk Radar", count: radarData ? String(radarData.items.filter(i => i.riskScore >= 70).length) : null, active: false, href: "/risk-radar" },
                   { icon: BarChart3,   label: "Reports",    count: null,                    active: false, href: "/reports"   },
                 ].map(({ icon: Icon, label, count, active, href }) => (

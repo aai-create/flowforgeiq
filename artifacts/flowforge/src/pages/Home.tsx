@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import {
   Mail, MessageCircle, FileText, Sparkles, Wand2, Search,
   Bell, ChevronDown, Check, AlertCircle, Clock, MoreHorizontal,
@@ -51,7 +51,7 @@ function RadarIcon({ size = 16, className = "" }: { size?: number; className?: s
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type ActiveView = "inbox" | "shipments" | "risk" | "reports" | "calendar" | "buyers" | "import" | "copilot";
+type ActiveView = "inbox" | "calendar" | "buyers" | "import" | "copilot";
 type RightTab   = "message" | "docs" | "risk" | "copilot";
 type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
@@ -1051,6 +1051,7 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const search = useSearch();
+  const [, navigate] = useLocation();
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
@@ -1327,13 +1328,6 @@ export default function Home() {
   const highCount      = tasks.filter(t=>t.urgency==="high").length;
   const isQuotesStage  = activeShipment?.currentStageId === "quotes";
 
-  // VIEWS nav items (persistent left panel)
-  const VIEWS_NAV: { id: ActiveView; Icon: React.ElementType; label: string }[] = [
-    { id: "risk",      Icon: RadarIcon, label: "Risk Radar"  },
-    { id: "shipments", Icon: Package,   label: "Shipments"   },
-    { id: "reports",   Icon: BarChart3, label: "Reports"     },
-    { id: "calendar",  Icon: Calendar,  label: "Calendar"    },
-  ];
 
   const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
   if (!activeMessage || !activeShipment) {
@@ -1357,51 +1351,40 @@ export default function Home() {
       {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
       {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
 
-      {/* ── FAR LEFT ICON STRIP ── */}
-      <div className="w-[58px] bg-white border-r border-[#E5EAF0] flex flex-col items-center py-4 z-20 shrink-0">
-        <div className="w-7 h-7 rounded-lg overflow-hidden mb-5 shrink-0">
-          <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
-        </div>
-        <div className="flex flex-col gap-2 text-[#5E687B]">
-          {([
-            { view:"inbox"     as ActiveView, Icon:Inbox,     label:"Inbox"     },
-            { view:"shipments" as ActiveView, Icon:Package,   label:"Shipments" },
-            { view:"risk"      as ActiveView, Icon:RadarIcon, label:"Risk Radar"},
-            { view:"reports"   as ActiveView, Icon:BarChart3, label:"Reports"   },
-            { view:"calendar"  as ActiveView, Icon:Calendar,  label:"Calendar"  },
-          ] as const).map(({view,Icon,label})=>(
-            <button key={view} onClick={()=>setActiveView(view)} title={label}
-              className={`p-2 rounded-md transition-colors relative ${activeView===view?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
-              <Icon size={17}/>
-              {view==="inbox"&&unreadCount>0&&<span className="absolute top-1 right-1 w-2 h-2 bg-[#9000FF] rounded-full border border-white"/>}
-            </button>
-          ))}
-          <div className="w-6 h-px bg-[#E5EAF0] mx-auto my-1"/>
-          <button onClick={()=>setActiveView("copilot")} title="Copilot Queue"
-            className={`p-2 rounded-md transition-colors relative ${activeView==="copilot"?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
-            <BrainCircuit size={17}/>
-          </button>
-          <button onClick={()=>setActiveView("import")} title="Import Documents"
-            className={`p-2 rounded-md transition-colors ${activeView==="import"?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
-            <Upload size={17}/>
-          </button>
-          <button onClick={()=>setActiveView("buyers")} title="Buyer Chatbot"
-            className={`p-2 rounded-md transition-colors ${activeView==="buyers"?"bg-[#F0F4F8] text-[#9000FF]":"hover:bg-[#F0F4F8] hover:text-[#212833]"}`}>
-            <Users size={17}/>
-          </button>
-          <button onClick={()=>setShowStageConfig(true)} title="Workflow Stages"
-            className="p-2 rounded-md hover:bg-[#F0F4F8] text-[#5E687B] hover:text-[#9000FF] transition-colors">
-            <SlidersHorizontal size={17}/>
-          </button>
-        </div>
-        <div className="mt-auto"><img src="https://i.pravatar.cc/100?img=33" alt="Avatar" className="w-7 h-7 rounded-full border border-[#E5EAF0] object-cover"/></div>
-      </div>
-
       {/* ── MAIN AREA: persistent filter panel + content ── */}
       <div className="flex-1 flex min-w-0 overflow-hidden">
 
         {/* ── PERSISTENT LEFT FILTER PANEL ── */}
         <div className="w-[195px] shrink-0 bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col overflow-hidden z-10">
+
+          {/* Brand + nav */}
+          <div className="px-2.5 pt-2.5 pb-1.5 border-b border-[#E5EAF0] shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <div className="w-4 h-4 rounded overflow-hidden shrink-0">
+                <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain"/>
+              </div>
+              <span className="font-bold text-xs tracking-tight text-[#9000FF]">flowforge</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <button onClick={()=>navigate("/")} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
+                <Package size={12}/><span>My Orders</span>
+              </button>
+              <button onClick={()=>setActiveView("inbox")} className={`w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] transition-colors ${activeView==="inbox"?"bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm":"text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                <Inbox size={12}/><span>Inbox</span>{unreadCount>0&&<span className="ml-auto text-[9px] bg-[#9000FF] text-white px-1.5 rounded-full font-bold">{unreadCount}</span>}
+              </button>
+              <button onClick={()=>setActiveView("calendar")} className={`w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] transition-colors ${activeView==="calendar"?"bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm":"text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                <Calendar size={12}/><span>Calendar</span>
+              </button>
+              <button onClick={()=>navigate("/risk-radar")} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
+                <ShieldAlert size={12}/><span>Risk Radar</span>
+              </button>
+              <button onClick={()=>navigate("/reports")} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
+                <BarChart3 size={12}/><span>Reports</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search */}
           <div className="px-2.5 pt-2.5 pb-2 shrink-0">
             <div className="flex items-center gap-1.5 bg-white border border-[#E5EAF0] rounded-lg px-2 py-1.5">
               <Search size={11} className="text-[#9E9FAE] shrink-0"/>
@@ -1504,9 +1487,6 @@ export default function Home() {
               {activeView==="inbox"
                   ? (selectedShipmentId ? shipments.find(s=>s.id===selectedShipmentId)?.po
                     : supplierFilter ?? (channelFilter!=="all" ? channelFilter[0].toUpperCase()+channelFilter.slice(1) : "Inbox"))
-                  : activeView==="shipments" ? "Shipments"
-                  : activeView==="risk"      ? "Risk Radar"
-                  : activeView==="reports"   ? "Reports"
                   : activeView==="calendar"  ? "Calendar"
                   : activeView==="copilot"   ? "Copilot Queue"
                   : activeView==="buyers"    ? "Buyer Chatbot"
@@ -1590,18 +1570,6 @@ export default function Home() {
           {activeView==="calendar"&&<CalendarView shipments={shipments}/>}
           {activeView==="buyers"&&<BuyersView/>}
           {activeView==="import"&&<DocumentIntake onDone={()=>setActiveView("inbox")}/>}
-          {activeView==="shipments"&&<div className="flex-1 overflow-auto h-full min-h-0"><Atelier/></div>}
-          {activeView==="reports"&&<div className="flex-1 overflow-auto h-full min-h-0"><Reports/></div>}
-          {activeView==="risk"&&<div className="flex-1 overflow-auto h-full min-h-0"><RiskRadar onNavigateToShipment={id=>{
-            const uiId=`s${id}`;
-            setActiveView("inbox");
-            setSelectedShipmentId(uiId);
-            setChannelFilter("all");
-            setSupplierFilter(null);
-            const first=messages.find(m=>m.shipmentId===uiId);
-            if(first) setActiveMessageId(first.id);
-          }}/></div>}
-
           {/* ── INBOX VIEW: thread list + detail ── */}
           {activeView==="inbox"&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
 
