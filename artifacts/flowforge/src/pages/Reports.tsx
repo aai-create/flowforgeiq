@@ -1208,8 +1208,8 @@ export function Reports() {
     <div className="h-full flex bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
       {/* Persistent nav sidebar */}
-      <div className="w-[180px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
-        <div className="px-3 py-3.5 border-b border-[#E5EAF0] flex items-center gap-2">
+      <div className="w-[240px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
+        <div className="px-3 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
           <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
             <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
           </div>
@@ -1219,13 +1219,15 @@ export function Reports() {
           {navItems.map(({ icon: Icon, label, to }) => (
             <button key={label}
               onClick={() => navigate(to)}
-              className={`w-full flex items-center gap-2.5 px-2.5 h-8 rounded-md text-[12px] transition-colors ${
+              className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${
                 location === to
-                  ? "bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm"
-                  : "text-[#5E687B] hover:text-[#212833] hover:bg-white"
+                  ? "bg-[#E5EAF0] text-[#212833] font-semibold"
+                  : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"
               }`}>
-              <Icon className="w-3.5 h-3.5 shrink-0" />
-              {label}
+              <span className="flex items-center gap-2">
+                <Icon className={`w-4 h-4 shrink-0 ${location === to ? "text-[#9000FF]" : ""}`} />
+                {label}
+              </span>
             </button>
           ))}
         </div>

@@ -1355,31 +1355,32 @@ export default function Home() {
       <div className="flex-1 flex min-w-0 overflow-hidden">
 
         {/* ── PERSISTENT LEFT FILTER PANEL ── */}
-        <div className="w-[195px] shrink-0 bg-[#FAFBFC] border-r border-[#E5EAF0] flex flex-col overflow-hidden z-10">
+        <div className="w-[240px] shrink-0 bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col overflow-hidden z-10">
 
           {/* Brand + nav */}
-          <div className="px-2.5 pt-2.5 pb-1.5 border-b border-[#E5EAF0] shrink-0">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="w-4 h-4 rounded overflow-hidden shrink-0">
+          <div className="px-3 pt-3 pb-2 border-b border-[#E5EAF0] shrink-0">
+            <div className="flex items-center gap-2 mb-3 px-2">
+              <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
                 <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain"/>
               </div>
-              <span className="font-bold text-xs tracking-tight text-[#9000FF]">flowforge</span>
+              <span className="font-bold text-sm tracking-tight text-[#9000FF]">flowforge</span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <button onClick={()=>navigate("/")} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
-                <Package size={12}/><span>My Orders</span>
+              <button onClick={()=>navigate("/")} className="w-full flex items-center justify-between px-2 h-8 rounded-md text-sm text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] transition-colors">
+                <span className="flex items-center gap-2"><Package className="w-4 h-4"/><span>My Orders</span></span>
               </button>
-              <button onClick={()=>setActiveView("inbox")} className={`w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] transition-colors ${activeView==="inbox"?"bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm":"text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                <Inbox size={12}/><span>Inbox</span>{unreadCount>0&&<span className="ml-auto text-[9px] bg-[#9000FF] text-white px-1.5 rounded-full font-bold">{unreadCount}</span>}
+              <button onClick={()=>setActiveView("inbox")} className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${activeView==="inbox"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                <span className="flex items-center gap-2"><Inbox className={`w-4 h-4 ${activeView==="inbox"?"text-[#9000FF]":""}`}/><span>Inbox</span></span>
+                {unreadCount>0&&<span className={`text-[10px] px-1.5 rounded-full font-bold ${activeView==="inbox"?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{unreadCount}</span>}
               </button>
-              <button onClick={()=>setActiveView("calendar")} className={`w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] transition-colors ${activeView==="calendar"?"bg-white border border-[#E5EAF0] text-[#9000FF] font-semibold shadow-sm":"text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                <Calendar size={12}/><span>Calendar</span>
+              <button onClick={()=>setActiveView("calendar")} className={`w-full flex items-center px-2 h-8 rounded-md text-sm transition-colors ${activeView==="calendar"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                <span className="flex items-center gap-2"><Calendar className={`w-4 h-4 ${activeView==="calendar"?"text-[#9000FF]":""}`}/><span>Calendar</span></span>
               </button>
-              <button onClick={()=>navigate("/risk-radar")} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
-                <ShieldAlert size={12}/><span>Risk Radar</span>
+              <button onClick={()=>navigate("/risk-radar")} className="w-full flex items-center px-2 h-8 rounded-md text-sm text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] transition-colors">
+                <span className="flex items-center gap-2"><ShieldAlert className="w-4 h-4"/><span>Risk Radar</span></span>
               </button>
-              <button onClick={()=>navigate("/reports")} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-[11px] text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
-                <BarChart3 size={12}/><span>Reports</span>
+              <button onClick={()=>navigate("/reports")} className="w-full flex items-center px-2 h-8 rounded-md text-sm text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] transition-colors">
+                <span className="flex items-center gap-2"><BarChart3 className="w-4 h-4"/><span>Reports</span></span>
               </button>
             </div>
           </div>
