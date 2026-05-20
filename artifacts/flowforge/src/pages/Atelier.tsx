@@ -205,9 +205,8 @@ export function Atelier() {
   const [newPOError, setNewPOError] = useState<string | null>(null);
   const [newPOFile, setNewPOFile] = useState<File | null>(null);
   const [newPODragOver, setNewPODragOver] = useState(false);
-  const [newSupplierMode, setNewSupplierMode] = useState(false);
-  const [newSupplierName, setNewSupplierName] = useState("");
-  const [newSupplierCountry, setNewSupplierCountry] = useState("CN");
+  const [supplierQuery, setSupplierQuery] = useState("");
+  const [supplierOpen, setSupplierOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createShipmentMutation = useCreateShipment();
   const createSupplierMutation = useCreateSupplier();
@@ -217,26 +216,14 @@ export function Atelier() {
     setNewPOError(null);
     setNewPOFile(null);
     setNewPODragOver(false);
-    setNewSupplierMode(false);
-    setNewSupplierName("");
-    setNewSupplierCountry("CN");
+    setSupplierQuery("");
+    setSupplierOpen(false);
     setNewPOForm({ product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN" });
   };
 
   const submitNewPO = async () => {
     setNewPOError(null);
-    let resolvedSupplierId = newPOForm.supplierId;
-
-    if (newSupplierMode) {
-      if (!newSupplierName.trim()) { setNewPOError("Supplier name is required."); return; }
-      try {
-        const created = await createSupplierMutation.mutateAsync({ data: { name: newSupplierName.trim(), country: newSupplierCountry.trim() || "CN" } });
-        resolvedSupplierId = String(created.id);
-        setNewPOForm(p => ({ ...p, supplierId: String(created.id) }));
-      } catch {
-        setNewPOError("Failed to create supplier. Please try again."); return;
-      }
-    }
+    const resolvedSupplierId = newPOForm.supplierId;
 
     if (!newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate) {
       setNewPOError("Please fill in all required fields."); return;
@@ -875,45 +862,74 @@ export function Atelier() {
             </datalist>
           </div>
 
-          {/* Supplier */}
+          {/* Supplier combobox */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-[#5E687B]">Supplier <span className="text-red-500">*</span></label>
-              {!newSupplierMode
-                ? <button onClick={() => { setNewSupplierMode(true); setNewPOForm(p => ({ ...p, supplierId: "" })); }}
-                    className="text-[10px] text-[#9000FF] hover:underline flex items-center gap-0.5">
-                    <Plus className="w-3 h-3"/>Add new supplier
-                  </button>
-                : <button onClick={() => setNewSupplierMode(false)} className="text-[10px] text-[#5E687B] hover:text-[#212833]">
-                    ← Back to list
-                  </button>}
-            </div>
-            {!newSupplierMode ? (
-              <select value={newPOForm.supplierId} onChange={e => setNewPOForm(p => ({ ...p, supplierId: e.target.value }))}
-                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors bg-white text-[#212833]">
-                <option value="">Select supplier…</option>
-                {apiSuppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
-              </select>
-            ) : (
-              <div className="border border-[#9000FF]/20 bg-[#9000FF]/3 rounded-md p-3 space-y-2">
-                <div className="text-[10px] font-semibold text-[#9000FF] uppercase tracking-wider mb-1">New supplier</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] text-[#5E687B] mb-0.5">Name <span className="text-red-500">*</span></label>
-                    <input value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)}
-                      placeholder="e.g. Hangzhou Timber Co."
-                      className="w-full border border-[#E5EAF0] rounded px-2.5 py-1.5 text-xs text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] transition-colors"/>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-[#5E687B] mb-0.5">Country code</label>
-                    <input value={newSupplierCountry} onChange={e => setNewSupplierCountry(e.target.value.toUpperCase().slice(0,2))}
-                      placeholder="CN"
-                      maxLength={2}
-                      className="w-full border border-[#E5EAF0] rounded px-2.5 py-1.5 text-xs text-[#212833] uppercase placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] transition-colors"/>
-                  </div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+              Supplier <span className="text-red-500">*</span>
+              <span className="text-[#9E9FAE] font-normal ml-1">— type to search or add a new one</span>
+            </label>
+            <div className="relative">
+              <input
+                value={supplierQuery}
+                onChange={e => {
+                  setSupplierQuery(e.target.value);
+                  setNewPOForm(p => ({ ...p, supplierId: "" }));
+                  setSupplierOpen(true);
+                }}
+                onFocus={() => setSupplierOpen(true)}
+                onBlur={() => setTimeout(() => setSupplierOpen(false), 150)}
+                placeholder="e.g. Guangzhou Metalworks"
+                disabled={createSupplierMutation.isPending}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors disabled:opacity-60"/>
+              {newPOForm.supplierId && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#9000FF] font-medium pointer-events-none">✓</span>
+              )}
+              {supplierOpen && (
+                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-[#E5EAF0] rounded-md shadow-lg max-h-44 overflow-y-auto">
+                  {(() => {
+                    const q = supplierQuery.trim().toLowerCase();
+                    const filtered = apiSuppliers.filter(s => !q || s.name.toLowerCase().includes(q));
+                    const exactMatch = apiSuppliers.some(s => s.name.toLowerCase() === q);
+                    return (
+                      <>
+                        {filtered.length === 0 && !supplierQuery.trim() && (
+                          <div className="px-3 py-2.5 text-sm text-[#9E9FAE]">Start typing to search…</div>
+                        )}
+                        {filtered.map(s => (
+                          <button key={s.id} onMouseDown={() => {
+                            setNewPOForm(p => ({ ...p, supplierId: String(s.id) }));
+                            setSupplierQuery(s.name);
+                            setSupplierOpen(false);
+                          }} className="w-full text-left px-3 py-2 text-sm text-[#212833] hover:bg-[#F7F9FA] flex items-center gap-2">
+                            {s.name}
+                            <span className="text-[10px] text-[#9E9FAE] ml-auto">{s.country}</span>
+                          </button>
+                        ))}
+                        {supplierQuery.trim() && !exactMatch && (
+                          <button onMouseDown={async () => {
+                            try {
+                              const created = await createSupplierMutation.mutateAsync({ data: { name: supplierQuery.trim(), country: "CN" } });
+                              setNewPOForm(p => ({ ...p, supplierId: String(created.id) }));
+                              setSupplierOpen(false);
+                            } catch {
+                              setNewPOError("Failed to create supplier.");
+                            }
+                          }} className="w-full text-left px-3 py-2 text-sm text-[#9000FF] hover:bg-[#9000FF]/5 flex items-center gap-1.5 border-t border-[#E5EAF0]">
+                            <Plus className="w-3.5 h-3.5 shrink-0"/>
+                            Create "{supplierQuery.trim()}"
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
-                <p className="text-[10px] text-[#9E9FAE]">The supplier will be created when you submit the form.</p>
-              </div>
+              )}
+            </div>
+            {createSupplierMutation.isPending && (
+              <p className="text-[10px] text-[#9000FF] mt-1 flex items-center gap-1">
+                <span className="w-2.5 h-2.5 border border-[#9000FF]/40 border-t-[#9000FF] rounded-full animate-spin"/>
+                Creating supplier…
+              </p>
             )}
           </div>
 
