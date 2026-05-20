@@ -175,6 +175,20 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Shipment" }
+    post:
+      operationId: createShipment
+      tags: [shipments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipmentCreate" }
+      responses:
+        "201":
+          description: Created shipment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
   /shipments/{id}:
     patch:
       operationId: updateShipment
@@ -787,6 +801,27 @@ components:
         quotes:
           type: array
           items: { $ref: "#/components/schemas/FactoryQuote" }
+    ShipmentCreate:
+      type: object
+      required:
+        - product
+        - category
+        - supplierId
+        - customerName
+        - dueDate
+        - exFactoryDate
+      properties:
+        poNumber:       { type: string }
+        product:        { type: string }
+        category:       { type: string }
+        supplierId:     { type: integer }
+        customerName:   { type: string }
+        status:         { type: string }
+        currentStageId: { type: string }
+        dueDate:        { type: string, format: date-time }
+        exFactoryDate:  { type: string, format: date-time }
+        destination:    { type: string }
+        via:            { type: string }
     ShipmentUpdate:
       type: object
       properties:

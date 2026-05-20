@@ -51,6 +51,7 @@ export * from './reconciliationFinding';
 export * from './riskRadarItem';
 export * from './riskRadarResponse';
 export * from './shipment';
+export * from './shipmentCreate';
 export * from './shipmentPrediction';
 export * from './shipmentUpdate';
 export * from './stage';

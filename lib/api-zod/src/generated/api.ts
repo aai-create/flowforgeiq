@@ -223,6 +223,21 @@ export const ListShipmentsResponseItem = zod.object({
 export const ListShipmentsResponse = zod.array(ListShipmentsResponseItem)
 
 
+export const CreateShipmentBody = zod.object({
+  "poNumber": zod.string().optional(),
+  "product": zod.string(),
+  "category": zod.string(),
+  "supplierId": zod.number(),
+  "customerName": zod.string(),
+  "status": zod.string().optional(),
+  "currentStageId": zod.string().optional(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string().optional(),
+  "via": zod.string().optional()
+})
+
+
 export const UpdateShipmentParams = zod.object({
   "id": zod.coerce.number()
 })

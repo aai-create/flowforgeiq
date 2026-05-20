@@ -122,6 +122,20 @@ export interface Shipment {
   quotes: FactoryQuote[];
 }
 
+export interface ShipmentCreate {
+  poNumber?: string;
+  product: string;
+  category: string;
+  supplierId: number;
+  customerName: string;
+  status?: string;
+  currentStageId?: string;
+  dueDate: string;
+  exFactoryDate: string;
+  destination?: string;
+  via?: string;
+}
+
 export interface ShipmentUpdate {
   status?: string;
   currentStageId?: string;

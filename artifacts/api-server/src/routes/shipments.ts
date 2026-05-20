@@ -16,6 +16,7 @@ import {
   SelectFactoryQuoteBody,
   SelectFactoryQuoteResponseItem,
 } from "@workspace/api-zod";
+import { insertShipmentSchema } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -48,6 +49,17 @@ router.get("/shipments", async (_req, res) => {
     }),
   );
   res.json(out);
+});
+
+router.post("/shipments", async (req, res) => {
+  const input = insertShipmentSchema.parse(req.body);
+  const [row] = await db.insert(shipmentsTable).values(input).returning();
+  const out = await loadShipment(row.id);
+  if (!out) {
+    res.status(500).json({ error: "Failed to load created shipment" });
+    return;
+  }
+  res.status(201).json(ListShipmentsResponseItem.parse(out));
 });
 
 router.patch("/shipments/:id", async (req, res) => {

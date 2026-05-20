@@ -48,6 +48,7 @@ import type {
   QuoteSelection,
   RiskRadarResponse,
   Shipment,
+  ShipmentCreate,
   ShipmentPrediction,
   ShipmentUpdate,
   Stage,
@@ -776,6 +777,71 @@ export function useListShipments<TData = Awaited<ReturnType<typeof listShipments
 
 
 
+
+export const getCreateShipmentUrl = () => {
+
+
+
+
+  return `/api/shipments`
+}
+
+export const createShipment = async (shipmentCreate: ShipmentCreate, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getCreateShipmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      shipmentCreate,)
+  }
+);}
+
+
+
+
+export const getCreateShipmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShipment>>, TError,{data: BodyType<ShipmentCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createShipment>>, TError,{data: BodyType<ShipmentCreate>}, TContext> => {
+
+const mutationKey = ['createShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createShipment>>, {data: BodyType<ShipmentCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createShipment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof createShipment>>>
+    export type CreateShipmentMutationBody = BodyType<ShipmentCreate>
+    export type CreateShipmentMutationError = ErrorType<unknown>
+
+    export const useCreateShipment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShipment>>, TError,{data: BodyType<ShipmentCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createShipment>>,
+        TError,
+        {data: BodyType<ShipmentCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateShipmentMutationOptions(options));
+    }
 
 export const getUpdateShipmentUrl = (id: number,) => {
 

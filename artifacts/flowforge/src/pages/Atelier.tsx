@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers, useCreateShipment } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
@@ -12,6 +12,7 @@ import {
   MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -195,6 +196,45 @@ export function Atelier() {
   const [aiLoading, setAiLoading] = useState(false);
   const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
 
+  const [showNewPO, setShowNewPO] = useState(false);
+  const [newPOForm, setNewPOForm] = useState({
+    product: "", category: "", customerName: "",
+    supplierId: "", dueDate: "", exFactoryDate: "",
+    destination: "", via: "OCEAN",
+  });
+  const [newPOError, setNewPOError] = useState<string | null>(null);
+  const createShipmentMutation = useCreateShipment();
+
+  const submitNewPO = async () => {
+    setNewPOError(null);
+    if (!newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !newPOForm.supplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate) {
+      setNewPOError("Please fill in all required fields.");
+      return;
+    }
+    try {
+      const created = await createShipmentMutation.mutateAsync({
+        data: {
+          product: newPOForm.product.trim(),
+          category: newPOForm.category.trim(),
+          customerName: newPOForm.customerName.trim(),
+          supplierId: Number(newPOForm.supplierId),
+          dueDate: new Date(newPOForm.dueDate).toISOString(),
+          exFactoryDate: new Date(newPOForm.exFactoryDate).toISOString(),
+          destination: newPOForm.destination.trim() || undefined,
+          via: newPOForm.via || undefined,
+          status: "on-track",
+          currentStageId: stages[0]?.id ?? "stage-1",
+        },
+      });
+      const adapted = adaptShipments([created], stages);
+      setShipments(prev => [...prev, ...adapted]);
+      setShowNewPO(false);
+      setNewPOForm({ product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN" });
+    } catch {
+      setNewPOError("Failed to create PO. Please try again.");
+    }
+  };
+
   const sendMessage = async (overrideText?: string) => {
     const text = (overrideText ?? aiInput).trim();
     if (!text || aiLoading) return;
@@ -254,6 +294,7 @@ export function Atelier() {
   const doneCount  = tasks.filter(t => t.done).length;
 
   return (
+    <>
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
       {/* TOP BAR */}
@@ -386,7 +427,7 @@ export function Atelier() {
                 </button>
               ))}
               <Separator orientation="vertical" className="h-5 mx-1" />
-              <button className="flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-3 py-1.5 rounded-md transition-colors">
+              <button onClick={() => setShowNewPO(true)} className="flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-3 py-1.5 rounded-md transition-colors">
                 <Plus className="w-3.5 h-3.5" /> New PO
               </button>
             </div>
@@ -713,5 +754,107 @@ export function Atelier() {
 
       </div>
     </div>
+
+    {/* ── NEW PO DIALOG ── */}
+    
+    <Dialog open={showNewPO} onOpenChange={setShowNewPO}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold text-[#212833]">Create New Purchase Order</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          {/* Product */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Product <span className="text-red-500">*</span></label>
+            <input value={newPOForm.product} onChange={e => setNewPOForm(p => ({ ...p, product: e.target.value }))}
+              placeholder="e.g. Chrome Retail Hanger — Heavy Duty Top"
+              className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+          </div>
+
+          {/* Category */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Category <span className="text-red-500">*</span></label>
+              <input value={newPOForm.category} onChange={e => setNewPOForm(p => ({ ...p, category: e.target.value }))}
+                placeholder="e.g. Hangers"
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Via</label>
+              <select value={newPOForm.via} onChange={e => setNewPOForm(p => ({ ...p, via: e.target.value }))}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors bg-white">
+                <option value="OCEAN">Ocean</option>
+                <option value="AIR">Air</option>
+                <option value="RAIL">Rail</option>
+                <option value="ROAD">Road</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Buyer + Supplier */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer <span className="text-red-500">*</span></label>
+              <input value={newPOForm.customerName} onChange={e => setNewPOForm(p => ({ ...p, customerName: e.target.value }))}
+                list="buyer-options"
+                placeholder="Select or type buyer"
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+              <datalist id="buyer-options">
+                {CUSTOMERS.map(c => <option key={c.id} value={c.name}/>)}
+              </datalist>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier <span className="text-red-500">*</span></label>
+              <select value={newPOForm.supplierId} onChange={e => setNewPOForm(p => ({ ...p, supplierId: e.target.value }))}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors bg-white text-[#212833]">
+                <option value="">Select supplier…</option>
+                {apiSuppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Ex-Factory Date <span className="text-red-500">*</span></label>
+              <input type="date" value={newPOForm.exFactoryDate} onChange={e => setNewPOForm(p => ({ ...p, exFactoryDate: e.target.value }))}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Delivery Due Date <span className="text-red-500">*</span></label>
+              <input type="date" value={newPOForm.dueDate} onChange={e => setNewPOForm(p => ({ ...p, dueDate: e.target.value }))}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+            </div>
+          </div>
+
+          {/* Destination */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination</label>
+            <input value={newPOForm.destination} onChange={e => setNewPOForm(p => ({ ...p, destination: e.target.value }))}
+              placeholder="e.g. Los Angeles, CA"
+              className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+          </div>
+
+          {newPOError && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{newPOError}</p>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          <button onClick={() => { setShowNewPO(false); setNewPOError(null); }}
+            className="px-4 py-2 text-sm text-[#5E687B] hover:text-[#212833] transition-colors">
+            Cancel
+          </button>
+          <button onClick={submitNewPO} disabled={createShipmentMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
+            {createShipmentMutation.isPending
+              ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Creating…</>
+              : <><Plus className="w-3.5 h-3.5"/>Create PO</>}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
