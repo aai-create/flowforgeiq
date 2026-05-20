@@ -537,12 +537,12 @@ export function Atelier() {
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={e => { e.stopPropagation(); window.location.assign(import.meta.env.BASE_URL); }}
+                            onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}`); }}
                             className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
                             <MessageCircle className="w-3 h-3" /> Open Threads
                           </button>
                           <button
-                            onClick={e => { e.stopPropagation(); window.location.assign(import.meta.env.BASE_URL); }}
+                            onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}&tab=docs`); }}
                             className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                             <FileText className="w-3 h-3" /> View Docs
                           </button>

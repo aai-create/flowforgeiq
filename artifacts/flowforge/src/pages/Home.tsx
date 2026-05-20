@@ -1113,7 +1113,7 @@ export default function Home() {
   const [emailDraft, setEmailDraft]       = useState("");
   const [supplierEmailOverrides, setSupplierEmailOverrides] = useState<Map<number, string | null>>(new Map());
 
-  // Apply deep-link URL params (?supplier= or ?shipment=) once messages are loaded.
+  // Apply deep-link URL params (?supplier=, ?shipment=, ?tab=) once messages are loaded.
   // Reports navigates here with these params so users land on the right filtered view.
   const urlParamsApplied = useRef(false);
   useEffect(() => {
@@ -1121,9 +1121,13 @@ export default function Home() {
     const params = new URLSearchParams(search);
     const supplierParam = params.get("supplier");
     const shipmentParam = params.get("shipment");
+    const tabParam = params.get("tab");
     if (!supplierParam && !shipmentParam) return;
     urlParamsApplied.current = true;
     setActiveView("inbox");
+    if (tabParam && (["message", "docs", "risk", "copilot"] as string[]).includes(tabParam)) {
+      setRightTab(tabParam as RightTab);
+    }
     if (shipmentParam) {
       const uiId = `s${shipmentParam}`;
       setSelectedShipmentId(uiId);
