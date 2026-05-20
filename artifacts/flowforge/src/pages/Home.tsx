@@ -1096,10 +1096,11 @@ export default function Home() {
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
   const [rightTab, setRightTab]           = useState<RightTab>(() => {
+    const VALID_TABS = ["message", "docs", "risk", "copilot"] as string[];
     const p = new URLSearchParams(window.location.search).get("tab");
-    return (["message", "docs", "risk", "copilot"] as string[]).includes(p ?? "")
-      ? (p as RightTab)
-      : "message";
+    if (VALID_TABS.includes(p ?? "")) return p as RightTab;
+    const saved = sessionStorage.getItem("flowforge:rightTab");
+    return VALID_TABS.includes(saved ?? "") ? (saved as RightTab) : "message";
   });
   const [toast, setToast]                 = useState<string|null>(null);
   const [repliedIds, setRepliedIds]       = useState<Set<string>>(new Set());
@@ -1120,6 +1121,8 @@ export default function Home() {
 
   // Apply deep-link URL params (?supplier=, ?shipment=, ?tab=) once messages are loaded.
   // Reports navigates here with these params so users land on the right filtered view.
+  // ?tab= alone (without supplier/shipment) is also honoured so deep-links that only
+  // specify a tab land on the right panel.
   const urlParamsApplied = useRef(false);
   useEffect(() => {
     if (urlParamsApplied.current || !messages.length) return;
@@ -1127,7 +1130,7 @@ export default function Home() {
     const supplierParam = params.get("supplier");
     const shipmentParam = params.get("shipment");
     const tabParam = params.get("tab");
-    if (!supplierParam && !shipmentParam) return;
+    if (!supplierParam && !shipmentParam && !tabParam) return;
     urlParamsApplied.current = true;
     setActiveView("inbox");
     if (tabParam && (["message", "docs", "risk", "copilot"] as string[]).includes(tabParam)) {
@@ -1151,8 +1154,10 @@ export default function Home() {
 
   // Keep ?tab= in sync with rightTab so the URL is bookmarkable and the back
   // button can restore the active tab. Use replace (not push) so tab switches
-  // don't pollute the browser history stack.
+  // don't pollute the browser history stack. Also persist to sessionStorage so
+  // that navigating away via the sidebar and returning restores the active tab.
   useEffect(() => {
+    sessionStorage.setItem("flowforge:rightTab", rightTab);
     const params = new URLSearchParams(window.location.search);
     if (params.get("tab") === rightTab) return;
     params.set("tab", rightTab);
