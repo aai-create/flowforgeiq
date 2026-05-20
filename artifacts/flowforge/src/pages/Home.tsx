@@ -1095,7 +1095,12 @@ export default function Home() {
   }, [showTaskPanel]);
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
-  const [rightTab, setRightTab]           = useState<RightTab>("message");
+  const [rightTab, setRightTab]           = useState<RightTab>(() => {
+    const p = new URLSearchParams(window.location.search).get("tab");
+    return (["message", "docs", "risk", "copilot"] as string[]).includes(p ?? "")
+      ? (p as RightTab)
+      : "message";
+  });
   const [toast, setToast]                 = useState<string|null>(null);
   const [repliedIds, setRepliedIds]       = useState<Set<string>>(new Set());
   const [searchMode, setSearchMode]       = useState(false);
@@ -1143,6 +1148,16 @@ export default function Home() {
       if (first) setActiveMessageId(first.id);
     }
   }, [messages, search]);
+
+  // Keep ?tab= in sync with rightTab so the URL is bookmarkable and the back
+  // button can restore the active tab. Use replace (not push) so tab switches
+  // don't pollute the browser history stack.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === rightTab) return;
+    params.set("tab", rightTab);
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [rightTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const SUPPLIERS = useMemo(() => {
     const counts = new Map<string, number>();
