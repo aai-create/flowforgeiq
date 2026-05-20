@@ -46,6 +46,13 @@ export const ListSuppliersResponseItem = zod.object({
 export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
 
 
+export const CreateSupplierBody = zod.object({
+  "name": zod.string(),
+  "country": zod.string().optional(),
+  "contactEmail": zod.string().optional()
+})
+
+
 /**
  * @summary Update supplier fields (e.g. contactEmail)
  */

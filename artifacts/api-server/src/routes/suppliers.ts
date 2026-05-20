@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, suppliersTable, messagesTable } from "@workspace/db";
+import { db, suppliersTable, messagesTable, insertSupplierSchema } from "@workspace/db";
 import { sql, asc, eq } from "drizzle-orm";
 import { ListSuppliersResponseItem, UpdateSupplierBody } from "@workspace/api-zod";
 
@@ -21,6 +21,13 @@ router.get("/suppliers", async (_req, res) => {
     .groupBy(suppliersTable.id)
     .orderBy(asc(suppliersTable.name));
   res.json(rows.map(r => ListSuppliersResponseItem.parse(r)));
+});
+
+router.post("/suppliers", async (req, res) => {
+  const input = insertSupplierSchema.parse(req.body);
+  const [row] = await db.insert(suppliersTable).values(input).returning();
+  const result = ListSuppliersResponseItem.parse({ ...row, threadCount: 0 });
+  res.status(201).json(result);
 });
 
 router.patch("/suppliers/:id", async (req, res) => {

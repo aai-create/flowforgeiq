@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers, useCreateShipment } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
@@ -9,7 +9,7 @@ import {
   Sparkles, AlertCircle, Clock, ChevronRight, Hash, X,
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
-  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft,
+  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -203,13 +203,43 @@ export function Atelier() {
     destination: "", via: "OCEAN",
   });
   const [newPOError, setNewPOError] = useState<string | null>(null);
+  const [newPOFile, setNewPOFile] = useState<File | null>(null);
+  const [newPODragOver, setNewPODragOver] = useState(false);
+  const [newSupplierMode, setNewSupplierMode] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierCountry, setNewSupplierCountry] = useState("CN");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const createShipmentMutation = useCreateShipment();
+  const createSupplierMutation = useCreateSupplier();
+
+  const resetNewPO = () => {
+    setShowNewPO(false);
+    setNewPOError(null);
+    setNewPOFile(null);
+    setNewPODragOver(false);
+    setNewSupplierMode(false);
+    setNewSupplierName("");
+    setNewSupplierCountry("CN");
+    setNewPOForm({ product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN" });
+  };
 
   const submitNewPO = async () => {
     setNewPOError(null);
-    if (!newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !newPOForm.supplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate) {
-      setNewPOError("Please fill in all required fields.");
-      return;
+    let resolvedSupplierId = newPOForm.supplierId;
+
+    if (newSupplierMode) {
+      if (!newSupplierName.trim()) { setNewPOError("Supplier name is required."); return; }
+      try {
+        const created = await createSupplierMutation.mutateAsync({ data: { name: newSupplierName.trim(), country: newSupplierCountry.trim() || "CN" } });
+        resolvedSupplierId = String(created.id);
+        setNewPOForm(p => ({ ...p, supplierId: String(created.id) }));
+      } catch {
+        setNewPOError("Failed to create supplier. Please try again."); return;
+      }
+    }
+
+    if (!newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate) {
+      setNewPOError("Please fill in all required fields."); return;
     }
     try {
       const created = await createShipmentMutation.mutateAsync({
@@ -217,7 +247,7 @@ export function Atelier() {
           product: newPOForm.product.trim(),
           category: newPOForm.category.trim(),
           customerName: newPOForm.customerName.trim(),
-          supplierId: Number(newPOForm.supplierId),
+          supplierId: Number(resolvedSupplierId),
           dueDate: new Date(newPOForm.dueDate).toISOString(),
           exFactoryDate: new Date(newPOForm.exFactoryDate).toISOString(),
           destination: newPOForm.destination.trim() || undefined,
@@ -228,8 +258,16 @@ export function Atelier() {
       });
       const adapted = adaptShipments([created], stages);
       setShipments(prev => [...prev, ...adapted]);
-      setShowNewPO(false);
-      setNewPOForm({ product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN" });
+
+      if (newPOFile) {
+        const fd = new FormData();
+        fd.append("file", newPOFile);
+        fd.append("shipmentId", String(created.id));
+        fd.append("sourceChannel", "upload");
+        fetch(`${import.meta.env.BASE_URL}api/documents`, { method: "POST", body: fd }).catch(() => {});
+      }
+
+      resetNewPO();
     } catch {
       setNewPOError("Failed to create PO. Please try again.");
     }
@@ -756,14 +794,45 @@ export function Atelier() {
     </div>
 
     {/* ── NEW PO DIALOG ── */}
-    
-    <Dialog open={showNewPO} onOpenChange={setShowNewPO}>
-      <DialogContent className="max-w-lg">
+    <Dialog open={showNewPO} onOpenChange={open => { if (!open) resetNewPO(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-[#212833]">Create New Purchase Order</DialogTitle>
+          <DialogTitle className="text-base font-bold text-[#212833]">New Purchase Order</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+
+          {/* PO Document upload */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">PO Document <span className="text-[#9E9FAE] font-normal">(optional — PDF, Excel, Word)</span></label>
+            {newPOFile ? (
+              <div className="flex items-center gap-2.5 px-3 py-2.5 bg-[#F7F9FA] border border-[#E5EAF0] rounded-md">
+                <FileText className="w-4 h-4 text-[#9000FF] shrink-0"/>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-[#212833] truncate">{newPOFile.name}</div>
+                  <div className="text-[10px] text-[#9E9FAE]">{(newPOFile.size / 1024).toFixed(0)} KB</div>
+                </div>
+                <button onClick={() => setNewPOFile(null)} className="text-[#9E9FAE] hover:text-[#5E687B] transition-colors">
+                  <X className="w-3.5 h-3.5"/>
+                </button>
+              </div>
+            ) : (
+              <div
+                onDragOver={e => { e.preventDefault(); setNewPODragOver(true); }}
+                onDragLeave={() => setNewPODragOver(false)}
+                onDrop={e => { e.preventDefault(); setNewPODragOver(false); const f = e.dataTransfer.files[0]; if (f) setNewPOFile(f); }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex flex-col items-center gap-1.5 py-5 border-2 border-dashed rounded-md cursor-pointer transition-colors ${newPODragOver ? "border-[#9000FF] bg-[#9000FF]/5" : "border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#F7F9FA]"}`}>
+                <Upload className="w-5 h-5 text-[#9E9FAE]"/>
+                <span className="text-xs text-[#5E687B]">Drop a file here or <span className="text-[#9000FF] font-medium">browse</span></span>
+                <input ref={fileInputRef} type="file"
+                  accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) setNewPOFile(f); }}/>
+              </div>
+            )}
+          </div>
+
           {/* Product */}
           <div>
             <label className="block text-xs font-semibold text-[#5E687B] mb-1">Product <span className="text-red-500">*</span></label>
@@ -772,7 +841,7 @@ export function Atelier() {
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
           </div>
 
-          {/* Category */}
+          {/* Category + Via */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#5E687B] mb-1">Category <span className="text-red-500">*</span></label>
@@ -781,7 +850,7 @@ export function Atelier() {
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Via</label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Shipping via</label>
               <select value={newPOForm.via} onChange={e => setNewPOForm(p => ({ ...p, via: e.target.value }))}
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors bg-white">
                 <option value="OCEAN">Ocean</option>
@@ -792,26 +861,60 @@ export function Atelier() {
             </div>
           </div>
 
-          {/* Buyer + Supplier */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer <span className="text-red-500">*</span></label>
-              <input value={newPOForm.customerName} onChange={e => setNewPOForm(p => ({ ...p, customerName: e.target.value }))}
-                list="buyer-options"
-                placeholder="Select or type buyer"
-                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
-              <datalist id="buyer-options">
-                {CUSTOMERS.map(c => <option key={c.id} value={c.name}/>)}
-              </datalist>
+          {/* Buyer */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+              Buyer <span className="text-red-500">*</span>
+              <span className="text-[#9E9FAE] font-normal ml-1">— type to add a new buyer</span>
+            </label>
+            <input value={newPOForm.customerName} onChange={e => setNewPOForm(p => ({ ...p, customerName: e.target.value }))}
+              list="buyer-options-new" placeholder="e.g. Marlowe & Sons"
+              className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+            <datalist id="buyer-options-new">
+              {CUSTOMERS.map(c => <option key={c.id} value={c.name}/>)}
+            </datalist>
+          </div>
+
+          {/* Supplier */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-[#5E687B]">Supplier <span className="text-red-500">*</span></label>
+              {!newSupplierMode
+                ? <button onClick={() => { setNewSupplierMode(true); setNewPOForm(p => ({ ...p, supplierId: "" })); }}
+                    className="text-[10px] text-[#9000FF] hover:underline flex items-center gap-0.5">
+                    <Plus className="w-3 h-3"/>Add new supplier
+                  </button>
+                : <button onClick={() => setNewSupplierMode(false)} className="text-[10px] text-[#5E687B] hover:text-[#212833]">
+                    ← Back to list
+                  </button>}
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier <span className="text-red-500">*</span></label>
+            {!newSupplierMode ? (
               <select value={newPOForm.supplierId} onChange={e => setNewPOForm(p => ({ ...p, supplierId: e.target.value }))}
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors bg-white text-[#212833]">
                 <option value="">Select supplier…</option>
                 {apiSuppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
               </select>
-            </div>
+            ) : (
+              <div className="border border-[#9000FF]/20 bg-[#9000FF]/3 rounded-md p-3 space-y-2">
+                <div className="text-[10px] font-semibold text-[#9000FF] uppercase tracking-wider mb-1">New supplier</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-[#5E687B] mb-0.5">Name <span className="text-red-500">*</span></label>
+                    <input value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)}
+                      placeholder="e.g. Hangzhou Timber Co."
+                      className="w-full border border-[#E5EAF0] rounded px-2.5 py-1.5 text-xs text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] transition-colors"/>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#5E687B] mb-0.5">Country code</label>
+                    <input value={newSupplierCountry} onChange={e => setNewSupplierCountry(e.target.value.toUpperCase().slice(0,2))}
+                      placeholder="CN"
+                      maxLength={2}
+                      className="w-full border border-[#E5EAF0] rounded px-2.5 py-1.5 text-xs text-[#212833] uppercase placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] transition-colors"/>
+                  </div>
+                </div>
+                <p className="text-[10px] text-[#9E9FAE]">The supplier will be created when you submit the form.</p>
+              </div>
+            )}
           </div>
 
           {/* Dates */}
@@ -830,7 +933,7 @@ export function Atelier() {
 
           {/* Destination */}
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination</label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
             <input value={newPOForm.destination} onChange={e => setNewPOForm(p => ({ ...p, destination: e.target.value }))}
               placeholder="e.g. Los Angeles, CA"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
@@ -842,15 +945,15 @@ export function Atelier() {
         </div>
 
         <DialogFooter className="gap-2">
-          <button onClick={() => { setShowNewPO(false); setNewPOError(null); }}
-            className="px-4 py-2 text-sm text-[#5E687B] hover:text-[#212833] transition-colors">
+          <button onClick={resetNewPO} className="px-4 py-2 text-sm text-[#5E687B] hover:text-[#212833] transition-colors">
             Cancel
           </button>
-          <button onClick={submitNewPO} disabled={createShipmentMutation.isPending}
+          <button onClick={submitNewPO}
+            disabled={createShipmentMutation.isPending || createSupplierMutation.isPending}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
-            {createShipmentMutation.isPending
+            {(createShipmentMutation.isPending || createSupplierMutation.isPending)
               ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Creating…</>
-              : <><Plus className="w-3.5 h-3.5"/>Create PO</>}
+              : <><Plus className="w-3.5 h-3.5"/>Create PO{newPOFile ? " + upload doc" : ""}</>}
           </button>
         </DialogFooter>
       </DialogContent>

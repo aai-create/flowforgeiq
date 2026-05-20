@@ -56,6 +56,7 @@ export * from './shipmentPrediction';
 export * from './shipmentUpdate';
 export * from './stage';
 export * from './stageOrderInput';
+export * from './supplierCreate';
 export * from './supplierSummary';
 export * from './supplierUpdate';
 export * from './task';

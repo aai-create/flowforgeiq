@@ -27,6 +27,12 @@ export interface SupplierSummary {
   threadCount: number;
 }
 
+export interface SupplierCreate {
+  name: string;
+  country?: string;
+  contactEmail?: string;
+}
+
 export interface SupplierUpdate {
   contactEmail?: string | null;
 }

@@ -76,6 +76,20 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/SupplierSummary" }
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierCreate" }
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierSummary" }
 
   /suppliers/{id}:
     patch:
@@ -661,6 +675,13 @@ components:
         contactEmail: { type: string, nullable: true }
         threadCount:  { type: integer }
 
+    SupplierCreate:
+      type: object
+      required: [name]
+      properties:
+        name:         { type: string }
+        country:      { type: string }
+        contactEmail: { type: string }
     SupplierUpdate:
       type: object
       properties:
