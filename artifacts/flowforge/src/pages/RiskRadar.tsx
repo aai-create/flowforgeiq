@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
+import { NavSidebar } from "@/components/NavSidebar";
 import {
   ShieldAlert, DollarSign, AlertCircle, Clock,
   ChevronRight, RefreshCw, Info, BarChart3,
@@ -98,41 +99,10 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
   const medCount  = items.filter(i => i.riskScore >= 45 && i.riskScore < 70).length;
   const lowCount  = items.filter(i => i.riskScore < 45).length;
 
-  const navItems = [
-    { icon: Package,     label: "My Orders",  to: "/"           },
-    { icon: Inbox,       label: "Inbox",      to: "/inbox"      },
-    { icon: ShieldAlert, label: "Risk Radar", to: "/risk-radar" },
-    { icon: BarChart3,   label: "Reports",    to: "/reports"    },
-  ] as { icon: React.ElementType; label: string; to: string }[];
-
   return (
     <div className="h-full flex bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
-      {/* Persistent nav sidebar */}
-      <div className="w-[240px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
-        <div className="px-3 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
-          <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-            <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
-          </div>
-          <span className="font-bold text-sm tracking-tight text-[#9000FF]">flowforge</span>
-        </div>
-        <div className="p-2 flex flex-col gap-0.5 mt-1">
-          {navItems.map(({ icon: Icon, label, to }) => (
-            <button key={label}
-              onClick={() => navigate(to)}
-              className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${
-                location === to
-                  ? "bg-[#E5EAF0] text-[#212833] font-semibold"
-                  : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"
-              }`}>
-              <span className="flex items-center gap-2">
-                <Icon className={`w-4 h-4 shrink-0 ${location === to ? "text-[#9000FF]" : ""}`} />
-                {label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <NavSidebar />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">

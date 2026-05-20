@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { NavSidebar } from "@/components/NavSidebar";
 import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers } from "@workspace/api-client-react";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
@@ -287,29 +288,15 @@ export function Atelier() {
       <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT PANE — Nav + Tasks */}
-        <div className="w-[268px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
+        <NavSidebar
+          showBrand={false}
+          counts={{
+            myOrders: shipments.length,
+            riskRadar: radarData ? radarData.items.filter(i => i.riskScore >= 70).length : null,
+          }}
+        >
           <ScrollArea className="flex-1">
-            <div className="p-3">
-
-              {/* Nav links */}
-              <div className="space-y-0.5 mb-5">
-                {[
-                  { icon: Inbox,       label: "Inbox",      count: null,                    active: false, href: "/inbox"      },
-                  { icon: LayoutGrid,  label: "My Orders",  count: String(shipments.length), active: true,  href: null         },
-                  { icon: Calendar,    label: "Calendar",   count: null,                    active: false, href: "/inbox"     },
-                  { icon: ShieldAlert, label: "Risk Radar", count: radarData ? String(radarData.items.filter(i => i.riskScore >= 70).length) : null, active: false, href: "/risk-radar" },
-                  { icon: BarChart3,   label: "Reports",    count: null,                    active: false, href: "/reports"   },
-                ].map(({ icon: Icon, label, count, active, href }) => (
-                  <button key={label}
-                    onClick={() => { if (href) navigate(href); }}
-                    className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                    <span className="flex items-center gap-2"><Icon className={`w-4 h-4 ${active ? "text-[#9000FF]" : label === "Risk Radar" ? "text-[#9000FF]" : ""}`} />{label}</span>
-                    {count && (
-                      <span className={`text-[10px] px-1.5 rounded-full font-bold ${active ? "bg-[#9000FF] text-white" : "bg-[#E5EAF0] text-[#5E687B]"}`}>{count}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+            <div className="px-3 pb-3">
 
               {/* Customers */}
               <div className="mb-1.5 px-2 flex items-center justify-between group">
@@ -373,7 +360,7 @@ export function Atelier() {
               </div>
             </div>
           </ScrollArea>
-        </div>
+        </NavSidebar>
 
         {/* CENTER PANE — Shipment Command Horizon */}
         <div className="flex-1 bg-white flex flex-col min-w-0">

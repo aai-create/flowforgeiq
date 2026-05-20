@@ -10,8 +10,9 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
-  Pencil, Package,
+  Pencil, Package, Hash,
 } from "lucide-react";
+import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
 import { ShipmentRiskDetail } from "./ShipmentRiskDetail";
@@ -1355,126 +1356,123 @@ export default function Home() {
       <div className="flex-1 flex min-w-0 overflow-hidden">
 
         {/* ── PERSISTENT LEFT FILTER PANEL ── */}
-        <div className="w-[240px] shrink-0 bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col overflow-hidden z-10">
-
-          {/* Brand + nav */}
-          <div className="px-3 pt-3 pb-2 border-b border-[#E5EAF0] shrink-0">
-            <div className="flex items-center gap-2 mb-3 px-2">
-              <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-                <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain"/>
-              </div>
-              <span className="font-bold text-sm tracking-tight text-[#9000FF]">flowforge</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <button onClick={()=>navigate("/")} className="w-full flex items-center justify-between px-2 h-8 rounded-md text-sm text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] transition-colors">
-                <span className="flex items-center gap-2"><Package className="w-4 h-4"/><span>My Orders</span></span>
-              </button>
-              <button onClick={()=>setActiveView("inbox")} className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${activeView==="inbox"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                <span className="flex items-center gap-2"><Inbox className={`w-4 h-4 ${activeView==="inbox"?"text-[#9000FF]":""}`}/><span>Inbox</span></span>
-                {unreadCount>0&&<span className={`text-[10px] px-1.5 rounded-full font-bold ${activeView==="inbox"?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{unreadCount}</span>}
-              </button>
-              <button onClick={()=>setActiveView("calendar")} className={`w-full flex items-center px-2 h-8 rounded-md text-sm transition-colors ${activeView==="calendar"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                <span className="flex items-center gap-2"><Calendar className={`w-4 h-4 ${activeView==="calendar"?"text-[#9000FF]":""}`}/><span>Calendar</span></span>
-              </button>
-              <button onClick={()=>navigate("/risk-radar")} className="w-full flex items-center px-2 h-8 rounded-md text-sm text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] transition-colors">
-                <span className="flex items-center gap-2"><ShieldAlert className="w-4 h-4"/><span>Risk Radar</span></span>
-              </button>
-              <button onClick={()=>navigate("/reports")} className="w-full flex items-center px-2 h-8 rounded-md text-sm text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] transition-colors">
-                <span className="flex items-center gap-2"><BarChart3 className="w-4 h-4"/><span>Reports</span></span>
-              </button>
-            </div>
-          </div>
-
+        <NavSidebar
+          onCalendarClick={() => setActiveView("calendar")}
+          isCalendarActive={activeView === "calendar"}
+          counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
+        >
           {/* Search */}
-          <div className="px-2.5 pt-2.5 pb-2 shrink-0">
-            <div className="flex items-center gap-1.5 bg-white border border-[#E5EAF0] rounded-lg px-2 py-1.5">
-              <Search size={11} className="text-[#9E9FAE] shrink-0"/>
-              <input placeholder="Search…" className="flex-1 text-[10px] bg-transparent outline-none text-[#212833] placeholder:text-[#C0C8D4] min-w-0"/>
+          <div className="px-3 pt-2 pb-1.5 shrink-0">
+            <div className="flex items-center gap-2 bg-white border border-[#E5EAF0] rounded-lg px-2.5 py-1.5">
+              <Search size={13} className="text-[#9E9FAE] shrink-0"/>
+              <input placeholder="Search…" className="flex-1 text-xs bg-transparent outline-none text-[#212833] placeholder:text-[#C0C8D4] min-w-0"/>
             </div>
           </div>
-          <div className="px-2.5 pb-2 border-b border-[#E5EAF0] shrink-0">
-            <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5">Messages</div>
-            <div className="flex flex-col gap-0.5">
-              {([
-                {id:"all"      as Channel|"all",label:"All Inbox",icon:<Inbox size={12}/>,        count:messages.length},
-                {id:"gmail"    as Channel,       label:"Gmail",   icon:<Mail size={12}/>,          count:messages.filter(m=>m.channel==="gmail").length},
-                {id:"whatsapp" as Channel,       label:"WhatsApp",icon:<MessageCircle size={12}/>, count:messages.filter(m=>m.channel==="whatsapp").length},
-                {id:"sheets"   as Channel,       label:"Sheets",  icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>,count:messages.filter(m=>m.channel==="sheets").length},
-                {id:"pdf"      as Channel,       label:"PDFs",    icon:<FileText size={12}/>,      count:messages.filter(m=>m.channel==="pdf").length},
-              ]).map(f=>{
-                const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter&&activeView==="inbox";
-                const unread=f.id==="all"?messages.filter(m=>m.unread).length:messages.filter(m=>m.channel===f.id&&m.unread).length;
-                return (
-                  <button key={String(f.id)} onClick={()=>{setActiveView("inbox");toggleChannel(f.id);}}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors ${active?"bg-white border border-[#E5EAF0] text-[#212833] font-semibold shadow-sm":"text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
-                    <span className="flex items-center gap-2">{f.icon}{f.label}</span>
-                    {unread>0?<span className="text-[9px] bg-[#9000FF] text-white px-1.5 rounded-full font-bold">{unread}</span>:<span className="text-[9px] text-[#5E687B]">{f.count}</span>}
-                  </button>
-                );
-              })}
+
+          {/* Scrollable filter sections */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* Messages */}
+            <div className="px-3 pt-1.5 pb-2">
+              <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase px-2 mb-1.5">Messages</div>
+              <div className="space-y-0.5">
+                {([
+                  {id:"all"      as Channel|"all", label:"All Inbox", icon:<Inbox className="w-3 h-3"/>,         count:messages.length},
+                  {id:"gmail"    as Channel,        label:"Gmail",    icon:<Mail className="w-3 h-3"/>,           count:messages.filter(m=>m.channel==="gmail").length},
+                  {id:"whatsapp" as Channel,        label:"WhatsApp", icon:<MessageCircle className="w-3 h-3"/>,  count:messages.filter(m=>m.channel==="whatsapp").length},
+                  {id:"sheets"   as Channel,        label:"Sheets",   icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>, count:messages.filter(m=>m.channel==="sheets").length},
+                  {id:"pdf"      as Channel,        label:"PDFs",     icon:<FileText className="w-3 h-3"/>,       count:messages.filter(m=>m.channel==="pdf").length},
+                ]).map(f=>{
+                  const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter&&activeView==="inbox";
+                  const unread=f.id==="all"?messages.filter(m=>m.unread).length:messages.filter(m=>m.channel===f.id&&m.unread).length;
+                  return (
+                    <button key={String(f.id)} onClick={()=>{setActiveView("inbox");toggleChannel(f.id);}}
+                      className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                      <span className="flex items-center gap-1.5">{f.icon}<span className="text-xs">{f.label}</span></span>
+                      {unread>0
+                        ? <span className={`text-[10px] px-1.5 rounded-full font-bold ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{unread}</span>
+                        : <span className="text-[10px] text-[#9E9FAE]">{f.count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          <div className="px-2.5 py-2 border-b border-[#E5EAF0] flex flex-col min-h-0 overflow-y-auto" style={{maxHeight:"35vh"}}>
-            <div className="flex items-center justify-between mb-1.5 shrink-0">
-              <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Purchase Orders</div>
-              {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {shipments.map(s=>{
-                const isSelected=selectedShipmentId===s.id;
-                const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
-                const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
-                const cur=stages.find(st=>st.id===s.currentStageId);
-                const dotCls=s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400";
-                return (
-                  <button key={s.id} onClick={()=>{setActiveView("inbox");selectShipment(s.id);}}
-                    className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#F0F4F8]"}`}>
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
-                      <span className={`text-[10px] font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
-                    </div>
-                    <div className="text-[9px] text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
-                    <div className="pl-3">
-                      <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
+
+            <div className="mx-3 h-px bg-[#E5EAF0]"/>
+
+            {/* Purchase Orders */}
+            <div className="px-3 py-2 flex flex-col" style={{maxHeight:"33vh", overflowY:"auto"}}>
+              <div className="flex items-center justify-between px-2 mb-1.5 shrink-0">
+                <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">Purchase Orders</div>
+                {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[10px] flex items-center gap-0.5"><X size={9}/>Clear</button>}
+              </div>
+              <div className="space-y-0.5">
+                {shipments.map(s=>{
+                  const isSelected=selectedShipmentId===s.id;
+                  const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
+                  const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
+                  const cur=stages.find(st=>st.id===s.currentStageId);
+                  const dotCls=s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400";
+                  return (
+                    <button key={s.id} onClick={()=>{setActiveView("inbox");selectShipment(s.id);}}
+                      className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#E5EAF0]"}`}>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
+                        <span className={`text-xs font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
                       </div>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <span className="text-[8px] text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
-                        <span className="text-[8px] text-[#9E9FAE] shrink-0">{pct}%</span>
+                      <div className="text-[10px] text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
+                      <div className="pl-3">
+                        <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-[10px] text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
+                          <span className="text-[10px] text-[#9E9FAE] shrink-0">{pct}%</span>
+                        </div>
                       </div>
-                    </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mx-3 h-px bg-[#E5EAF0]"/>
+
+            {/* Suppliers */}
+            <div className="px-3 py-2">
+              <div className="flex items-center justify-between px-2 mb-1.5">
+                <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">Suppliers</div>
+                {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-[10px] flex items-center gap-0.5"><X size={9}/>Clear</button>}
+              </div>
+              <div className="space-y-0.5">
+                {SUPPLIERS.map(s=>(
+                  <button key={s.id} onClick={()=>{setActiveView("inbox");toggleSupplier(s.id);}}
+                    className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${supplierFilter===s.id?"bg-[#E5EAF0] text-[#9000FF] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                    <span className="flex items-center gap-1.5 truncate min-w-0">
+                      <Hash className="w-3 h-3 opacity-50 shrink-0"/>
+                      <span className="truncate text-xs">{s.label}</span>
+                    </span>
+                    <span className="text-[10px] bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{s.count}</span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="px-2.5 py-2 flex-1 overflow-y-auto">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Suppliers</div>
-              {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-[9px] flex items-center gap-0.5"><X size={8}/>Clear</button>}
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {SUPPLIERS.map(s=>(
-                <button key={s.id} onClick={()=>{setActiveView("inbox");toggleSupplier(s.id);}}
-                  className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] transition-colors ${supplierFilter===s.id?"bg-white border border-[#9000FF]/30 text-[#9000FF] font-semibold shadow-sm":"text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                  <span className="truncate pr-2">{s.label}</span>
-                  <span className="text-[9px] bg-white border border-[#E5EAF0] px-1.5 rounded shrink-0">{s.count}</span>
+                ))}
+              </div>
+              {(selectedShipmentId||supplierFilter||channelFilter!=="all")&&activeView==="inbox"&&(
+                <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");}}
+                  className="mt-3 w-full text-[10px] text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
+                  <X size={9}/>Clear all filters
                 </button>
-              ))}
+              )}
             </div>
-            {(selectedShipmentId||supplierFilter||channelFilter!=="all")&&activeView==="inbox"&&(
-              <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");}}
-                className="mt-3 w-full text-[9px] text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
-                <X size={9}/>Clear all filters
-              </button>
-            )}
+
           </div>
+
+          {/* Import Documents */}
           <div className="shrink-0 p-2 border-t border-[#E5EAF0]">
-            <button onClick={()=>setActiveView("import")} className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-[10px] font-semibold text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors">
-              <Upload size={12}/>Import Documents
+            <button onClick={()=>setActiveView("import")} className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm font-semibold text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors">
+              <Upload className="w-4 h-4"/>Import Documents
             </button>
           </div>
-        </div>
+        </NavSidebar>
 
         {/* ── CONTENT AREA ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
