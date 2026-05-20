@@ -1164,6 +1164,36 @@ export default function Home() {
     navigate(`?${params.toString()}`, { replace: true });
   }, [rightTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep ?shipment= in sync with selectedShipmentId. Guard against running
+  // before the deep-link effect has had a chance to consume any pending URL
+  // params (urlParamsApplied stays false until messages load and params are read).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!urlParamsApplied.current && (params.has("shipment") || params.has("supplier"))) return;
+    // selectedShipmentId is "s{numericId}" — strip prefix for the URL.
+    const numericId = selectedShipmentId ? selectedShipmentId.replace(/^s/, "") : null;
+    if (params.get("shipment") === numericId) return;
+    if (numericId) {
+      params.set("shipment", numericId);
+    } else {
+      params.delete("shipment");
+    }
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [selectedShipmentId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep ?supplier= in sync with supplierFilter.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!urlParamsApplied.current && (params.has("shipment") || params.has("supplier"))) return;
+    if (params.get("supplier") === supplierFilter) return;
+    if (supplierFilter) {
+      params.set("supplier", supplierFilter);
+    } else {
+      params.delete("supplier");
+    }
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [supplierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const SUPPLIERS = useMemo(() => {
     const counts = new Map<string, number>();
     for (const m of messages) counts.set(m.supplierId, (counts.get(m.supplierId) ?? 0) + 1);
