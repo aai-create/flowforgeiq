@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/flowforge-video/"
+title = "FlowForge Explainer Video"
+version = "1.0.0"
+id = "artifacts/flowforge-video"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/flowforge-video/" ]
+localPort = 21879
+
+[services.development]
+run = "pnpm --filter @workspace/flowforge-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/flowforge-video", "run", "build" ]
+publicDir = "artifacts/flowforge-video/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21879"
+BASE_PATH = "/flowforge-video/"

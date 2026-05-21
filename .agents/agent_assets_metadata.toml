@@ -6,6 +6,18 @@ uri = "file://attached_assets/flowforge-logo-branded.png"
 type = "image"
 title = "flowforge-logo-branded"
 
+[[generated]]
+id = "gFf4hIz38eUeZMmPgAISN"
+uri = "file://artifacts/flowforge-video/public/images/bg-light-tech.png"
+type = "image"
+title = "Light tech abstract texture"
+
+[[generated]]
+id = "-dQSJkkQJttoDR7mGZpMz"
+uri = "file://artifacts/flowforge-video/public/images/bg-dark-tech.png"
+type = "image"
+title = "Dark tech abstract texture"
+
 [[outputs]]
 id = "_9ZvNMjB4OrocZCpIN4zd"
 uri = "file://sample-pos/PO-1001-778143.pdf"
@@ -29,3 +41,9 @@ id = "KxVGwz_-aiPzwFrNB2ft0"
 uri = "file://sample-pos/PO-1007-P201472890.pdf"
 type = "pdf"
 title = "PO-1007-P201472890 — Powder-Coat Hanger Bronze Petite (Marlowe & Sons → Foshan Precision Parts)"
+
+[[outputs]]
+id = "Qbw0tKw_pcJDj7FTZkLZR"
+uri = "file://artifacts/flowforge-video/public/audio/bg_music.mp3"
+type = "audio"
+title = "background music"
