@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
   ChevronsUpDown, RefreshCw, Clock, CheckCircle2, ArrowRight, ArrowLeft,
   CalendarRange, X, Layers, ExternalLink, TrendingDown,
-  Inbox, ShieldAlert,
+  Inbox, ShieldAlert, Sparkles, Bell,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer,
@@ -1207,23 +1207,28 @@ export function Reports() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
       {/* Header */}
-      <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9000FF] to-[#B040FF] flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-[#212833]">Reports</h1>
-              <p className="text-[11px] text-[#5E687B]">Portfolio-wide actionable insights across finance, pipeline, suppliers, and tasks</p>
-            </div>
+      <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0">
+        <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
+          <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
+            <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-[#5E687B]">
-            <Package className="w-3.5 h-3.5" />
-            <span className="font-medium">{filteredShipments.length}{hasRange ? ` / ${allShipments.length}` : ""} shipments</span>
-            <span className="text-[#D6E3EB]">·</span>
-            <span>as of {shortDate(TODAY)}</span>
+          <span className="text-[#9000FF] tracking-tight">flowforge</span>
+          <span className="text-[#E5EAF0]">/</span>
+          <span className="text-[#5E687B] font-medium text-xs">Reports</span>
+        </div>
+        <div className="flex-1 flex justify-center max-w-lg">
+          <div className="relative w-full">
+            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9000FF]" />
+            <input type="text" placeholder="Ask FlowForge anything...  ⌘K"
+              className="w-full h-8 bg-[#F0F4F8] hover:bg-[#E5EAF0] focus:bg-white border border-transparent focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 rounded-full pl-9 pr-4 text-xs outline-none transition-all placeholder:text-[#9E9FAE]" />
           </div>
+        </div>
+        <div className="flex items-center gap-2 w-[200px] justify-end text-[#5E687B]">
+          <button className="h-8 w-8 flex items-center justify-center rounded-md hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
+            <Bell className="w-4 h-4" />
+          </button>
+          <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
+          <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">AX</div>
         </div>
       </div>
 
