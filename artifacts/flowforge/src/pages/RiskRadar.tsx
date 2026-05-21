@@ -128,10 +128,6 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
           </div>
         </div>
         <div className="flex items-center gap-2 w-[200px] justify-end text-[#5E687B]">
-          <button onClick={() => refetch()}
-            className="flex items-center gap-1.5 text-[11px] font-medium hover:text-[#212833] border border-[#E5EAF0] px-3 py-1.5 rounded-md hover:bg-[#F0F4F8] transition-colors">
-            <RefreshCw className="w-3 h-3" /> Refresh
-          </button>
           <button className="h-8 w-8 flex items-center justify-center rounded-md hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
             <Bell className="w-4 h-4" />
           </button>
@@ -142,6 +138,13 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
 
       {/* Summary cards */}
       <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-4 py-3">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Portfolio Summary</span>
+          <button onClick={() => refetch()}
+            className="flex items-center gap-1.5 text-[11px] font-medium text-[#5E687B] hover:text-[#212833] border border-[#E5EAF0] px-3 py-1.5 rounded-md hover:bg-[#F0F4F8] transition-colors">
+            <RefreshCw className="w-3 h-3" /> Refresh
+          </button>
+        </div>
         <div className="grid grid-cols-4 gap-3">
           <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
