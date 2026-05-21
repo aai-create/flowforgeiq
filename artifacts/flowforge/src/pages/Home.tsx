@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { AICopilotBar } from "@/components/AICopilotBar";
+import { useCopilotHint } from "@/lib/CopilotContext";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSearch, useLocation } from "wouter";
 import {
@@ -1220,6 +1222,7 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 export default function Home() {
   const search = useSearch();
   const [, navigate] = useLocation();
+  useCopilotHint("Draft a reply or ask about shipment status");
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
@@ -1279,10 +1282,6 @@ export default function Home() {
   const [showHistory, setShowHistory]     = useState(false);
   const [searchMode, setSearchMode]       = useState(false);
   const [searchQuery, setSearchQuery]     = useState("");
-  const [aiQuery, setAiQuery]             = useState("");
-  const [showAiResult, setShowAiResult]   = useState(false);
-  const [aiResult, setAiResult]           = useState("");
-  const [aiResultLoading, setAiResultLoading] = useState(false);
 
   // Supplier email editing
   const { data: suppliersData, refetch: refetchSuppliers } = useListSuppliers();
@@ -1881,46 +1880,38 @@ export default function Home() {
           </div>
 
           <div className="flex-1 max-w-md mx-5 relative">
-            {/* Mode toggle */}
-            <div className="flex items-center gap-1 absolute left-2 top-1/2 -translate-y-1/2 z-10">
-              <button onClick={()=>{setSearchMode(false);setSearchQuery("");}} title="AI mode"
-                className={`p-0.5 rounded transition-colors ${!searchMode?"text-[#9000FF]":"text-[#C0C8D4] hover:text-[#5E687B]"}`}>
-                <Sparkles size={12}/>
-              </button>
-              <button onClick={()=>{setSearchMode(true);setShowAiResult(false);}} title="Search mode"
-                className={`p-0.5 rounded transition-colors ${searchMode?"text-[#9000FF]":"text-[#C0C8D4] hover:text-[#5E687B]"}`}>
-                <Search size={12}/>
-              </button>
-            </div>
-
             {searchMode ? (
               <>
+                <div className="flex items-center gap-1 absolute left-2 top-1/2 -translate-y-1/2 z-10">
+                  <button onClick={()=>{setSearchMode(false);setSearchQuery("");}} title="AI mode"
+                    className="p-0.5 rounded transition-colors text-[#C0C8D4] hover:text-[#5E687B]">
+                    <Sparkles size={12}/>
+                  </button>
+                  <button title="Search mode"
+                    className="p-0.5 rounded transition-colors text-[#9000FF]">
+                    <Search size={12}/>
+                  </button>
+                </div>
                 <input autoFocus type="text" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}
                   placeholder="Search messages, POs, suppliers..."
                   className="w-full pl-14 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"/>
                 {searchQuery&&<SearchResults query={searchQuery} messages={messages} onOpen={id=>{openMessage(id);setSearchMode(false);setSearchQuery("");}}/>}
               </>
             ) : (
-              <>
-                <input type="text" value={aiQuery} onChange={e=>{setAiQuery(e.target.value);setShowAiResult(false);}} onKeyDown={e=>{if(e.key==="Enter"&&aiQuery.trim()){setShowAiResult(true);setAiResultLoading(true);setAiResult("");fetch(`${import.meta.env.BASE_URL}api/copilot/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:aiQuery})}).then(r=>r.json()).then((d:{reply:string})=>{setAiResult(d.reply);}).catch(()=>{setAiResult("Sorry, I couldn't connect to the AI. Please try again.");}).finally(()=>setAiResultLoading(false));}}}
-                  placeholder="Ask FlowForge anything...  ⌘K"
-                  className="w-full pl-14 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"/>
-                {showAiResult&&(
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/20 rounded-xl shadow-xl z-50 p-4">
-                    <div className="flex items-start gap-2 mb-3">
-                      <Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5"/>
-                      {aiResultLoading
-                        ? <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"0ms"}}/><span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"150ms"}}/><span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"300ms"}}/></span>
-                        : <p className="text-xs text-[#212833] leading-relaxed">{aiResult}</p>
-                      }
-                    </div>
-                    {!aiResultLoading&&<div className="flex flex-wrap gap-2">
-                      {["Draft reply","Flag payment","Show all tasks"].map(c=><button key={c} onClick={()=>{setShowAiResult(false);setAiQuery("");}} className="text-[10px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold">{c}</button>)}
-                    </div>}
-                    <button onClick={()=>{setShowAiResult(false);setAiQuery("");}} className="absolute top-3 right-3 text-[#5E687B] hover:text-[#212833]"><X size={13}/></button>
+              <AICopilotBar
+                className="w-full"
+                leftNode={
+                  <div className="flex items-center gap-1">
+                    <button title="AI mode" className="p-0.5 rounded transition-colors text-[#9000FF]">
+                      <Sparkles size={12}/>
+                    </button>
+                    <button onClick={()=>{setSearchMode(true);}} title="Search mode"
+                      className="p-0.5 rounded transition-colors text-[#C0C8D4] hover:text-[#5E687B]">
+                      <Search size={12}/>
+                    </button>
                   </div>
-                )}
-              </>
+                }
+              />
             )}
           </div>
 

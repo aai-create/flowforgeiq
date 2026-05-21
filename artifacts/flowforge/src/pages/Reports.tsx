@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
+import { AppHeader } from "@/components/AppHeader";
+import { useCopilotHint } from "@/lib/CopilotContext";
 import {
   DollarSign, TrendingUp, Users, ListTodo,
   ChevronDown, ChevronUp, AlertCircle, BarChart3, Package,
@@ -1198,9 +1200,14 @@ export function Reports() {
     },
   ];
 
-  return (
-    <div className="h-full flex bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+  useCopilotHint("Compare supplier performance or summarize financials");
 
+  return (
+    <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+
+      <AppHeader pageLabel="Reports" />
+
+      <div className="flex-1 flex overflow-hidden">
       <NavSidebar />
 
       {/* Main content */}
@@ -1277,6 +1284,7 @@ export function Reports() {
           )}
         </div>
       </ScrollArea>
+      </div>
       </div>
     </div>
   );

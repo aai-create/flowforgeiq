@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
+import { AppHeader } from "@/components/AppHeader";
+import { useCopilotHint } from "@/lib/CopilotContext";
 import { HELP_SECTIONS } from "@/lib/helpContent";
 import { Search, BookOpen, ChevronRight, X, Sparkles, Bell } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,11 +61,16 @@ export function Help() {
     );
   }
 
+  useCopilotHint("Find help on any FlowForge workflow or feature");
+
   return (
     <div
-      className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex"
+      className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col"
       style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}
     >
+      <AppHeader pageLabel="Help" />
+
+      <div className="flex-1 flex overflow-hidden">
       <NavSidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -229,6 +236,7 @@ export function Help() {
             </div>
           </ScrollArea>
         </div>
+      </div>
       </div>
     </div>
   );

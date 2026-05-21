@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
+import { AppHeader } from "@/components/AppHeader";
+import { useCopilotHint } from "@/lib/CopilotContext";
 import {
   ShieldAlert, DollarSign, AlertCircle, Clock,
   ChevronRight, RefreshCw, Info, BarChart3,
@@ -102,9 +104,14 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
   const medCount  = items.filter(i => i.riskScore >= 45 && i.riskScore < 70).length;
   const lowCount  = items.filter(i => i.riskScore < 45).length;
 
-  return (
-    <div className="h-full flex bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+  useCopilotHint("Summarize high-risk shipments or explain a risk score");
 
+  return (
+    <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+
+      <AppHeader pageLabel="Risk Radar" />
+
+      <div className="flex-1 flex overflow-hidden">
       <NavSidebar />
 
       {/* Main content */}
@@ -409,6 +416,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             </div>
           </ScrollArea>
         </div>
+      </div>
       </div>
       </div>
     </div>
