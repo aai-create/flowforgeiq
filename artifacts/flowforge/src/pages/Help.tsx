@@ -71,7 +71,7 @@ export function Help() {
       <AppHeader pageLabel="Help" />
 
       <div className="flex-1 flex overflow-hidden">
-      <NavSidebar />
+      <NavSidebar showBrand={false} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Search bar */}

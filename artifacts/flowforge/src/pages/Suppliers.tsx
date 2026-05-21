@@ -496,6 +496,7 @@ export function Suppliers() {
 
         {/* LEFT NAV */}
         <NavSidebar
+          showBrand={false}
           counts={{
             riskRadar: radarData ? radarData.items.filter(i => i.riskScore >= 70).length : null,
           }}

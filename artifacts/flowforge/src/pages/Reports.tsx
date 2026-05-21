@@ -1208,7 +1208,7 @@ export function Reports() {
       <AppHeader pageLabel="Reports" />
 
       <div className="flex-1 flex overflow-hidden">
-      <NavSidebar />
+      <NavSidebar showBrand={false} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
