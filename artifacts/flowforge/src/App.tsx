@@ -8,6 +8,7 @@ import { Atelier } from "@/pages/Atelier";
 import { RiskRadar } from "@/pages/RiskRadar";
 import { Reports } from "@/pages/Reports";
 import { Suppliers } from "@/pages/Suppliers";
+import { Help } from "@/pages/Help";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/risk-radar" component={RiskRadarPage} />
       <Route path="/reports" component={ReportsPage} />
       <Route path="/suppliers" component={Suppliers} />
+      <Route path="/help" component={Help} />
       <Route component={NotFound} />
     </Switch>
   );

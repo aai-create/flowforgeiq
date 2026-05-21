@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build-seed-data": "tsx ./src/build-seed-data.ts",
+    "capture-docs": "tsx ./src/capture-docs-screenshots.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
-    "@e965/xlsx": "^0.20.3"
+    "@e965/xlsx": "^0.20.3",
+    "playwright": "^1.49.1"
   }
 }
