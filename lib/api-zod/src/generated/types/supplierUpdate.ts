@@ -7,5 +7,10 @@
  */
 
 export interface SupplierUpdate {
+  name?: string;
+  country?: string;
   contactEmail?: string | null;
+  contactName?: string | null;
+  whatsAppNumber?: string | null;
+  paymentTerms?: string | null;
 }

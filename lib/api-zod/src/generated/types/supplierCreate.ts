@@ -10,4 +10,7 @@ export interface SupplierCreate {
   name: string;
   country?: string;
   contactEmail?: string;
+  contactName?: string;
+  whatsAppNumber?: string;
+  paymentTerms?: string;
 }

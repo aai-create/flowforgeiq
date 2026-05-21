@@ -24,6 +24,9 @@ export interface SupplierSummary {
   name: string;
   country: string;
   contactEmail?: string | null;
+  contactName?: string | null;
+  whatsAppNumber?: string | null;
+  paymentTerms?: string | null;
   threadCount: number;
 }
 
@@ -31,10 +34,18 @@ export interface SupplierCreate {
   name: string;
   country?: string;
   contactEmail?: string;
+  contactName?: string;
+  whatsAppNumber?: string;
+  paymentTerms?: string;
 }
 
 export interface SupplierUpdate {
+  name?: string;
+  country?: string;
   contactEmail?: string | null;
+  contactName?: string | null;
+  whatsAppNumber?: string | null;
+  paymentTerms?: string | null;
 }
 
 export interface Payment {

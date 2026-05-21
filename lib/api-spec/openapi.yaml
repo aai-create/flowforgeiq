@@ -669,23 +669,34 @@ components:
       type: object
       required: [id, name, country, threadCount]
       properties:
-        id:           { type: integer }
-        name:         { type: string }
-        country:      { type: string }
-        contactEmail: { type: string, nullable: true }
-        threadCount:  { type: integer }
+        id:             { type: integer }
+        name:           { type: string }
+        country:        { type: string }
+        contactEmail:   { type: string, nullable: true }
+        contactName:    { type: string, nullable: true }
+        whatsAppNumber: { type: string, nullable: true }
+        paymentTerms:   { type: string, nullable: true }
+        threadCount:    { type: integer }
 
     SupplierCreate:
       type: object
       required: [name]
       properties:
-        name:         { type: string }
-        country:      { type: string }
-        contactEmail: { type: string }
+        name:           { type: string }
+        country:        { type: string }
+        contactEmail:   { type: string }
+        contactName:    { type: string }
+        whatsAppNumber: { type: string }
+        paymentTerms:   { type: string }
     SupplierUpdate:
       type: object
       properties:
-        contactEmail: { type: string, nullable: true }
+        name:           { type: string }
+        country:        { type: string }
+        contactEmail:   { type: string, nullable: true }
+        contactName:    { type: string, nullable: true }
+        whatsAppNumber: { type: string, nullable: true }
+        paymentTerms:   { type: string, nullable: true }
 
     Payment:
       type: object

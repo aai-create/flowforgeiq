@@ -1,21 +1,28 @@
 import { Router, type IRouter } from "express";
-import { db, suppliersTable, messagesTable, insertSupplierSchema } from "@workspace/db";
+import { db, suppliersTable, messagesTable } from "@workspace/db";
 import { sql, asc, eq } from "drizzle-orm";
-import { ListSuppliersResponseItem, UpdateSupplierBody } from "@workspace/api-zod";
+import { ListSuppliersResponseItem, UpdateSupplierBody, CreateSupplierBody } from "@workspace/api-zod";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const router: IRouter = Router();
 
+function supplierSelect() {
+  return {
+    id: suppliersTable.id,
+    name: suppliersTable.name,
+    country: suppliersTable.country,
+    contactEmail: suppliersTable.contactEmail,
+    contactName: suppliersTable.contactName,
+    whatsAppNumber: suppliersTable.whatsAppNumber,
+    paymentTerms: suppliersTable.paymentTerms,
+    threadCount: sql<number>`count(distinct ${messagesTable.shipmentId})::int`,
+  };
+}
+
 router.get("/suppliers", async (_req, res) => {
   const rows = await db
-    .select({
-      id: suppliersTable.id,
-      name: suppliersTable.name,
-      country: suppliersTable.country,
-      contactEmail: suppliersTable.contactEmail,
-      threadCount: sql<number>`count(distinct ${messagesTable.shipmentId})::int`,
-    })
+    .select(supplierSelect())
     .from(suppliersTable)
     .leftJoin(messagesTable, sql`${messagesTable.supplierId} = ${suppliersTable.id}`)
     .groupBy(suppliersTable.id)
@@ -24,7 +31,19 @@ router.get("/suppliers", async (_req, res) => {
 });
 
 router.post("/suppliers", async (req, res) => {
-  const input = insertSupplierSchema.parse(req.body);
+  const parsed = CreateSupplierBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return;
+  }
+  const input = parsed.data;
+  if (input.contactEmail != null && !EMAIL_RE.test(input.contactEmail)) {
+    res.status(400).json({ error: "contactEmail must be a valid email address" });
+    return;
+  }
+  if (input.contactEmail != null) {
+    input.contactEmail = input.contactEmail.toLowerCase().trim();
+  }
   const [row] = await db.insert(suppliersTable).values(input).returning();
   const result = ListSuppliersResponseItem.parse({ ...row, threadCount: 0 });
   res.status(201).json(result);
@@ -74,13 +93,7 @@ router.patch("/suppliers/:id", async (req, res) => {
 
   const supplier = updated[0];
   const [withThreadCount] = await db
-    .select({
-      id: suppliersTable.id,
-      name: suppliersTable.name,
-      country: suppliersTable.country,
-      contactEmail: suppliersTable.contactEmail,
-      threadCount: sql<number>`count(distinct ${messagesTable.shipmentId})::int`,
-    })
+    .select(supplierSelect())
     .from(suppliersTable)
     .leftJoin(messagesTable, sql`${messagesTable.supplierId} = ${suppliersTable.id}`)
     .where(eq(suppliersTable.id, supplier.id))

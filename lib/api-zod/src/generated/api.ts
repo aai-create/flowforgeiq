@@ -41,6 +41,9 @@ export const ListSuppliersResponseItem = zod.object({
   "name": zod.string(),
   "country": zod.string(),
   "contactEmail": zod.string().nullish(),
+  "contactName": zod.string().nullish(),
+  "whatsAppNumber": zod.string().nullish(),
+  "paymentTerms": zod.string().nullish(),
   "threadCount": zod.number()
 })
 export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
@@ -49,7 +52,10 @@ export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
 export const CreateSupplierBody = zod.object({
   "name": zod.string(),
   "country": zod.string().optional(),
-  "contactEmail": zod.string().optional()
+  "contactEmail": zod.string().optional(),
+  "contactName": zod.string().optional(),
+  "whatsAppNumber": zod.string().optional(),
+  "paymentTerms": zod.string().optional()
 })
 
 
@@ -61,7 +67,12 @@ export const UpdateSupplierParams = zod.object({
 })
 
 export const UpdateSupplierBody = zod.object({
-  "contactEmail": zod.string().nullish()
+  "name": zod.string().optional(),
+  "country": zod.string().optional(),
+  "contactEmail": zod.string().nullish(),
+  "contactName": zod.string().nullish(),
+  "whatsAppNumber": zod.string().nullish(),
+  "paymentTerms": zod.string().nullish()
 })
 
 export const UpdateSupplierResponse = zod.object({
@@ -69,6 +80,9 @@ export const UpdateSupplierResponse = zod.object({
   "name": zod.string(),
   "country": zod.string(),
   "contactEmail": zod.string().nullish(),
+  "contactName": zod.string().nullish(),
+  "whatsAppNumber": zod.string().nullish(),
+  "paymentTerms": zod.string().nullish(),
   "threadCount": zod.number()
 })
 
