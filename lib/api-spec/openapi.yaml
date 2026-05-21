@@ -245,6 +245,43 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Payment" }
 
+  /shipments/{id}/quotes:
+    get:
+      operationId: listShipmentQuotes
+      tags: [quotes]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Quotes for shipment
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FactoryQuote" }
+    post:
+      operationId: createFactoryQuote
+      tags: [quotes]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FactoryQuoteCreate" }
+      responses:
+        "201":
+          description: Created quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FactoryQuote" }
+
   /shipments/{id}/stage-events:
     get:
       operationId: listShipmentStageEvents
@@ -770,15 +807,28 @@ components:
       type: object
       required: [id, shipmentId, factory, country, unitPrice, leadDays, moq, selected, sortOrder]
       properties:
-        id:         { type: integer }
-        shipmentId: { type: integer }
-        factory:    { type: string }
-        country:    { type: string }
-        unitPrice:  { type: number }
-        leadDays:   { type: integer }
-        moq:        { type: integer }
-        selected:   { type: boolean }
-        sortOrder:  { type: integer }
+        id:           { type: integer }
+        shipmentId:   { type: integer }
+        factory:      { type: string }
+        country:      { type: string }
+        unitPrice:    { type: number }
+        leadDays:     { type: integer }
+        moq:          { type: integer }
+        selected:     { type: boolean }
+        sortOrder:    { type: integer }
+        validityDate: { type: string, nullable: true }
+        notes:        { type: string, nullable: true }
+    FactoryQuoteCreate:
+      type: object
+      required: [factory, unitPrice, leadDays, moq]
+      properties:
+        factory:      { type: string }
+        country:      { type: string }
+        unitPrice:    { type: number }
+        leadDays:     { type: integer }
+        moq:          { type: integer }
+        validityDate: { type: string }
+        notes:        { type: string }
     QuoteSelection:
       type: object
       required: [quoteId]

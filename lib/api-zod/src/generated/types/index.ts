@@ -32,6 +32,7 @@ export * from './extractionCorrection';
 export * from './extractionCorrectionInput';
 export * from './extractionFieldProvenance';
 export * from './factoryQuote';
+export * from './factoryQuoteCreate';
 export * from './fieldProvenanceEntry';
 export * from './healthStatus';
 export * from './inboundEmailAttachment';

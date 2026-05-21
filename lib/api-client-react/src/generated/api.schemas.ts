@@ -80,6 +80,18 @@ export interface FactoryQuote {
   moq: number;
   selected: boolean;
   sortOrder: number;
+  validityDate?: string | null;
+  notes?: string | null;
+}
+
+export interface FactoryQuoteCreate {
+  factory: string;
+  country?: string;
+  unitPrice: number;
+  leadDays: number;
+  moq: number;
+  validityDate?: string;
+  notes?: string;
 }
 
 export interface QuoteSelection {

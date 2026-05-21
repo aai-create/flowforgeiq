@@ -28,7 +28,7 @@ export function relativeAge(iso: string | Date): string {
 }
 
 export interface UiPayment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; paymentId: number; paidAt: string | null; paidMethod: string | null; }
-export interface UiFactoryQuote { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean; quoteId: number; }
+export interface UiFactoryQuote { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean; quoteId: number; validityDate?: string | null; notes?: string | null; }
 export type UiShipmentStatus = "on-track" | "at-risk" | "delayed";
 
 export interface UiShipment {
@@ -104,7 +104,7 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
         : { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null },
     ],
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
-      factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id,
+      factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id, validityDate: q.validityDate, notes: q.notes,
     })),
   }));
 }

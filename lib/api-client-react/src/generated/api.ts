@@ -34,6 +34,7 @@ import type {
   ExtractionCorrection,
   ExtractionCorrectionInput,
   FactoryQuote,
+  FactoryQuoteCreate,
   HealthStatus,
   InboundEmailWebhook,
   InboundEmailWebhookResponse,
@@ -1042,6 +1043,143 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpdatePaymentMutationOptions(options));
+    }
+
+export const getListShipmentQuotesUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/quotes`
+}
+
+export const listShipmentQuotes = async (id: number, options?: RequestInit): Promise<FactoryQuote[]> => {
+
+  return customFetch<FactoryQuote[]>(getListShipmentQuotesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListShipmentQuotesQueryKey = (id: number,) => {
+    return [
+    `/api/shipments/${id}/quotes`
+    ] as const;
+    }
+
+
+export const getListShipmentQuotesQueryOptions = <TData = Awaited<ReturnType<typeof listShipmentQuotes>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipmentQuotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListShipmentQuotesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShipmentQuotes>>> = ({ signal }) => listShipmentQuotes(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listShipmentQuotes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListShipmentQuotesQueryResult = NonNullable<Awaited<ReturnType<typeof listShipmentQuotes>>>
+export type ListShipmentQuotesQueryError = ErrorType<unknown>
+
+
+
+export function useListShipmentQuotes<TData = Awaited<ReturnType<typeof listShipmentQuotes>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipmentQuotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListShipmentQuotesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFactoryQuoteUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/quotes`
+}
+
+export const createFactoryQuote = async (id: number,
+    factoryQuoteCreate: FactoryQuoteCreate, options?: RequestInit): Promise<FactoryQuote> => {
+
+  return customFetch<FactoryQuote>(getCreateFactoryQuoteUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      factoryQuoteCreate,)
+  }
+);}
+
+
+
+
+export const getCreateFactoryQuoteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFactoryQuote>>, TError,{id: number;data: BodyType<FactoryQuoteCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFactoryQuote>>, TError,{id: number;data: BodyType<FactoryQuoteCreate>}, TContext> => {
+
+const mutationKey = ['createFactoryQuote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFactoryQuote>>, {id: number;data: BodyType<FactoryQuoteCreate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createFactoryQuote(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFactoryQuoteMutationResult = NonNullable<Awaited<ReturnType<typeof createFactoryQuote>>>
+    export type CreateFactoryQuoteMutationBody = BodyType<FactoryQuoteCreate>
+    export type CreateFactoryQuoteMutationError = ErrorType<unknown>
+
+    export const useCreateFactoryQuote = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFactoryQuote>>, TError,{id: number;data: BodyType<FactoryQuoteCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFactoryQuote>>,
+        TError,
+        {id: number;data: BodyType<FactoryQuoteCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateFactoryQuoteMutationOptions(options));
     }
 
 export const getListShipmentStageEventsUrl = (id: number,) => {

@@ -12,6 +12,8 @@ export const factoryQuotesTable = pgTable("factory_quotes", {
   moq: integer("moq").notNull(),
   selected: boolean("selected").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  validityDate: text("validity_date"),
+  notes: text("notes"),
 });
 
 export const insertFactoryQuoteSchema = createInsertSchema(factoryQuotesTable).omit({ id: true });

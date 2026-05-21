@@ -242,7 +242,9 @@ export const ListShipmentsResponseItem = zod.object({
   "leadDays": zod.number(),
   "moq": zod.number(),
   "selected": zod.boolean(),
-  "sortOrder": zod.number()
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
 }))
 })
 export const ListShipmentsResponse = zod.array(ListShipmentsResponseItem)
@@ -311,7 +313,9 @@ export const UpdateShipmentResponse = zod.object({
   "leadDays": zod.number(),
   "moq": zod.number(),
   "selected": zod.boolean(),
-  "sortOrder": zod.number()
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
 }))
 })
 
@@ -340,6 +344,41 @@ export const UpdatePaymentResponse = zod.object({
   "paidAt": zod.coerce.date().nullish(),
   "referenceNumber": zod.string().nullish(),
   "method": zod.string().nullish()
+})
+
+
+export const ListShipmentQuotesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListShipmentQuotesResponseItem = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "factory": zod.string(),
+  "country": zod.string(),
+  "unitPrice": zod.number(),
+  "leadDays": zod.number(),
+  "moq": zod.number(),
+  "selected": zod.boolean(),
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+export const ListShipmentQuotesResponse = zod.array(ListShipmentQuotesResponseItem)
+
+
+export const CreateFactoryQuoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateFactoryQuoteBody = zod.object({
+  "factory": zod.string(),
+  "country": zod.string().optional(),
+  "unitPrice": zod.number(),
+  "leadDays": zod.number(),
+  "moq": zod.number(),
+  "validityDate": zod.string().optional(),
+  "notes": zod.string().optional()
 })
 
 
@@ -392,16 +431,18 @@ export const SelectFactoryQuoteResponseItem = zod.object({
   "leadDays": zod.number(),
   "moq": zod.number(),
   "selected": zod.boolean(),
-  "sortOrder": zod.number()
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
 })
 export const SelectFactoryQuoteResponse = zod.array(SelectFactoryQuoteResponseItem)
 
 
-export const listMessagesResponseDirectionDefault = `inbound`;
-
 export const ListMessagesQueryParams = zod.object({
   "isFlagged": zod.coerce.boolean().optional()
 })
+
+export const listMessagesResponseDirectionDefault = `inbound`;
 
 export const ListMessagesResponseItem = zod.object({
   "id": zod.number(),

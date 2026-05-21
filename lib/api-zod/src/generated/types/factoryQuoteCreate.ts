@@ -6,16 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FactoryQuote {
-  id: number;
-  shipmentId: number;
+export interface FactoryQuoteCreate {
   factory: string;
-  country: string;
+  country?: string;
   unitPrice: number;
   leadDays: number;
   moq: number;
-  selected: boolean;
-  sortOrder: number;
-  validityDate?: string | null;
-  notes?: string | null;
+  validityDate?: string;
+  notes?: string;
 }

@@ -19,7 +19,10 @@ import {
   SelectFactoryQuoteResponseItem,
   ListShipmentStageEventsResponseItem,
   CreateShipmentStageEventBody,
+  CreateFactoryQuoteBody,
+  ListShipmentQuotesResponseItem,
 } from "@workspace/api-zod";
+import { insertFactoryQuoteSchema } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -111,6 +114,36 @@ router.patch("/payments/:id", async (req, res) => {
     return;
   }
   res.json(UpdatePaymentResponse.parse(updated));
+});
+
+router.get("/shipments/:id/quotes", async (req, res) => {
+  const shipmentId = Number(req.params.id);
+  const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, shipmentId)).orderBy(asc(factoryQuotesTable.sortOrder));
+  res.json(quotes.map(q => ListShipmentQuotesResponseItem.parse(q)));
+});
+
+router.post("/shipments/:id/quotes", async (req, res) => {
+  const shipmentId = Number(req.params.id);
+  const input = CreateFactoryQuoteBody.parse(req.body);
+  const maxOrder = await db.select({ sortOrder: factoryQuotesTable.sortOrder })
+    .from(factoryQuotesTable)
+    .where(eq(factoryQuotesTable.shipmentId, shipmentId))
+    .orderBy(asc(factoryQuotesTable.sortOrder));
+  const nextOrder = maxOrder.length > 0 ? Math.max(...maxOrder.map(r => r.sortOrder)) + 1 : 0;
+  const parsed = insertFactoryQuoteSchema.parse({
+    shipmentId,
+    factory: input.factory,
+    country: input.country ?? "CN",
+    unitPrice: input.unitPrice,
+    leadDays: input.leadDays,
+    moq: input.moq,
+    selected: false,
+    sortOrder: nextOrder,
+    validityDate: input.validityDate ?? null,
+    notes: input.notes ?? null,
+  });
+  const [created] = await db.insert(factoryQuotesTable).values(parsed).returning();
+  res.status(201).json(ListShipmentQuotesResponseItem.parse(created));
 });
 
 router.post("/shipments/:id/select-quote", async (req, res) => {

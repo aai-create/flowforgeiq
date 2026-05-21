@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent } from "@workspace/api-client-react";
+import type { FactoryQuote } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
+import { QuotesTab } from "@/components/QuotesTab";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
   MessageCircle, Mail, FileText, CheckCircle2, Circle,
@@ -206,6 +208,21 @@ export function Atelier() {
     }
     return map;
   }, [radarData]);
+
+  const [shipmentQuotesMap, setShipmentQuotesMap] = useState<Map<number, FactoryQuote[]>>(new Map());
+
+  useEffect(() => {
+    if (!apiShipments) return;
+    setShipmentQuotesMap(prev => {
+      const next = new Map(prev);
+      for (const s of apiShipments) {
+        if (!next.has(s.id)) {
+          next.set(s.id, s.quotes);
+        }
+      }
+      return next;
+    });
+  }, [apiShipments]);
 
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
@@ -749,53 +766,66 @@ export function Atelier() {
 
                     {/* Expanded detail row */}
                     {isActive && (
-                      <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}`); }}
-                            className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
-                            <MessageCircle className="w-3 h-3" /> Open Threads
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}&tab=docs`); }}
-                            className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
-                            <FileText className="w-3 h-3" /> View Docs
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
-                            className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3" /> Advance Stage
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
-                            className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                            <Clock className="w-3 h-3" /> History
-                          </button>
+                      <div onClick={e => e.stopPropagation()}>
+                        <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}`); }}
+                              className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
+                              <MessageCircle className="w-3 h-3" /> Open Threads
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}&tab=docs`); }}
+                              className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                              <FileText className="w-3 h-3" /> View Docs
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
+                              className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                              <MapPin className="w-3 h-3" /> Advance Stage
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
+                              className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                              <Clock className="w-3 h-3" /> History
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <button
+                              onClick={e => { e.stopPropagation(); setMoreMenuId(moreMenuId === shipment.id ? null : shipment.id); }}
+                              className="text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] p-1 rounded transition-colors">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                            {moreMenuId === shipment.id && (
+                              <div
+                                onClick={e => e.stopPropagation()}
+                                className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
+                                {[
+                                  { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
+                                  { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
+                                  { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
+                                  { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); } },
+                                ].map(({ label, action }) => (
+                                  <button key={label} onClick={action}
+                                    className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#212833] transition-colors">
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="relative">
-                          <button
-                            onClick={e => { e.stopPropagation(); setMoreMenuId(moreMenuId === shipment.id ? null : shipment.id); }}
-                            className="text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] p-1 rounded transition-colors">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-                          {moreMenuId === shipment.id && (
-                            <div
-                              onClick={e => e.stopPropagation()}
-                              className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
-                              {[
-                                { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
-                                { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
-                                { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
-                                { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); } },
-                              ].map(({ label, action }) => (
-                                <button key={label} onClick={action}
-                                  className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#212833] transition-colors">
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+
+                        {/* Factory Quotes section */}
+                        <QuotesTab
+                          shipmentId={shipment.shipmentId}
+                          quotes={shipmentQuotesMap.get(shipment.shipmentId) ?? []}
+                          currentStage={shipment.currentStage}
+                          supplierNames={apiSuppliers.map(s => s.name)}
+                          onQuotesChange={(updated) =>
+                            setShipmentQuotesMap(prev => new Map(prev).set(shipment.shipmentId, updated))
+                          }
+                        />
                       </div>
                     )}
                   </div>
