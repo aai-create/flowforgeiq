@@ -10,9 +10,9 @@
     "capture-docs": "tsx ./src/capture-docs-screenshots.ts"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
-    "tsx": "catalog:",
     "@e965/xlsx": "^0.20.3",
-    "playwright": "^1.49.1"
+    "@types/node": "catalog:",
+    "playwright": "^1.60.0",
+    "tsx": "catalog:"
   }
 }

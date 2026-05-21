@@ -13,7 +13,10 @@ import {
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
   MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft, Upload,
+  HelpCircle,
 } from "lucide-react";
+import { Link } from "wouter";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -614,6 +617,25 @@ export function Atelier() {
                       </div>
                     </div>
 
+                    {/* Stage tracker header */}
+                    <div className="flex items-center justify-between mb-1 mt-1">
+                      <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Stage Tracker</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
+                            <HelpCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3 text-[12px]" align="end">
+                          <p className="font-semibold text-[#212833] mb-1">Stage Tracker</p>
+                          <p className="text-[#5E687B] leading-relaxed">Every shipment moves through 11 milestones from Spec Sheet to Delivered. Click "Advance Stage" to log a stage change with an optional note.</p>
+                          <Link to="/help#track-shipment" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
+                            Learn more →
+                          </Link>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
                     {/* Visual stage timeline */}
                     <div className="relative py-3 mb-3">
                       {/* Track */}
@@ -817,6 +839,23 @@ export function Atelier() {
                         </div>
 
                         {/* Factory Quotes section */}
+                        <div className="flex items-center justify-between mt-3 mb-1">
+                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Factory Quotes</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
+                                <HelpCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3 text-[12px]" align="end">
+                              <p className="font-semibold text-[#212833] mb-1">Factory Quotes</p>
+                              <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForge tracks the margin automatically.</p>
+                              <Link to="/help#create-po" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
+                                Learn more →
+                              </Link>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                         <QuotesTab
                           shipmentId={shipment.shipmentId}
                           quotes={shipmentQuotesMap.get(shipment.shipmentId) ?? []}

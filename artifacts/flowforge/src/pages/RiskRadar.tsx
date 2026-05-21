@@ -6,7 +6,10 @@ import {
   ChevronRight, RefreshCw, Info, BarChart3,
   ArrowUpRight, CheckCircle2, Search,
   Inbox, Package, Target, Calendar, Zap,
+  HelpCircle,
 } from "lucide-react";
+import { Link } from "wouter";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useGetRiskRadar, useGetPredictionAccuracy } from "@workspace/api-client-react";
 import type { RiskRadarItem } from "@workspace/api-client-react";
 import { shortDate } from "@/lib/adapters";
@@ -131,6 +134,20 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             <div className="flex items-center gap-2 mb-1">
               <DollarSign className="w-3.5 h-3.5 text-[#9000FF]" />
               <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Risk Exposure</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors ml-auto">
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3 text-[12px]" align="end">
+                  <p className="font-semibold text-[#212833] mb-1">Risk Exposure</p>
+                  <p className="text-[#5E687B] leading-relaxed">Total financial exposure weighted by each shipment's risk score — the higher the risk score, the more of the PO value is counted. Use this to prioritise which delays to address first.</p>
+                  <Link to="/help#handle-delays" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
+                    Learn more →
+                  </Link>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="text-xl font-bold text-[#212833]">{fmt(radarData?.totalExposureUsd ?? 0)}</div>
             <div className="text-[10px] text-[#5E687B] mt-0.5">weighted by risk score</div>
