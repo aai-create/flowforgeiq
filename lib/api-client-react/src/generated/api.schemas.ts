@@ -209,6 +209,7 @@ export interface Message {
   aiAction: string;
   aiTags: string[];
   unread: boolean;
+  isFlagged: boolean;
   receivedAt: string;
 }
 
@@ -246,6 +247,7 @@ export interface MessageInput {
 
 export interface MessageUpdate {
   unread?: boolean;
+  isFlagged?: boolean;
   aiDraft?: string;
 }
 
@@ -543,6 +545,10 @@ export interface InboundEmailWebhookResponse {
   accepted: boolean;
   documentIds: number[];
 }
+
+export type ListMessagesParams = {
+isFlagged?: boolean;
+};
 
 export type ListDocumentsParams = {
 shipmentId?: number;

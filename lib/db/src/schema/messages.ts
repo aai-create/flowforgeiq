@@ -17,6 +17,7 @@ export const messagesTable = pgTable("messages", {
   aiAction: text("ai_action").notNull().default(""),
   aiTags: text("ai_tags").array().notNull().default([]),
   unread: boolean("unread").notNull().default(true),
+  isFlagged: boolean("is_flagged").notNull().default(false),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

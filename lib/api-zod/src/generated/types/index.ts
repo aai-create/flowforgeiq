@@ -39,6 +39,7 @@ export * from './inboundEmailWebhook';
 export * from './inboundEmailWebhookResponse';
 export * from './listCopilotProposalsParams';
 export * from './listDocumentsParams';
+export * from './listMessagesParams';
 export * from './message';
 export * from './messageDirection';
 export * from './messageInput';

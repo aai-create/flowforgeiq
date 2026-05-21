@@ -55,6 +55,7 @@ export interface UiMessage {
   snippet: string;
   fullBody: string;
   unread: boolean;
+  isFlagged: boolean;
   aiTags: string[];
   shipmentId: string;
   supplierId: string;
@@ -121,6 +122,7 @@ export function adaptMessages(rows: ApiMessage[], shipments: UiShipment[]): UiMe
       snippet: m.snippet,
       fullBody: m.fullBody,
       unread: m.unread,
+      isFlagged: m.isFlagged,
       aiTags: m.aiTags ?? [],
       shipmentId: ship ? ship.id : `s${m.shipmentId}`,
       supplierId: ship?.supplier ?? "",

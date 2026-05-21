@@ -31,5 +31,6 @@ export interface Message {
   aiAction: string;
   aiTags: string[];
   unread: boolean;
+  isFlagged: boolean;
   receivedAt: Date;
 }

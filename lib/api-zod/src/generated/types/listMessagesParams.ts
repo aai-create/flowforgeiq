@@ -6,8 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MessageUpdate {
-  unread?: boolean;
-  isFlagged?: boolean;
-  aiDraft?: string;
-}
+export type ListMessagesParams = {
+isFlagged?: boolean;
+};

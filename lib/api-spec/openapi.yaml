@@ -311,6 +311,11 @@ paths:
     get:
       operationId: listMessages
       tags: [messages]
+      parameters:
+        - in: query
+          name: isFlagged
+          required: false
+          schema: { type: boolean }
       responses:
         "200":
           description: All messages newest first
@@ -935,6 +940,7 @@ components:
         - aiAction
         - aiTags
         - unread
+        - isFlagged
         - receivedAt
       properties:
         id:         { type: integer }
@@ -953,6 +959,7 @@ components:
           type: array
           items: { type: string }
         unread:     { type: boolean }
+        isFlagged:  { type: boolean }
         receivedAt: { type: string, format: date-time }
     MessageInput:
       type: object
@@ -978,8 +985,9 @@ components:
     MessageUpdate:
       type: object
       properties:
-        unread:  { type: boolean }
-        aiDraft: { type: string }
+        unread:    { type: boolean }
+        isFlagged: { type: boolean }
+        aiDraft:   { type: string }
 
     Task:
       type: object

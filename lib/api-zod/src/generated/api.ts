@@ -386,6 +386,10 @@ export const SelectFactoryQuoteResponse = zod.array(SelectFactoryQuoteResponseIt
 
 export const listMessagesResponseDirectionDefault = `inbound`;
 
+export const ListMessagesQueryParams = zod.object({
+  "isFlagged": zod.coerce.boolean().optional()
+})
+
 export const ListMessagesResponseItem = zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -401,6 +405,7 @@ export const ListMessagesResponseItem = zod.object({
   "aiAction": zod.string(),
   "aiTags": zod.array(zod.string()),
   "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
   "receivedAt": zod.coerce.date()
 })
 export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
@@ -431,6 +436,7 @@ export const UpdateMessageParams = zod.object({
 
 export const UpdateMessageBody = zod.object({
   "unread": zod.boolean().optional(),
+  "isFlagged": zod.boolean().optional(),
   "aiDraft": zod.string().optional()
 })
 
@@ -451,6 +457,7 @@ export const UpdateMessageResponse = zod.object({
   "aiAction": zod.string(),
   "aiTags": zod.array(zod.string()),
   "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
   "receivedAt": zod.coerce.date()
 })
 

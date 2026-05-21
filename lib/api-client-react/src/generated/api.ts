@@ -39,6 +39,7 @@ import type {
   InboundEmailWebhookResponse,
   ListCopilotProposalsParams,
   ListDocumentsParams,
+  ListMessagesParams,
   Message,
   MessageInput,
   MessageUpdate,
@@ -1258,17 +1259,24 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getSelectFactoryQuoteMutationOptions(options));
     }
 
-export const getListMessagesUrl = () => {
+export const getListMessagesUrl = (params?: ListMessagesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/messages`
+  return stringifiedParams.length > 0 ? `/api/messages?${stringifiedParams}` : `/api/messages`
 }
 
-export const listMessages = async ( options?: RequestInit): Promise<Message[]> => {
+export const listMessages = async (params?: ListMessagesParams, options?: RequestInit): Promise<Message[]> => {
 
-  return customFetch<Message[]>(getListMessagesUrl(),
+  return customFetch<Message[]>(getListMessagesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1281,23 +1289,23 @@ export const listMessages = async ( options?: RequestInit): Promise<Message[]> =
 
 
 
-export const getListMessagesQueryKey = () => {
+export const getListMessagesQueryKey = (params?: ListMessagesParams,) => {
     return [
-    `/api/messages`
+    `/api/messages`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listMessages>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listMessages>>, TError = ErrorType<unknown>>(params?: ListMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListMessagesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListMessagesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMessages>>> = ({ signal }) => listMessages({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMessages>>> = ({ signal }) => listMessages(params, { signal, ...requestOptions });
 
 
 
@@ -1312,11 +1320,11 @@ export type ListMessagesQueryError = ErrorType<unknown>
 
 
 export function useListMessages<TData = Awaited<ReturnType<typeof listMessages>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListMessagesQueryOptions(options)
+  const queryOptions = getListMessagesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

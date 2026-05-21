@@ -10,7 +10,7 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
-  Pencil, Package, Hash,
+  Pencil, Package, Hash, Bookmark,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
@@ -1252,6 +1252,8 @@ export default function Home() {
   const [selectedShipmentId, setSelectedShipmentId] = useState<string|null>(null);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">("all");
   const [supplierFilter, setSupplierFilter] = useState<string|null>(null);
+  const [flaggedFilter, setFlaggedFilter] = useState(false);
+  const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
   const [shipmentContextExpanded, setShipmentContextExpanded] = useState(true);
   useEffect(() => {
@@ -1366,9 +1368,15 @@ export default function Home() {
   }, [supplierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const SUPPLIERS = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const m of messages) counts.set(m.supplierId, (counts.get(m.supplierId) ?? 0) + 1);
-    return Array.from(counts.entries()).map(([name, count]) => ({ id: name, label: name, count }));
+    const totalCounts = new Map<string, number>();
+    const unreadCounts = new Map<string, number>();
+    for (const m of messages) {
+      totalCounts.set(m.supplierId, (totalCounts.get(m.supplierId) ?? 0) + 1);
+      if (m.unread) unreadCounts.set(m.supplierId, (unreadCounts.get(m.supplierId) ?? 0) + 1);
+    }
+    return Array.from(totalCounts.entries()).map(([name, total]) => ({
+      id: name, label: name, count: total, unread: unreadCounts.get(name) ?? 0,
+    }));
   }, [messages]);
 
   const activeMessage  = messages.find(m => m.id === activeMessageId) || messages[0];
@@ -1436,6 +1444,7 @@ export default function Home() {
   );
 
   const visibleMessages = messages.filter(m => {
+    if (flaggedFilter && !m.isFlagged) return false;
     if (selectedShipmentId && m.shipmentId !== selectedShipmentId) return false;
     if (channelFilter !== "all" && m.channel !== channelFilter) return false;
     if (supplierFilter && m.supplierId !== supplierFilter) return false;
@@ -1444,12 +1453,23 @@ export default function Home() {
 
   const openMessage = (id: string) => {
     setActiveMessageId(id); setActiveView("inbox");
+    if (readTimerRef.current) clearTimeout(readTimerRef.current);
     const msg = messages.find(m => m.id === id);
     if (msg && msg.unread) {
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, unread:false } : m));
-      updateMessage(msg.messageId, { unread: false }).catch(() => {});
+      readTimerRef.current = setTimeout(() => {
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, unread: false } : m));
+        updateMessage(msg.messageId, { unread: false }).catch(() => {});
+      }, 1500);
     }
     setComposeText(""); setRightTab("message");
+  };
+  const toggleFlag = (msgId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+    const next = !msg.isFlagged;
+    setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isFlagged: next } : m));
+    updateMessage(msg.messageId, { isFlagged: next }).catch(() => {});
   };
   const selectShipment = (id: string) => {
     const next = selectedShipmentId===id ? null : id;
@@ -1523,6 +1543,7 @@ export default function Home() {
               snippet: created.snippet,
               fullBody: created.fullBody,
               unread: false,
+              isFlagged: false,
               aiTags: created.aiTags ?? [],
               shipmentId: msg.shipmentId,
               supplierId: msg.supplierId,
@@ -1566,13 +1587,13 @@ export default function Home() {
     setToast("Factory quote selected");
   };
   const toggleChannel = (ch: Channel|"all") => {
-    setChannelFilter(ch); setSelectedShipmentId(null); setSupplierFilter(null);
+    setChannelFilter(ch); setSelectedShipmentId(null); setSupplierFilter(null); setFlaggedFilter(false);
     const f = ch==="all" ? messages[0] : messages.find(m=>m.channel===ch);
     if(f) openMessage(f.id);
   };
   const toggleSupplier = (id: string) => {
     const next = supplierFilter===id ? null : id;
-    setSupplierFilter(next); setSelectedShipmentId(null); setChannelFilter("all");
+    setSupplierFilter(next); setSelectedShipmentId(null); setChannelFilter("all"); setFlaggedFilter(false);
     if(next) { const f=messages.find(m=>m.supplierId===next); if(f) openMessage(f.id); }
   };
 
@@ -1700,7 +1721,7 @@ export default function Home() {
                   {id:"sheets"   as Channel,        label:"Sheets",   icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>, count:messages.filter(m=>m.channel==="sheets").length},
                   {id:"pdf"      as Channel,        label:"PDFs",     icon:<FileText className="w-3 h-3"/>,       count:messages.filter(m=>m.channel==="pdf").length},
                 ]).map(f=>{
-                  const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter&&activeView==="inbox";
+                  const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter&&!flaggedFilter&&activeView==="inbox";
                   const unread=f.id==="all"?messages.filter(m=>m.unread).length:messages.filter(m=>m.channel===f.id&&m.unread).length;
                   return (
                     <button key={String(f.id)} onClick={()=>{setActiveView("inbox");toggleChannel(f.id);}}
@@ -1712,6 +1733,19 @@ export default function Home() {
                     </button>
                   );
                 })}
+                {/* Flagged filter */}
+                {(() => {
+                  const flaggedCount = messages.filter(m => m.isFlagged).length;
+                  return (
+                    <button onClick={()=>{setActiveView("inbox");setFlaggedFilter(f=>!f);setChannelFilter("all");setSelectedShipmentId(null);setSupplierFilter(null);const fm=messages.find(m=>m.isFlagged);if(fm&&!flaggedFilter)openMessage(fm.id);}}
+                      className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${flaggedFilter&&activeView==="inbox"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                      <span className="flex items-center gap-1.5"><Bookmark className="w-3 h-3"/><span className="text-xs">Flagged</span></span>
+                      {flaggedCount>0
+                        ? <span className={`text-[10px] px-1.5 rounded-full font-bold ${flaggedFilter&&activeView==="inbox"?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>
+                        : <span className="text-[10px] text-[#9E9FAE]">0</span>}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 
@@ -1769,12 +1803,14 @@ export default function Home() {
                       <Hash className="w-3 h-3 opacity-50 shrink-0"/>
                       <span className="truncate text-xs">{s.label}</span>
                     </span>
-                    <span className="text-[10px] bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{s.count}</span>
+                    {s.unread>0
+                      ? <span className={`text-[10px] px-1.5 rounded-full font-bold shrink-0 ml-1 ${supplierFilter===s.id?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{s.unread}</span>
+                      : <span className="text-[10px] text-[#9E9FAE] shrink-0 ml-1">{s.count}</span>}
                   </button>
                 ))}
               </div>
-              {(selectedShipmentId||supplierFilter||channelFilter!=="all")&&activeView==="inbox"&&(
-                <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");}}
+              {(selectedShipmentId||supplierFilter||channelFilter!=="all"||flaggedFilter)&&activeView==="inbox"&&(
+                <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");setFlaggedFilter(false);}}
                   className="mt-3 w-full text-[10px] text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
                   <X size={9}/>Clear all filters
                 </button>
@@ -1893,7 +1929,7 @@ export default function Home() {
             <ResizablePanel defaultSize={38} minSize={22} className="bg-white flex flex-col min-w-0">
             <div className="flex flex-col h-full overflow-hidden">
               <div className="border-b border-[#E5EAF0] px-3 flex items-center justify-between shrink-0" style={{height:38}}>
-                <div className="font-semibold text-[11px] text-[#212833]">{visibleMessages.length} thread{visibleMessages.length!==1?"s":""}{(selectedShipmentId||supplierFilter||channelFilter!=="all")&&<span className="ml-1 text-[#9000FF] font-normal">— filtered</span>}</div>
+                <div className="font-semibold text-[11px] text-[#212833]">{visibleMessages.length} thread{visibleMessages.length!==1?"s":""}{(selectedShipmentId||supplierFilter||channelFilter!=="all"||flaggedFilter)&&<span className="ml-1 text-[#9000FF] font-normal">— {flaggedFilter?"flagged":"filtered"}</span>}</div>
                 <div className="flex items-center gap-1">
                   {activeShipment && (
                     <button
@@ -1912,7 +1948,7 @@ export default function Home() {
                   const replied=repliedIds.has(msg.id);
                   return (
                     <div key={msg.id} onClick={()=>openMessage(msg.id)}
-                      className={`px-3 py-2.5 border-b border-[#E5EAF0] cursor-pointer hover:bg-[#FAFBFC] transition-colors relative ${activeMessageId===msg.id?"bg-[#FAFBFF] border-l-2 border-l-[#9000FF]":"border-l-2 border-l-transparent"}`}>
+                      className={`px-3 py-2.5 border-b border-[#E5EAF0] cursor-pointer hover:bg-[#FAFBFC] transition-colors relative group/row ${activeMessageId===msg.id?"bg-[#FAFBFF] border-l-2 border-l-[#9000FF]":"border-l-2 border-l-transparent"}`}>
                       {msg.unread&&!replied&&<div className="absolute left-2 top-4 w-1.5 h-1.5 bg-[#9000FF] rounded-full"/>}
                       <div className="flex items-start justify-between mb-0.5 pl-3">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1920,7 +1956,15 @@ export default function Home() {
                           {chIcon(msg.channel)}
                           {replied&&<span className="text-[8px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 rounded-full font-semibold flex items-center gap-0.5"><Check size={7}/>Replied</span>}
                         </div>
-                        <span className={`text-[9px] shrink-0 ml-2 ${msg.unread&&!replied?"text-[#9000FF] font-semibold":"text-[#5E687B]"}`}>{msg.timestamp}</span>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <button
+                            onClick={e=>toggleFlag(msg.id,e)}
+                            title={msg.isFlagged?"Remove flag":"Flag for follow-up"}
+                            className={`p-0.5 rounded transition-all ${msg.isFlagged?"text-amber-500 opacity-100":"text-[#9E9FAE] opacity-0 group-hover/row:opacity-100"} hover:scale-110`}>
+                            <Bookmark size={11} className={msg.isFlagged?"fill-amber-400":""}/>
+                          </button>
+                          <span className={`text-[9px] ${msg.unread&&!replied?"text-[#9000FF] font-semibold":"text-[#5E687B]"}`}>{msg.timestamp}</span>
+                        </div>
                       </div>
                       <div className={`text-[11px] pl-3 mb-1.5 line-clamp-2 leading-relaxed ${msg.unread&&!replied?"text-[#212833]":"text-[#9E9FAE]"}`}>{msg.snippet}</div>
                       <div className="flex flex-wrap gap-1 pl-3">
@@ -2148,7 +2192,16 @@ export default function Home() {
                         <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
                         <div className="text-[9px] text-[#5E687B] flex items-center gap-1">{chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}</div>
                       </div>
-                      {repliedIds.has(activeMessage.id)&&<span className="ml-auto text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
+                      <div className="ml-auto flex items-center gap-2">
+                        <button
+                          onClick={e=>toggleFlag(activeMessage.id,e)}
+                          title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
+                          <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
+                          {activeMessage.isFlagged?"Flagged":"Flag"}
+                        </button>
+                        {repliedIds.has(activeMessage.id)&&<span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
+                      </div>
                     </div>
                     <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
                     {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}

@@ -11,8 +11,12 @@ import { ingestDocumentFromBase64 } from "./webhooks";
 
 const router: IRouter = Router();
 
-router.get("/messages", async (_req, res) => {
-  const rows = await db.select().from(messagesTable).orderBy(desc(messagesTable.receivedAt));
+router.get("/messages", async (req, res) => {
+  const flaggedParam = req.query["isFlagged"];
+  let rows = await db.select().from(messagesTable).orderBy(desc(messagesTable.receivedAt));
+  if (flaggedParam === "true") {
+    rows = rows.filter(r => r.isFlagged);
+  }
   res.json(rows.map(r => ListMessagesResponseItem.parse(r)));
 });
 
@@ -34,6 +38,7 @@ router.post("/messages", async (req, res) => {
       aiAction: input.aiAction ?? "",
       aiTags: input.aiTags ?? [],
       unread: false,
+      isFlagged: false,
       receivedAt: new Date(),
     })
     .returning();
