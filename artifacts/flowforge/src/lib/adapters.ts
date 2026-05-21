@@ -27,7 +27,7 @@ export function relativeAge(iso: string | Date): string {
   return `${days}d ago`;
 }
 
-export interface UiPayment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; paymentId: number; }
+export interface UiPayment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; paymentId: number; paidAt: string | null; paidMethod: string | null; }
 export interface UiFactoryQuote { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean; quoteId: number; }
 export type UiShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -97,11 +97,11 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     dueDate: shortDate(s.dueDate),
     payments: [
       s.payments[0]
-        ? { label: s.payments[0].label, percent: s.payments[0].percent, amountUsd: s.payments[0].amountUsd, paid: s.payments[0].paid, dueDate: shortDate(s.payments[0].dueDate), paymentId: s.payments[0].id }
-        : { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0 },
+        ? { label: s.payments[0].label, percent: s.payments[0].percent, amountUsd: s.payments[0].amountUsd, paid: s.payments[0].paid, dueDate: shortDate(s.payments[0].dueDate), paymentId: s.payments[0].id, paidAt: s.payments[0].paidAt ?? null, paidMethod: s.payments[0].method ?? null }
+        : { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null },
       s.payments[1]
-        ? { label: s.payments[1].label, percent: s.payments[1].percent, amountUsd: s.payments[1].amountUsd, paid: s.payments[1].paid, dueDate: shortDate(s.payments[1].dueDate), paymentId: s.payments[1].id }
-        : { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0 },
+        ? { label: s.payments[1].label, percent: s.payments[1].percent, amountUsd: s.payments[1].amountUsd, paid: s.payments[1].paid, dueDate: shortDate(s.payments[1].dueDate), paymentId: s.payments[1].id, paidAt: s.payments[1].paidAt ?? null, paidMethod: s.payments[1].method ?? null }
+        : { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null },
     ],
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
       factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id,

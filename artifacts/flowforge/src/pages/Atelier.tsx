@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
-import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
+import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
   MessageCircle, Mail, FileText, CheckCircle2, Circle,
@@ -214,6 +214,48 @@ export function Atelier() {
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Mark-paid inline form
+  interface MarkPaidForm { shipmentId: string; paymentIdx: 0|1; amount: string; date: string; reference: string; method: string; }
+  const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm | null>(null);
+  const openMarkPaid = (shipmentId: string, paymentIdx: 0|1) => {
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship) return;
+    setMarkPaidForm({ shipmentId, paymentIdx, amount: String(ship.payments[paymentIdx].amountUsd), date: new Date().toISOString().split("T")[0], reference: "", method: "Wire" });
+  };
+  const confirmMarkPaid = () => {
+    if (!markPaidForm) return;
+    const { shipmentId, paymentIdx, amount, date, reference, method } = markPaidForm;
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship) return;
+    const payment = ship.payments[paymentIdx];
+    const paidAtIso = new Date(date).toISOString();
+    const amountUsd = Math.round(Number(amount)) || payment.amountUsd;
+    setShipments(prev => prev.map(s => {
+      if (s.id !== shipmentId) return s;
+      const [dep, bal] = s.payments;
+      const update = { ...payment, paid: true, amountUsd, paidAt: paidAtIso, paidMethod: method };
+      return { ...s, payments: paymentIdx === 0 ? [update, bal] : [dep, update] };
+    }));
+    updatePayment(payment.paymentId, { paid: true, amountUsd, paidAt: paidAtIso, referenceNumber: reference || undefined, method }).catch(() => {});
+    setToast("Payment marked as paid");
+    setTimeout(() => setToast(null), 3000);
+    setMarkPaidForm(null);
+  };
+  const undoPaymentPaid = (shipmentId: string, paymentIdx: 0|1) => {
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship) return;
+    const payment = ship.payments[paymentIdx];
+    setShipments(prev => prev.map(s => {
+      if (s.id !== shipmentId) return s;
+      const [dep, bal] = s.payments;
+      return { ...s, payments: paymentIdx === 0 ? [{ ...dep, paid: false }, bal] : [dep, { ...bal, paid: false }] };
+    }));
+    updatePayment(payment.paymentId, { paid: false, paidAt: null, referenceNumber: null, method: null }).catch(() => {});
+    setToast("Payment marked unpaid");
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const [showNewPO, setShowNewPO] = useState(false);
   const [newPOForm, setNewPOForm] = useState({
@@ -349,6 +391,11 @@ export function Atelier() {
 
   return (
     <>
+    {toast && (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-[#212833] text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-sm font-semibold animate-in slide-in-from-bottom-5">
+        <CheckCircle2 className="w-4 h-4 text-emerald-400" />{toast}
+      </div>
+    )}
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
       {/* TOP BAR */}
@@ -606,13 +653,28 @@ export function Atelier() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {shipment.payments.map((p, i) => {
                         const overdue = !p.paid && new Date(`${p.dueDate} 2026`) < new Date();
+                        const isFormOpen = markPaidForm?.shipmentId === shipment.id && markPaidForm?.paymentIdx === i;
                         return (
-                          <div key={i} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full border ${
-                            p.paid   ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                            : overdue ? "bg-red-50 text-red-600 border-red-100 animate-pulse"
-                            : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
-                            {p.paid ? <CheckCircle2 className="w-2.5 h-2.5" /> : overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
-                            {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? "paid" : overdue ? "OVERDUE" : `due ${p.dueDate}`}
+                          <div key={i} className="flex items-center gap-1.5">
+                            <div className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full border ${
+                              p.paid   ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                              : overdue ? "bg-red-50 text-red-600 border-red-100 animate-pulse"
+                              : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+                              {p.paid ? <CheckCircle2 className="w-2.5 h-2.5" /> : overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
+                              {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : overdue ? "OVERDUE" : `due ${p.dueDate}`}
+                            </div>
+                            {isActive && !p.paid && !isFormOpen && (
+                              <button type="button" onClick={e => { e.stopPropagation(); openMarkPaid(shipment.id, i as 0|1); }}
+                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
+                                Mark Paid
+                              </button>
+                            )}
+                            {isActive && p.paid && (
+                              <button type="button" onClick={e => { e.stopPropagation(); undoPaymentPaid(shipment.id, i as 0|1); }}
+                                className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
+                                Undo
+                              </button>
+                            )}
                           </div>
                         );
                       })}
@@ -638,6 +700,50 @@ export function Atelier() {
                           shipmentId={shipment.shipmentId}
                           stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
                         />
+                      </div>
+                    )}
+
+                    {/* Mark-paid inline form */}
+                    {isActive && markPaidForm?.shipmentId === shipment.id && (
+                      <div className="mt-2 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Record Payment — {shipment.payments[markPaidForm.paymentIdx].label}</p>
+                          <button type="button" onClick={() => setMarkPaidForm(null)} className="text-[#9E9FAE] hover:text-[#212833]"><X className="w-3 h-3"/></button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                            <input type="number" min="0" value={markPaidForm.amount}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, amount: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
+                            <input type="date" value={markPaidForm.date}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
+                            <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
+                          </div>
+                          <div>
+                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label>
+                            <select value={markPaidForm.method}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
+                              <option>Wire</option>
+                              <option>Credit</option>
+                              <option>Other</option>
+                            </select>
+                          </div>
+                        </div>
+                        <button type="button" onClick={confirmMarkPaid}
+                          className="w-full py-1.5 text-[10px] font-semibold bg-[#9000FF] text-white rounded-md hover:bg-[#7A00D9] transition-colors flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-3 h-3"/> Confirm Payment
+                        </button>
                       </div>
                     )}
 

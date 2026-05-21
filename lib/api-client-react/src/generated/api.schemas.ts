@@ -57,10 +57,17 @@ export interface Payment {
   paid: boolean;
   dueDate: string;
   sortOrder: number;
+  paidAt?: string | null;
+  referenceNumber?: string | null;
+  method?: string | null;
 }
 
 export interface PaymentUpdate {
   paid?: boolean;
+  amountUsd?: number;
+  paidAt?: string | null;
+  referenceNumber?: string | null;
+  method?: string | null;
 }
 
 export interface FactoryQuote {

@@ -746,18 +746,25 @@ components:
       type: object
       required: [id, shipmentId, label, percent, amountUsd, paid, dueDate, sortOrder]
       properties:
-        id:         { type: integer }
-        shipmentId: { type: integer }
-        label:      { type: string }
-        percent:    { type: integer }
-        amountUsd:  { type: integer }
-        paid:       { type: boolean }
-        dueDate:    { type: string, format: date-time }
-        sortOrder:  { type: integer }
+        id:              { type: integer }
+        shipmentId:      { type: integer }
+        label:           { type: string }
+        percent:         { type: integer }
+        amountUsd:       { type: integer }
+        paid:            { type: boolean }
+        dueDate:         { type: string, format: date-time }
+        sortOrder:       { type: integer }
+        paidAt:          { type: string, format: date-time, nullable: true }
+        referenceNumber: { type: string, nullable: true }
+        method:          { type: string, nullable: true }
     PaymentUpdate:
       type: object
       properties:
-        paid: { type: boolean }
+        paid:            { type: boolean }
+        amountUsd:       { type: integer }
+        paidAt:          { type: string, format: date-time, nullable: true }
+        referenceNumber: { type: string, nullable: true }
+        method:          { type: string, nullable: true }
 
     FactoryQuote:
       type: object

@@ -15,4 +15,7 @@ export interface Payment {
   paid: boolean;
   dueDate: Date;
   sortOrder: number;
+  paidAt?: Date | null;
+  referenceNumber?: string | null;
+  method?: string | null;
 }

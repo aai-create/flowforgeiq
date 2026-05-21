@@ -228,7 +228,10 @@ export const ListShipmentsResponseItem = zod.object({
   "amountUsd": zod.number(),
   "paid": zod.boolean(),
   "dueDate": zod.coerce.date(),
-  "sortOrder": zod.number()
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish()
 })),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
@@ -294,7 +297,10 @@ export const UpdateShipmentResponse = zod.object({
   "amountUsd": zod.number(),
   "paid": zod.boolean(),
   "dueDate": zod.coerce.date(),
-  "sortOrder": zod.number()
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish()
 })),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
@@ -315,7 +321,11 @@ export const UpdatePaymentParams = zod.object({
 })
 
 export const UpdatePaymentBody = zod.object({
-  "paid": zod.boolean().optional()
+  "paid": zod.boolean().optional(),
+  "amountUsd": zod.number().optional(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish()
 })
 
 export const UpdatePaymentResponse = zod.object({
@@ -326,7 +336,10 @@ export const UpdatePaymentResponse = zod.object({
   "amountUsd": zod.number(),
   "paid": zod.boolean(),
   "dueDate": zod.coerce.date(),
-  "sortOrder": zod.number()
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish()
 })
 
 

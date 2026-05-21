@@ -31,7 +31,7 @@ import {
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
 import {
-  adaptStages, adaptShipments, adaptMessages, adaptTasks,
+  adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
 } from "@/lib/adapters";
 
@@ -1292,6 +1292,34 @@ export default function Home() {
   const [emailDraft, setEmailDraft]       = useState("");
   const [supplierEmailOverrides, setSupplierEmailOverrides] = useState<Map<number, string | null>>(new Map());
 
+  // Mark-paid inline form
+  interface MarkPaidForm { shipmentId: string; paymentIdx: 0|1; amount: string; date: string; reference: string; method: string; }
+  const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm | null>(null);
+  const openMarkPaid = (shipmentId: string, paymentIdx: 0|1) => {
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship) return;
+    setMarkPaidForm({ shipmentId, paymentIdx, amount: String(ship.payments[paymentIdx].amountUsd), date: new Date().toISOString().split("T")[0], reference: "", method: "Wire" });
+  };
+  const confirmMarkPaid = () => {
+    if (!markPaidForm) return;
+    const { shipmentId, paymentIdx, amount, date, reference, method } = markPaidForm;
+    const ship = shipments.find(s => s.id === shipmentId);
+    if (!ship) return;
+    const payment = ship.payments[paymentIdx];
+    const paidAtIso = new Date(date).toISOString();
+    const amountUsd = Math.round(Number(amount)) || payment.amountUsd;
+    setShipments(prev => prev.map(s => {
+      if (s.id !== shipmentId) return s;
+      const [dep, bal] = s.payments;
+      const update = { ...payment, paid: true, amountUsd, paidAt: paidAtIso, paidMethod: method };
+      return { ...s, payments: paymentIdx === 0 ? [update, bal] : [dep, update] };
+    }));
+    updatePayment(payment.paymentId, { paid: true, amountUsd, paidAt: paidAtIso, referenceNumber: reference || undefined, method }).catch(() => {});
+    setToast("Payment marked as paid");
+    setTimeout(() => setToast(null), 3000);
+    setMarkPaidForm(null);
+  };
+
   // Apply deep-link URL params (?supplier=, ?shipment=, ?tab=) once messages are loaded.
   // Reports navigates here with these params so users land on the right filtered view.
   // ?tab= alone (without supplier/shipment) is also honoured so deep-links that only
@@ -1558,20 +1586,20 @@ export default function Home() {
     setComposeText(""); setComposeFocused(false);
     setToast("Reply sent — stage advanced");
   };
-  const togglePaymentPaid = (shipmentId: string, paymentIdx: 0 | 1) => {
+  const undoPaymentPaid = (shipmentId: string, paymentIdx: 0 | 1) => {
     const ship = shipments.find(s => s.id === shipmentId);
     if (!ship) return;
     const payment = ship.payments[paymentIdx];
-    const nextPaid = !payment.paid;
     setShipments(prev => prev.map(s => {
       if (s.id !== shipmentId) return s;
       const [dep, bal] = s.payments;
-      const newDep = paymentIdx === 0 ? { ...dep, paid: nextPaid } : dep;
-      const newBal = paymentIdx === 1 ? { ...bal, paid: nextPaid } : bal;
+      const newDep = paymentIdx === 0 ? { ...dep, paid: false } : dep;
+      const newBal = paymentIdx === 1 ? { ...bal, paid: false } : bal;
       return { ...s, payments: [newDep, newBal] };
     }));
-    updatePayment(payment.paymentId, { paid: nextPaid }).catch(() => {});
-    setToast(nextPaid ? "Payment marked paid" : "Payment marked unpaid");
+    updatePayment(payment.paymentId, { paid: false, paidAt: null, referenceNumber: null, method: null }).catch(() => {});
+    setToast("Payment marked unpaid");
+    setTimeout(() => setToast(null), 3000);
   };
   const saveStages = (next: UiStage[]) => {
     setStages(next);
@@ -2045,8 +2073,78 @@ export default function Home() {
                     )}
                   </div>
                   {/* Payment inline */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {activeShipment.payments.map((p,i)=>{const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();return<button key={i} type="button" onClick={()=>togglePaymentPaid(activeShipment.id, i as 0|1)} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border transition-opacity hover:opacity-80 ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`} title={p.paid?"Click to mark unpaid":"Click to mark paid"}>{p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}{p.label}: ${p.amountUsd.toLocaleString()} {p.paid?"paid":ov?"OVERDUE":`due ${p.dueDate}`}</button>;})}
+                  <div className="space-y-1.5">
+                    {activeShipment.payments.map((p, i) => {
+                      const ov = !p.paid && new Date(`${p.dueDate} 2026`) < new Date();
+                      const isFormOpen = markPaidForm?.shipmentId === activeShipment.id && markPaidForm?.paymentIdx === i;
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center gap-2">
+                            <div className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ov ? "bg-red-50 text-red-600 border-red-100" : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+                              {p.paid ? <CheckCircle2 size={9}/> : ov ? <AlertCircle size={9}/> : <CreditCard size={9}/>}
+                              {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : ov ? "OVERDUE" : `due ${p.dueDate}`}
+                            </div>
+                            {!p.paid && !isFormOpen && (
+                              <button type="button" onClick={() => openMarkPaid(activeShipment.id, i as 0|1)}
+                                className="text-[9px] font-semibold px-2 py-1 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
+                                Mark Paid
+                              </button>
+                            )}
+                            {p.paid && (
+                              <button type="button" onClick={() => undoPaymentPaid(activeShipment.id, i as 0|1)}
+                                className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
+                                Undo
+                              </button>
+                            )}
+                            {isFormOpen && (
+                              <button type="button" onClick={() => setMarkPaidForm(null)}
+                                className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                          {isFormOpen && markPaidForm && (
+                            <div className="mt-1.5 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2">
+                              <p className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Record Payment</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                                  <input type="number" min="0" value={markPaidForm.amount}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, amount: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
+                                  <input type="date" value={markPaidForm.date}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
+                                  <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label>
+                                  <select value={markPaidForm.method}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
+                                    <option>Wire</option>
+                                    <option>Credit</option>
+                                    <option>Other</option>
+                                  </select>
+                                </div>
+                              </div>
+                              <button type="button" onClick={confirmMarkPaid}
+                                className="w-full py-1.5 text-[10px] font-semibold bg-[#9000FF] text-white rounded-md hover:bg-[#7A00D9] transition-colors flex items-center justify-center gap-1.5">
+                                <CheckCircle2 size={10}/> Confirm Payment
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   {/* Supplier contact email */}
                   {activeSupplier ? (

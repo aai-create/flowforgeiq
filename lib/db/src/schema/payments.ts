@@ -11,6 +11,9 @@ export const paymentsTable = pgTable("payments", {
   paid: boolean("paid").notNull().default(false),
   dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  referenceNumber: text("reference_number"),
+  method: text("method"),
 });
 
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true });

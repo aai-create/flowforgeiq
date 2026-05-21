@@ -8,4 +8,8 @@
 
 export interface PaymentUpdate {
   paid?: boolean;
+  amountUsd?: number;
+  paidAt?: Date | null;
+  referenceNumber?: string | null;
+  method?: string | null;
 }
