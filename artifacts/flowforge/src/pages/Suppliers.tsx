@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AICopilotBar } from "@/components/AICopilotBar";
+import { AppHeader } from "@/components/AppHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import {
   useListSuppliers,
@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Search, Plus, Mail, MessageCircle, Globe, CreditCard,
   ChevronRight, Package, X, Check, Pencil, ArrowRight,
-  Building2, User, AlertCircle, Sparkles, Bell,
+  Building2, User, AlertCircle,
 } from "lucide-react";
 import { shortDate } from "@/lib/adapters";
 
@@ -488,7 +488,11 @@ export function Suppliers() {
   }
 
   return (
-    <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+    <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+
+        <AppHeader pageLabel="Suppliers" />
+
+        <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT NAV */}
         <NavSidebar
@@ -498,28 +502,6 @@ export function Suppliers() {
         />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* TOP BAR */}
-        <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0">
-          <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
-            <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-              <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
-            </div>
-            <span className="text-[#9000FF] tracking-tight">flowforge</span>
-            <span className="text-[#E5EAF0]">/</span>
-            <span className="text-[#5E687B] font-medium text-xs">Suppliers</span>
-          </div>
-          <div className="flex-1 flex justify-center max-w-lg">
-            <AICopilotBar className="w-full" />
-          </div>
-          <div className="flex items-center gap-2 w-[200px] justify-end">
-            <button className="h-8 w-8 flex items-center justify-center rounded-md text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
-              <Bell className="w-4 h-4" />
-            </button>
-            <Separator orientation="vertical" className="h-4" />
-            <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">AX</div>
-          </div>
-        </div>
 
         <div className="flex-1 flex overflow-hidden">
 
@@ -685,6 +667,7 @@ export function Suppliers() {
               />
             )}
           </div>
+        </div>
         </div>
         </div>
         </div>
