@@ -1726,6 +1726,7 @@ export default function Home() {
         {/* ── PERSISTENT LEFT FILTER PANEL ── */}
         <NavSidebar
           onCalendarClick={() => setActiveView("calendar")}
+          onInboxClick={() => setActiveView("inbox")}
           isCalendarActive={activeView === "calendar"}
           counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
         >

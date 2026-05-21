@@ -5,6 +5,7 @@ import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpe
 interface NavSidebarProps {
   showBrand?: boolean;
   onCalendarClick?: () => void;
+  onInboxClick?: () => void;
   isCalendarActive?: boolean;
   counts?: {
     myOrders?: number | null;
@@ -17,6 +18,7 @@ interface NavSidebarProps {
 export function NavSidebar({
   showBrand = true,
   onCalendarClick,
+  onInboxClick,
   isCalendarActive = false,
   counts = {},
   children,
@@ -42,6 +44,9 @@ export function NavSidebar({
   function handleClick(label: string, to: string) {
     if (label === "Calendar" && onCalendarClick) {
       onCalendarClick();
+    } else if (label === "Inbox" && onInboxClick) {
+      onInboxClick();
+      navigate(to);
     } else {
       navigate(to);
     }
