@@ -124,12 +124,14 @@ export interface Shipment {
   exFactoryDate: string;
   destination: string;
   via: string;
+  /** @nullable */
+  notes?: string | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }
 
 export interface ShipmentCreate {
-  poNumber?: string;
+  poNumber: string;
   product: string;
   category: string;
   supplierId: number;
@@ -138,8 +140,9 @@ export interface ShipmentCreate {
   currentStageId?: string;
   dueDate: string;
   exFactoryDate: string;
-  destination?: string;
+  destination: string;
   via?: string;
+  notes?: string;
 }
 
 export interface ShipmentUpdate {

@@ -7,7 +7,7 @@
  */
 
 export interface ShipmentCreate {
-  poNumber?: string;
+  poNumber: string;
   product: string;
   category: string;
   supplierId: number;
@@ -16,6 +16,7 @@ export interface ShipmentCreate {
   currentStageId?: string;
   dueDate: Date;
   exFactoryDate: Date;
-  destination?: string;
+  destination: string;
   via?: string;
+  notes?: string;
 }

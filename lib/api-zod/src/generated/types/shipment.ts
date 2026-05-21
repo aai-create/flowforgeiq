@@ -24,6 +24,8 @@ export interface Shipment {
   exFactoryDate: Date;
   destination: string;
   via: string;
+  /** @nullable */
+  notes?: string | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }

@@ -17,6 +17,7 @@ export const shipmentsTable = pgTable("shipments", {
   exFactoryDate: timestamp("ex_factory_date", { withTimezone: true }).notNull(),
   destination: text("destination").notNull().default(""),
   via: text("via").notNull().default("OCEAN"),
+  notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

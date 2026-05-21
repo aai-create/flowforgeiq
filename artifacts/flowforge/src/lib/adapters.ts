@@ -95,8 +95,12 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     currentStage: labelById.get(s.currentStageId) ?? s.currentStageId,
     dueDate: shortDate(s.dueDate),
     payments: [
-      { label: s.payments[0].label, percent: s.payments[0].percent, amountUsd: s.payments[0].amountUsd, paid: s.payments[0].paid, dueDate: shortDate(s.payments[0].dueDate), paymentId: s.payments[0].id },
-      { label: s.payments[1].label, percent: s.payments[1].percent, amountUsd: s.payments[1].amountUsd, paid: s.payments[1].paid, dueDate: shortDate(s.payments[1].dueDate), paymentId: s.payments[1].id },
+      s.payments[0]
+        ? { label: s.payments[0].label, percent: s.payments[0].percent, amountUsd: s.payments[0].amountUsd, paid: s.payments[0].paid, dueDate: shortDate(s.payments[0].dueDate), paymentId: s.payments[0].id }
+        : { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0 },
+      s.payments[1]
+        ? { label: s.payments[1].label, percent: s.payments[1].percent, amountUsd: s.payments[1].amountUsd, paid: s.payments[1].paid, dueDate: shortDate(s.payments[1].dueDate), paymentId: s.payments[1].id }
+        : { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0 },
     ],
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
       factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id,

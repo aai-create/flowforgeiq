@@ -205,6 +205,7 @@ export const ListShipmentsResponseItem = zod.object({
   "exFactoryDate": zod.coerce.date(),
   "destination": zod.string(),
   "via": zod.string(),
+  "notes": zod.string().nullish(),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -231,7 +232,7 @@ export const ListShipmentsResponse = zod.array(ListShipmentsResponseItem)
 
 
 export const CreateShipmentBody = zod.object({
-  "poNumber": zod.string().optional(),
+  "poNumber": zod.string(),
   "product": zod.string(),
   "category": zod.string(),
   "supplierId": zod.number(),
@@ -240,8 +241,9 @@ export const CreateShipmentBody = zod.object({
   "currentStageId": zod.string().optional(),
   "dueDate": zod.coerce.date(),
   "exFactoryDate": zod.coerce.date(),
-  "destination": zod.string().optional(),
-  "via": zod.string().optional()
+  "destination": zod.string(),
+  "via": zod.string().optional(),
+  "notes": zod.string().optional()
 })
 
 
@@ -269,6 +271,7 @@ export const UpdateShipmentResponse = zod.object({
   "exFactoryDate": zod.coerce.date(),
   "destination": zod.string(),
   "via": zod.string(),
+  "notes": zod.string().nullish(),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),

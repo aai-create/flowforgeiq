@@ -9,6 +9,7 @@ import {
 import { and, asc, eq } from "drizzle-orm";
 import {
   ListShipmentsResponseItem,
+  CreateShipmentBody,
   UpdateShipmentBody,
   UpdateShipmentResponse,
   UpdatePaymentBody,
@@ -16,7 +17,6 @@ import {
   SelectFactoryQuoteBody,
   SelectFactoryQuoteResponseItem,
 } from "@workspace/api-zod";
-import { insertShipmentSchema } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -52,8 +52,33 @@ router.get("/shipments", async (_req, res) => {
 });
 
 router.post("/shipments", async (req, res) => {
-  const input = insertShipmentSchema.parse(req.body);
-  const [row] = await db.insert(shipmentsTable).values(input).returning();
+  const parsed = CreateShipmentBody.parse(req.body);
+  const input = {
+    ...parsed,
+    status: parsed.status ?? "on-track",
+    currentStageId: parsed.currentStageId ?? "stage-spec-sheet",
+    via: parsed.via ?? "OCEAN",
+  };
+  let row: typeof shipmentsTable.$inferSelect;
+  try {
+    [row] = await db.insert(shipmentsTable).values(input).returning();
+  } catch (err: unknown) {
+    const isPoUnique = (e: unknown): boolean => {
+      if (!e || typeof e !== "object") return false;
+      const obj = e as Record<string, unknown>;
+      const code = obj["code"];
+      const constraint = String(obj["constraint"] ?? "");
+      const detail = String(obj["detail"] ?? "");
+      if (code === "23505" && (constraint.includes("po_number") || detail.includes("po_number"))) return true;
+      if (obj["cause"]) return isPoUnique(obj["cause"]);
+      return false;
+    };
+    if (isPoUnique(err)) {
+      res.status(409).json({ error: "A shipment with this PO number already exists." });
+      return;
+    }
+    throw err;
+  }
   const out = await loadShipment(row.id);
   if (!out) {
     res.status(500).json({ error: "Failed to load created shipment" });

@@ -816,6 +816,7 @@ components:
         exFactoryDate:  { type: string, format: date-time }
         destination:    { type: string }
         via:            { type: string }
+        notes:          { type: ["string", "null"] }
         payments:
           type: array
           items: { $ref: "#/components/schemas/Payment" }
@@ -825,12 +826,14 @@ components:
     ShipmentCreate:
       type: object
       required:
+        - poNumber
         - product
         - category
         - supplierId
         - customerName
         - dueDate
         - exFactoryDate
+        - destination
       properties:
         poNumber:       { type: string }
         product:        { type: string }
@@ -843,6 +846,7 @@ components:
         exFactoryDate:  { type: string, format: date-time }
         destination:    { type: string }
         via:            { type: string }
+        notes:          { type: string }
     ShipmentUpdate:
       type: object
       properties:

@@ -198,11 +198,12 @@ export function Atelier() {
 
   const [showNewPO, setShowNewPO] = useState(false);
   const [newPOForm, setNewPOForm] = useState({
-    product: "", category: "", customerName: "",
+    poNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
-    destination: "", via: "OCEAN",
+    destination: "", via: "OCEAN", notes: "",
   });
   const [newPOError, setNewPOError] = useState<string | null>(null);
+  const [poNumberError, setPoNumberError] = useState<string | null>(null);
   const [newPOFile, setNewPOFile] = useState<File | null>(null);
   const [newPODragOver, setNewPODragOver] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
@@ -214,31 +215,35 @@ export function Atelier() {
   const resetNewPO = () => {
     setShowNewPO(false);
     setNewPOError(null);
+    setPoNumberError(null);
     setNewPOFile(null);
     setNewPODragOver(false);
     setSupplierQuery("");
     setSupplierOpen(false);
-    setNewPOForm({ product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN" });
+    setNewPOForm({ poNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "" });
   };
 
   const submitNewPO = async () => {
     setNewPOError(null);
+    setPoNumberError(null);
     const resolvedSupplierId = newPOForm.supplierId;
 
-    if (!newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate) {
+    if (!newPOForm.poNumber.trim() || !newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate || !newPOForm.destination.trim()) {
       setNewPOError("Please fill in all required fields."); return;
     }
     try {
       const created = await createShipmentMutation.mutateAsync({
         data: {
+          poNumber: newPOForm.poNumber.trim(),
           product: newPOForm.product.trim(),
           category: newPOForm.category.trim(),
           customerName: newPOForm.customerName.trim(),
           supplierId: Number(resolvedSupplierId),
           dueDate: new Date(newPOForm.dueDate).toISOString(),
           exFactoryDate: new Date(newPOForm.exFactoryDate).toISOString(),
-          destination: newPOForm.destination.trim() || undefined,
+          destination: newPOForm.destination.trim(),
           via: newPOForm.via || undefined,
+          notes: newPOForm.notes.trim() || undefined,
           status: "on-track",
           currentStageId: stages[0]?.id ?? "stage-1",
         },
@@ -255,8 +260,13 @@ export function Atelier() {
       }
 
       resetNewPO();
-    } catch {
-      setNewPOError("Failed to create PO. Please try again.");
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        setPoNumberError("A PO with this number already exists. Please use a different PO number.");
+      } else {
+        setNewPOError("Failed to create PO. Please try again.");
+      }
     }
   };
 
@@ -820,9 +830,20 @@ export function Atelier() {
             )}
           </div>
 
+          {/* PO Number */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">PO Number <span className="text-red-500">*</span></label>
+            <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
+              placeholder="e.g. PO-2026-0199"
+              className={`w-full border rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 transition-colors ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
+            {poNumberError && (
+              <p className="text-[11px] text-red-600 mt-1">{poNumberError}</p>
+            )}
+          </div>
+
           {/* Product */}
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Product <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Product Description <span className="text-red-500">*</span></label>
             <input value={newPOForm.product} onChange={e => setNewPOForm(p => ({ ...p, product: e.target.value }))}
               placeholder="e.g. Chrome Retail Hanger — Heavy Duty Top"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
@@ -949,10 +970,19 @@ export function Atelier() {
 
           {/* Destination */}
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination <span className="text-red-500">*</span></label>
             <input value={newPOForm.destination} onChange={e => setNewPOForm(p => ({ ...p, destination: e.target.value }))}
               placeholder="e.g. Los Angeles, CA"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Notes <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+            <textarea value={newPOForm.notes} onChange={e => setNewPOForm(p => ({ ...p, notes: e.target.value }))}
+              rows={2}
+              placeholder="e.g. Verbal order from buyer call on May 20 — confirmed by email"
+              className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors resize-none"/>
           </div>
 
           {newPOError && (
