@@ -39,7 +39,7 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
       const res = await fetch(`${import.meta.env.BASE_URL}api/copilot/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, contextHint: contextHint !== "Ask FlowForge anything" ? contextHint : undefined }),
       });
       if (!res.ok) throw new Error("Request failed");
       const data = (await res.json()) as { reply: string };

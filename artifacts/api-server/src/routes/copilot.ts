@@ -166,6 +166,7 @@ router.put("/copilot/policies", async (req, res) => {
 // ─── AI Chat ──────────────────────────────────────────────────────────────────
 const CopilotChatBody = z.object({
   message: z.string().min(1).max(2000),
+  contextHint: z.string().max(500).optional(),
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional(),
 });
 
@@ -217,8 +218,12 @@ router.post("/copilot/chat", async (req, res) => {
     ].filter(Boolean).join("\n");
   }).join("\n");
 
-  const systemPrompt = `You are FlowForge Copilot, an AI assistant for a supply-chain buyer managing international purchase orders. Today is ${TODAY}.
+  const contextSection = input.contextHint
+    ? `\nCURRENT PAGE CONTEXT: ${input.contextHint}\n`
+    : "";
 
+  const systemPrompt = `You are FlowForge Copilot, an AI assistant for a supply-chain buyer managing international purchase orders. Today is ${TODAY}.
+${contextSection}
 ACTIVE SHIPMENTS:
 ${shipmentContext || "No active shipments."}
 
