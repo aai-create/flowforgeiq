@@ -1862,8 +1862,11 @@ export default function Home() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* TOP BAR */}
-        <div className="bg-white border-b border-[#E5EAF0] flex items-center justify-between px-5 shrink-0 relative" style={{height:50}}>
-          <div className="font-bold text-sm flex items-center gap-2">
+        <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 relative">
+          <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
+            <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
+              <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
+            </div>
             <span className="text-[#9000FF] tracking-tight">flowforge</span>
             <span className="text-[#E5EAF0]">/</span>
             <span className="text-[#5E687B] font-medium text-xs">
@@ -1945,6 +1948,8 @@ export default function Home() {
               </>}
             </div>}
             <button className="hover:text-[#212833] p-1 relative"><Bell size={15}/>{unreadCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}</button>
+            <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
+            <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">AX</div>
           </div>
         </div>
 

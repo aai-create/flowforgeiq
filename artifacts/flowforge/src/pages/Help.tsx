@@ -68,8 +68,8 @@ export function Help() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Page header */}
-        <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9000FF] to-[#B040FF] flex items-center justify-center">
               <BookOpen className="w-4 h-4 text-white" />
             </div>
@@ -78,8 +78,10 @@ export function Help() {
               <p className="text-[11px] text-[#5E687B]">Step-by-step guides for every core workflow in FlowForge</p>
             </div>
           </div>
+        </div>
 
-          {/* Search */}
+        {/* Search bar */}
+        <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-6 py-2.5">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9E9FAE]" />
             <input
@@ -87,7 +89,7 @@ export function Help() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search guides and steps…"
-              className="w-full h-9 bg-[#F0F4F8] border border-transparent rounded-lg pl-9 pr-8 text-[12px] focus:outline-none focus:border-[#9000FF]/30 focus:bg-white transition-colors placeholder:text-[#9E9FAE]"
+              className="w-full h-8 bg-[#F0F4F8] border border-transparent rounded-lg pl-9 pr-8 text-[12px] focus:outline-none focus:border-[#9000FF]/30 focus:bg-white transition-colors placeholder:text-[#9E9FAE]"
             />
             {query && (
               <button
@@ -98,9 +100,8 @@ export function Help() {
               </button>
             )}
           </div>
-
           {lower && (
-            <p className="mt-2 text-[11px] text-[#5E687B]">
+            <p className="mt-1.5 text-[11px] text-[#5E687B]">
               {visible.length === 0
                 ? "No guides match your search."
                 : `${visible.length} guide${visible.length === 1 ? "" : "s"} match "${query}"`}

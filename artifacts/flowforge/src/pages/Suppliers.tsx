@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Search, Plus, Mail, MessageCircle, Globe, CreditCard,
   ChevronRight, Package, X, Check, Pencil, ArrowRight,
-  Building2, User, AlertCircle,
+  Building2, User, AlertCircle, Sparkles, Bell,
 } from "lucide-react";
 import { shortDate } from "@/lib/adapters";
 
@@ -497,7 +497,20 @@ export function Suppliers() {
           <span className="text-[#E5EAF0] mx-1">/</span>
           <span className="text-[#5E687B] font-medium text-xs">Suppliers</span>
         </div>
+
+        <div className="flex-1 flex justify-center max-w-lg">
+          <div className="relative w-full group">
+            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9000FF]" />
+            <input type="text" placeholder="Ask FlowForge anything...  ⌘K"
+              className="w-full h-8 bg-[#F0F4F8] hover:bg-[#E5EAF0] focus:bg-white border border-transparent focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 rounded-full pl-9 pr-4 text-xs outline-none transition-all placeholder:text-[#9E9FAE]" />
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 w-[260px] justify-end">
+          <button className="h-8 w-8 flex items-center justify-center rounded-md text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
+            <Bell className="w-4 h-4" />
+          </button>
+          <Separator orientation="vertical" className="h-4" />
           <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">AX</div>
         </div>
       </header>
