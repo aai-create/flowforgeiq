@@ -161,6 +161,22 @@ export interface ShipmentUpdate {
   currentStageId?: string;
 }
 
+export interface StageEvent {
+  id: number;
+  shipmentId: number;
+  fromStageId: string;
+  toStageId: string;
+  /** @nullable */
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface StageEventInput {
+  fromStageId: string;
+  toStageId: string;
+  note?: string;
+}
+
 export type MessageDirection = typeof MessageDirection[keyof typeof MessageDirection];
 
 

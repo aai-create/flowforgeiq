@@ -330,6 +330,38 @@ export const UpdatePaymentResponse = zod.object({
 })
 
 
+/**
+ * @summary Get stage advancement history for a shipment
+ */
+export const ListShipmentStageEventsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListShipmentStageEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "fromStageId": zod.string(),
+  "toStageId": zod.string(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListShipmentStageEventsResponse = zod.array(ListShipmentStageEventsResponseItem)
+
+
+/**
+ * @summary Record a stage advancement with optional note
+ */
+export const CreateShipmentStageEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateShipmentStageEventBody = zod.object({
+  "fromStageId": zod.string(),
+  "toStageId": zod.string(),
+  "note": zod.string().optional()
+})
+
+
 export const SelectFactoryQuoteParams = zod.object({
   "id": zod.coerce.number()
 })

@@ -5,8 +5,9 @@ import {
   suppliersTable,
   paymentsTable,
   factoryQuotesTable,
+  stageEventsTable,
 } from "@workspace/db";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import {
   ListShipmentsResponseItem,
   CreateShipmentBody,
@@ -16,6 +17,8 @@ import {
   UpdatePaymentResponse,
   SelectFactoryQuoteBody,
   SelectFactoryQuoteResponseItem,
+  ListShipmentStageEventsResponseItem,
+  CreateShipmentStageEventBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -129,6 +132,44 @@ router.post("/shipments/:id/select-quote", async (req, res) => {
   });
   const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, shipmentId)).orderBy(asc(factoryQuotesTable.sortOrder));
   res.json(quotes.map(q => SelectFactoryQuoteResponseItem.parse(q)));
+});
+
+router.get("/shipments/:id/stage-events", async (req, res) => {
+  const shipmentId = Number(req.params.id);
+  const events = await db
+    .select()
+    .from(stageEventsTable)
+    .where(eq(stageEventsTable.shipmentId, shipmentId))
+    .orderBy(desc(stageEventsTable.createdAt));
+  res.json(events.map(e => ListShipmentStageEventsResponseItem.parse(e)));
+});
+
+router.post("/shipments/:id/stage-events", async (req, res) => {
+  const shipmentId = Number(req.params.id);
+  const input = CreateShipmentStageEventBody.parse(req.body);
+
+  const shipment = await loadShipment(shipmentId);
+  if (!shipment) {
+    res.status(404).json({ error: "Shipment not found" });
+    return;
+  }
+
+  const [event] = await db.transaction(async (tx) => {
+    await tx.update(shipmentsTable)
+      .set({ currentStageId: input.toStageId, status: "on-track" })
+      .where(eq(shipmentsTable.id, shipmentId));
+    return tx
+      .insert(stageEventsTable)
+      .values({
+        shipmentId,
+        fromStageId: input.fromStageId,
+        toStageId: input.toStageId,
+        note: input.note ?? null,
+      })
+      .returning();
+  });
+
+  res.status(201).json(ListShipmentStageEventsResponseItem.parse(event));
 });
 
 export default router;

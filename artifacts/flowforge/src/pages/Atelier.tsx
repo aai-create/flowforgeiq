@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent } from "@workspace/api-client-react";
+import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import {
   Search, Bell, Plus, Inbox, LayoutGrid,
@@ -168,16 +169,34 @@ export function Atelier() {
     if (apiTasks) setTasks(adaptTasks(apiTasks, ships));
   }, [apiStages, apiShipments, apiTasks]);
 
-  const advanceStage = (shipmentId: string) => {
-    const target = shipments.find(s => s.id === shipmentId);
-    if (!target) return;
-    const idx = stages.findIndex(st => st.id === target.currentStageId);
+  const [advanceTarget, setAdvanceTarget] = useState<UiShipment | null>(null);
+  const [advanceNote, setAdvanceNote] = useState("");
+  const [historyShipmentId, setHistoryShipmentId] = useState<string | null>(null);
+  const createStageEventMutation = useCreateShipmentStageEvent();
+
+  const openAdvanceDialog = (shipment: UiShipment) => {
+    const idx = stages.findIndex(st => st.id === shipment.currentStageId);
     const next = stages[Math.min(idx + 1, stages.length - 1)];
-    if (!next || next.id === target.currentStageId) return;
+    if (!next || next.id === shipment.currentStageId) return;
+    setAdvanceTarget(shipment);
+    setAdvanceNote("");
+  };
+
+  const confirmAdvanceStage = async () => {
+    if (!advanceTarget) return;
+    const idx = stages.findIndex(st => st.id === advanceTarget.currentStageId);
+    const next = stages[Math.min(idx + 1, stages.length - 1)];
+    if (!next || next.id === advanceTarget.currentStageId) return;
+    const fromStageId = advanceTarget.currentStageId;
     setShipments(prev => prev.map(s =>
-      s.id === shipmentId ? { ...s, currentStageId: next.id, currentStage: next.label, status: "on-track" } : s,
+      s.id === advanceTarget.id ? { ...s, currentStageId: next.id, currentStage: next.label, status: "on-track" } : s,
     ));
-    updateShipment(target.shipmentId, { currentStageId: next.id, status: "on-track" }).catch(() => {});
+    setAdvanceTarget(null);
+    setAdvanceNote("");
+    createStageEventMutation.mutate({
+      id: advanceTarget.shipmentId,
+      data: { fromStageId, toStageId: next.id, note: advanceNote.trim() || undefined },
+    });
   };
 
   const riskByShipmentId = React.useMemo(() => {
@@ -608,6 +627,20 @@ export function Atelier() {
                       )}
                     </div>
 
+                    {/* History section */}
+                    {historyShipmentId === shipment.id && (
+                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Clock className="w-3 h-3 text-[#9000FF]" />
+                          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Stage History</span>
+                        </div>
+                        <StageHistory
+                          shipmentId={shipment.shipmentId}
+                          stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
+                        />
+                      </div>
+                    )}
+
                     {/* Expanded detail row */}
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
@@ -623,9 +656,14 @@ export function Atelier() {
                             <FileText className="w-3 h-3" /> View Docs
                           </button>
                           <button
-                            onClick={e => { e.stopPropagation(); advanceStage(shipment.id); }}
+                            onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
                             className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                             <MapPin className="w-3 h-3" /> Advance Stage
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
+                            className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                            <Clock className="w-3 h-3" /> History
                           </button>
                         </div>
                         <div className="relative">
@@ -789,6 +827,61 @@ export function Atelier() {
 
       </div>
     </div>
+
+    {/* ── ADVANCE STAGE CONFIRMATION DIALOG ── */}
+    {advanceTarget && (() => {
+      const idx = stages.findIndex(st => st.id === advanceTarget.currentStageId);
+      const next = stages[Math.min(idx + 1, stages.length - 1)];
+      return (
+        <Dialog open={true} onOpenChange={open => { if (!open) { setAdvanceTarget(null); setAdvanceNote(""); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-[#212833]">Advance Shipment Stage</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-1">
+              <p className="text-xs text-[#5E687B]">
+                <span className="font-semibold text-[#212833]">{advanceTarget.po}</span> — {advanceTarget.product}
+              </p>
+              <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
+                <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
+                  <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                  <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceTarget.currentStageId}</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-[#9000FF] shrink-0" />
+                <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
+                  <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
+                  <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">
+                  Note <span className="text-[#9E9FAE] font-normal">(optional — e.g. "QC passed, cert attached")</span>
+                </label>
+                <textarea
+                  value={advanceNote}
+                  onChange={e => setAdvanceNote(e.target.value)}
+                  placeholder="Add context about this stage change..."
+                  rows={3}
+                  className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors resize-none"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <button
+                onClick={() => { setAdvanceTarget(null); setAdvanceNote(""); }}
+                className="px-4 py-2 text-xs font-semibold text-[#5E687B] hover:text-[#212833] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => void confirmAdvanceStage()}
+                className="px-5 py-2 bg-[#9000FF] text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-[#7A00D9] transition-colors">
+                Confirm Advance
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    })()}
 
     {/* ── NEW PO DIALOG ── */}
     <Dialog open={showNewPO} onOpenChange={open => { if (!open) resetNewPO(); }}>

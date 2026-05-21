@@ -57,6 +57,8 @@ export * from './shipmentCreate';
 export * from './shipmentPrediction';
 export * from './shipmentUpdate';
 export * from './stage';
+export * from './stageEvent';
+export * from './stageEventInput';
 export * from './stageOrderInput';
 export * from './supplierCreate';
 export * from './supplierSummary';

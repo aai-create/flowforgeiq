@@ -9,3 +9,4 @@ export * from "./tasks";
 export * from "./documents";
 export * from "./predictions";
 export * from "./copilot";
+export * from "./stage_events";

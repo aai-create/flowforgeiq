@@ -26,7 +26,9 @@ import {
   useListDocuments, getListDocumentsQueryKey,
   useListCopilotProposals,
   useListSuppliers, useUpdateSupplier,
+  createShipmentStageEvent,
 } from "@workspace/api-client-react";
+import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks,
@@ -1270,6 +1272,9 @@ export default function Home() {
   });
   const [toast, setToast]                 = useState<string|null>(null);
   const [repliedIds, setRepliedIds]       = useState<Set<string>>(new Set());
+  const [advanceDialogShipment, setAdvanceDialogShipment] = useState<UiShipment | null>(null);
+  const [advanceNote, setAdvanceNote]     = useState("");
+  const [showHistory, setShowHistory]     = useState(false);
   const [searchMode, setSearchMode]       = useState(false);
   const [searchQuery, setSearchQuery]     = useState("");
   const [aiQuery, setAiQuery]             = useState("");
@@ -1451,16 +1456,42 @@ export default function Home() {
     setSelectedShipmentId(next); setChannelFilter("all"); setSupplierFilter(null);
     if (next) { const f = messages.find(m => m.shipmentId===next); if(f) openMessage(f.id); }
   };
-  const advanceStage = (shipmentId: string) => {
+  const advanceStage = (shipmentId: string, note?: string) => {
     const target = shipments.find(s => s.id === shipmentId);
     if (!target) return;
     const idx = stages.findIndex(st => st.id === target.currentStageId);
     const next = stages[Math.min(idx + 1, stages.length - 1)];
     if (!next || next.id === target.currentStageId) return;
+    const fromStageId = target.currentStageId;
     setShipments(prev => prev.map(s =>
       s.id === shipmentId ? { ...s, currentStageId: next.id, currentStage: next.label, status: "on-track" } : s,
     ));
-    updateShipment(target.shipmentId, { currentStageId: next.id, status: "on-track" }).catch(() => {});
+    createShipmentStageEvent(target.shipmentId, {
+      fromStageId,
+      toStageId: next.id,
+      note: note?.trim() || undefined,
+    }).catch(() => {
+      setShipments(prev => prev.map(s =>
+        s.id === shipmentId ? { ...s, currentStageId: fromStageId, currentStage: target.currentStage, status: target.status } : s,
+      ));
+      setToast("Failed to advance stage — please try again");
+    });
+  };
+
+  const openAdvanceDialog = (ship: UiShipment) => {
+    const idx = stages.findIndex(st => st.id === ship.currentStageId);
+    const next = stages[Math.min(idx + 1, stages.length - 1)];
+    if (!next || next.id === ship.currentStageId) return;
+    setAdvanceDialogShipment(ship);
+    setAdvanceNote("");
+  };
+
+  const confirmAdvanceStage = () => {
+    if (!advanceDialogShipment) return;
+    advanceStage(advanceDialogShipment.id, advanceNote);
+    setAdvanceDialogShipment(null);
+    setAdvanceNote("");
+    setToast("Stage advanced");
   };
   const sendReply = (msgId: string) => {
     setRepliedIds(prev => new Set(prev).add(msgId));
@@ -1944,10 +1975,30 @@ export default function Home() {
                   <div className="bg-white rounded-lg border border-[#E5EAF0] p-2.5 mb-2.5">
                     <div className="flex items-center justify-between text-[9px] mb-1.5">
                       <span className="font-bold text-[#212833] flex items-center gap-1"><MapPin size={9} className="text-[#9000FF]"/>{activeStage?.label??"—"}</span>
-                      <span className="text-[#5E687B]">Stage {activeStageIdx+1} of {stages.length}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#5E687B]">Stage {activeStageIdx+1} of {stages.length}</span>
+                        <button
+                          onClick={() => activeShipment && openAdvanceDialog(activeShipment)}
+                          className="text-[8px] font-semibold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-2 py-0.5 rounded-full hover:bg-[#9000FF]/15 transition-colors flex items-center gap-1">
+                          <ChevronRight size={8}/>Advance
+                        </button>
+                        <button
+                          onClick={() => setShowHistory(h => !h)}
+                          className={`text-[8px] font-semibold px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showHistory?"bg-[#9000FF]/10 border-[#9000FF]/20 text-[#9000FF]":"text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}>
+                          <Clock size={8}/>History
+                        </button>
+                      </div>
                     </div>
                     <div className="flex gap-px h-1.5 mb-2">{stages.map((_,idx)=><div key={idx} className={`flex-1 rounded-full transition-all duration-500 ${idx<activeStageIdx?"bg-[#9000FF]":idx===activeStageIdx?"bg-[#9000FF] opacity-50":"bg-[#E5EAF0]"}`}/>)}</div>
                     <div className="flex items-center gap-1 overflow-x-auto">{stages.slice(activeStageIdx,activeStageIdx+5).map((st,i)=><div key={st.id} className={`flex items-center gap-1 shrink-0 text-[9px] ${i===0?"text-[#9000FF] font-bold":"text-[#9E9FAE]"}`}>{i>0&&<ChevronRight size={8} className="text-[#D6E3EB]"/>}{st.label}</div>)}</div>
+                    {showHistory&&activeShipment&&(
+                      <div className="mt-2.5 pt-2.5 border-t border-[#F0F4F8]">
+                        <StageHistory
+                          shipmentId={activeShipment.shipmentId}
+                          stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
+                        />
+                      </div>
+                    )}
                   </div>
                   {/* Payment inline */}
                   <div className="flex items-center gap-2 flex-wrap">
@@ -2165,6 +2216,61 @@ export default function Home() {
 
         </div>{/* end CONTENT AREA */}
       </div>{/* end MAIN AREA */}
+
+      {/* ── ADVANCE STAGE CONFIRMATION DIALOG ── */}
+      {advanceDialogShipment && (() => {
+        const idx = stages.findIndex(st => st.id === advanceDialogShipment.currentStageId);
+        const next = stages[Math.min(idx + 1, stages.length - 1)];
+        return (
+          <div className="fixed inset-0 z-[200] bg-[#212833]/30 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E5EAF0] bg-[#FAFBFC]">
+                <h2 className="text-sm font-bold text-[#212833]">Advance Shipment Stage</h2>
+                <p className="text-[11px] text-[#5E687B] mt-0.5">
+                  {advanceDialogShipment.po} — {advanceDialogShipment.product}
+                </p>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
+                  <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
+                    <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                    <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceDialogShipment.currentStageId}</span>
+                  </div>
+                  <ChevronRight size={20} className="text-[#9000FF] shrink-0" />
+                  <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
+                    <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
+                    <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">
+                    Note <span className="text-[#9E9FAE] font-normal">(optional — e.g. "QC passed, cert attached")</span>
+                  </label>
+                  <textarea
+                    value={advanceNote}
+                    onChange={e => setAdvanceNote(e.target.value)}
+                    placeholder="Add context about this stage change..."
+                    rows={3}
+                    className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors resize-none"
+                  />
+                </div>
+              </div>
+              <div className="px-5 py-4 border-t border-[#E5EAF0] bg-[#FAFBFC] flex justify-end gap-2">
+                <button
+                  onClick={() => { setAdvanceDialogShipment(null); setAdvanceNote(""); }}
+                  className="px-4 py-2 text-xs font-semibold text-[#5E687B] hover:text-[#212833] transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmAdvanceStage}
+                  className="px-5 py-2 bg-[#9000FF] text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-[#7A00D9] transition-colors">
+                  Confirm Advance
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -52,6 +52,8 @@ import type {
   ShipmentPrediction,
   ShipmentUpdate,
   Stage,
+  StageEvent,
+  StageEventInput,
   StageOrderInput,
   SupplierCreate,
   SupplierSummary,
@@ -1039,6 +1041,155 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpdatePaymentMutationOptions(options));
+    }
+
+export const getListShipmentStageEventsUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/stage-events`
+}
+
+/**
+ * @summary Get stage advancement history for a shipment
+ */
+export const listShipmentStageEvents = async (id: number, options?: RequestInit): Promise<StageEvent[]> => {
+
+  return customFetch<StageEvent[]>(getListShipmentStageEventsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListShipmentStageEventsQueryKey = (id: number,) => {
+    return [
+    `/api/shipments/${id}/stage-events`
+    ] as const;
+    }
+
+
+export const getListShipmentStageEventsQueryOptions = <TData = Awaited<ReturnType<typeof listShipmentStageEvents>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipmentStageEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListShipmentStageEventsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShipmentStageEvents>>> = ({ signal }) => listShipmentStageEvents(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listShipmentStageEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListShipmentStageEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listShipmentStageEvents>>>
+export type ListShipmentStageEventsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get stage advancement history for a shipment
+ */
+
+export function useListShipmentStageEvents<TData = Awaited<ReturnType<typeof listShipmentStageEvents>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipmentStageEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListShipmentStageEventsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateShipmentStageEventUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/stage-events`
+}
+
+/**
+ * @summary Record a stage advancement with optional note
+ */
+export const createShipmentStageEvent = async (id: number,
+    stageEventInput: StageEventInput, options?: RequestInit): Promise<StageEvent> => {
+
+  return customFetch<StageEvent>(getCreateShipmentStageEventUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      stageEventInput,)
+  }
+);}
+
+
+
+
+export const getCreateShipmentStageEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShipmentStageEvent>>, TError,{id: number;data: BodyType<StageEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createShipmentStageEvent>>, TError,{id: number;data: BodyType<StageEventInput>}, TContext> => {
+
+const mutationKey = ['createShipmentStageEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createShipmentStageEvent>>, {id: number;data: BodyType<StageEventInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createShipmentStageEvent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateShipmentStageEventMutationResult = NonNullable<Awaited<ReturnType<typeof createShipmentStageEvent>>>
+    export type CreateShipmentStageEventMutationBody = BodyType<StageEventInput>
+    export type CreateShipmentStageEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record a stage advancement with optional note
+ */
+export const useCreateShipmentStageEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShipmentStageEvent>>, TError,{id: number;data: BodyType<StageEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createShipmentStageEvent>>,
+        TError,
+        {id: number;data: BodyType<StageEventInput>},
+        TContext
+      > => {
+      return useMutation(getCreateShipmentStageEventMutationOptions(options));
     }
 
 export const getSelectFactoryQuoteUrl = (id: number,) => {

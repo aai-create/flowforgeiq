@@ -245,6 +245,45 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Payment" }
 
+  /shipments/{id}/stage-events:
+    get:
+      operationId: listShipmentStageEvents
+      tags: [shipments]
+      summary: Get stage advancement history for a shipment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Stage event history (newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StageEvent" }
+    post:
+      operationId: createShipmentStageEvent
+      tags: [shipments]
+      summary: Record a stage advancement with optional note
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StageEventInput" }
+      responses:
+        "201":
+          description: Created stage event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StageEvent" }
+
   /shipments/{id}/select-quote:
     post:
       operationId: selectFactoryQuote
@@ -863,6 +902,24 @@ components:
       properties:
         status:         { type: string }
         currentStageId: { type: string }
+
+    StageEvent:
+      type: object
+      required: [id, shipmentId, fromStageId, toStageId, createdAt]
+      properties:
+        id:          { type: integer }
+        shipmentId:  { type: integer }
+        fromStageId: { type: string }
+        toStageId:   { type: string }
+        note:        { type: ["string", "null"] }
+        createdAt:   { type: string, format: date-time }
+    StageEventInput:
+      type: object
+      required: [fromStageId, toStageId]
+      properties:
+        fromStageId: { type: string }
+        toStageId:   { type: string }
+        note:        { type: string }
 
     Message:
       type: object
