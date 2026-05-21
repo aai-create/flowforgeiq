@@ -147,13 +147,32 @@ export interface ShipmentUpdate {
   currentStageId?: string;
 }
 
+export type MessageDirection = typeof MessageDirection[keyof typeof MessageDirection];
+
+
+export const MessageDirection = {
+  inbound: 'inbound',
+  outbound: 'outbound',
+} as const;
+
 export interface Message {
   id: number;
   shipmentId: number;
   /** @nullable */
   supplierId?: number | null;
   sender: string;
+  /**
+     * Outbound recipient — supplier email or name
+     * @nullable
+     */
+  recipient?: string | null;
   channel: string;
+  /**
+     * Subject line for outbound email messages
+     * @nullable
+     */
+  subject?: string | null;
+  direction: MessageDirection;
   snippet: string;
   fullBody: string;
   aiDraft: string;
@@ -163,12 +182,25 @@ export interface Message {
   receivedAt: string;
 }
 
+export type MessageInputDirection = typeof MessageInputDirection[keyof typeof MessageInputDirection];
+
+
+export const MessageInputDirection = {
+  inbound: 'inbound',
+  outbound: 'outbound',
+} as const;
+
 export interface MessageInput {
   shipmentId: number;
   /** @nullable */
   supplierId?: number | null;
   sender: string;
+  /** Outbound recipient — supplier email or name */
+  recipient?: string;
   channel: string;
+  /** Subject line for outbound email messages */
+  subject?: string;
+  direction?: MessageInputDirection;
   snippet: string;
   fullBody: string;
   aiDraft?: string;

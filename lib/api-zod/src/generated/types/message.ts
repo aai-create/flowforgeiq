@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageDirection } from './messageDirection';
 
 export interface Message {
   id: number;
@@ -12,7 +13,18 @@ export interface Message {
   /** @nullable */
   supplierId?: number | null;
   sender: string;
+  /**
+     * Outbound recipient — supplier email or name
+     * @nullable
+     */
+  recipient?: string | null;
   channel: string;
+  /**
+     * Subject line for outbound email messages
+     * @nullable
+     */
+  subject?: string | null;
+  direction: MessageDirection;
   snippet: string;
   fullBody: string;
   aiDraft: string;

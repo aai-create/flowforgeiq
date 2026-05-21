@@ -5,13 +5,19 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageInputDirection } from './messageInputDirection';
 
 export interface MessageInput {
   shipmentId: number;
   /** @nullable */
   supplierId?: number | null;
   sender: string;
+  /** Outbound recipient — supplier email or name */
+  recipient?: string;
   channel: string;
+  /** Subject line for outbound email messages */
+  subject?: string;
+  direction?: MessageInputDirection;
   snippet: string;
   fullBody: string;
   aiDraft?: string;

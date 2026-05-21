@@ -1019,6 +1019,171 @@ function TemplatePicker({ stageId, onPick }: { stageId: string; onPick: (body: s
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Compose Panel  — new outbound message to supplier
+// ─────────────────────────────────────────────────────────────────────────────
+type ComposeChannel = "gmail" | "whatsapp";
+
+interface ComposePanelProps {
+  shipment: UiShipment;
+  supplierEmail: string | null | undefined;
+  onSend: (channel: ComposeChannel, recipient: string, subject: string, body: string) => void;
+  onCancel: () => void;
+}
+
+function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePanelProps) {
+  const stageId = shipment.currentStageId;
+  const templates = EMAIL_TEMPLATES[stageId] ?? [];
+  const defaultBody = templates[0]?.body ?? "";
+
+  const [channel, setChannel]   = useState<ComposeChannel>("gmail");
+  const [subject, setSubject]   = useState(shipment.po);
+  const [body, setBody]         = useState(defaultBody);
+  const [sending, setSending]   = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+
+  const recipient = supplierEmail ?? shipment.supplier;
+
+  const handleSend = () => {
+    if (!body.trim() || sending) return;
+    setSending(true);
+    onSend(channel, recipient, subject, body);
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#E5EAF0] shrink-0 bg-[#FAFBFC]">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-[#9000FF]/10 flex items-center justify-center">
+            <Pencil size={12} className="text-[#9000FF]"/>
+          </div>
+          <span className="text-xs font-bold text-[#212833]">New Message</span>
+        </div>
+        <button onClick={onCancel} className="p-1 rounded hover:bg-[#F0F4F8] text-[#5E687B] transition-colors"><X size={13}/></button>
+      </div>
+
+      {/* Fields */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+        {/* To */}
+        <div className="flex items-start gap-2">
+          <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider w-14 pt-2 shrink-0">To</span>
+          <div className="flex-1 flex items-center gap-2 bg-[#F0F4F8] border border-[#E5EAF0] rounded-lg px-2.5 py-1.5">
+            <span className="text-[11px] text-[#212833] font-medium truncate">{recipient}</span>
+            <span className="ml-auto text-[9px] text-[#9E9FAE] shrink-0">{shipment.supplier}</span>
+          </div>
+        </div>
+
+        {/* Channel */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Via</span>
+          <div className="flex gap-1.5">
+            {(["gmail", "whatsapp"] as ComposeChannel[]).map(ch => (
+              <button
+                key={ch}
+                onClick={() => setChannel(ch)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold transition-all ${
+                  channel === ch
+                    ? "bg-[#9000FF] text-white border-[#9000FF] shadow-sm"
+                    : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#9000FF]/30 hover:text-[#212833]"
+                }`}
+              >
+                {ch === "gmail" ? <Mail size={11}/> : <MessageCircle size={11}/>}
+                {ch === "gmail" ? "Email" : "WhatsApp"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Subject (only for email) */}
+        {channel === "gmail" && (
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Subject</span>
+            <input
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              className="flex-1 px-2.5 py-1.5 text-[11px] border border-[#E5EAF0] rounded-lg outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 transition-all text-[#212833] bg-white"
+              placeholder="Subject…"
+            />
+          </div>
+        )}
+
+        {/* Stage-aware template hint */}
+        {templates.length > 0 && (
+          <div className="border border-[#9000FF]/20 rounded-lg overflow-hidden bg-[#FAFBFF]">
+            <button
+              onClick={() => setTemplateOpen(v => !v)}
+              className="w-full flex items-center gap-1.5 px-3 py-1.5 text-left hover:bg-[#9000FF]/5 transition-colors"
+            >
+              <Wand2 size={10} className="text-[#9000FF]"/>
+              <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider flex-1">Stage templates — {shipment.currentStage}</span>
+              {templateOpen ? <ChevronUp size={10} className="text-[#9000FF]"/> : <ChevronDown size={10} className="text-[#9000FF]"/>}
+            </button>
+            {templateOpen && (
+              <div className="border-t border-[#9000FF]/10 flex flex-col divide-y divide-[#E5EAF0]">
+                {templates.map(t => (
+                  <button
+                    key={t.label}
+                    onClick={() => { setBody(t.body); setTemplateOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-left hover:bg-white transition-colors group"
+                  >
+                    <span className="text-[10px] font-medium text-[#212833] flex-1">{t.label}</span>
+                    <ArrowRight size={10} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0"/>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="flex-1 flex flex-col min-h-[140px]">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Message</span>
+            {body !== defaultBody && defaultBody && (
+              <button onClick={() => setBody(defaultBody)} className="text-[9px] text-[#9000FF] hover:underline flex items-center gap-0.5">
+                <Sparkles size={8}/>Reset draft
+              </button>
+            )}
+          </div>
+          <textarea
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            className="flex-1 w-full px-3 py-2.5 border border-[#E5EAF0] rounded-xl text-[11px] text-[#212833] leading-relaxed resize-none outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 transition-all bg-white"
+            style={{ minHeight: 140 }}
+            placeholder="Write your message…"
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="shrink-0 p-3 border-t border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-[10px] text-[#9E9FAE]">
+          {channel === "gmail" ? <Mail size={10}/> : <MessageCircle size={10}/>}
+          <span>Sending via {channel === "gmail" ? "Email" : "WhatsApp"} to {shipment.supplier}</span>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button onClick={onCancel} className="px-3 py-1.5 text-[10px] font-semibold text-[#5E687B] border border-[#E5EAF0] rounded-md hover:bg-[#F0F4F8] transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={!body.trim() || sending}
+            className={`px-3 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+              body.trim() && !sending
+                ? "bg-[#9000FF] text-white hover:bg-[#7A00D9]"
+                : "bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"
+            }`}
+          >
+            <Send size={10}/>
+            {sending ? "Sending…" : "Send"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Search results  (P2)
 // ─────────────────────────────────────────────────────────────────────────────
 function SearchResults({ query, messages, onOpen }: { query: string; messages: Message[]; onOpen: (id: string) => void }) {
@@ -1095,6 +1260,7 @@ export default function Home() {
   }, [showTaskPanel]);
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
+  const [showComposePanel, setShowComposePanel] = useState(false);
   const [rightTab, setRightTab]           = useState<RightTab>(() => {
     const VALID_TABS = ["message", "docs", "risk", "copilot"] as string[];
     const p = new URLSearchParams(window.location.search).get("tab");
@@ -1379,6 +1545,72 @@ export default function Home() {
     if(next) { const f=messages.find(m=>m.supplierId===next); if(f) openMessage(f.id); }
   };
 
+  const sendComposedMessage = (channel: ComposeChannel, recipient: string, subject: string, body: string) => {
+    if (!activeShipment) return;
+    const snippet = (channel === "gmail" && subject ? `${subject}: ` : "") + body.slice(0, 120);
+
+    // Optimistic: add temp message immediately before API call
+    const tempId = `m-tmp-${Date.now()}`;
+    const tempMsg: UiMessage = {
+      id: tempId,
+      messageId: -1,
+      sender: "You",
+      channel: channel as UiMessage["channel"],
+      timestamp: "Just now",
+      snippet,
+      fullBody: body,
+      unread: false,
+      aiTags: [],
+      shipmentId: activeShipment.id,
+      supplierId: activeShipment.supplier,
+      aiDraft: "",
+      aiAction: "",
+    };
+    setMessages(prev => [tempMsg, ...prev]);
+    setActiveMessageId(tempId);
+    setShowComposePanel(false);
+    setToast("Message sent to " + activeShipment.supplier);
+    setTimeout(() => setToast(null), 3000);
+
+    // Persist to API; replace temp on success, rollback on failure
+    createMessage({
+      shipmentId: activeShipment.shipmentId,
+      sender: "You",
+      recipient,
+      channel,
+      subject: channel === "gmail" ? subject : undefined,
+      direction: "outbound",
+      snippet,
+      fullBody: body,
+    })
+      .then(created => {
+        const realMsg: UiMessage = {
+          id: `m-srv-${created.id}`,
+          messageId: created.id,
+          sender: "You",
+          channel: channel as UiMessage["channel"],
+          timestamp: "Just now",
+          snippet: created.snippet,
+          fullBody: created.fullBody,
+          unread: false,
+          aiTags: [],
+          shipmentId: activeShipment.id,
+          supplierId: activeShipment.supplier,
+          aiDraft: "",
+          aiAction: "",
+        };
+        setMessages(prev => prev.map(m => m.id === tempId ? realMsg : m));
+        setActiveMessageId(realMsg.id);
+      })
+      .catch(() => {
+        // Rollback the optimistic message
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setActiveMessageId(messages[0]?.id ?? "");
+        setToast("Failed to send — message removed. Please try again.");
+        setTimeout(() => setToast(null), 4000);
+      });
+  };
+
   const unreadCount    = messages.filter(m=>m.unread).length;
   const highCount      = tasks.filter(t=>t.urgency==="high").length;
   const isQuotesStage  = activeShipment?.currentStageId === "quotes";
@@ -1631,7 +1863,18 @@ export default function Home() {
             <div className="flex flex-col h-full overflow-hidden">
               <div className="border-b border-[#E5EAF0] px-3 flex items-center justify-between shrink-0" style={{height:38}}>
                 <div className="font-semibold text-[11px] text-[#212833]">{visibleMessages.length} thread{visibleMessages.length!==1?"s":""}{(selectedShipmentId||supplierFilter||channelFilter!=="all")&&<span className="ml-1 text-[#9000FF] font-normal">— filtered</span>}</div>
-                <button className="p-1 hover:bg-[#F0F4F8] rounded text-[#5E687B]"><MoreHorizontal size={13}/></button>
+                <div className="flex items-center gap-1">
+                  {activeShipment && (
+                    <button
+                      onClick={() => { setShowComposePanel(true); setRightTab("message"); }}
+                      title={`Compose new message for ${activeShipment.po}`}
+                      className="flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold text-[#9000FF] hover:bg-[#9000FF]/8 border border-[#9000FF]/20 transition-colors"
+                    >
+                      <Plus size={11}/>Compose
+                    </button>
+                  )}
+                  <button className="p-1 hover:bg-[#F0F4F8] rounded text-[#5E687B]"><MoreHorizontal size={13}/></button>
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {visibleMessages.map(msg=>{
@@ -1668,8 +1911,17 @@ export default function Home() {
             {/* Col B — Thread detail */}
             <ResizablePanel defaultSize={62} minSize={30} className="bg-white flex flex-col min-w-0 border-l border-[#E5EAF0]">
             <div className="flex flex-col h-full overflow-hidden">
+              {/* Compose panel (replaces normal detail when open) */}
+              {showComposePanel && activeShipment && (
+                <ComposePanel
+                  shipment={activeShipment}
+                  supplierEmail={activeSupplierEmail}
+                  onSend={sendComposedMessage}
+                  onCancel={() => setShowComposePanel(false)}
+                />
+              )}
               {/* Shipment context */}
-              {activeShipment&&(
+              {!showComposePanel && activeShipment&&(
                 <div className="border-b border-[#E5EAF0] p-4 bg-[#FAFBFC] shrink-0">
                   <div className="flex items-start justify-between mb-2.5">
                     <div>
@@ -1746,8 +1998,8 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Tabs: Message / Docs / Risk / Copilot */}
-              <div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
+              {/* Tabs + tab content — hidden while compose panel is open */}
+              {!showComposePanel && <><div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
                 {([
                   {id:"message" as RightTab, label:"Message"},
                   {id:"docs"    as RightTab, label:"Docs"},
@@ -1905,6 +2157,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+              </>}
               </>}
             </div>
             </ResizablePanel>

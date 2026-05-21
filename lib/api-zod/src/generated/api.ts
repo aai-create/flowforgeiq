@@ -335,12 +335,17 @@ export const SelectFactoryQuoteResponseItem = zod.object({
 export const SelectFactoryQuoteResponse = zod.array(SelectFactoryQuoteResponseItem)
 
 
+export const listMessagesResponseDirectionDefault = `inbound`;
+
 export const ListMessagesResponseItem = zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
   "supplierId": zod.number().nullish(),
   "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
   "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(listMessagesResponseDirectionDefault),
   "snippet": zod.string(),
   "fullBody": zod.string(),
   "aiDraft": zod.string(),
@@ -356,7 +361,10 @@ export const CreateMessageBody = zod.object({
   "shipmentId": zod.number(),
   "supplierId": zod.number().nullish(),
   "sender": zod.string(),
+  "recipient": zod.string().optional().describe('Outbound recipient — supplier email or name'),
   "channel": zod.string(),
+  "subject": zod.string().optional().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).optional(),
   "snippet": zod.string(),
   "fullBody": zod.string(),
   "aiDraft": zod.string().optional(),
@@ -377,12 +385,17 @@ export const UpdateMessageBody = zod.object({
   "aiDraft": zod.string().optional()
 })
 
+export const updateMessageResponseDirectionDefault = `inbound`;
+
 export const UpdateMessageResponse = zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
   "supplierId": zod.number().nullish(),
   "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
   "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(updateMessageResponseDirectionDefault),
   "snippet": zod.string(),
   "fullBody": zod.string(),
   "aiDraft": zod.string(),

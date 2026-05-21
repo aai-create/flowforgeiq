@@ -7,7 +7,10 @@ export const messagesTable = pgTable("messages", {
   shipmentId: integer("shipment_id").notNull(),
   supplierId: integer("supplier_id"),
   sender: text("sender").notNull(),
-  channel: text("channel").notNull(), // gmail | whatsapp | sheets | pdf
+  recipient: text("recipient"),          // for outbound: supplier email or name
+  channel: text("channel").notNull(),    // gmail | whatsapp | sheets | pdf
+  subject: text("subject"),             // for outbound email: subject line
+  direction: text("direction").notNull().default("inbound"), // inbound | outbound
   snippet: text("snippet").notNull(),
   fullBody: text("full_body").notNull(),
   aiDraft: text("ai_draft").notNull().default(""),

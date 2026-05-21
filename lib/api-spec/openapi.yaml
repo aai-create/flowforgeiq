@@ -856,6 +856,7 @@ components:
         - shipmentId
         - sender
         - channel
+        - direction
         - snippet
         - fullBody
         - aiDraft
@@ -868,7 +869,10 @@ components:
         shipmentId: { type: integer }
         supplierId: { type: ["integer", "null"] }
         sender:     { type: string }
+        recipient:  { type: ["string", "null"], description: "Outbound recipient — supplier email or name" }
         channel:    { type: string }
+        subject:    { type: ["string", "null"], description: "Subject line for outbound email messages" }
+        direction:  { type: string, enum: [inbound, outbound], default: inbound }
         snippet:    { type: string }
         fullBody:   { type: string }
         aiDraft:    { type: string }
@@ -885,7 +889,10 @@ components:
         shipmentId:        { type: integer }
         supplierId:        { type: ["integer", "null"] }
         sender:            { type: string }
+        recipient:         { type: string, description: "Outbound recipient — supplier email or name" }
         channel:           { type: string }
+        subject:           { type: string, description: "Subject line for outbound email messages" }
+        direction:         { type: string, enum: [inbound, outbound] }
         snippet:           { type: string }
         fullBody:          { type: string }
         aiDraft:           { type: string }
