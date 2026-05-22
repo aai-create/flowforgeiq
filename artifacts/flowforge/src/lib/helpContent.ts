@@ -82,6 +82,21 @@ export const HELP_SECTIONS: HelpSection[] = [
     keywords: ["payment", "deposit", "balance", "paid", "mark paid", "wire", "reference", "due date"],
   },
   {
+    id: "intermediary-financing",
+    title: "Intermediary Advance Financing",
+    summary:
+      "FlowForge supports a three-party financing model where an Intermediary fronts a portion of a payment to the Supplier so production can start immediately, then recovers that advance from the Buyer once delivery milestones are met.",
+    steps: [
+      { text: "The Buyer commits to a share of the payment — typically 40%. The Intermediary covers the remaining 60% directly to the Supplier so production is not held up waiting for the full amount." },
+      { text: "The Finance report\u2019s \u201cUnpaid by Supplier\u201d table shows an \u201cIntermediary Advance\u201d column whenever advance financing is in play, so you can see at a glance how much each supplier has already received from the Intermediary." },
+      { text: "The \u201cIntermediary Recovery\u201d panel at the bottom of the Finance report tracks three numbers: Total Advanced (how much the Intermediary has fronted across all shipments), Recovered (how much the Buyer has already repaid), and Outstanding (the remaining balance owed to the Intermediary)." },
+      { text: "Once the Buyer remits the outstanding amount to the Intermediary, mark the payment as paid in the usual way \u2014 the Recovery panel updates automatically." },
+      { text: "Payments without intermediary financing are unaffected: the advance column and recovery panel only appear when advance data is present for the selected date range." },
+    ],
+    screenshot: "intermediary-financing.png",
+    keywords: ["intermediary", "advance", "financing", "trade finance", "recovery", "buyer share", "fronted", "three-party"],
+  },
+  {
     id: "manage-suppliers",
     title: "Managing Suppliers",
     summary:

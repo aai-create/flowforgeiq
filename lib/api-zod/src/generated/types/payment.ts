@@ -18,4 +18,10 @@ export interface Payment {
   paidAt?: Date | null;
   referenceNumber?: string | null;
   method?: string | null;
+  /** Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment. */
+  buyerSharePct?: number | null;
+  /** USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer. */
+  intermediaryAdvanceUsd?: number | null;
+  /** USD amount the Intermediary has already recovered from the Buyer. */
+  intermediaryRecoveredUsd?: number | null;
 }

@@ -80,7 +80,10 @@
           "amountUsd": 2280,
           "paid": false,
           "dueDate": "2026-05-28",
-          "sortOrder": 0
+          "sortOrder": 0,
+          "buyerSharePct": 40,
+          "intermediaryAdvanceUsd": 1368,
+          "intermediaryRecoveredUsd": 0
         },
         {
           "label": "Balance (70%)",
@@ -113,7 +116,10 @@
           "amountUsd": 3090,
           "paid": false,
           "dueDate": "2026-05-25",
-          "sortOrder": 0
+          "sortOrder": 0,
+          "buyerSharePct": 40,
+          "intermediaryAdvanceUsd": 1854,
+          "intermediaryRecoveredUsd": 0
         },
         {
           "label": "Balance (70%)",
@@ -172,7 +178,10 @@
           "amountUsd": 3996,
           "paid": false,
           "dueDate": "2026-05-10",
-          "sortOrder": 0
+          "sortOrder": 0,
+          "buyerSharePct": 40,
+          "intermediaryAdvanceUsd": 2398,
+          "intermediaryRecoveredUsd": 1200
         },
         {
           "label": "Balance (70%)",
@@ -205,7 +214,10 @@
           "amountUsd": 4998,
           "paid": false,
           "dueDate": "2026-05-07",
-          "sortOrder": 0
+          "sortOrder": 0,
+          "buyerSharePct": 40,
+          "intermediaryAdvanceUsd": 2999,
+          "intermediaryRecoveredUsd": 999
         },
         {
           "label": "Balance (70%)",
@@ -469,7 +481,10 @@
           "amountUsd": 3507,
           "paid": false,
           "dueDate": "2026-05-28",
-          "sortOrder": 0
+          "sortOrder": 0,
+          "buyerSharePct": 40,
+          "intermediaryAdvanceUsd": 2104,
+          "intermediaryRecoveredUsd": 0
         },
         {
           "label": "Balance (70%)",

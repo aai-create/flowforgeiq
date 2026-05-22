@@ -30,7 +30,7 @@ interface SeedShipment {
   exFactoryDate: string;
   destination: string;
   via: string;
-  payments: { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; sortOrder: number }[];
+  payments: { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; sortOrder: number; buyerSharePct?: number; intermediaryAdvanceUsd?: number; intermediaryRecoveredUsd?: number }[];
   quotes?: { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean }[];
 }
 
@@ -165,6 +165,9 @@ async function main() {
       paid: p.paid,
       dueDate: new Date(p.dueDate),
       sortOrder: p.sortOrder,
+      buyerSharePct: p.buyerSharePct ?? null,
+      intermediaryAdvanceUsd: p.intermediaryAdvanceUsd ?? null,
+      intermediaryRecoveredUsd: p.intermediaryRecoveredUsd ?? null,
     })));
 
     // Quotes

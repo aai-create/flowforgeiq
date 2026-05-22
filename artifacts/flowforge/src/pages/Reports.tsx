@@ -141,6 +141,12 @@ function FinanceCardContent({
   const totalUnpaid  = allPayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
   const totalPaid    = allPayments.filter(p =>  p.paid).reduce((s, p) => s + p.amountUsd, 0);
 
+  // Intermediary totals across all (range-filtered) payments
+  const totalIntermediaryAdvance   = allPayments.reduce((s, p) => s + (p.intermediaryAdvanceUsd  ?? 0), 0);
+  const totalIntermediaryRecovered = allPayments.reduce((s, p) => s + (p.intermediaryRecoveredUsd ?? 0), 0);
+  const totalIntermediaryOutstanding = Math.max(0, totalIntermediaryAdvance - totalIntermediaryRecovered);
+  const hasIntermediaryData = totalIntermediaryAdvance > 0;
+
   // Bucket payments by due-date proximity
   const chartData = useMemo(() => {
     const buckets: Record<string, { paid: number; unpaid: number }> = {
@@ -164,16 +170,18 @@ function FinanceCardContent({
     return Object.entries(buckets).map(([name, v]) => ({ name, ...v }));
   }, [allPayments]);
 
-  // Unpaid ranked by supplier
+  // Unpaid ranked by supplier — includes intermediary advance breakdown
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { supplier: string; unpaid: number; overdue: number }>();
+    const map = new Map<string, { supplier: string; unpaid: number; overdue: number; intermediaryAdvance: number; intermediaryRecovered: number }>();
     for (const s of shipments) {
       for (const p of s.payments) {
         if (p.paid) continue;
         if (!inRange(p.dueDate, rangeStart, rangeEnd)) continue;
-        const e = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0 };
+        const e = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0, intermediaryAdvance: 0, intermediaryRecovered: 0 };
         e.unpaid += p.amountUsd;
         if (daysDiff(p.dueDate) < 0) e.overdue += p.amountUsd;
+        e.intermediaryAdvance   += (p.intermediaryAdvanceUsd  ?? 0);
+        e.intermediaryRecovered += (p.intermediaryRecoveredUsd ?? 0);
         map.set(s.supplierName, e);
       }
     }
@@ -236,6 +244,11 @@ function FinanceCardContent({
                   <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
                     <span title="Unpaid amount where the Buyer's due date has already passed">Overdue</span>
                   </th>
+                  {hasIntermediaryData && (
+                    <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
+                      <span title="Amount the Intermediary has already fronted to this Supplier on behalf of the Buyer">Intermediary Advance</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -259,6 +272,18 @@ function FinanceCardContent({
                         : <span className="text-[#9E9FAE]">—</span>
                       }
                     </td>
+                    {hasIntermediaryData && (
+                      <td className="py-2 text-right">
+                        {row.intermediaryAdvance > 0
+                          ? (
+                            <span className="text-amber-600 font-semibold" title={`${fmtUsd(row.intermediaryRecovered)} recovered so far`}>
+                              {fmtUsd(row.intermediaryAdvance)}
+                            </span>
+                          )
+                          : <span className="text-[#9E9FAE]">—</span>
+                        }
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -266,6 +291,28 @@ function FinanceCardContent({
           )
         }
       </div>
+
+      {/* Intermediary Recovery section — only shown when advance data exists */}
+      {hasIntermediaryData && (
+        <div className="border border-amber-100 bg-amber-50 rounded-lg p-3 space-y-2">
+          <div>
+            <div className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">Intermediary Recovery</div>
+            <div className="text-[10px] text-amber-600 mt-0.5">amount the Intermediary is owed by Buyer</div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Total Advanced",   value: fmtUsd(totalIntermediaryAdvance),     color: "text-amber-800", title: "Total amount the Intermediary has fronted to Suppliers across all payments" },
+              { label: "Recovered",        value: fmtUsd(totalIntermediaryRecovered),   color: "text-emerald-700", title: "Amount the Buyer has already repaid to the Intermediary" },
+              { label: "Outstanding",      value: fmtUsd(totalIntermediaryOutstanding), color: totalIntermediaryOutstanding > 0 ? "text-red-600" : "text-[#5E687B]", title: "Remaining advance the Buyer still owes the Intermediary" },
+            ].map(({ label, value, color, title }) => (
+              <div key={label} className="bg-white border border-amber-100 rounded p-2 text-center" title={title}>
+                <div className={`text-sm font-bold ${color}`}>{value}</div>
+                <div className="text-[10px] text-amber-700 mt-0.5">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

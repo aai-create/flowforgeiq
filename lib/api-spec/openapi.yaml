@@ -783,17 +783,20 @@ components:
       type: object
       required: [id, shipmentId, label, percent, amountUsd, paid, dueDate, sortOrder]
       properties:
-        id:              { type: integer }
-        shipmentId:      { type: integer }
-        label:           { type: string }
-        percent:         { type: integer }
-        amountUsd:       { type: integer }
-        paid:            { type: boolean }
-        dueDate:         { type: string, format: date-time }
-        sortOrder:       { type: integer }
-        paidAt:          { type: string, format: date-time, nullable: true }
-        referenceNumber: { type: string, nullable: true }
-        method:          { type: string, nullable: true }
+        id:                      { type: integer }
+        shipmentId:              { type: integer }
+        label:                   { type: string }
+        percent:                 { type: integer }
+        amountUsd:               { type: integer }
+        paid:                    { type: boolean }
+        dueDate:                 { type: string, format: date-time }
+        sortOrder:               { type: integer }
+        paidAt:                  { type: string, format: date-time, nullable: true }
+        referenceNumber:         { type: string, nullable: true }
+        method:                  { type: string, nullable: true }
+        buyerSharePct:           { type: integer, nullable: true, description: "Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment." }
+        intermediaryAdvanceUsd:  { type: integer, nullable: true, description: "USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer." }
+        intermediaryRecoveredUsd: { type: integer, nullable: true, description: "USD amount the Intermediary has already recovered from the Buyer." }
     PaymentUpdate:
       type: object
       properties:

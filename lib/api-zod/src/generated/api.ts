@@ -231,7 +231,10 @@ export const ListShipmentsResponseItem = zod.object({
   "sortOrder": zod.number(),
   "paidAt": zod.coerce.date().nullish(),
   "referenceNumber": zod.string().nullish(),
-  "method": zod.string().nullish()
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.')
 })),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
@@ -302,7 +305,10 @@ export const UpdateShipmentResponse = zod.object({
   "sortOrder": zod.number(),
   "paidAt": zod.coerce.date().nullish(),
   "referenceNumber": zod.string().nullish(),
-  "method": zod.string().nullish()
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.')
 })),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
@@ -343,7 +349,10 @@ export const UpdatePaymentResponse = zod.object({
   "sortOrder": zod.number(),
   "paidAt": zod.coerce.date().nullish(),
   "referenceNumber": zod.string().nullish(),
-  "method": zod.string().nullish()
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.')
 })
 
 
