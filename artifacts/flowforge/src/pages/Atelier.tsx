@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig } from "@workspace/api-client-react";
 import type { FactoryQuote } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -283,6 +283,8 @@ export function Atelier() {
   };
 
   const [showNewPO, setShowNewPO] = useState(false);
+  const [buyerPoMode, setBuyerPoMode] = useState<"auto" | "provided">("auto");
+  const { data: poConfig } = useGetPoNumberingConfig();
   const [newPOForm, setNewPOForm] = useState({
     poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
@@ -316,6 +318,7 @@ export function Atelier() {
     setSupplierQuery("");
     setSupplierOpen(false);
     setMilestones(defaultMilestones);
+    setBuyerPoMode("auto");
     setNewPOForm({ poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "" });
   };
 
@@ -1115,38 +1118,79 @@ export function Atelier() {
           <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers</span>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(`${import.meta.env.BASE_URL}api/settings/po-numbering/next`);
-                    const data = await res.json() as { buyerPo: string; supplierPo: string };
-                    setNewPOForm(p => ({ ...p, buyerPoNumber: data.buyerPo, poNumber: data.supplierPo }));
-                    setPoNumberError(null);
-                  } catch {}
-                }}
-                className="text-[10px] font-semibold text-[#9000FF] border border-[#9000FF]/30 px-2 py-1 rounded-md hover:bg-[#9000FF]/5 transition-colors">
-                Auto-fill from settings
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                  Buyer PO <span className="text-[#9E9FAE] font-normal">(buyer → trader)</span>
-                </label>
-                <input value={newPOForm.buyerPoNumber} onChange={e => setNewPOForm(p => ({ ...p, buyerPoNumber: e.target.value }))}
-                  placeholder="e.g. PO-0001"
-                  className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors font-mono"/>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                  Supplier PO <span className="text-red-500">*</span> <span className="text-[#9E9FAE] font-normal">(trader → supplier)</span>
-                </label>
-                <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
-                  placeholder="e.g. PO-0001S"
-                  className={`w-full border rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 transition-colors font-mono ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
+              {/* Mode toggle */}
+              <div className="flex items-center border border-[#E5EAF0] rounded-md overflow-hidden text-[10px] font-semibold">
+                <button type="button"
+                  onClick={() => setBuyerPoMode("auto")}
+                  className={`px-2.5 py-1 transition-colors ${buyerPoMode === "auto" ? "bg-[#9000FF] text-white" : "bg-white text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
+                  Auto-generate
+                </button>
+                <button type="button"
+                  onClick={() => setBuyerPoMode("provided")}
+                  className={`px-2.5 py-1 border-l border-[#E5EAF0] transition-colors ${buyerPoMode === "provided" ? "bg-[#9000FF] text-white" : "bg-white text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
+                  Buyer provided
+                </button>
               </div>
             </div>
+
+            {buyerPoMode === "auto" ? (
+              <div className="space-y-2">
+                <p className="text-[10px] text-[#9E9FAE]">
+                  Click to auto-generate the next buyer + supplier PO pair from your numbering scheme. The counter advances on each use.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${import.meta.env.BASE_URL}api/settings/po-numbering/next`, { method: "POST" });
+                      const data = await res.json() as { buyerPo: string; supplierPo: string };
+                      setNewPOForm(p => ({ ...p, buyerPoNumber: data.buyerPo, poNumber: data.supplierPo }));
+                      setPoNumberError(null);
+                    } catch {}
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-[11px] font-semibold text-[#9000FF] border border-[#9000FF]/30 px-3 py-2 rounded-md hover:bg-[#9000FF]/5 transition-colors">
+                  ✦ Auto-fill next PO pair
+                  {newPOForm.buyerPoNumber && (
+                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      {newPOForm.buyerPoNumber} / {newPOForm.poNumber}
+                    </span>
+                  )}
+                </button>
+                {!newPOForm.buyerPoNumber && (
+                  <p className="text-[10px] text-amber-600 text-center">Click above to generate PO numbers before submitting.</p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                    Buyer PO <span className="text-[#9E9FAE] font-normal">(buyer → trader)</span>
+                  </label>
+                  <input
+                    value={newPOForm.buyerPoNumber}
+                    onChange={e => {
+                      const bpo = e.target.value;
+                      const suffix = poConfig?.supplierSuffix ?? "S";
+                      setNewPOForm(p => ({
+                        ...p,
+                        buyerPoNumber: bpo,
+                        poNumber: bpo.trim() ? bpo.trim() + suffix : p.poNumber,
+                      }));
+                    }}
+                    placeholder="e.g. PO-0001"
+                    className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors font-mono"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                    Supplier PO <span className="text-red-500">*</span>
+                    <span className="text-[#9E9FAE] font-normal ml-1">(auto-derived, override ↓)</span>
+                  </label>
+                  <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
+                    placeholder={newPOForm.buyerPoNumber ? newPOForm.buyerPoNumber + (poConfig?.supplierSuffix ?? "S") : "e.g. PO-0001S"}
+                    className={`w-full border rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 transition-colors font-mono ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
+                </div>
+              </div>
+            )}
             {poNumberError && (
               <p className="text-[11px] text-red-600">{poNumberError}</p>
             )}

@@ -55,5 +55,15 @@ router.get("/settings/po-numbering/next", async (req, res) => {
   res.json(makePreview(cfg));
 });
 
+router.post("/settings/po-numbering/next", async (req, res) => {
+  const cfg = await getConfig();
+  const preview = makePreview(cfg);
+  await db
+    .update(poNumberingConfigTable)
+    .set({ nextSeq: cfg.nextSeq + 1, updatedAt: new Date() })
+    .where(eq(poNumberingConfigTable.id, cfg.id));
+  res.json(preview);
+});
+
 export { buildPoNumber, getConfig };
 export default router;

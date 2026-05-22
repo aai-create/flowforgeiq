@@ -758,7 +758,17 @@ paths:
       summary: Preview the next buyer and supplier PO number pair without consuming the sequence
       responses:
         "200":
-          description: Next PO number pair
+          description: Next PO number pair (preview only, counter not advanced)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NextPoNumbers" }
+    post:
+      operationId: consumeNextPoNumbers
+      tags: [settings]
+      summary: Atomically consume the next PO number pair and advance the sequence counter
+      responses:
+        "200":
+          description: Consumed PO number pair (counter has been advanced)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/NextPoNumbers" }
@@ -960,8 +970,12 @@ components:
         - quotes
       properties:
         id:             { type: integer }
-        poNumber:       { type: string, description: "Supplier-facing PO number (trader→supplier)" }
-        buyerPoNumber:  { type: ["string", "null"], description: "Buyer-facing PO number (buyer→trader). Null if no deal is linked." }
+        poNumber:        { type: string, description: "Supplier-facing PO number (trader→supplier)" }
+        buyerPoNumber:   { type: ["string", "null"], description: "Primary buyer-facing PO number (buyer→trader). Null if no deal is linked." }
+        buyerPoNumbers:
+          type: array
+          items: { type: string }
+          description: "All buyer-facing PO numbers linked to this shipment via the deal_shipments join table."
         product:        { type: string }
         category:       { type: string }
         supplierId:     { type: integer }

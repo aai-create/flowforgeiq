@@ -13,10 +13,12 @@ export interface Shipment {
   /** Supplier-facing PO number (trader→supplier) */
   poNumber: string;
   /**
-     * Buyer-facing PO number (buyer→trader). Null if no deal is linked.
+     * Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.
      * @nullable
      */
   buyerPoNumber?: string | null;
+  /** All buyer-facing PO numbers linked to this shipment via the deal_shipments join table. */
+  buyerPoNumbers?: string[];
   product: string;
   category: string;
   supplierId: number;

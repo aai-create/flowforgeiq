@@ -207,7 +207,8 @@ export const UpdateDealResponse = zod.object({
 export const ListShipmentsResponseItem = zod.object({
   "id": zod.number(),
   "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
-  "buyerPoNumber": zod.string().nullish().describe('Buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumber": zod.string().nullish().describe('Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumbers": zod.array(zod.string()).optional().describe('All buyer-facing PO numbers linked to this shipment via the deal_shipments join table.'),
   "product": zod.string(),
   "category": zod.string(),
   "supplierId": zod.number(),
@@ -292,7 +293,8 @@ export const UpdateShipmentBody = zod.object({
 export const UpdateShipmentResponse = zod.object({
   "id": zod.number(),
   "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
-  "buyerPoNumber": zod.string().nullish().describe('Buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumber": zod.string().nullish().describe('Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumbers": zod.array(zod.string()).optional().describe('All buyer-facing PO numbers linked to this shipment via the deal_shipments join table.'),
   "product": zod.string(),
   "category": zod.string(),
   "supplierId": zod.number(),
@@ -1142,6 +1144,15 @@ export const UpdatePoNumberingConfigResponse = zod.object({
  * @summary Preview the next buyer and supplier PO number pair without consuming the sequence
  */
 export const GetNextPoNumbersResponse = zod.object({
+  "buyerPo": zod.string().describe('Next buyer-facing PO number (buyer→trader)'),
+  "supplierPo": zod.string().describe('Next supplier-facing PO number (trader→supplier)')
+})
+
+
+/**
+ * @summary Atomically consume the next PO number pair and advance the sequence counter
+ */
+export const ConsumeNextPoNumbersResponse = zod.object({
   "buyerPo": zod.string().describe('Next buyer-facing PO number (buyer→trader)'),
   "supplierPo": zod.string().describe('Next supplier-facing PO number (trader→supplier)')
 })

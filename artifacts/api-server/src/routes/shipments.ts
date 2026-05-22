@@ -41,9 +41,15 @@ async function loadShipment(id: number) {
     .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
     .where(eq(shipmentsTable.id, id));
   if (!row) return null;
+  const linkedDeals = await db
+    .select({ buyerPoNumber: dealsTable.buyerPoNumber })
+    .from(dealShipmentsTable)
+    .innerJoin(dealsTable, eq(dealShipmentsTable.dealId, dealsTable.id))
+    .where(eq(dealShipmentsTable.shipmentId, id));
+  const buyerPoNumbers = linkedDeals.map(d => d.buyerPoNumber);
   const payments = await db.select().from(paymentsTable).where(eq(paymentsTable.shipmentId, id)).orderBy(asc(paymentsTable.sortOrder));
   const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, id)).orderBy(asc(factoryQuotesTable.sortOrder));
-  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, payments, quotes };
+  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerPoNumbers, payments, quotes };
 }
 
 router.get("/shipments", async (_req, res) => {
@@ -57,13 +63,31 @@ router.get("/shipments", async (_req, res) => {
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
     .orderBy(asc(shipmentsTable.id));
-  const allPayments = shipments.length ? await db.select().from(paymentsTable).orderBy(asc(paymentsTable.sortOrder)) : [];
-  const allQuotes = shipments.length ? await db.select().from(factoryQuotesTable).orderBy(asc(factoryQuotesTable.sortOrder)) : [];
+  const [allPayments, allQuotes, allDealShipments] = await Promise.all([
+    shipments.length
+      ? db.select().from(paymentsTable).orderBy(asc(paymentsTable.sortOrder))
+      : Promise.resolve([] as (typeof paymentsTable.$inferSelect)[]),
+    shipments.length
+      ? db.select().from(factoryQuotesTable).orderBy(asc(factoryQuotesTable.sortOrder))
+      : Promise.resolve([] as (typeof factoryQuotesTable.$inferSelect)[]),
+    shipments.length
+      ? db
+          .select({ shipmentId: dealShipmentsTable.shipmentId, buyerPoNumber: dealsTable.buyerPoNumber })
+          .from(dealShipmentsTable)
+          .innerJoin(dealsTable, eq(dealShipmentsTable.dealId, dealsTable.id))
+      : Promise.resolve([] as { shipmentId: number; buyerPoNumber: string }[]),
+  ]);
+  const buyerPoByShipment: Record<number, string[]> = {};
+  for (const { shipmentId, buyerPoNumber } of allDealShipments) {
+    if (!buyerPoByShipment[shipmentId]) buyerPoByShipment[shipmentId] = [];
+    buyerPoByShipment[shipmentId].push(buyerPoNumber);
+  }
   const out = shipments.map(({ shipment, supplierName, buyerPoNumber }) =>
     ListShipmentsResponseItem.parse({
       ...shipment,
       supplierName,
       buyerPoNumber: buyerPoNumber ?? null,
+      buyerPoNumbers: buyerPoByShipment[shipment.id] ?? [],
       payments: allPayments.filter(p => p.shipmentId === shipment.id),
       quotes: allQuotes.filter(q => q.shipmentId === shipment.id),
     }),

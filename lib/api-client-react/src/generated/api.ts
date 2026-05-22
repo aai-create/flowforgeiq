@@ -3230,3 +3230,73 @@ export function useGetNextPoNumbers<TData = Awaited<ReturnType<typeof getNextPoN
 
 
 
+export const getConsumeNextPoNumbersUrl = () => {
+
+
+
+
+  return `/api/settings/po-numbering/next`
+}
+
+/**
+ * @summary Atomically consume the next PO number pair and advance the sequence counter
+ */
+export const consumeNextPoNumbers = async ( options?: RequestInit): Promise<NextPoNumbers> => {
+
+  return customFetch<NextPoNumbers>(getConsumeNextPoNumbersUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getConsumeNextPoNumbersMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consumeNextPoNumbers>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof consumeNextPoNumbers>>, TError,void, TContext> => {
+
+const mutationKey = ['consumeNextPoNumbers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof consumeNextPoNumbers>>, void> = () => {
+
+
+          return  consumeNextPoNumbers(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConsumeNextPoNumbersMutationResult = NonNullable<Awaited<ReturnType<typeof consumeNextPoNumbers>>>
+
+    export type ConsumeNextPoNumbersMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Atomically consume the next PO number pair and advance the sequence counter
+ */
+export const useConsumeNextPoNumbers = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consumeNextPoNumbers>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof consumeNextPoNumbers>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getConsumeNextPoNumbersMutationOptions(options));
+    }
+
