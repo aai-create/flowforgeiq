@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey } from "@workspace/api-client-react";
 import type { FactoryQuote } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -286,8 +287,14 @@ export function Atelier() {
   const [buyerPoMode, setBuyerPoMode] = useState<"auto" | "provided">("auto");
   const { data: poConfig } = useGetPoNumberingConfig();
   const { data: existingDeals } = useListDeals();
-  const { mutate: linkDeal } = useLinkDealToShipment();
-  const { mutate: unlinkDeal } = useUnlinkDealFromShipment();
+  const queryClient = useQueryClient();
+  const shipmentsQueryKey = getListShipmentsQueryKey();
+  const { mutate: linkDeal } = useLinkDealToShipment({
+    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: shipmentsQueryKey }); } },
+  });
+  const { mutate: unlinkDeal } = useUnlinkDealFromShipment({
+    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: shipmentsQueryKey }); } },
+  });
   const [linkPanelShipmentId, setLinkPanelShipmentId] = useState<number | null>(null);
   const [newPOForm, setNewPOForm] = useState({
     poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
@@ -332,6 +339,9 @@ export function Atelier() {
     setMilestonesError(null);
     const resolvedSupplierId = newPOForm.supplierId;
 
+    if (!newPOForm.buyerPoNumber.trim()) {
+      setNewPOError("A buyer PO number is required. Generate one or enter a buyer-provided PO."); return;
+    }
     if (!newPOForm.poNumber.trim() || !newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate || !newPOForm.destination.trim()) {
       setNewPOError("Please fill in all required fields."); return;
     }

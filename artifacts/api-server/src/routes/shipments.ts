@@ -306,7 +306,16 @@ router.post("/shipments/:id/deals", async (req, res) => {
   if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
   const [deal] = await db.select({ id: dealsTable.id }).from(dealsTable).where(eq(dealsTable.id, dealId));
   if (!deal) { res.status(404).json({ error: "Deal not found" }); return; }
-  await db.insert(dealShipmentsTable).values({ dealId, shipmentId }).catch(() => {});
+  try {
+    await db.insert(dealShipmentsTable).values({ dealId, shipmentId });
+  } catch (err: unknown) {
+    const code = (err as Record<string, unknown>)?.["code"];
+    if (code === "23505") {
+      res.status(409).json({ error: "This deal is already linked to this shipment" });
+      return;
+    }
+    throw err;
+  }
   const updated = await loadShipment(shipmentId);
   res.status(201).json(updated);
 });

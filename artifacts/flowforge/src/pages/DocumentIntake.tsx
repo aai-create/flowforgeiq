@@ -412,7 +412,8 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
                 {shipments.map(s => {
                   const extractedPo = ((localFields["poNumber"] ?? fields["poNumber"] ?? "") as string).trim().toLowerCase();
                   const matchesSupplier = Boolean(extractedPo && extractedPo === s.po.trim().toLowerCase());
-                  const matchesBuyer = Boolean(extractedPo && s.buyerPoNumbers.some(bp => bp.trim().toLowerCase() === extractedPo));
+                  const allBuyerPos = s.buyerPoNumbers.length > 0 ? s.buyerPoNumbers : (s.buyerPoNumber ? [s.buyerPoNumber] : []);
+                  const matchesBuyer = Boolean(extractedPo && allBuyerPos.some(bp => bp.trim().toLowerCase() === extractedPo));
                   return (
                     <button key={s.id} onClick={() => handleLink(s.id)}
                       className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-[#F0F4F8] border-b border-[#F0F4F8] last:border-b-0">
