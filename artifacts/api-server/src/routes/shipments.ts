@@ -6,6 +6,9 @@ import {
   paymentsTable,
   factoryQuotesTable,
   stageEventsTable,
+  dealsTable,
+  poNumberingConfigTable,
+  dealShipmentsTable,
 } from "@workspace/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
@@ -28,28 +31,39 @@ const router: IRouter = Router();
 
 async function loadShipment(id: number) {
   const [row] = await db
-    .select({ shipment: shipmentsTable, supplierName: suppliersTable.name })
+    .select({
+      shipment: shipmentsTable,
+      supplierName: suppliersTable.name,
+      buyerPoNumber: dealsTable.buyerPoNumber,
+    })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+    .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
     .where(eq(shipmentsTable.id, id));
   if (!row) return null;
   const payments = await db.select().from(paymentsTable).where(eq(paymentsTable.shipmentId, id)).orderBy(asc(paymentsTable.sortOrder));
   const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, id)).orderBy(asc(factoryQuotesTable.sortOrder));
-  return { ...row.shipment, supplierName: row.supplierName, payments, quotes };
+  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, payments, quotes };
 }
 
 router.get("/shipments", async (_req, res) => {
   const shipments = await db
-    .select({ shipment: shipmentsTable, supplierName: suppliersTable.name })
+    .select({
+      shipment: shipmentsTable,
+      supplierName: suppliersTable.name,
+      buyerPoNumber: dealsTable.buyerPoNumber,
+    })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+    .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
     .orderBy(asc(shipmentsTable.id));
   const allPayments = shipments.length ? await db.select().from(paymentsTable).orderBy(asc(paymentsTable.sortOrder)) : [];
   const allQuotes = shipments.length ? await db.select().from(factoryQuotesTable).orderBy(asc(factoryQuotesTable.sortOrder)) : [];
-  const out = shipments.map(({ shipment, supplierName }) =>
+  const out = shipments.map(({ shipment, supplierName, buyerPoNumber }) =>
     ListShipmentsResponseItem.parse({
       ...shipment,
       supplierName,
+      buyerPoNumber: buyerPoNumber ?? null,
       payments: allPayments.filter(p => p.shipmentId === shipment.id),
       quotes: allQuotes.filter(q => q.shipmentId === shipment.id),
     }),
@@ -57,9 +71,30 @@ router.get("/shipments", async (_req, res) => {
   res.json(out);
 });
 
+async function getOrCreateDeal(buyerPoNumber: string, customerName: string): Promise<number> {
+  const [existing] = await db.select({ id: dealsTable.id }).from(dealsTable).where(eq(dealsTable.buyerPoNumber, buyerPoNumber));
+  if (existing) return existing.id;
+  const [created] = await db.insert(dealsTable).values({
+    buyerPoNumber,
+    customerName,
+    buyerTotalUsd: 0,
+    buyerUnitPrice: 0,
+    buyerQuantity: 0,
+    currency: "USD",
+  }).returning({ id: dealsTable.id });
+  return created!.id;
+}
+
+async function consumeNextSeq(): Promise<number> {
+  const [cfg] = await db.select().from(poNumberingConfigTable).limit(1);
+  if (!cfg) return 1;
+  await db.update(poNumberingConfigTable).set({ nextSeq: cfg.nextSeq + 1 }).where(eq(poNumberingConfigTable.id, cfg.id));
+  return cfg.nextSeq;
+}
+
 router.post("/shipments", async (req, res) => {
   const parsed = CreateShipmentBody.parse(req.body);
-  const { payments: paymentMilestones, ...shipmentFields } = parsed;
+  const { payments: paymentMilestones, buyerPoNumber, ...shipmentFields } = parsed as typeof parsed & { buyerPoNumber?: string };
   const input = {
     ...shipmentFields,
     status: shipmentFields.status ?? "on-track",
@@ -86,6 +121,18 @@ router.post("/shipments", async (req, res) => {
     }
     throw err;
   }
+
+  if (buyerPoNumber && buyerPoNumber.trim()) {
+    try {
+      const dealId = await getOrCreateDeal(buyerPoNumber.trim(), shipmentFields.customerName);
+      await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, row.id));
+      row = { ...row, dealId };
+      await db.insert(dealShipmentsTable).values({ dealId, shipmentId: row.id }).catch(() => {});
+    } catch {
+      req.log.warn("Failed to link buyerPoNumber to deal — continuing without deal link");
+    }
+  }
+
   if (paymentMilestones && paymentMilestones.length > 0) {
     const qty = row.quantity ?? null;
     const unitCost = row.unitCostUsd ?? null;
@@ -223,4 +270,5 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
   res.status(201).json(ListShipmentStageEventsResponseItem.parse(event));
 });
 
+export { consumeNextSeq };
 export default router;

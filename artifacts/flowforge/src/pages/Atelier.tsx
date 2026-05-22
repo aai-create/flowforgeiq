@@ -284,7 +284,7 @@ export function Atelier() {
 
   const [showNewPO, setShowNewPO] = useState(false);
   const [newPOForm, setNewPOForm] = useState({
-    poNumber: "", product: "", category: "", customerName: "",
+    poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
     destination: "", via: "OCEAN", notes: "",
     quantity: "", unitCostUsd: "",
@@ -316,7 +316,7 @@ export function Atelier() {
     setSupplierQuery("");
     setSupplierOpen(false);
     setMilestones(defaultMilestones);
-    setNewPOForm({ poNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "" });
+    setNewPOForm({ poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "" });
   };
 
   const submitNewPO = async () => {
@@ -339,6 +339,7 @@ export function Atelier() {
       const created = await createShipmentMutation.mutateAsync({
         data: {
           poNumber: newPOForm.poNumber.trim(),
+          buyerPoNumber: newPOForm.buyerPoNumber.trim() || undefined,
           product: newPOForm.product.trim(),
           category: newPOForm.category.trim(),
           customerName: newPOForm.customerName.trim(),
@@ -574,10 +575,19 @@ export function Atelier() {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
-                          <div className="flex items-center gap-2 mb-0.5">
+                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                            <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier</span>
                             <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0]"}`}>
                               {shipment.po}
                             </span>
+                            {shipment.buyerPoNumber && (
+                              <>
+                                <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer</span>
+                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                  {shipment.buyerPoNumber}
+                                </span>
+                              </>
+                            )}
                             <span className="text-[10px] bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] px-1.5 py-0.5 rounded font-medium">
                               {shipment.customer}
                             </span>
@@ -1101,14 +1111,44 @@ export function Atelier() {
             )}
           </div>
 
-          {/* PO Number */}
-          <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">PO Number <span className="text-red-500">*</span></label>
-            <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
-              placeholder="e.g. PO-2026-0199"
-              className={`w-full border rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 transition-colors ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
+          {/* Buyer PO + Supplier PO pair */}
+          <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${import.meta.env.BASE_URL}api/settings/po-numbering/next`);
+                    const data = await res.json() as { buyerPo: string; supplierPo: string };
+                    setNewPOForm(p => ({ ...p, buyerPoNumber: data.buyerPo, poNumber: data.supplierPo }));
+                    setPoNumberError(null);
+                  } catch {}
+                }}
+                className="text-[10px] font-semibold text-[#9000FF] border border-[#9000FF]/30 px-2 py-1 rounded-md hover:bg-[#9000FF]/5 transition-colors">
+                Auto-fill from settings
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                  Buyer PO <span className="text-[#9E9FAE] font-normal">(buyer → trader)</span>
+                </label>
+                <input value={newPOForm.buyerPoNumber} onChange={e => setNewPOForm(p => ({ ...p, buyerPoNumber: e.target.value }))}
+                  placeholder="e.g. PO-0001"
+                  className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors font-mono"/>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                  Supplier PO <span className="text-red-500">*</span> <span className="text-[#9E9FAE] font-normal">(trader → supplier)</span>
+                </label>
+                <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
+                  placeholder="e.g. PO-0001S"
+                  className={`w-full border rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 transition-colors font-mono ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
+              </div>
+            </div>
             {poNumberError && (
-              <p className="text-[11px] text-red-600 mt-1">{poNumberError}</p>
+              <p className="text-[11px] text-red-600">{poNumberError}</p>
             )}
           </div>
 

@@ -44,8 +44,11 @@ import type {
   Message,
   MessageInput,
   MessageUpdate,
+  NextPoNumbers,
   Payment,
   PaymentUpdate,
+  PoNumberingConfig,
+  PoNumberingConfigUpdate,
   PredictionAccuracyReport,
   QuoteSelection,
   RiskRadarResponse,
@@ -3001,4 +3004,229 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getSaveExtractionCorrectionMutationOptions(options));
     }
+
+export const getGetPoNumberingConfigUrl = () => {
+
+
+
+
+  return `/api/settings/po-numbering`
+}
+
+/**
+ * @summary Get PO numbering configuration and preview next pair
+ */
+export const getPoNumberingConfig = async ( options?: RequestInit): Promise<PoNumberingConfig> => {
+
+  return customFetch<PoNumberingConfig>(getGetPoNumberingConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPoNumberingConfigQueryKey = () => {
+    return [
+    `/api/settings/po-numbering`
+    ] as const;
+    }
+
+
+export const getGetPoNumberingConfigQueryOptions = <TData = Awaited<ReturnType<typeof getPoNumberingConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPoNumberingConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPoNumberingConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPoNumberingConfig>>> = ({ signal }) => getPoNumberingConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPoNumberingConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPoNumberingConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getPoNumberingConfig>>>
+export type GetPoNumberingConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get PO numbering configuration and preview next pair
+ */
+
+export function useGetPoNumberingConfig<TData = Awaited<ReturnType<typeof getPoNumberingConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPoNumberingConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPoNumberingConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdatePoNumberingConfigUrl = () => {
+
+
+
+
+  return `/api/settings/po-numbering`
+}
+
+/**
+ * @summary Update PO numbering configuration
+ */
+export const updatePoNumberingConfig = async (poNumberingConfigUpdate: PoNumberingConfigUpdate, options?: RequestInit): Promise<PoNumberingConfig> => {
+
+  return customFetch<PoNumberingConfig>(getUpdatePoNumberingConfigUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      poNumberingConfigUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdatePoNumberingConfigMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePoNumberingConfig>>, TError,{data: BodyType<PoNumberingConfigUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePoNumberingConfig>>, TError,{data: BodyType<PoNumberingConfigUpdate>}, TContext> => {
+
+const mutationKey = ['updatePoNumberingConfig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePoNumberingConfig>>, {data: BodyType<PoNumberingConfigUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePoNumberingConfig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePoNumberingConfigMutationResult = NonNullable<Awaited<ReturnType<typeof updatePoNumberingConfig>>>
+    export type UpdatePoNumberingConfigMutationBody = BodyType<PoNumberingConfigUpdate>
+    export type UpdatePoNumberingConfigMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update PO numbering configuration
+ */
+export const useUpdatePoNumberingConfig = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePoNumberingConfig>>, TError,{data: BodyType<PoNumberingConfigUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePoNumberingConfig>>,
+        TError,
+        {data: BodyType<PoNumberingConfigUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePoNumberingConfigMutationOptions(options));
+    }
+
+export const getGetNextPoNumbersUrl = () => {
+
+
+
+
+  return `/api/settings/po-numbering/next`
+}
+
+/**
+ * @summary Preview the next buyer and supplier PO number pair without consuming the sequence
+ */
+export const getNextPoNumbers = async ( options?: RequestInit): Promise<NextPoNumbers> => {
+
+  return customFetch<NextPoNumbers>(getGetNextPoNumbersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNextPoNumbersQueryKey = () => {
+    return [
+    `/api/settings/po-numbering/next`
+    ] as const;
+    }
+
+
+export const getGetNextPoNumbersQueryOptions = <TData = Awaited<ReturnType<typeof getNextPoNumbers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextPoNumbers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNextPoNumbersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNextPoNumbers>>> = ({ signal }) => getNextPoNumbers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNextPoNumbers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNextPoNumbersQueryResult = NonNullable<Awaited<ReturnType<typeof getNextPoNumbers>>>
+export type GetNextPoNumbersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Preview the next buyer and supplier PO number pair without consuming the sequence
+ */
+
+export function useGetNextPoNumbers<TData = Awaited<ReturnType<typeof getNextPoNumbers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextPoNumbers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNextPoNumbersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

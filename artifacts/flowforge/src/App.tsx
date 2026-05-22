@@ -10,6 +10,7 @@ import { RiskRadar } from "@/pages/RiskRadar";
 import { Reports } from "@/pages/Reports";
 import { Suppliers } from "@/pages/Suppliers";
 import { Help } from "@/pages/Help";
+import { Settings } from "@/pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/reports" component={ReportsPage} />
       <Route path="/suppliers" component={Suppliers} />
       <Route path="/help" component={Help} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

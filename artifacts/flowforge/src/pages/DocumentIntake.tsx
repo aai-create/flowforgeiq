@@ -310,7 +310,7 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
 
 interface DocumentDetailProps {
   doc: DocumentWithExtraction;
-  shipments: { id: number; po: string; supplier: string }[];
+  shipments: { id: number; po: string; supplier: string; buyerPoNumber: string | null }[];
   onBack: () => void;
   onLinked: (docId: number, shipmentId: number | null) => void;
 }
@@ -389,26 +389,53 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
             {linkedShipment ? (
               <div className="flex items-center gap-2">
                 <Package size={13} className="text-[#9000FF] shrink-0" />
-                <div>
-                  <p className="text-[11px] font-semibold text-[#212833]">{linkedShipment.po}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                    <span className="text-[11px] font-semibold text-[#212833] font-mono">{linkedShipment.po}</span>
+                    {linkedShipment.buyerPoNumber && (
+                      <>
+                        <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer PO</span>
+                        <span className="text-[11px] font-semibold text-emerald-700 font-mono">{linkedShipment.buyerPoNumber}</span>
+                      </>
+                    )}
+                  </div>
                   <p className="text-[10px] text-[#5E687B]">{linkedShipment.supplier}</p>
                 </div>
-                <button onClick={() => handleLink(null)} className="ml-auto p-0.5 text-[#C0C8D4] hover:text-red-500"><X size={11} /></button>
+                <button onClick={() => handleLink(null)} className="p-0.5 text-[#C0C8D4] hover:text-red-500"><X size={11} /></button>
               </div>
             ) : (
               <p className="text-[11px] text-[#C0C8D4] italic">No shipment linked</p>
             )}
             {linkOpen && (
               <div className="mt-2 border border-[#E5EAF0] rounded-lg overflow-hidden shadow-sm max-h-[180px] overflow-y-auto">
-                {shipments.map(s => (
-                  <button key={s.id} onClick={() => handleLink(s.id)}
-                    className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-[#F0F4F8] border-b border-[#F0F4F8] last:border-b-0">
-                    <Package size={11} className="text-[#9000FF] shrink-0" />
-                    <span className="text-[11px] font-semibold text-[#212833]">{s.po}</span>
-                    <span className="text-[10px] text-[#5E687B] truncate">{s.supplier}</span>
-                    {s.id === doc.shipmentId && <Check size={11} className="text-emerald-500 ml-auto" />}
-                  </button>
-                ))}
+                {shipments.map(s => {
+                  const extractedPo = (localFields["poNumber"] ?? fields["poNumber"] ?? "") as string;
+                  const matchesBuyer = extractedPo && s.buyerPoNumber && extractedPo.trim().toLowerCase() === s.buyerPoNumber.trim().toLowerCase();
+                  const matchesSupplier = extractedPo && extractedPo.trim().toLowerCase() === s.po.trim().toLowerCase();
+                  return (
+                    <button key={s.id} onClick={() => handleLink(s.id)}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-[#F0F4F8] border-b border-[#F0F4F8] last:border-b-0">
+                      <Package size={11} className="text-[#9000FF] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[11px] font-semibold text-[#212833] font-mono">{s.po}</span>
+                          {s.buyerPoNumber && (
+                            <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded">{s.buyerPoNumber}</span>
+                          )}
+                          {matchesSupplier && (
+                            <span className="text-[8px] font-bold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-1 py-0.5 rounded uppercase tracking-wider">Supplier PO match</span>
+                          )}
+                          {matchesBuyer && (
+                            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded uppercase tracking-wider">Buyer PO match</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[#5E687B] truncate block">{s.supplier}</span>
+                      </div>
+                      {s.id === doc.shipmentId && <Check size={11} className="text-emerald-500 shrink-0" />}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -637,6 +664,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
     id: s.id,
     po: s.poNumber ?? `#${s.id}`,
     supplier: s.supplierName ?? "",
+    buyerPoNumber: s.buyerPoNumber ?? null,
   }));
 
   useEffect(() => {

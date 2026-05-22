@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation } from "wouter";
-import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen } from "lucide-react";
+import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2 } from "lucide-react";
 
 interface NavSidebarProps {
   showBrand?: boolean;
@@ -33,6 +33,7 @@ export function NavSidebar({
     { icon: BarChart3,   label: "Reports",     to: "/reports",     count: null              },
     { icon: Building2,   label: "Suppliers",   to: "/suppliers",   count: null              },
     { icon: BookOpen,    label: "Help",        to: "/help",        count: null              },
+    { icon: Settings2,   label: "Settings",    to: "/settings",    count: null              },
   ];
 
   function isActive(label: string, to: string) {

@@ -8,7 +8,10 @@
 import type { PaymentMilestoneInput } from './paymentMilestoneInput';
 
 export interface ShipmentCreate {
+  /** Supplier-facing PO number (trader→supplier) */
   poNumber: string;
+  /** Buyer-facing PO number (buyer→trader). Creates or links a deal. */
+  buyerPoNumber?: string;
   product: string;
   category: string;
   supplierId: number;

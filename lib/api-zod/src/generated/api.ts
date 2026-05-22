@@ -206,7 +206,8 @@ export const UpdateDealResponse = zod.object({
 
 export const ListShipmentsResponseItem = zod.object({
   "id": zod.number(),
-  "poNumber": zod.string(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().nullish().describe('Buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
   "product": zod.string(),
   "category": zod.string(),
   "supplierId": zod.number(),
@@ -256,7 +257,8 @@ export const ListShipmentsResponse = zod.array(ListShipmentsResponseItem)
 
 
 export const CreateShipmentBody = zod.object({
-  "poNumber": zod.string(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().optional().describe('Buyer-facing PO number (buyer→trader). Creates or links a deal.'),
   "product": zod.string(),
   "category": zod.string(),
   "supplierId": zod.number(),
@@ -289,7 +291,8 @@ export const UpdateShipmentBody = zod.object({
 
 export const UpdateShipmentResponse = zod.object({
   "id": zod.number(),
-  "poNumber": zod.string(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().nullish().describe('Buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
   "product": zod.string(),
   "category": zod.string(),
   "supplierId": zod.number(),
@@ -1091,6 +1094,56 @@ export const SaveExtractionCorrectionResponse = zod.object({
   "originalValue": zod.string().nullish(),
   "correctedValue": zod.string(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get PO numbering configuration and preview next pair
+ */
+export const GetPoNumberingConfigResponse = zod.object({
+  "id": zod.number(),
+  "prefix": zod.string().describe('Common prefix for both PO sides, e.g. \'PO-\''),
+  "sequenceFormat": zod.string().describe('Sequence format string using {seq} placeholder, e.g. \'2026-{seq}\''),
+  "supplierSuffix": zod.string().describe('Suffix appended only to the supplier PO, e.g. \'S\''),
+  "nextSeq": zod.number().describe('Next sequence number to be consumed'),
+  "updatedAt": zod.coerce.date(),
+  "preview": zod.object({
+  "buyerPo": zod.string(),
+  "supplierPo": zod.string()
+})
+})
+
+
+/**
+ * @summary Update PO numbering configuration
+ */
+export const UpdatePoNumberingConfigBody = zod.object({
+  "prefix": zod.string().optional(),
+  "sequenceFormat": zod.string().optional(),
+  "supplierSuffix": zod.string().optional(),
+  "resetSeq": zod.number().optional().describe('Reset the sequence counter to this value (must be positive integer)')
+})
+
+export const UpdatePoNumberingConfigResponse = zod.object({
+  "id": zod.number(),
+  "prefix": zod.string().describe('Common prefix for both PO sides, e.g. \'PO-\''),
+  "sequenceFormat": zod.string().describe('Sequence format string using {seq} placeholder, e.g. \'2026-{seq}\''),
+  "supplierSuffix": zod.string().describe('Suffix appended only to the supplier PO, e.g. \'S\''),
+  "nextSeq": zod.number().describe('Next sequence number to be consumed'),
+  "updatedAt": zod.coerce.date(),
+  "preview": zod.object({
+  "buyerPo": zod.string(),
+  "supplierPo": zod.string()
+})
+})
+
+
+/**
+ * @summary Preview the next buyer and supplier PO number pair without consuming the sequence
+ */
+export const GetNextPoNumbersResponse = zod.object({
+  "buyerPo": zod.string().describe('Next buyer-facing PO number (buyer→trader)'),
+  "supplierPo": zod.string().describe('Next supplier-facing PO number (trader→supplier)')
 })
 
 

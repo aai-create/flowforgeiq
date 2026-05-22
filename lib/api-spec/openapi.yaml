@@ -21,6 +21,7 @@ tags:
   - name: extractions
   - name: predictions
   - name: copilot
+  - name: settings
 paths:
   /healthz:
     get:
@@ -723,6 +724,45 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ExtractionCorrection" }
 
+  /settings/po-numbering:
+    get:
+      operationId: getPoNumberingConfig
+      tags: [settings]
+      summary: Get PO numbering configuration and preview next pair
+      responses:
+        "200":
+          description: PO numbering config with preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PoNumberingConfig" }
+    put:
+      operationId: updatePoNumberingConfig
+      tags: [settings]
+      summary: Update PO numbering configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PoNumberingConfigUpdate" }
+      responses:
+        "200":
+          description: Updated config with preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PoNumberingConfig" }
+
+  /settings/po-numbering/next:
+    get:
+      operationId: getNextPoNumbers
+      tags: [settings]
+      summary: Preview the next buyer and supplier PO number pair without consuming the sequence
+      responses:
+        "200":
+          description: Next PO number pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NextPoNumbers" }
+
 components:
   schemas:
     HealthStatus:
@@ -920,7 +960,8 @@ components:
         - quotes
       properties:
         id:             { type: integer }
-        poNumber:       { type: string }
+        poNumber:       { type: string, description: "Supplier-facing PO number (trader→supplier)" }
+        buyerPoNumber:  { type: ["string", "null"], description: "Buyer-facing PO number (buyer→trader). Null if no deal is linked." }
         product:        { type: string }
         category:       { type: string }
         supplierId:     { type: integer }
@@ -954,7 +995,8 @@ components:
         - exFactoryDate
         - destination
       properties:
-        poNumber:       { type: string }
+        poNumber:       { type: string, description: "Supplier-facing PO number (trader→supplier)" }
+        buyerPoNumber:  { type: string, description: "Buyer-facing PO number (buyer→trader). Creates or links a deal." }
         product:        { type: string }
         category:       { type: string }
         supplierId:     { type: integer }
@@ -1394,6 +1436,38 @@ components:
         Attachments:
           type: array
           items: { $ref: "#/components/schemas/InboundEmailAttachment" }
+
+    NextPoNumbers:
+      type: object
+      required: [buyerPo, supplierPo]
+      properties:
+        buyerPo:    { type: string, description: "Next buyer-facing PO number (buyer→trader)" }
+        supplierPo: { type: string, description: "Next supplier-facing PO number (trader→supplier)" }
+
+    PoNumberingConfig:
+      type: object
+      required: [id, prefix, sequenceFormat, supplierSuffix, nextSeq, updatedAt, preview]
+      properties:
+        id:             { type: integer }
+        prefix:         { type: string, description: "Common prefix for both PO sides, e.g. 'PO-'" }
+        sequenceFormat: { type: string, description: "Sequence format string using {seq} placeholder, e.g. '2026-{seq}'" }
+        supplierSuffix: { type: string, description: "Suffix appended only to the supplier PO, e.g. 'S'" }
+        nextSeq:        { type: integer, description: "Next sequence number to be consumed" }
+        updatedAt:      { type: string, format: date-time }
+        preview:
+          type: object
+          required: [buyerPo, supplierPo]
+          properties:
+            buyerPo:    { type: string }
+            supplierPo: { type: string }
+
+    PoNumberingConfigUpdate:
+      type: object
+      properties:
+        prefix:         { type: string }
+        sequenceFormat: { type: string }
+        supplierSuffix: { type: string }
+        resetSeq:       { type: integer, description: "Reset the sequence counter to this value (must be positive integer)" }
 
     InboundEmailWebhookResponse:
       type: object

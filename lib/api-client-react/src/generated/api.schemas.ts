@@ -150,7 +150,13 @@ export interface DealWithSpread {
 
 export interface Shipment {
   id: number;
+  /** Supplier-facing PO number (trader→supplier) */
   poNumber: string;
+  /**
+     * Buyer-facing PO number (buyer→trader). Null if no deal is linked.
+     * @nullable
+     */
+  buyerPoNumber?: string | null;
   product: string;
   category: string;
   supplierId: number;
@@ -179,7 +185,10 @@ export interface PaymentMilestoneInput {
 }
 
 export interface ShipmentCreate {
+  /** Supplier-facing PO number (trader→supplier) */
   poNumber: string;
+  /** Buyer-facing PO number (buyer→trader). Creates or links a deal. */
+  buyerPoNumber?: string;
   product: string;
   category: string;
   supplierId: number;
@@ -579,6 +588,40 @@ export interface InboundEmailWebhook {
   TextBody?: string;
   HtmlBody?: string;
   Attachments?: InboundEmailAttachment[];
+}
+
+export interface NextPoNumbers {
+  /** Next buyer-facing PO number (buyer→trader) */
+  buyerPo: string;
+  /** Next supplier-facing PO number (trader→supplier) */
+  supplierPo: string;
+}
+
+export type PoNumberingConfigPreview = {
+  buyerPo: string;
+  supplierPo: string;
+};
+
+export interface PoNumberingConfig {
+  id: number;
+  /** Common prefix for both PO sides, e.g. 'PO-' */
+  prefix: string;
+  /** Sequence format string using {seq} placeholder, e.g. '2026-{seq}' */
+  sequenceFormat: string;
+  /** Suffix appended only to the supplier PO, e.g. 'S' */
+  supplierSuffix: string;
+  /** Next sequence number to be consumed */
+  nextSeq: number;
+  updatedAt: string;
+  preview: PoNumberingConfigPreview;
+}
+
+export interface PoNumberingConfigUpdate {
+  prefix?: string;
+  sequenceFormat?: string;
+  supplierSuffix?: string;
+  /** Reset the sequence counter to this value (must be positive integer) */
+  resetSeq?: number;
 }
 
 export interface InboundEmailWebhookResponse {

@@ -10,7 +10,13 @@ import type { Payment } from './payment';
 
 export interface Shipment {
   id: number;
+  /** Supplier-facing PO number (trader→supplier) */
   poNumber: string;
+  /**
+     * Buyer-facing PO number (buyer→trader). Null if no deal is linked.
+     * @nullable
+     */
+  buyerPoNumber?: string | null;
   product: string;
   category: string;
   supplierId: number;
