@@ -158,7 +158,11 @@ function stageIndex(stage: string) {
 // ---------------------------------------------------------------------------
 export function Atelier() {
   const [, navigate] = useLocation();
-  useCopilotHint("Ask about PO status or draft a quick update");
+  useCopilotHint("Ask about PO status or draft a quick update", [
+    "Which POs need attention today?",
+    "Show me all delayed shipments",
+    "Which tasks are still open this week?",
+  ]);
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
   const { data: apiTasks }     = useListTasks();

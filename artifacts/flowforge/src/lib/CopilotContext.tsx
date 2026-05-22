@@ -5,6 +5,8 @@ const MAX_HISTORY = 10;
 interface CopilotContextValue {
   contextHint: string;
   setContextHint: (hint: string) => void;
+  suggestions: string[];
+  setSuggestions: (suggestions: string[]) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
   history: string[];
   addToHistory: (query: string) => void;
@@ -13,6 +15,8 @@ interface CopilotContextValue {
 const CopilotContext = createContext<CopilotContextValue>({
   contextHint: "Ask FlowForge anything",
   setContextHint: () => {},
+  suggestions: [],
+  setSuggestions: () => {},
   inputRef: { current: null },
   history: [],
   addToHistory: () => {},
@@ -20,6 +24,7 @@ const CopilotContext = createContext<CopilotContextValue>({
 
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [contextHint, setContextHint] = useState("Ask FlowForge anything");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -44,7 +49,7 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <CopilotContext.Provider value={{ contextHint, setContextHint, inputRef, history, addToHistory }}>
+    <CopilotContext.Provider value={{ contextHint, setContextHint, suggestions, setSuggestions, inputRef, history, addToHistory }}>
       {children}
     </CopilotContext.Provider>
   );
@@ -54,9 +59,10 @@ export function useCopilot() {
   return useContext(CopilotContext);
 }
 
-export function useCopilotHint(hint: string) {
-  const { setContextHint } = useCopilot();
+export function useCopilotHint(hint: string, pageSuggestions?: string[]) {
+  const { setContextHint, setSuggestions } = useCopilot();
   useEffect(() => {
     setContextHint(hint);
-  }, [hint, setContextHint]);
+    setSuggestions(pageSuggestions ?? []);
+  }, [hint, setContextHint, setSuggestions]);
 }

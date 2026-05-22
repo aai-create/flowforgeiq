@@ -1200,7 +1200,11 @@ export function Reports() {
     },
   ];
 
-  useCopilotHint("Compare supplier performance or summarize financials");
+  useCopilotHint("Compare supplier performance or summarize financials", [
+    "Which supplier has the best on-time rate?",
+    "Summarize outstanding payments this month",
+    "Compare deposit vs balance payments across suppliers",
+  ]);
 
   return (
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>

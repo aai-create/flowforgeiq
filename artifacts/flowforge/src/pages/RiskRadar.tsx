@@ -104,7 +104,11 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
   const medCount  = items.filter(i => i.riskScore >= 45 && i.riskScore < 70).length;
   const lowCount  = items.filter(i => i.riskScore < 45).length;
 
-  useCopilotHint("Summarize high-risk shipments or explain a risk score");
+  useCopilotHint("Summarize high-risk shipments or explain a risk score", [
+    "Which shipments are highest risk right now?",
+    "Explain the risk score for a specific PO",
+    "Show me any shipments past their ex-factory date",
+  ]);
 
   return (
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>

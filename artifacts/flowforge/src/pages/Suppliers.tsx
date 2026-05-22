@@ -426,7 +426,11 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
 // Main page
 // ---------------------------------------------------------------------------
 export function Suppliers() {
-  useCopilotHint("Search suppliers or check on-time performance");
+  useCopilotHint("Search suppliers or check on-time performance", [
+    "Who has the best on-time delivery rate?",
+    "Which supplier has the most delayed shipments?",
+    "Flag any supplier with consistent issues",
+  ]);
   const { data: suppliersData } = useListSuppliers();
   const { data: shipmentsData } = useListShipments();
   const { data: radarData } = useGetRiskRadar();
@@ -488,6 +492,7 @@ export function Suppliers() {
   }
 
   return (
+    <>
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
         <AppHeader pageLabel="Suppliers" />
@@ -677,7 +682,6 @@ export function Suppliers() {
         onClose={() => setShowNewDialog(false)}
         onCreate={s => setSuppliers(prev => [...prev, s].sort((a, b) => a.name.localeCompare(b.name)))}
       />
-    </div>
-  </div>
+    </>
   );
 }

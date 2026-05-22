@@ -12,7 +12,7 @@ type ConversationTurn = { role: "user" | "assistant"; content: string };
 const ACTION_CHIPS = ["Draft reply", "Flag payment", "Show all tasks"];
 
 export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
-  const { contextHint, inputRef, history, addToHistory } = useCopilot();
+  const { contextHint, suggestions, inputRef, history, addToHistory } = useCopilot();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,13 +45,13 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     }
   }, [conversationHistory, pendingMessage, loading]);
 
-  async function submit() {
-    const text = query.trim();
+  async function submitQuery(text: string) {
     if (!text || loading) return;
     setHistoryIndex(-1);
     draftRef.current = "";
     addToHistory(text);
     setShowResult(true);
+    setFocused(false);
     setLoading(true);
     setError("");
     setPendingMessage(text);
@@ -81,6 +81,10 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function submit() {
+    await submitQuery(query.trim());
   }
 
   function clear() {
@@ -126,8 +130,9 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     }
   }
 
-  const showRecentDropdown =
-    focused && !showResult && query === "" && history.length > 0;
+  const isEmptyAndFocused = focused && !showResult && query === "";
+  const showSuggestionsDropdown = isEmptyAndFocused && suggestions.length > 0;
+  const showRecentDropdown = isEmptyAndFocused && !showSuggestionsDropdown && history.length > 0;
 
   const hasLeftNode = !!leftNode;
   const hasConversation = conversationHistory.length > 0;
@@ -162,6 +167,55 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
         }
         className={`w-full h-8 bg-[#F0F4F8] hover:bg-[#E5EAF0] focus:bg-white border border-transparent focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 rounded-full ${hasLeftNode ? "pl-14" : "pl-9"} pr-4 text-xs outline-none transition-all placeholder:text-[#9E9FAE]`}
       />
+
+      {showSuggestionsDropdown && (
+        <div
+          ref={dropdownRef}
+          className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/15 rounded-xl shadow-lg z-50 py-2 overflow-hidden"
+        >
+          <p className="text-[10px] font-semibold text-[#9E9FAE] uppercase tracking-wide px-3 pt-0.5 pb-1.5">
+            Suggestions
+          </p>
+          {suggestions.map((suggestion, i) => (
+            <button
+              key={i}
+              onMouseDown={e => {
+                e.preventDefault();
+                void submitQuery(suggestion);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[#212833] hover:bg-[#F5F0FF] transition-colors text-left group"
+            >
+              <Sparkles size={11} className="text-[#9000FF]/50 shrink-0 group-hover:text-[#9000FF] transition-colors" />
+              <span className="truncate">{suggestion}</span>
+            </button>
+          ))}
+          {history.length > 0 && (
+            <>
+              <div className="mx-3 my-1.5 border-t border-[#F0F4F8]" />
+              <p className="text-[10px] font-semibold text-[#9E9FAE] uppercase tracking-wide px-3 pb-1">
+                Recent
+              </p>
+              {history.slice(0, 3).map((item, i) => (
+                <button
+                  key={i}
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    setQuery(item);
+                    setHistoryIndex(-1);
+                    draftRef.current = "";
+                    setFocused(false);
+                    inputRef.current?.focus();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[#212833] hover:bg-[#F0F4F8] transition-colors text-left"
+                >
+                  <Clock size={11} className="text-[#9E9FAE] shrink-0" />
+                  <span className="truncate">{item}</span>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {showRecentDropdown && (
         <div

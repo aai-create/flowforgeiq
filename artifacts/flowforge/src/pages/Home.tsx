@@ -1222,7 +1222,11 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 export default function Home() {
   const search = useSearch();
   const [, navigate] = useLocation();
-  useCopilotHint("Draft a reply or ask about shipment status");
+  useCopilotHint("Draft a reply or ask about shipment status", [
+    "Draft a reply to this supplier",
+    "Any overdue payments on this PO?",
+    "Summarize this shipment's current status",
+  ]);
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();

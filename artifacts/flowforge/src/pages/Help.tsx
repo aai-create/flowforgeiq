@@ -61,7 +61,11 @@ export function Help() {
     );
   }
 
-  useCopilotHint("Find help on any FlowForge workflow or feature");
+  useCopilotHint("Find help on any FlowForge workflow or feature", [
+    "How do I advance a shipment to the next stage?",
+    "What does the risk score mean?",
+    "How do I draft and send a supplier reply?",
+  ]);
 
   return (
     <div
