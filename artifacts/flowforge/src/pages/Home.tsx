@@ -62,7 +62,7 @@ type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
 interface Stage { id: string; label: string; }
-interface Payment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; }
+interface Payment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; intermediaryAdvanceUsd?: number | null; intermediaryRecoveredUsd?: number | null; }
 interface FactoryQuote { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean; }
 interface Shipment {
   id: string; po: string; product: string; supplier: string; customer: string;
@@ -2084,9 +2084,18 @@ export default function Home() {
                       return (
                         <div key={i}>
                           <div className="flex items-center gap-2">
-                            <div className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ov ? "bg-red-50 text-red-600 border-red-100" : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
-                              {p.paid ? <CheckCircle2 size={9}/> : ov ? <AlertCircle size={9}/> : <CreditCard size={9}/>}
-                              {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : ov ? "OVERDUE" : `due ${p.dueDate}`}
+                            <div className={`flex flex-col gap-0.5 text-[9px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ov ? "bg-red-50 text-red-600 border-red-100" : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+                              <div className="flex items-center gap-1">
+                                {p.paid ? <CheckCircle2 size={9}/> : ov ? <AlertCircle size={9}/> : <CreditCard size={9}/>}
+                                {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : ov ? "OVERDUE" : `due ${p.dueDate}`}
+                              </div>
+                              {(p.intermediaryAdvanceUsd ?? 0) > 0 && (
+                                <div className="flex items-center gap-1 text-amber-600 font-medium">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                                  Intermediary: ${p.intermediaryAdvanceUsd!.toLocaleString()} fronted
+                                  {(p.intermediaryRecoveredUsd ?? 0) > 0 && ` / $${p.intermediaryRecoveredUsd!.toLocaleString()} recovered`}
+                                </div>
+                              )}
                             </div>
                             {!p.paid && !isFormOpen && (
                               <button type="button" onClick={() => openMarkPaid(activeShipment.id, i as 0|1)}
