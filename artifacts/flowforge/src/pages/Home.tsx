@@ -67,7 +67,7 @@ interface FactoryQuote { factory: string; country: string; unitPrice: number; le
 interface Shipment {
   id: string; po: string; product: string; supplier: string; customer: string;
   status: ShipmentStatus; currentStageId: string; dueDate: string;
-  payments: [Payment, Payment]; quotes?: FactoryQuote[];
+  payments: Payment[]; quotes?: FactoryQuote[];
 }
 interface Message {
   id: string; sender: string; channel: Channel; timestamp: string;
@@ -303,13 +303,14 @@ function StageConfigModal({ stages, onSave, onClose }: { stages: Stage[]; onSave
 // ─────────────────────────────────────────────────────────────────────────────
 // Payment chip
 // ─────────────────────────────────────────────────────────────────────────────
-function PaymentStatus({ payments }: { payments: [Payment,Payment] }) {
-  const [dep, bal] = payments;
-  const overdue = !bal.paid && new Date(`${bal.dueDate} 2026`) < new Date();
+function PaymentStatus({ payments }: { payments: Payment[] }) {
+  const dep = payments[0];
+  const bal = payments[1];
+  const overdue = bal != null && !bal.paid && new Date(`${bal.dueDate} 2026`) < new Date();
   return (
     <div className="flex items-center gap-1.5 mt-1.5">
       <div className={`flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded border ${dep.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><DollarSign size={8}/>{dep.percent}% {dep.paid?"paid":"due "+dep.dueDate}</div>
-      <div className={`flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded border ${bal.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":overdue?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><CreditCard size={8}/>{bal.percent}% {bal.paid?"paid":overdue?"OVERDUE":"due "+bal.dueDate}</div>
+      {bal != null && <div className={`flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded border ${bal.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":overdue?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><CreditCard size={8}/>{bal.percent}% {bal.paid?"paid":overdue?"OVERDUE":"due "+bal.dueDate}</div>}
     </div>
   );
 }

@@ -47,6 +47,7 @@ export * from './messageInput';
 export * from './messageInputDirection';
 export * from './messageUpdate';
 export * from './payment';
+export * from './paymentMilestoneInput';
 export * from './paymentUpdate';
 export * from './predictionAccuracyReport';
 export * from './quoteSelection';

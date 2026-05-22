@@ -244,9 +244,9 @@ export function Atelier() {
   const [toast, setToast] = useState<string | null>(null);
 
   // Mark-paid inline form
-  interface MarkPaidForm { shipmentId: string; paymentIdx: 0|1; amount: string; date: string; reference: string; method: string; }
+  interface MarkPaidForm { shipmentId: string; paymentIdx: number; amount: string; date: string; reference: string; method: string; }
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm | null>(null);
-  const openMarkPaid = (shipmentId: string, paymentIdx: 0|1) => {
+  const openMarkPaid = (shipmentId: string, paymentIdx: number) => {
     const ship = shipments.find(s => s.id === shipmentId);
     if (!ship) return;
     setMarkPaidForm({ shipmentId, paymentIdx, amount: String(ship.payments[paymentIdx].amountUsd), date: new Date().toISOString().split("T")[0], reference: "", method: "Wire" });
@@ -261,23 +261,21 @@ export function Atelier() {
     const amountUsd = Math.round(Number(amount)) || payment.amountUsd;
     setShipments(prev => prev.map(s => {
       if (s.id !== shipmentId) return s;
-      const [dep, bal] = s.payments;
       const update = { ...payment, paid: true, amountUsd, paidAt: paidAtIso, paidMethod: method };
-      return { ...s, payments: paymentIdx === 0 ? [update, bal] : [dep, update] };
+      return { ...s, payments: s.payments.map((p, idx) => idx === paymentIdx ? update : p) };
     }));
     updatePayment(payment.paymentId, { paid: true, amountUsd, paidAt: paidAtIso, referenceNumber: reference || undefined, method }).catch(() => {});
     setToast("Payment marked as paid");
     setTimeout(() => setToast(null), 3000);
     setMarkPaidForm(null);
   };
-  const undoPaymentPaid = (shipmentId: string, paymentIdx: 0|1) => {
+  const undoPaymentPaid = (shipmentId: string, paymentIdx: number) => {
     const ship = shipments.find(s => s.id === shipmentId);
     if (!ship) return;
     const payment = ship.payments[paymentIdx];
     setShipments(prev => prev.map(s => {
       if (s.id !== shipmentId) return s;
-      const [dep, bal] = s.payments;
-      return { ...s, payments: paymentIdx === 0 ? [{ ...dep, paid: false }, bal] : [dep, { ...bal, paid: false }] };
+      return { ...s, payments: s.payments.map((p, idx) => idx === paymentIdx ? { ...p, paid: false } : p) };
     }));
     updatePayment(payment.paymentId, { paid: false, paidAt: null, referenceNumber: null, method: null }).catch(() => {});
     setToast("Payment marked unpaid");
@@ -289,9 +287,17 @@ export function Atelier() {
     poNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
     destination: "", via: "OCEAN", notes: "",
+    quantity: "", unitCostUsd: "",
   });
+  type Milestone = { label: string; percent: string; dueDate: string };
+  const defaultMilestones: Milestone[] = [
+    { label: "Deposit", percent: "30", dueDate: "" },
+    { label: "Balance", percent: "70", dueDate: "" },
+  ];
+  const [milestones, setMilestones] = useState<Milestone[]>(defaultMilestones);
   const [newPOError, setNewPOError] = useState<string | null>(null);
   const [poNumberError, setPoNumberError] = useState<string | null>(null);
+  const [milestonesError, setMilestonesError] = useState<string | null>(null);
   const [newPOFile, setNewPOFile] = useState<File | null>(null);
   const [newPODragOver, setNewPODragOver] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
@@ -304,21 +310,31 @@ export function Atelier() {
     setShowNewPO(false);
     setNewPOError(null);
     setPoNumberError(null);
+    setMilestonesError(null);
     setNewPOFile(null);
     setNewPODragOver(false);
     setSupplierQuery("");
     setSupplierOpen(false);
-    setNewPOForm({ poNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "" });
+    setMilestones(defaultMilestones);
+    setNewPOForm({ poNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "" });
   };
 
   const submitNewPO = async () => {
     setNewPOError(null);
     setPoNumberError(null);
+    setMilestonesError(null);
     const resolvedSupplierId = newPOForm.supplierId;
 
     if (!newPOForm.poNumber.trim() || !newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate || !newPOForm.destination.trim()) {
       setNewPOError("Please fill in all required fields."); return;
     }
+    const totalPct = milestones.reduce((sum, m) => sum + (Number(m.percent) || 0), 0);
+    if (totalPct !== 100) {
+      setMilestonesError(`Payment percentages must sum to 100% (currently ${totalPct}%).`);
+      return;
+    }
+    const qty = newPOForm.quantity ? Number(newPOForm.quantity) : undefined;
+    const unitCost = newPOForm.unitCostUsd ? Number(newPOForm.unitCostUsd) : undefined;
     try {
       const created = await createShipmentMutation.mutateAsync({
         data: {
@@ -334,6 +350,13 @@ export function Atelier() {
           notes: newPOForm.notes.trim() || undefined,
           status: "on-track",
           currentStageId: stages[0]?.id ?? "stage-1",
+          quantity: qty,
+          unitCostUsd: unitCost,
+          payments: milestones.map(m => ({
+            label: m.label,
+            percent: Number(m.percent),
+            dueDate: m.dueDate ? new Date(m.dueDate).toISOString() : new Date(newPOForm.dueDate).toISOString(),
+          })),
         },
       });
       const adapted = adaptShipments([created], stages);
@@ -539,7 +562,7 @@ export function Atelier() {
                 const stageIdx  = stageIndex(shipment.currentStage);
                 const stagePct  = STAGES.length > 1 ? (stageIdx / (STAGES.length - 1)) * 100 : 0;
                 const isActive  = activeShipmentId === shipment.id;
-                const balanceOverdue = !shipment.payments[1].paid && new Date(`${shipment.payments[1].dueDate} 2026`) < new Date();
+                const balanceOverdue = shipment.payments[1] != null && !shipment.payments[1].paid && new Date(`${shipment.payments[1].dueDate} 2026`) < new Date();
 
                 return (
                   <div key={shipment.id}
@@ -682,13 +705,13 @@ export function Atelier() {
                               {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : overdue ? "OVERDUE" : `due ${p.dueDate}`}
                             </div>
                             {isActive && !p.paid && !isFormOpen && (
-                              <button type="button" onClick={e => { e.stopPropagation(); openMarkPaid(shipment.id, i as 0|1); }}
+                              <button type="button" onClick={e => { e.stopPropagation(); openMarkPaid(shipment.id, i); }}
                                 className="text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
                                 Mark Paid
                               </button>
                             )}
                             {isActive && p.paid && (
-                              <button type="button" onClick={e => { e.stopPropagation(); undoPaymentPaid(shipment.id, i as 0|1); }}
+                              <button type="button" onClick={e => { e.stopPropagation(); undoPaymentPaid(shipment.id, i); }}
                                 className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
                                 Undo
                               </button>
@@ -1222,6 +1245,86 @@ export function Atelier() {
             <input value={newPOForm.destination} onChange={e => setNewPOForm(p => ({ ...p, destination: e.target.value }))}
               placeholder="e.g. Los Angeles, CA"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+          </div>
+
+          {/* Quantity + Unit Cost */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Quantity <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+              <input type="number" min="1" value={newPOForm.quantity} onChange={e => setNewPOForm(p => ({ ...p, quantity: e.target.value }))}
+                placeholder="e.g. 5000"
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Unit Cost (USD) <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+              <input type="number" min="0" value={newPOForm.unitCostUsd} onChange={e => setNewPOForm(p => ({ ...p, unitCostUsd: e.target.value }))}
+                placeholder="e.g. 4"
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+            </div>
+          </div>
+          {newPOForm.quantity && newPOForm.unitCostUsd && (
+            <div className="flex items-center gap-1.5 text-xs text-[#5E687B] bg-[#F7F9FA] rounded-md px-3 py-2">
+              <span className="font-medium">Total order value:</span>
+              <span className="text-[#212833] font-semibold">${(Number(newPOForm.quantity) * Number(newPOForm.unitCostUsd)).toLocaleString()}</span>
+            </div>
+          )}
+
+          {/* Payment Milestones */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-[#5E687B]">Payment Milestones</label>
+              {milestones.length < 3 && (
+                <button type="button"
+                  onClick={() => setMilestones(prev => [...prev, { label: "Milestone", percent: "0", dueDate: "" }])}
+                  className="text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] flex items-center gap-0.5 transition-colors">
+                  <Plus className="w-3 h-3"/>Add row
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {milestones.map((m, i) => {
+                const qty = newPOForm.quantity ? Number(newPOForm.quantity) : null;
+                const cost = newPOForm.unitCostUsd ? Number(newPOForm.unitCostUsd) : null;
+                const pct = Number(m.percent) || 0;
+                const amountStr = qty != null && cost != null ? `$${Math.round(pct / 100 * qty * cost).toLocaleString()}` : "—";
+                return (
+                  <div key={i} className="space-y-1">
+                    <div className="grid grid-cols-[1fr_52px_24px] gap-1.5 items-center">
+                      <input value={m.label} onChange={e => setMilestones(prev => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                        placeholder="Label"
+                        className="border border-[#E5EAF0] rounded-md px-2 py-1.5 text-xs text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+                      <div className="relative">
+                        <input type="number" min="0" max="100" value={m.percent}
+                          onChange={e => setMilestones(prev => prev.map((x, j) => j === i ? { ...x, percent: e.target.value } : x))}
+                          className="w-full border border-[#E5EAF0] rounded-md pl-2 pr-5 py-1.5 text-xs text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#9E9FAE] pointer-events-none">%</span>
+                      </div>
+                      <button type="button" onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
+                        disabled={milestones.length <= 1}
+                        className="text-[#C0C8D4] hover:text-[#9E9FAE] disabled:opacity-30 transition-colors flex items-center justify-center">
+                        <X className="w-3.5 h-3.5"/>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-[1fr_auto] gap-1.5 items-center pl-0">
+                      <input type="date" value={m.dueDate} onChange={e => setMilestones(prev => prev.map((x, j) => j === i ? { ...x, dueDate: e.target.value } : x))}
+                        className="border border-[#E5EAF0] rounded-md px-2 py-1 text-xs text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
+                      <span className="text-[10px] text-[#5E687B] font-medium whitespace-nowrap">{amountStr}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {(() => {
+              const total = milestones.reduce((s, m) => s + (Number(m.percent) || 0), 0);
+              return total !== 100 ? (
+                <p className="text-[11px] text-amber-600 mt-1.5">Percentages sum to {total}% — must equal 100% to save.</p>
+              ) : (
+                <p className="text-[11px] text-emerald-600 mt-1.5">✓ Percentages sum to 100%</p>
+              );
+            })()}
+            {milestonesError && (
+              <p className="text-[11px] text-red-600 mt-1">{milestonesError}</p>
+            )}
           </div>
 
           {/* Notes */}

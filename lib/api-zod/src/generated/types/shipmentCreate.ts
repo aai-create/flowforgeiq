@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PaymentMilestoneInput } from './paymentMilestoneInput';
 
 export interface ShipmentCreate {
   poNumber: string;
@@ -19,4 +20,7 @@ export interface ShipmentCreate {
   destination: string;
   via?: string;
   notes?: string;
+  quantity?: number;
+  unitCostUsd?: number;
+  payments?: PaymentMilestoneInput[];
 }

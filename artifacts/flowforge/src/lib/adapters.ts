@@ -42,7 +42,7 @@ export interface UiShipment {
   currentStageId: string;
   currentStage: string; // label, for Atelier
   dueDate: string;
-  payments: [UiPayment, UiPayment];
+  payments: UiPayment[];
   quotes?: UiFactoryQuote[];
 }
 
@@ -95,14 +95,12 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     currentStageId: s.currentStageId,
     currentStage: labelById.get(s.currentStageId) ?? s.currentStageId,
     dueDate: shortDate(s.dueDate),
-    payments: [
-      s.payments[0]
-        ? { label: s.payments[0].label, percent: s.payments[0].percent, amountUsd: s.payments[0].amountUsd, paid: s.payments[0].paid, dueDate: shortDate(s.payments[0].dueDate), paymentId: s.payments[0].id, paidAt: s.payments[0].paidAt ?? null, paidMethod: s.payments[0].method ?? null, intermediaryAdvanceUsd: s.payments[0].intermediaryAdvanceUsd ?? null, intermediaryRecoveredUsd: s.payments[0].intermediaryRecoveredUsd ?? null }
-        : { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null },
-      s.payments[1]
-        ? { label: s.payments[1].label, percent: s.payments[1].percent, amountUsd: s.payments[1].amountUsd, paid: s.payments[1].paid, dueDate: shortDate(s.payments[1].dueDate), paymentId: s.payments[1].id, paidAt: s.payments[1].paidAt ?? null, paidMethod: s.payments[1].method ?? null, intermediaryAdvanceUsd: s.payments[1].intermediaryAdvanceUsd ?? null, intermediaryRecoveredUsd: s.payments[1].intermediaryRecoveredUsd ?? null }
-        : { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null },
-    ],
+    payments: s.payments.length === 0
+      ? [
+          { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null },
+          { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null },
+        ]
+      : s.payments.map(p => ({ label: p.label, percent: p.percent, amountUsd: p.amountUsd, paid: p.paid, dueDate: shortDate(p.dueDate), paymentId: p.id, paidAt: p.paidAt ?? null, paidMethod: p.method ?? null, intermediaryAdvanceUsd: p.intermediaryAdvanceUsd ?? null, intermediaryRecoveredUsd: p.intermediaryRecoveredUsd ?? null })) as [UiPayment, UiPayment],
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
       factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id, validityDate: q.validityDate, notes: q.notes,
     })),

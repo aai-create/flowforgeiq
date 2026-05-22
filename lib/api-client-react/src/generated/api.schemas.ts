@@ -166,8 +166,16 @@ export interface Shipment {
   via: string;
   /** @nullable */
   notes?: string | null;
+  quantity?: number | null;
+  unitCostUsd?: number | null;
   payments: Payment[];
   quotes: FactoryQuote[];
+}
+
+export interface PaymentMilestoneInput {
+  label: string;
+  percent: number;
+  dueDate: string;
 }
 
 export interface ShipmentCreate {
@@ -183,6 +191,9 @@ export interface ShipmentCreate {
   destination: string;
   via?: string;
   notes?: string;
+  quantity?: number;
+  unitCostUsd?: number;
+  payments?: PaymentMilestoneInput[];
 }
 
 export interface ShipmentUpdate {

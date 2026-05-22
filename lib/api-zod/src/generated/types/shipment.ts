@@ -26,6 +26,8 @@ export interface Shipment {
   via: string;
   /** @nullable */
   notes?: string | null;
+  quantity?: number | null;
+  unitCostUsd?: number | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }

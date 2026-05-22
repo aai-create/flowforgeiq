@@ -59,11 +59,12 @@ router.get("/shipments", async (_req, res) => {
 
 router.post("/shipments", async (req, res) => {
   const parsed = CreateShipmentBody.parse(req.body);
+  const { payments: paymentMilestones, ...shipmentFields } = parsed;
   const input = {
-    ...parsed,
-    status: parsed.status ?? "on-track",
-    currentStageId: parsed.currentStageId ?? "stage-spec-sheet",
-    via: parsed.via ?? "OCEAN",
+    ...shipmentFields,
+    status: shipmentFields.status ?? "on-track",
+    currentStageId: shipmentFields.currentStageId ?? "stage-spec-sheet",
+    via: shipmentFields.via ?? "OCEAN",
   };
   let row: typeof shipmentsTable.$inferSelect;
   try {
@@ -84,6 +85,23 @@ router.post("/shipments", async (req, res) => {
       return;
     }
     throw err;
+  }
+  if (paymentMilestones && paymentMilestones.length > 0) {
+    const qty = row.quantity ?? null;
+    const unitCost = row.unitCostUsd ?? null;
+    await db.insert(paymentsTable).values(
+      paymentMilestones.map((m, i) => ({
+        shipmentId: row.id,
+        label: m.label,
+        percent: m.percent,
+        amountUsd: qty != null && unitCost != null
+          ? Math.round(m.percent / 100 * qty * unitCost)
+          : 0,
+        paid: false,
+        dueDate: new Date(m.dueDate),
+        sortOrder: i,
+      })),
+    );
   }
   const out = await loadShipment(row.id);
   if (!out) {
