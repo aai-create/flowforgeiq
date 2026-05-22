@@ -335,7 +335,9 @@ export const UpdatePaymentBody = zod.object({
   "amountUsd": zod.number().optional(),
   "paidAt": zod.coerce.date().nullish(),
   "referenceNumber": zod.string().nullish(),
-  "method": zod.string().nullish()
+  "method": zod.string().nullish(),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount recovered from the Buyer to repay the Intermediary.'),
+  "intermediaryRecoveredAt": zod.coerce.date().nullish().describe('Date the recovery was recorded.')
 })
 
 export const UpdatePaymentResponse = zod.object({

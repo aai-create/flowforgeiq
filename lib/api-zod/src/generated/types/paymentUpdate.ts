@@ -12,4 +12,8 @@ export interface PaymentUpdate {
   paidAt?: Date | null;
   referenceNumber?: string | null;
   method?: string | null;
+  /** USD amount recovered from the Buyer to repay the Intermediary. */
+  intermediaryRecoveredUsd?: number | null;
+  /** Date the recovery was recorded. */
+  intermediaryRecoveredAt?: Date | null;
 }

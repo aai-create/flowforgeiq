@@ -17,6 +17,7 @@ export const paymentsTable = pgTable("payments", {
   buyerSharePct: integer("buyer_share_pct"),
   intermediaryAdvanceUsd: integer("intermediary_advance_usd"),
   intermediaryRecoveredUsd: integer("intermediary_recovered_usd"),
+  intermediaryRecoveredAt: timestamp("intermediary_recovered_at", { withTimezone: true }),
 });
 
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true });

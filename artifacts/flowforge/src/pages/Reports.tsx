@@ -19,6 +19,7 @@ import {
   useListSuppliers,
   useListStages,
   useListDeals,
+  updatePayment,
 } from "@workspace/api-client-react";
 import type { Shipment, Task, SupplierSummary, DealWithSpread } from "@workspace/api-client-react";
 import {
@@ -128,10 +129,16 @@ const financeChartConfig: ChartConfig = {
   unpaid: { label: "Unpaid", color: "#9000FF" },
 };
 
+interface RecoveryForm { paymentId: number; amount: string; date: string; }
+
 function FinanceCardContent({
   shipments, rangeStart, rangeEnd,
 }: { shipments: Shipment[]; rangeStart: Date | null; rangeEnd: Date | null }) {
   const [, navigate] = useLocation();
+  const [recoveryForm, setRecoveryForm] = useState<RecoveryForm | null>(null);
+  const [recoveryOverrides, setRecoveryOverrides] = useState<Record<number, number>>({});
+  const [savingId, setSavingId] = useState<number | null>(null);
+
   const allPayments = useMemo(() => {
     const payments = shipments.flatMap(s => s.payments);
     if (!rangeStart && !rangeEnd) return payments;
@@ -141,11 +148,59 @@ function FinanceCardContent({
   const totalUnpaid  = allPayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
   const totalPaid    = allPayments.filter(p =>  p.paid).reduce((s, p) => s + p.amountUsd, 0);
 
-  // Intermediary totals across all (range-filtered) payments
-  const totalIntermediaryAdvance   = allPayments.reduce((s, p) => s + (p.intermediaryAdvanceUsd  ?? 0), 0);
-  const totalIntermediaryRecovered = allPayments.reduce((s, p) => s + (p.intermediaryRecoveredUsd ?? 0), 0);
-  const totalIntermediaryOutstanding = Math.max(0, totalIntermediaryAdvance - totalIntermediaryRecovered);
-  const hasIntermediaryData = totalIntermediaryAdvance > 0;
+  // Per-payment rows for the Intermediary Recovery section
+  const intermediaryPayments = useMemo(() => {
+    return shipments.flatMap(s =>
+      s.payments
+        .filter(p => (p.intermediaryAdvanceUsd ?? 0) > 0)
+        .filter(p => inRange(p.dueDate, rangeStart, rangeEnd))
+        .map(p => {
+          const recoveredUsd = recoveryOverrides[p.id] ?? (p.intermediaryRecoveredUsd ?? 0);
+          return {
+            paymentId: p.id,
+            shipmentPo: s.poNumber,
+            supplierName: s.supplierName,
+            label: p.label,
+            advanceUsd: p.intermediaryAdvanceUsd ?? 0,
+            recoveredUsd,
+            outstandingUsd: Math.max(0, (p.intermediaryAdvanceUsd ?? 0) - recoveredUsd),
+          };
+        })
+    ).sort((a, b) => b.outstandingUsd - a.outstandingUsd);
+  }, [shipments, rangeStart, rangeEnd, recoveryOverrides]);
+
+  // Intermediary totals derived from the per-payment list (respects overrides)
+  const totalIntermediaryAdvance      = intermediaryPayments.reduce((s, p) => s + p.advanceUsd, 0);
+  const totalIntermediaryRecovered    = intermediaryPayments.reduce((s, p) => s + p.recoveredUsd, 0);
+  const totalIntermediaryOutstanding  = Math.max(0, totalIntermediaryAdvance - totalIntermediaryRecovered);
+  const hasIntermediaryData           = totalIntermediaryAdvance > 0;
+
+  const openRecovery = (paymentId: number, currentRecoveredUsd: number) => {
+    setRecoveryForm({
+      paymentId,
+      amount: String(currentRecoveredUsd > 0 ? currentRecoveredUsd : ""),
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+  const saveRecovery = async () => {
+    if (!recoveryForm) return;
+    const { paymentId, amount, date } = recoveryForm;
+    const amountUsd = Math.round(Number(amount));
+    if (isNaN(amountUsd) || amountUsd < 0) return;
+    const recoveredAt = date ? new Date(date + "T00:00:00Z").toISOString() : new Date().toISOString();
+    setSavingId(paymentId);
+    setRecoveryOverrides(prev => ({ ...prev, [paymentId]: amountUsd }));
+    setRecoveryForm(null);
+    try {
+      await updatePayment(paymentId, { intermediaryRecoveredUsd: amountUsd, intermediaryRecoveredAt: recoveredAt });
+    } catch {
+      // rollback on error
+      setRecoveryOverrides(prev => { const next = { ...prev }; delete next[paymentId]; return next; });
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   // Bucket payments by due-date proximity
   const chartData = useMemo(() => {
@@ -294,11 +349,13 @@ function FinanceCardContent({
 
       {/* Intermediary Recovery section — only shown when advance data exists */}
       {hasIntermediaryData && (
-        <div className="border border-amber-100 bg-amber-50 rounded-lg p-3 space-y-2">
+        <div className="border border-amber-100 bg-amber-50 rounded-lg p-3 space-y-3">
           <div>
             <div className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">Intermediary Recovery</div>
             <div className="text-[10px] text-amber-600 mt-0.5">amount the Intermediary is owed by Buyer</div>
           </div>
+
+          {/* KPI trio */}
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: "Total Advanced",   value: fmtUsd(totalIntermediaryAdvance),     color: "text-amber-800", title: "Total amount the Intermediary has fronted to Suppliers across all payments" },
@@ -310,6 +367,98 @@ function FinanceCardContent({
                 <div className="text-[10px] text-amber-700 mt-0.5">{label}</div>
               </div>
             ))}
+          </div>
+
+          {/* Per-payment rows */}
+          <div className="bg-white border border-amber-100 rounded-lg overflow-hidden">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-amber-100 bg-amber-50/60">
+                  <th className="text-left text-[10px] font-bold text-amber-700 uppercase tracking-wide px-3 py-2">Payment</th>
+                  <th className="text-right text-[10px] font-bold text-amber-700 uppercase tracking-wide px-3 py-2">Advanced</th>
+                  <th className="text-right text-[10px] font-bold text-amber-700 uppercase tracking-wide px-3 py-2">Recovered</th>
+                  <th className="text-right text-[10px] font-bold text-amber-700 uppercase tracking-wide px-3 py-2">Outstanding</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {intermediaryPayments.map(row => {
+                  const isOpen = recoveryForm?.paymentId === row.paymentId;
+                  const isSaving = savingId === row.paymentId;
+                  return (
+                    <React.Fragment key={row.paymentId}>
+                      <tr className="border-b border-amber-50 last:border-0 hover:bg-amber-50/40 transition-colors">
+                        <td className="px-3 py-2">
+                          <div className="font-medium text-[#212833] truncate max-w-[140px]" title={row.supplierName}>{row.supplierName}</div>
+                          <div className="text-[10px] text-[#9E9FAE]">{row.shipmentPo} · {row.label}</div>
+                        </td>
+                        <td className="px-3 py-2 text-right text-amber-700 font-semibold">{fmtUsd(row.advanceUsd)}</td>
+                        <td className="px-3 py-2 text-right text-emerald-600 font-semibold">
+                          {row.recoveredUsd > 0 ? fmtUsd(row.recoveredUsd) : <span className="text-[#9E9FAE]">—</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold">
+                          {row.outstandingUsd > 0
+                            ? <span className="text-red-600">{fmtUsd(row.outstandingUsd)}</span>
+                            : <span className="text-emerald-600">Settled</span>
+                          }
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => isOpen ? setRecoveryForm(null) : openRecovery(row.paymentId, row.recoveredUsd)}
+                            className={`text-[10px] font-semibold px-2 py-1 rounded border transition-colors ${
+                              isOpen
+                                ? "border-amber-300 bg-amber-100 text-amber-800"
+                                : "border-amber-200 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-300"
+                            } disabled:opacity-50`}
+                          >
+                            {isSaving ? "Saving…" : isOpen ? "Cancel" : "Record Recovery"}
+                          </button>
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr className="border-b border-amber-50">
+                          <td colSpan={5} className="px-3 py-2 bg-amber-50/60">
+                            <div className="flex items-end gap-2 flex-wrap">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Recovered Amount (USD)</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  placeholder="0"
+                                  value={recoveryForm.amount}
+                                  onChange={e => setRecoveryForm(f => f ? { ...f, amount: e.target.value } : f)}
+                                  className="w-32 text-xs border border-amber-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Recovery Date</label>
+                                <input
+                                  type="date"
+                                  value={recoveryForm.date}
+                                  onChange={e => setRecoveryForm(f => f ? { ...f, date: e.target.value } : f)}
+                                  className="text-xs border border-amber-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={saveRecovery}
+                                disabled={!recoveryForm.amount || Number(recoveryForm.amount) < 0}
+                                className="text-[11px] font-semibold px-3 py-1.5 rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-40 transition-colors"
+                              >
+                                Save Recovery
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -74,6 +74,10 @@ export interface PaymentUpdate {
   paidAt?: string | null;
   referenceNumber?: string | null;
   method?: string | null;
+  /** USD amount recovered from the Buyer to repay the Intermediary. */
+  intermediaryRecoveredUsd?: number | null;
+  /** Date the recovery was recorded. */
+  intermediaryRecoveredAt?: string | null;
 }
 
 export interface FactoryQuote {

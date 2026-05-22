@@ -800,11 +800,13 @@ components:
     PaymentUpdate:
       type: object
       properties:
-        paid:            { type: boolean }
-        amountUsd:       { type: integer }
-        paidAt:          { type: string, format: date-time, nullable: true }
-        referenceNumber: { type: string, nullable: true }
-        method:          { type: string, nullable: true }
+        paid:                     { type: boolean }
+        amountUsd:                { type: integer }
+        paidAt:                   { type: string, format: date-time, nullable: true }
+        referenceNumber:          { type: string, nullable: true }
+        method:                   { type: string, nullable: true }
+        intermediaryRecoveredUsd: { type: integer, nullable: true, description: "USD amount recovered from the Buyer to repay the Intermediary." }
+        intermediaryRecoveredAt:  { type: string, format: date-time, nullable: true, description: "Date the recovery was recorded." }
 
     FactoryQuote:
       type: object
