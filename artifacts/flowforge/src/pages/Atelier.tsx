@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals } from "@workspace/api-client-react";
 import type { FactoryQuote } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -285,6 +285,7 @@ export function Atelier() {
   const [showNewPO, setShowNewPO] = useState(false);
   const [buyerPoMode, setBuyerPoMode] = useState<"auto" | "provided">("auto");
   const { data: poConfig } = useGetPoNumberingConfig();
+  const { data: existingDeals } = useListDeals();
   const [newPOForm, setNewPOForm] = useState({
     poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
@@ -1161,11 +1162,36 @@ export function Atelier() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                    Buyer PO <span className="text-[#9E9FAE] font-normal">(buyer → trader)</span>
+                    Buyer PO <span className="text-[#9E9FAE] font-normal">(buyer → trader) — link existing or enter new</span>
                   </label>
+                  {existingDeals && existingDeals.length > 0 && (
+                    <div className="mb-2 border border-[#E5EAF0] rounded-md overflow-hidden divide-y divide-[#F0F4F8] max-h-28 overflow-y-auto">
+                      {existingDeals.map(deal => (
+                        <button
+                          key={deal.id}
+                          type="button"
+                          onClick={() => {
+                            const suffix = poConfig?.supplierSuffix ?? "S";
+                            setNewPOForm(p => ({
+                              ...p,
+                              buyerPoNumber: deal.buyerPoNumber,
+                              customerName: p.customerName || deal.customerName,
+                              poNumber: p.poNumber || (deal.buyerPoNumber + suffix),
+                            }));
+                          }}
+                          className={`w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 transition-colors ${newPOForm.buyerPoNumber === deal.buyerPoNumber ? "bg-emerald-50" : "bg-white"}`}>
+                          <span className="text-[10px] font-mono font-semibold text-emerald-700">{deal.buyerPoNumber}</span>
+                          <span className="text-[10px] text-[#5E687B] truncate">{deal.customerName}</span>
+                          {newPOForm.buyerPoNumber === deal.buyerPoNumber && (
+                            <span className="ml-auto text-[9px] font-bold text-emerald-600">selected</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <input
                     value={newPOForm.buyerPoNumber}
                     onChange={e => {
@@ -1177,13 +1203,13 @@ export function Atelier() {
                         poNumber: bpo.trim() ? bpo.trim() + suffix : p.poNumber,
                       }));
                     }}
-                    placeholder="e.g. PO-0001"
+                    placeholder="Type a new buyer PO or select above"
                     className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors font-mono"/>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[#5E687B] mb-1">
                     Supplier PO <span className="text-red-500">*</span>
-                    <span className="text-[#9E9FAE] font-normal ml-1">(auto-derived, override ↓)</span>
+                    <span className="text-[#9E9FAE] font-normal ml-1">(auto-derived from buyer PO + suffix, override below)</span>
                   </label>
                   <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
                     placeholder={newPOForm.buyerPoNumber ? newPOForm.buyerPoNumber + (poConfig?.supplierSuffix ?? "S") : "e.g. PO-0001S"}

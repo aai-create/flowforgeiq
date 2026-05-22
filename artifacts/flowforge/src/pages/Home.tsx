@@ -1802,9 +1802,12 @@ export default function Home() {
                   return (
                     <button key={s.id} onClick={()=>{setActiveView("inbox");selectShipment(s.id);}}
                       className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#E5EAF0]"}`}>
-                      <div className="flex items-center gap-1.5 mb-0.5">
+                      <div className="flex items-center gap-1 flex-wrap mb-0.5">
                         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
                         <span className={`text-xs font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
+                        {s.buyerPoNumber && (
+                          <span className="text-[8px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumber}</span>
+                        )}
                       </div>
                       <div className="text-[10px] text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
                       <div className="pl-3">
@@ -2033,8 +2036,15 @@ export default function Home() {
                 <div className="border-b border-[#E5EAF0] p-4 bg-[#FAFBFC] shrink-0">
                   <div className="flex items-start justify-between mb-2.5">
                     <div>
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier</span>
                         <span className="font-bold text-xs text-[#212833]">{activeShipment.po}</span>
+                        {activeShipment.buyerPoNumber && (
+                          <>
+                            <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer</span>
+                            <span className="font-bold text-xs text-emerald-700 font-mono">{activeShipment.buyerPoNumber}</span>
+                          </>
+                        )}
                         <span className="text-[9px] bg-[#E5EAF0] text-[#5E687B] px-1.5 rounded font-medium">{activeShipment.customer}</span>
                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${statusCls(activeShipment.status)}`}>{activeShipment.status==="on-track"?<Check size={8}/>:<AlertCircle size={8}/>}{activeShipment.status}</span>
                       </div>

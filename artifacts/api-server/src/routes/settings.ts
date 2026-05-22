@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, poNumberingConfigTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 
 const router: IRouter = Router();
@@ -57,11 +57,16 @@ router.get("/settings/po-numbering/next", async (req, res) => {
 
 router.post("/settings/po-numbering/next", async (req, res) => {
   const cfg = await getConfig();
-  const preview = makePreview(cfg);
-  await db
+  const [updated] = await db
     .update(poNumberingConfigTable)
-    .set({ nextSeq: cfg.nextSeq + 1, updatedAt: new Date() })
-    .where(eq(poNumberingConfigTable.id, cfg.id));
+    .set({ nextSeq: sql`${poNumberingConfigTable.nextSeq} + 1`, updatedAt: new Date() })
+    .where(eq(poNumberingConfigTable.id, cfg.id))
+    .returning();
+  const consumedSeq = (updated?.nextSeq ?? cfg.nextSeq + 1) - 1;
+  const preview = {
+    buyerPo: buildPoNumber(cfg.prefix, cfg.sequenceFormat, consumedSeq),
+    supplierPo: buildPoNumber(cfg.prefix, cfg.sequenceFormat, consumedSeq) + cfg.supplierSuffix,
+  };
   res.json(preview);
 });
 
