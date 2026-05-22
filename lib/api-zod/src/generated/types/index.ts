@@ -38,6 +38,7 @@ export * from './healthStatus';
 export * from './inboundEmailAttachment';
 export * from './inboundEmailWebhook';
 export * from './inboundEmailWebhookResponse';
+export * from './linkDealToShipmentBody';
 export * from './listCopilotProposalsParams';
 export * from './listDocumentsParams';
 export * from './listMessagesParams';

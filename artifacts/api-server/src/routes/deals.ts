@@ -14,7 +14,14 @@ async function buildDealWithSpread(dealId: number) {
   const [deal] = await db.select().from(dealsTable).where(eq(dealsTable.id, dealId));
   if (!deal) return null;
 
-  const shipments = await db
+  // Collect linked shipment IDs from both the M2M join table and the legacy FK
+  const [joinRows, fkRows] = await Promise.all([
+    db.select({ id: dealShipmentsTable.shipmentId }).from(dealShipmentsTable).where(eq(dealShipmentsTable.dealId, dealId)),
+    db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.dealId, dealId)),
+  ]);
+  const linkedIds = [...new Set([...joinRows.map(r => r.id), ...fkRows.map(r => r.id)])];
+
+  const shipments = linkedIds.length === 0 ? [] : await db
     .select({
       id: shipmentsTable.id,
       poNumber: shipmentsTable.poNumber,
@@ -25,8 +32,7 @@ async function buildDealWithSpread(dealId: number) {
       supplierId: shipmentsTable.supplierId,
     })
     .from(shipmentsTable)
-    .innerJoin(dealShipmentsTable, eq(dealShipmentsTable.shipmentId, shipmentsTable.id))
-    .where(eq(dealShipmentsTable.dealId, dealId));
+    .where(linkedIds.length === 1 ? eq(shipmentsTable.id, linkedIds[0]) : inArray(shipmentsTable.id, linkedIds));
 
   if (!shipments.length) {
     return GetDealResponse.parse({

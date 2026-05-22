@@ -3,6 +3,7 @@ import {
   stagesTable,
   suppliersTable,
   dealsTable,
+  dealShipmentsTable,
   shipmentsTable,
   paymentsTable,
   factoryQuotesTable,
@@ -93,6 +94,7 @@ async function main() {
   await db.delete(messagesTable);
   await db.delete(factoryQuotesTable);
   await db.delete(paymentsTable);
+  await db.delete(dealShipmentsTable);
   await db.delete(shipmentsTable);
   await db.delete(dealsTable);
   await db.delete(suppliersTable);
@@ -182,6 +184,17 @@ async function main() {
         selected: q.selected,
         sortOrder: i,
       })));
+    }
+  }
+
+  console.log("Inserting deal_shipments join rows...");
+  for (const d of (data.deals ?? [])) {
+    const dbDealId = dealIdMap.get(d.id);
+    if (!dbDealId) continue;
+    for (const sid of d.shipmentIds) {
+      const dbShipmentId = shipmentIdMap.get(sid);
+      if (!dbShipmentId) continue;
+      await db.insert(dealShipmentsTable).values({ dealId: dbDealId, shipmentId: dbShipmentId }).catch(() => {});
     }
   }
 

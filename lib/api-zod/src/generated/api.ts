@@ -410,6 +410,27 @@ export const CreateFactoryQuoteBody = zod.object({
 
 
 /**
+ * @summary Link an existing deal (buyer PO) to this shipment
+ */
+export const LinkDealToShipmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const LinkDealToShipmentBody = zod.object({
+  "dealId": zod.number()
+})
+
+
+/**
+ * @summary Unlink a deal from this shipment
+ */
+export const UnlinkDealFromShipmentParams = zod.object({
+  "id": zod.coerce.number(),
+  "dealId": zod.coerce.number()
+})
+
+
+/**
  * @summary Get stage advancement history for a shipment
  */
 export const ListShipmentStageEventsParams = zod.object({

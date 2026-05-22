@@ -631,6 +631,10 @@ export interface InboundEmailWebhookResponse {
   documentIds: number[];
 }
 
+export type LinkDealToShipmentBody = {
+  dealId: number;
+};
+
 export type ListMessagesParams = {
 isFlagged?: boolean;
 };

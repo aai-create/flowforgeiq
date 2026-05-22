@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment } from "@workspace/api-client-react";
 import type { FactoryQuote } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -15,7 +15,7 @@ import {
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
   MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft, Upload,
-  HelpCircle,
+  HelpCircle, Link2,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -286,6 +286,9 @@ export function Atelier() {
   const [buyerPoMode, setBuyerPoMode] = useState<"auto" | "provided">("auto");
   const { data: poConfig } = useGetPoNumberingConfig();
   const { data: existingDeals } = useListDeals();
+  const { mutate: linkDeal } = useLinkDealToShipment();
+  const { mutate: unlinkDeal } = useUnlinkDealFromShipment();
+  const [linkPanelShipmentId, setLinkPanelShipmentId] = useState<number | null>(null);
   const [newPOForm, setNewPOForm] = useState({
     poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
@@ -767,6 +770,55 @@ export function Atelier() {
                           shipmentId={shipment.shipmentId}
                           stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
                         />
+                      </div>
+                    )}
+
+                    {/* Buyer PO Links (many-to-many management) — visible when card is active */}
+                    {isActive && (
+                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1"><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
+                          <button type="button"
+                            onClick={() => setLinkPanelShipmentId(linkPanelShipmentId === shipment.shipmentId ? null : shipment.shipmentId)}
+                            className="text-[9px] font-semibold text-[#9000FF] hover:underline">
+                            {linkPanelShipmentId === shipment.shipmentId ? "Close" : "Manage"}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                          {shipment.buyerPoNumbers.length === 0 && !shipment.buyerPoNumber && (
+                            <span className="text-[9px] text-[#C0C8D4] italic">No buyer PO linked</span>
+                          )}
+                          {(shipment.buyerPoNumbers.length > 0 ? shipment.buyerPoNumbers : (shipment.buyerPoNumber ? [shipment.buyerPoNumber] : [])).map(bpo => {
+                            const deal = existingDeals?.find(d => d.buyerPoNumber === bpo);
+                            return (
+                              <span key={bpo} className="inline-flex items-center gap-1 text-[9px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                {bpo}
+                                {deal && linkPanelShipmentId === shipment.shipmentId && (
+                                  <button type="button" title="Unlink" onClick={() => unlinkDeal({ id: shipment.shipmentId, dealId: deal.id })}
+                                    className="text-red-400 hover:text-red-600 ml-0.5">×</button>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {linkPanelShipmentId === shipment.shipmentId && existingDeals && (
+                          <div className="border border-[#E5EAF0] rounded-md overflow-hidden max-h-[120px] overflow-y-auto">
+                            {existingDeals
+                              .filter(d => !shipment.buyerPoNumbers.includes(d.buyerPoNumber) && d.buyerPoNumber !== shipment.buyerPoNumber)
+                              .map(d => (
+                                <button key={d.id} type="button"
+                                  onClick={() => linkDeal({ id: shipment.shipmentId, data: { dealId: d.id } })}
+                                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 border-b border-[#F0F4F8] last:border-b-0 transition-colors">
+                                  <span className="text-[10px] font-mono font-semibold text-emerald-700">{d.buyerPoNumber}</span>
+                                  <span className="text-[9px] text-[#5E687B] truncate">{d.customerName}</span>
+                                  <span className="ml-auto text-[8px] text-[#9000FF] font-semibold shrink-0">+ Link</span>
+                                </button>
+                              ))}
+                            {existingDeals.filter(d => !shipment.buyerPoNumbers.includes(d.buyerPoNumber) && d.buyerPoNumber !== shipment.buyerPoNumber).length === 0 && (
+                              <p className="text-[9px] text-[#C0C8D4] italic px-3 py-2">All available deals are already linked</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 

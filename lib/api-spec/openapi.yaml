@@ -283,6 +283,52 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FactoryQuote" }
 
+  /shipments/{id}/deals:
+    post:
+      operationId: linkDealToShipment
+      tags: [shipments]
+      summary: Link an existing deal (buyer PO) to this shipment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dealId]
+              properties:
+                dealId: { type: integer }
+      responses:
+        "201":
+          description: Shipment with updated buyer PO links
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "404":
+          description: Shipment or deal not found
+
+  /shipments/{id}/deals/{dealId}:
+    delete:
+      operationId: unlinkDealFromShipment
+      tags: [shipments]
+      summary: Unlink a deal from this shipment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: dealId
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Unlinked successfully
+
   /shipments/{id}/stage-events:
     get:
       operationId: listShipmentStageEvents

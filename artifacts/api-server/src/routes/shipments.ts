@@ -294,5 +294,35 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
   res.status(201).json(ListShipmentStageEventsResponseItem.parse(event));
 });
 
+// POST /shipments/:id/deals — link an existing deal (by dealId) to this shipment
+router.post("/shipments/:id/deals", async (req, res) => {
+  const shipmentId = Number(req.params.id);
+  const { dealId } = req.body as { dealId?: number };
+  if (!dealId || !Number.isFinite(dealId)) {
+    res.status(400).json({ error: "dealId required" });
+    return;
+  }
+  const shipment = await loadShipment(shipmentId);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
+  const [deal] = await db.select({ id: dealsTable.id }).from(dealsTable).where(eq(dealsTable.id, dealId));
+  if (!deal) { res.status(404).json({ error: "Deal not found" }); return; }
+  await db.insert(dealShipmentsTable).values({ dealId, shipmentId }).catch(() => {});
+  const updated = await loadShipment(shipmentId);
+  res.status(201).json(updated);
+});
+
+// DELETE /shipments/:id/deals/:dealId — unlink a deal from this shipment
+router.delete("/shipments/:id/deals/:dealId", async (req, res) => {
+  const shipmentId = Number(req.params.id);
+  const dealId = Number(req.params.dealId);
+  if (!Number.isFinite(shipmentId) || !Number.isFinite(dealId)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  await db.delete(dealShipmentsTable)
+    .where(and(eq(dealShipmentsTable.shipmentId, shipmentId), eq(dealShipmentsTable.dealId, dealId)));
+  res.status(204).send();
+});
+
 export { consumeNextSeq };
 export default router;

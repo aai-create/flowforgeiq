@@ -38,6 +38,7 @@ import type {
   HealthStatus,
   InboundEmailWebhook,
   InboundEmailWebhookResponse,
+  LinkDealToShipmentBody,
   ListCopilotProposalsParams,
   ListDocumentsParams,
   ListMessagesParams,
@@ -1183,6 +1184,150 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateFactoryQuoteMutationOptions(options));
+    }
+
+export const getLinkDealToShipmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deals`
+}
+
+/**
+ * @summary Link an existing deal (buyer PO) to this shipment
+ */
+export const linkDealToShipment = async (id: number,
+    linkDealToShipmentBody: LinkDealToShipmentBody, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getLinkDealToShipmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      linkDealToShipmentBody,)
+  }
+);}
+
+
+
+
+export const getLinkDealToShipmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkDealToShipment>>, TError,{id: number;data: BodyType<LinkDealToShipmentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof linkDealToShipment>>, TError,{id: number;data: BodyType<LinkDealToShipmentBody>}, TContext> => {
+
+const mutationKey = ['linkDealToShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof linkDealToShipment>>, {id: number;data: BodyType<LinkDealToShipmentBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  linkDealToShipment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LinkDealToShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof linkDealToShipment>>>
+    export type LinkDealToShipmentMutationBody = BodyType<LinkDealToShipmentBody>
+    export type LinkDealToShipmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Link an existing deal (buyer PO) to this shipment
+ */
+export const useLinkDealToShipment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkDealToShipment>>, TError,{id: number;data: BodyType<LinkDealToShipmentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof linkDealToShipment>>,
+        TError,
+        {id: number;data: BodyType<LinkDealToShipmentBody>},
+        TContext
+      > => {
+      return useMutation(getLinkDealToShipmentMutationOptions(options));
+    }
+
+export const getUnlinkDealFromShipmentUrl = (id: number,
+    dealId: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deals/${dealId}`
+}
+
+/**
+ * @summary Unlink a deal from this shipment
+ */
+export const unlinkDealFromShipment = async (id: number,
+    dealId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnlinkDealFromShipmentUrl(id,dealId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUnlinkDealFromShipmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlinkDealFromShipment>>, TError,{id: number;dealId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlinkDealFromShipment>>, TError,{id: number;dealId: number}, TContext> => {
+
+const mutationKey = ['unlinkDealFromShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlinkDealFromShipment>>, {id: number;dealId: number}> = (props) => {
+          const {id,dealId} = props ?? {};
+
+          return  unlinkDealFromShipment(id,dealId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlinkDealFromShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof unlinkDealFromShipment>>>
+
+    export type UnlinkDealFromShipmentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Unlink a deal from this shipment
+ */
+export const useUnlinkDealFromShipment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlinkDealFromShipment>>, TError,{id: number;dealId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unlinkDealFromShipment>>,
+        TError,
+        {id: number;dealId: number},
+        TContext
+      > => {
+      return useMutation(getUnlinkDealFromShipmentMutationOptions(options));
     }
 
 export const getListShipmentStageEventsUrl = (id: number,) => {
