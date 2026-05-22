@@ -1904,6 +1904,7 @@ export default function Home() {
             ) : (
               <AICopilotBar
                 className="w-full"
+                alwaysOpen
                 leftNode={
                   <div className="flex items-center gap-1">
                     <button title="AI mode" className="p-0.5 rounded transition-colors text-[#9000FF]">

@@ -10,6 +10,8 @@ interface CopilotContextValue {
   inputRef: React.RefObject<HTMLInputElement | null>;
   history: string[];
   addToHistory: (query: string) => void;
+  isOpen: boolean;
+  setOpen: (open: boolean) => void;
 }
 
 const CopilotContext = createContext<CopilotContextValue>({
@@ -20,12 +22,15 @@ const CopilotContext = createContext<CopilotContextValue>({
   inputRef: { current: null },
   history: [],
   addToHistory: () => {},
+  isOpen: false,
+  setOpen: () => {},
 });
 
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [contextHint, setContextHint] = useState("Ask FlowForge anything");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const addToHistory = useCallback((query: string) => {
@@ -37,19 +42,33 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setOpen = useCallback((open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+    } else {
+      inputRef.current?.blur();
+    }
+  }, []);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        inputRef.current?.focus();
+        setOpen(!isOpen);
+      } else if (e.key === "Escape" && isOpen) {
+        e.preventDefault();
+        setOpen(false);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [isOpen, setOpen]);
 
   return (
-    <CopilotContext.Provider value={{ contextHint, setContextHint, suggestions, setSuggestions, inputRef, history, addToHistory }}>
+    <CopilotContext.Provider value={{ contextHint, setContextHint, suggestions, setSuggestions, inputRef, history, addToHistory, isOpen, setOpen }}>
       {children}
     </CopilotContext.Provider>
   );
