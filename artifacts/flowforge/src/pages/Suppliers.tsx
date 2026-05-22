@@ -672,7 +672,6 @@ export function Suppliers() {
         </div>
         </div>
         </div>
-        </div>
 
       <NewSupplierDialog
         open={showNewDialog}

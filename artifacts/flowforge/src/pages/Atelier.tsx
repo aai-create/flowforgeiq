@@ -978,7 +978,6 @@ export function Atelier() {
 
         </div>
         </div>
-    </div>
 
     {/* ── ADVANCE STAGE CONFIRMATION DIALOG ── */}
     {advanceTarget && (() => {

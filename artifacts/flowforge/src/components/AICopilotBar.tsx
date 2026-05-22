@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, X, AlertCircle, Clock } from "lucide-react";
+import { Sparkles, X, AlertCircle, Clock, User } from "lucide-react";
 import { useCopilot } from "@/lib/CopilotContext";
 
 interface AICopilotBarProps {
@@ -7,19 +7,23 @@ interface AICopilotBarProps {
   leftNode?: React.ReactNode;
 }
 
+type ConversationTurn = { role: "user" | "assistant"; content: string };
+
 const ACTION_CHIPS = ["Draft reply", "Flag payment", "Show all tasks"];
 
 export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
   const { contextHint, inputRef, history, addToHistory } = useCopilot();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [showResult, setShowResult] = useState(false);
   const [focused, setFocused] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
+  const [pendingMessage, setPendingMessage] = useState("");
   const draftRef = useRef("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
@@ -35,6 +39,11 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, [inputRef]);
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [conversationHistory, pendingMessage, loading]);
 
   async function submit() {
     const text = query.trim();
@@ -44,19 +53,31 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     addToHistory(text);
     setShowResult(true);
     setLoading(true);
-    setResult("");
     setError("");
+    setPendingMessage(text);
+    setQuery("");
+
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}api/copilot/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, contextHint: contextHint !== "Ask FlowForge anything" ? contextHint : undefined }),
+        body: JSON.stringify({
+          message: text,
+          contextHint: contextHint !== "Ask FlowForge anything" ? contextHint : undefined,
+          history: conversationHistory,
+        }),
       });
       if (!res.ok) throw new Error("Request failed");
       const data = (await res.json()) as { reply: string };
-      setResult(data.reply);
+      setConversationHistory(prev => [
+        ...prev,
+        { role: "user", content: text },
+        { role: "assistant", content: data.reply },
+      ]);
+      setPendingMessage("");
     } catch {
       setError("Couldn't connect to AI. Please try again.");
+      setPendingMessage("");
     } finally {
       setLoading(false);
     }
@@ -65,8 +86,10 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
   function clear() {
     setShowResult(false);
     setQuery("");
-    setResult("");
     setError("");
+    setLoading(false);
+    setConversationHistory([]);
+    setPendingMessage("");
     setHistoryIndex(-1);
     draftRef.current = "";
   }
@@ -107,6 +130,7 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     focused && !showResult && query === "" && history.length > 0;
 
   const hasLeftNode = !!leftNode;
+  const hasConversation = conversationHistory.length > 0;
 
   return (
     <div className={`relative w-full${className ? ` ${className}` : ""}`}>
@@ -125,14 +149,17 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
           setQuery(e.target.value);
           setHistoryIndex(-1);
           draftRef.current = "";
-          if (showResult) setShowResult(false);
         }}
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setTimeout(() => setFocused(false), 150);
         }}
-        placeholder={`${contextHint}  ⌘K`}
+        placeholder={
+          showResult && hasConversation
+            ? "Ask a follow-up…"
+            : `${contextHint}  ⌘K`
+        }
         className={`w-full h-8 bg-[#F0F4F8] hover:bg-[#E5EAF0] focus:bg-white border border-transparent focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 rounded-full ${hasLeftNode ? "pl-14" : "pl-9"} pr-4 text-xs outline-none transition-all placeholder:text-[#9E9FAE]`}
       />
 
@@ -165,31 +192,77 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
       )}
 
       {showResult && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/20 rounded-xl shadow-xl z-50 p-4">
-          <div className="flex items-start gap-2 mb-3">
-            {error ? (
-              <AlertCircle size={13} className="text-red-500 shrink-0 mt-0.5" />
-            ) : (
-              <Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5" />
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/20 rounded-xl shadow-xl z-50 flex flex-col max-h-96">
+          <button
+            onClick={clear}
+            className="absolute top-3 right-3 text-[#5E687B] hover:text-[#212833] transition-colors z-10"
+          >
+            <X size={13} />
+          </button>
+
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-3 min-h-0"
+          >
+            {conversationHistory.map((turn, i) =>
+              turn.role === "user" ? (
+                <div key={i} className="flex items-start gap-2 justify-end">
+                  <p className="text-xs text-[#212833] bg-[#F0F4F8] rounded-xl rounded-tr-sm px-3 py-2 max-w-[85%] leading-relaxed">
+                    {turn.content}
+                  </p>
+                  <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-[#9000FF]/10 flex items-center justify-center">
+                    <User size={10} className="text-[#9000FF]" />
+                  </span>
+                </div>
+              ) : (
+                <div key={i} className="flex items-start gap-2">
+                  <Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5" />
+                  <p className="text-xs text-[#212833] leading-relaxed max-w-[90%]">
+                    {turn.content}
+                  </p>
+                </div>
+              )
             )}
-            {loading ? (
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </span>
-            ) : error ? (
-              <p className="text-xs text-red-600 leading-relaxed">{error}</p>
-            ) : (
-              <p className="text-xs text-[#212833] leading-relaxed">{result}</p>
+
+            {pendingMessage && (
+              <div className="flex items-start gap-2 justify-end">
+                <p className="text-xs text-[#212833] bg-[#F0F4F8] rounded-xl rounded-tr-sm px-3 py-2 max-w-[85%] leading-relaxed">
+                  {pendingMessage}
+                </p>
+                <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-[#9000FF]/10 flex items-center justify-center">
+                  <User size={10} className="text-[#9000FF]" />
+                </span>
+              </div>
+            )}
+
+            {loading && (
+              <div className="flex items-start gap-2">
+                <Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5" />
+                <span className="flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </span>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-start gap-2">
+                <AlertCircle size={13} className="text-red-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-600 leading-relaxed">{error}</p>
+              </div>
             )}
           </div>
-          {!loading && !error && (
-            <div className="flex flex-wrap gap-2">
+
+          {!loading && !error && hasConversation && (
+            <div className="px-4 py-2 border-t border-[#F0F4F8] flex flex-wrap gap-2">
               {ACTION_CHIPS.map(chip => (
                 <button
                   key={chip}
-                  onClick={clear}
+                  onClick={() => {
+                    setQuery(chip);
+                    inputRef.current?.focus();
+                  }}
                   className="text-[10px] bg-[#9000FF]/[0.08] text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/[0.15] font-semibold transition-colors"
                 >
                   {chip}
@@ -197,12 +270,6 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
               ))}
             </div>
           )}
-          <button
-            onClick={clear}
-            className="absolute top-3 right-3 text-[#5E687B] hover:text-[#212833] transition-colors"
-          >
-            <X size={13} />
-          </button>
         </div>
       )}
     </div>
