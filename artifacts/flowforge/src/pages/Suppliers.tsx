@@ -657,7 +657,6 @@ export function Suppliers() {
                 </div>
               </ScrollArea>
             </div>
-          </div>
 
             {/* Detail panel */}
             {selectedSupplier && (
