@@ -219,7 +219,10 @@ function FinanceCardContent({
 
       {/* Unpaid by supplier table */}
       <div>
-        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">Unpaid by Supplier</div>
+        <div className="mb-2">
+          <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Unpaid by Supplier</div>
+          <div className="text-[10px] text-[#9E9FAE] mt-0.5">owed by Buyer</div>
+        </div>
         {bySupplier.length === 0
           ? <p className="text-xs text-[#9E9FAE]">All payments are up to date.</p>
           : (
@@ -227,8 +230,12 @@ function FinanceCardContent({
               <thead>
                 <tr className="border-b border-[#E5EAF0]">
                   <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Supplier</th>
-                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Unpaid</th>
-                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Overdue</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
+                    <span title="Amount the Buyer has not yet remitted to this Supplier">Unpaid</span>
+                  </th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
+                    <span title="Unpaid amount where the Buyer's due date has already passed">Overdue</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
