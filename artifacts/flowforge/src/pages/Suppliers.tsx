@@ -678,5 +678,6 @@ export function Suppliers() {
         onCreate={s => setSuppliers(prev => [...prev, s].sort((a, b) => a.name.localeCompare(b.name)))}
       />
     </div>
+  </div>
   );
 }
