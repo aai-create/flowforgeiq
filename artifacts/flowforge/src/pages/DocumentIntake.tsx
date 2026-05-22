@@ -310,7 +310,7 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
 
 interface DocumentDetailProps {
   doc: DocumentWithExtraction;
-  shipments: { id: number; po: string; supplier: string; buyerPoNumber: string | null }[];
+  shipments: { id: number; po: string; supplier: string; buyerPoNumber: string | null; buyerPoNumbers: string[] }[];
   onBack: () => void;
   onLinked: (docId: number, shipmentId: number | null) => void;
 }
@@ -410,9 +410,9 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
             {linkOpen && (
               <div className="mt-2 border border-[#E5EAF0] rounded-lg overflow-hidden shadow-sm max-h-[180px] overflow-y-auto">
                 {shipments.map(s => {
-                  const extractedPo = (localFields["poNumber"] ?? fields["poNumber"] ?? "") as string;
-                  const matchesBuyer = extractedPo && s.buyerPoNumber && extractedPo.trim().toLowerCase() === s.buyerPoNumber.trim().toLowerCase();
-                  const matchesSupplier = extractedPo && extractedPo.trim().toLowerCase() === s.po.trim().toLowerCase();
+                  const extractedPo = ((localFields["poNumber"] ?? fields["poNumber"] ?? "") as string).trim().toLowerCase();
+                  const matchesSupplier = Boolean(extractedPo && extractedPo === s.po.trim().toLowerCase());
+                  const matchesBuyer = Boolean(extractedPo && s.buyerPoNumbers.some(bp => bp.trim().toLowerCase() === extractedPo));
                   return (
                     <button key={s.id} onClick={() => handleLink(s.id)}
                       className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-[#F0F4F8] border-b border-[#F0F4F8] last:border-b-0">
@@ -665,6 +665,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
     po: s.poNumber ?? `#${s.id}`,
     supplier: s.supplierName ?? "",
     buyerPoNumber: s.buyerPoNumber ?? null,
+    buyerPoNumbers: s.buyerPoNumbers ?? (s.buyerPoNumber ? [s.buyerPoNumber] : []),
   }));
 
   useEffect(() => {

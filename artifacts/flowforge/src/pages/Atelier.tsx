@@ -584,14 +584,26 @@ export function Atelier() {
                             <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0]"}`}>
                               {shipment.po}
                             </span>
-                            {shipment.buyerPoNumber && (
+                            {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
+                              <>
+                                <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer</span>
+                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                  {shipment.buyerPoNumbers[0]}
+                                </span>
+                                {shipment.buyerPoNumbers.length > 1 && (
+                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none" title={shipment.buyerPoNumbers.join(", ")}>
+                                    +{shipment.buyerPoNumbers.length - 1}
+                                  </span>
+                                )}
+                              </>
+                            ) : shipment.buyerPoNumber ? (
                               <>
                                 <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer</span>
                                 <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
                                   {shipment.buyerPoNumber}
                                 </span>
                               </>
-                            )}
+                            ) : null}
                             <span className="text-[10px] bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] px-1.5 py-0.5 rounded font-medium">
                               {shipment.customer}
                             </span>
@@ -1151,13 +1163,22 @@ export function Atelier() {
                   }}
                   className="w-full flex items-center justify-center gap-2 text-[11px] font-semibold text-[#9000FF] border border-[#9000FF]/30 px-3 py-2 rounded-md hover:bg-[#9000FF]/5 transition-colors">
                   ✦ Auto-fill next PO pair
-                  {newPOForm.buyerPoNumber && (
-                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                      {newPOForm.buyerPoNumber} / {newPOForm.poNumber}
-                    </span>
-                  )}
                 </button>
-                {!newPOForm.buyerPoNumber && (
+                {newPOForm.buyerPoNumber ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Buyer PO <span className="text-[#9E9FAE] font-normal">(generated)</span></label>
+                      <input readOnly value={newPOForm.buyerPoNumber}
+                        className="w-full border border-emerald-200 bg-emerald-50 rounded-md px-2 py-1.5 text-[11px] text-emerald-700 font-mono outline-none cursor-default"/>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Supplier PO <span className="text-[#9E9FAE] font-normal">(override allowed)</span></label>
+                      <input value={newPOForm.poNumber}
+                        onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
+                        className={`w-full border rounded-md px-2 py-1.5 text-[11px] font-mono outline-none focus:ring-1 transition-colors ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
+                    </div>
+                  </div>
+                ) : (
                   <p className="text-[10px] text-amber-600 text-center">Click above to generate PO numbers before submitting.</p>
                 )}
               </div>

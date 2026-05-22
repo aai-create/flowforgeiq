@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, dealsTable, shipmentsTable, paymentsTable, suppliersTable } from "@workspace/db";
+import { db, dealsTable, shipmentsTable, paymentsTable, suppliersTable, dealShipmentsTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import {
   CreateDealBody,
@@ -25,7 +25,8 @@ async function buildDealWithSpread(dealId: number) {
       supplierId: shipmentsTable.supplierId,
     })
     .from(shipmentsTable)
-    .where(eq(shipmentsTable.dealId, dealId));
+    .innerJoin(dealShipmentsTable, eq(dealShipmentsTable.shipmentId, shipmentsTable.id))
+    .where(eq(dealShipmentsTable.dealId, dealId));
 
   if (!shipments.length) {
     return GetDealResponse.parse({

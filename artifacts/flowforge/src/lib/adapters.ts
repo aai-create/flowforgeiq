@@ -36,6 +36,7 @@ export interface UiShipment {
   shipmentId: number;
   po: string;
   buyerPoNumber: string | null;
+  buyerPoNumbers: string[];
   product: string;
   supplier: string;
   customer: string;
@@ -90,6 +91,7 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     shipmentId: s.id,
     po: s.poNumber,
     buyerPoNumber: s.buyerPoNumber ?? null,
+    buyerPoNumbers: s.buyerPoNumbers ?? [],
     product: s.product,
     supplier: s.supplierName,
     customer: s.customerName,

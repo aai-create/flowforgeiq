@@ -1805,9 +1805,16 @@ export default function Home() {
                       <div className="flex items-center gap-1 flex-wrap mb-0.5">
                         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
                         <span className={`text-xs font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
-                        {s.buyerPoNumber && (
+                        {s.buyerPoNumbers && s.buyerPoNumbers.length > 0 ? (
+                          <>
+                            <span className="text-[8px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumbers[0]}</span>
+                            {s.buyerPoNumbers.length > 1 && (
+                              <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0" title={s.buyerPoNumbers.join(", ")}>+{s.buyerPoNumbers.length - 1}</span>
+                            )}
+                          </>
+                        ) : s.buyerPoNumber ? (
                           <span className="text-[8px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumber}</span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="text-[10px] text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
                       <div className="pl-3">
@@ -2039,12 +2046,20 @@ export default function Home() {
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                         <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier</span>
                         <span className="font-bold text-xs text-[#212833]">{activeShipment.po}</span>
-                        {activeShipment.buyerPoNumber && (
+                        {activeShipment.buyerPoNumbers && activeShipment.buyerPoNumbers.length > 0 ? (
+                          <>
+                            <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer</span>
+                            <span className="font-bold text-xs text-emerald-700 font-mono">{activeShipment.buyerPoNumbers[0]}</span>
+                            {activeShipment.buyerPoNumbers.length > 1 && (
+                              <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded" title={activeShipment.buyerPoNumbers.join(", ")}>+{activeShipment.buyerPoNumbers.length - 1}</span>
+                            )}
+                          </>
+                        ) : activeShipment.buyerPoNumber ? (
                           <>
                             <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer</span>
                             <span className="font-bold text-xs text-emerald-700 font-mono">{activeShipment.buyerPoNumber}</span>
                           </>
-                        )}
+                        ) : null}
                         <span className="text-[9px] bg-[#E5EAF0] text-[#5E687B] px-1.5 rounded font-medium">{activeShipment.customer}</span>
                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${statusCls(activeShipment.status)}`}>{activeShipment.status==="on-track"?<Check size={8}/>:<AlertCircle size={8}/>}{activeShipment.status}</span>
                       </div>
