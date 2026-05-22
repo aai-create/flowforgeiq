@@ -22,17 +22,6 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [inputRef]);
-
-  useEffect(() => {
     function onMouseDown(e: MouseEvent) {
       if (
         dropdownRef.current &&
@@ -45,6 +34,7 @@ export function AICopilotBar({ className, leftNode }: AICopilotBarProps) {
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, [inputRef]);
+
 
   async function submit() {
     const text = query.trim();
