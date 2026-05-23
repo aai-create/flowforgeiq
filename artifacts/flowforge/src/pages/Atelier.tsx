@@ -158,7 +158,7 @@ function stageIndex(stage: string) {
 // Component
 // ---------------------------------------------------------------------------
 export function Atelier() {
-  const [, navigate] = useLocation();
+  useLocation();
   useCopilotHint("Ask about PO status or draft a quick update", [
     "Which POs need attention today?",
     "Show me all delayed shipments",
@@ -588,7 +588,7 @@ export function Atelier() {
                 return (
                   <div key={shipment.id}
                     id={`shipment-${shipment.id}`}
-                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); setMoreMenuId(null); if (isActive) setActiveDetailTab(null); }}
+                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); setMoreMenuId(null); setActiveDetailTab(null); }}
                     className={`border rounded-xl p-4 transition-all cursor-pointer ${isActive ? "border-[#9000FF]/30 shadow-md bg-[#FAFBFF]" : "border-[#E5EAF0] bg-white hover:border-[#D6E3EB] hover:shadow-sm"}`}>
 
                     {/* Header row */}
