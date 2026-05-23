@@ -4,8 +4,8 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey } from "@workspace/api-client-react";
-import type { FactoryQuote } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments } from "@workspace/api-client-react";
+import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
 import { QuotesTab } from "@/components/QuotesTab";
@@ -236,6 +236,9 @@ export function Atelier() {
   }, [apiShipments]);
 
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<"threads" | "docs" | "quotes" | null>(null);
+  const { data: allMessages = [] } = useListMessages();
+  const { data: allDocuments = [] } = useListDocuments();
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
@@ -585,7 +588,7 @@ export function Atelier() {
                 return (
                   <div key={shipment.id}
                     id={`shipment-${shipment.id}`}
-                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); setMoreMenuId(null); }}
+                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); setMoreMenuId(null); if (isActive) setActiveDetailTab(null); }}
                     className={`border rounded-xl p-4 transition-all cursor-pointer ${isActive ? "border-[#9000FF]/30 shadow-md bg-[#FAFBFF]" : "border-[#E5EAF0] bg-white hover:border-[#D6E3EB] hover:shadow-sm"}`}>
 
                     {/* Header row */}
@@ -880,22 +883,32 @@ export function Atelier() {
                     {isActive && (
                       <div onClick={e => e.stopPropagation()}>
                         <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Open Threads tab */}
                             <button
-                              onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}`); }}
-                              className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
+                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "threads" ? null : "threads"); }}
+                              className={`text-[10px] px-3 py-1.5 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${activeDetailTab === "threads" ? "bg-[#9000FF] text-white hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
                               <MessageCircle className="w-3 h-3" /> Open Threads
                             </button>
+                            {/* View Docs tab */}
                             <button
-                              onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${shipment.shipmentId}&tab=docs`); }}
-                              className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "docs" ? null : "docs"); }}
+                              className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "docs" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
                               <FileText className="w-3 h-3" /> View Docs
                             </button>
+                            {/* Factory Quotes tab */}
+                            <button
+                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "quotes" ? null : "quotes"); }}
+                              className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "quotes" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                              <DollarSign className="w-3 h-3" /> Factory Quotes
+                            </button>
+                            {/* Advance Stage — unchanged */}
                             <button
                               onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
                               className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
                               <MapPin className="w-3 h-3" /> Advance Stage
                             </button>
+                            {/* History */}
                             <button
                               onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
                               className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
@@ -928,33 +941,119 @@ export function Atelier() {
                           </div>
                         </div>
 
-                        {/* Factory Quotes section */}
-                        <div className="flex items-center justify-between mt-3 mb-1">
-                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Factory Quotes</span>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
-                                <HelpCircle className="w-3.5 h-3.5" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 text-[12px]" align="end">
-                              <p className="font-semibold text-[#212833] mb-1">Factory Quotes</p>
-                              <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForge tracks the margin automatically.</p>
-                              <Link to="/help#create-po" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
-                                Learn more →
-                              </Link>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <QuotesTab
-                          shipmentId={shipment.shipmentId}
-                          quotes={shipmentQuotesMap.get(shipment.shipmentId) ?? []}
-                          currentStage={shipment.currentStage}
-                          supplierNames={apiSuppliers.map(s => s.name)}
-                          onQuotesChange={(updated) =>
-                            setShipmentQuotesMap(prev => new Map(prev).set(shipment.shipmentId, updated))
-                          }
-                        />
+                        {/* Inline detail panel — shown when a tab is active */}
+                        {activeDetailTab !== null && (
+                          <div className="mt-3 border border-[#E5EAF0] rounded-xl bg-white overflow-hidden">
+                            {/* Threads panel */}
+                            {activeDetailTab === "threads" && (() => {
+                              const msgs: Message[] = allMessages
+                                .filter((m: Message) => m.shipmentId === shipment.shipmentId)
+                                .sort((a: Message, b: Message) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+                                .slice(0, 5);
+                              return (
+                                <div>
+                                  <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
+                                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Recent Threads</span>
+                                    <span className="text-[9px] text-[#C0C8D4]">{msgs.length} of {allMessages.filter((m: Message) => m.shipmentId === shipment.shipmentId).length}</span>
+                                  </div>
+                                  {msgs.length === 0 ? (
+                                    <p className="text-[11px] text-[#C0C8D4] italic px-4 py-4 text-center">No messages for this shipment</p>
+                                  ) : (
+                                    <ul>
+                                      {msgs.map((msg: Message) => (
+                                        <li key={msg.id} className="flex items-start gap-3 px-4 py-3 border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#FAFBFC] transition-colors">
+                                          <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 text-[#9000FF] flex items-center justify-center shrink-0 text-[9px] font-bold mt-0.5">
+                                            {msg.sender.charAt(0).toUpperCase()}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <span className="text-[11px] font-semibold text-[#212833] truncate">{msg.sender}</span>
+                                              <span className="text-[9px] text-[#C0C8D4] shrink-0">{new Date(msg.receivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                            </div>
+                                            {msg.subject && <p className="text-[10px] text-[#5E687B] font-medium truncate mt-0.5">{msg.subject}</p>}
+                                            <p className="text-[10px] text-[#9E9FAE] truncate mt-0.5">{msg.snippet}</p>
+                                          </div>
+                                          {msg.unread && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0 mt-2" />}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Docs panel */}
+                            {activeDetailTab === "docs" && (() => {
+                              const docs: DocumentWithExtraction[] = allDocuments
+                                .filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId)
+                                .sort((a: DocumentWithExtraction, b: DocumentWithExtraction) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .slice(0, 5);
+                              return (
+                                <div>
+                                  <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
+                                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Attached Documents</span>
+                                    <span className="text-[9px] text-[#C0C8D4]">{docs.length} of {allDocuments.filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId).length}</span>
+                                  </div>
+                                  {docs.length === 0 ? (
+                                    <p className="text-[11px] text-[#C0C8D4] italic px-4 py-4 text-center">No documents attached to this shipment</p>
+                                  ) : (
+                                    <ul>
+                                      {docs.map((doc: DocumentWithExtraction) => (
+                                        <li key={doc.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#FAFBFC] transition-colors">
+                                          <FileText className="w-4 h-4 text-[#9000FF] shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-semibold text-[#212833] truncate">{doc.fileName}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                              <span className="text-[9px] text-[#9E9FAE] uppercase">{doc.fileType}</span>
+                                              <span className="text-[9px] text-[#C0C8D4]">·</span>
+                                              <span className="text-[9px] text-[#9E9FAE]">{doc.sourceChannel}</span>
+                                              <span className="text-[9px] text-[#C0C8D4]">·</span>
+                                              <span className="text-[9px] text-[#9E9FAE]">{new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                            </div>
+                                          </div>
+                                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${doc.status === "extracted" ? "bg-emerald-50 text-emerald-700" : "bg-[#F0F4F8] text-[#9E9FAE]"}`}>
+                                            {doc.status}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Factory Quotes panel */}
+                            {activeDetailTab === "quotes" && (
+                              <div>
+                                <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
+                                  <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Factory Quotes</span>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
+                                        <HelpCircle className="w-3.5 h-3.5" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-3 text-[12px]" align="end">
+                                      <p className="font-semibold text-[#212833] mb-1">Factory Quotes</p>
+                                      <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForge tracks the margin automatically.</p>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                                <div className="p-3">
+                                  <QuotesTab
+                                    shipmentId={shipment.shipmentId}
+                                    quotes={shipmentQuotesMap.get(shipment.shipmentId) ?? []}
+                                    currentStage={shipment.currentStage}
+                                    supplierNames={apiSuppliers.map(s => s.name)}
+                                    onQuotesChange={(updated) =>
+                                      setShipmentQuotesMap(prev => new Map(prev).set(shipment.shipmentId, updated))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
