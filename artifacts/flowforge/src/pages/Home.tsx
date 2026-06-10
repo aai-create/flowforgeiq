@@ -2418,7 +2418,7 @@ export default function Home() {
                                 id: String(created.id), messageId: created.id, sender: created.sender,
                                 channel: pasteChatChannel as UiMessage["channel"], timestamp: "Just now",
                                 snippet: created.snippet, fullBody: created.fullBody, unread: true,
-                                aiTags: created.aiTags??[], shipmentId: created.shipmentId?String(created.shipmentId):"",
+                                aiTags: created.aiTags??[], shipmentId: created.shipmentId?`s${created.shipmentId}`:"",
                                 supplierId: "", aiDraft: created.aiDraft??"", aiAction: created.aiAction??"",
                                 isFlagged: false, routingStatus: pasteChatResult.routingStatus as "routed"|"needs-review",
                               };
