@@ -494,7 +494,7 @@ export const listMessagesResponseDirectionDefault = `inbound`;
 
 export const ListMessagesResponseItem = zod.object({
   "id": zod.number(),
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
   "supplierId": zod.number().nullish(),
   "sender": zod.string(),
   "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
@@ -508,7 +508,24 @@ export const ListMessagesResponseItem = zod.object({
   "aiTags": zod.array(zod.string()),
   "unread": zod.boolean(),
   "isFlagged": zod.boolean(),
-  "receivedAt": zod.coerce.date()
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().optional(),
+  "shipmentId": zod.number().optional(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
 })
 export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
 
@@ -532,6 +549,49 @@ export const CreateMessageBody = zod.object({
 })
 
 
+/**
+ * @summary Messages that could not be auto-routed and need manual assignment
+ */
+export const listNeedsReviewMessagesResponseDirectionDefault = `inbound`;
+
+export const ListNeedsReviewMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(listNeedsReviewMessagesResponseDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().optional(),
+  "shipmentId": zod.number().optional(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+})
+export const ListNeedsReviewMessagesResponse = zod.array(ListNeedsReviewMessagesResponseItem)
+
+
 export const UpdateMessageParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -546,7 +606,7 @@ export const updateMessageResponseDirectionDefault = `inbound`;
 
 export const UpdateMessageResponse = zod.object({
   "id": zod.number(),
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
   "supplierId": zod.number().nullish(),
   "sender": zod.string(),
   "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
@@ -560,7 +620,138 @@ export const UpdateMessageResponse = zod.object({
   "aiTags": zod.array(zod.string()),
   "unread": zod.boolean(),
   "isFlagged": zod.boolean(),
-  "receivedAt": zod.coerce.date()
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().optional(),
+  "shipmentId": zod.number().optional(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+})
+
+
+/**
+ * @summary Manually assign a needs-review message to a buyer and shipment
+ */
+export const AssignMessageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AssignMessageBody = zod.object({
+  "buyerName": zod.string().describe('Customer \/ buyer name to associate with this sender'),
+  "shipmentId": zod.number().describe('Shipment to thread this message into')
+})
+
+export const assignMessageResponseDirectionDefault = `inbound`;
+
+export const AssignMessageResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(assignMessageResponseDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().optional(),
+  "shipmentId": zod.number().optional(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+})
+
+
+/**
+ * @summary Send a reply via Gmail (send-as from your real Gmail address)
+ */
+export const SendReplyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SendReplyBody = zod.object({
+  "body": zod.string().describe('Reply body text'),
+  "subject": zod.string().optional().describe('Override subject line (defaults to Re: original subject)'),
+  "to": zod.string().optional().describe('Recipient email address (defaults to rawSenderEmail)')
+})
+
+
+/**
+ * @summary Get Gmail OAuth connection status
+ */
+export const GetGmailStatusResponse = zod.object({
+  "connected": zod.boolean(),
+  "gmailAddress": zod.string().nullish(),
+  "clientConfigured": zod.boolean().describe('True when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set')
+})
+
+
+/**
+ * @summary Start Gmail OAuth flow — returns authUrl for client-side popup
+ */
+export const ConnectGmailResponse = zod.object({
+  "authUrl": zod.string().describe('Google OAuth URL — open in a popup window')
+})
+
+
+/**
+ * @summary Gmail OAuth callback — exchanges code for tokens
+ */
+export const GmailOAuthCallbackQueryParams = zod.object({
+  "code": zod.coerce.string().optional(),
+  "error": zod.coerce.string().optional()
+})
+
+
+/**
+ * @summary Revoke and remove stored Gmail OAuth credentials
+ */
+export const DisconnectGmailResponse = zod.object({
+  "disconnected": zod.boolean()
+})
+
+
+/**
+ * @summary Send a test email through the Gmail pipeline to verify the setup
+ */
+export const TestGmailSendBody = zod.object({
+  "to": zod.string().optional().describe('Recipient address for the test email')
+})
+
+export const TestGmailSendResponse = zod.object({
+  "sent": zod.boolean(),
+  "to": zod.string(),
+  "from": zod.string()
 })
 
 

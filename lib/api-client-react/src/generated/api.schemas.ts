@@ -236,9 +236,51 @@ export const MessageDirection = {
   outbound: 'outbound',
 } as const;
 
+/**
+ * routed = auto-assigned; needs-review = awaiting manual assignment
+ */
+export type MessageRoutingStatus = typeof MessageRoutingStatus[keyof typeof MessageRoutingStatus];
+
+
+export const MessageRoutingStatus = {
+  routed: 'routed',
+  'needs-review': 'needs-review',
+} as const;
+
+/**
+ * AI's best guess for assignment (when confidence is low)
+ * @nullable
+ */
+export type MessageAiRoutingGuess = {
+  buyerName?: string;
+  shipmentId?: number;
+  confidence?: number;
+  reasoning?: string;
+} | null;
+
+/**
+ * Low-confidence field extractions awaiting human confirmation
+ * @nullable
+ */
+export type MessagePendingExtractionFields = {
+  /** @nullable */
+  exFactoryDate?: string | null;
+  /** @nullable */
+  quantity?: number | null;
+  /** @nullable */
+  delayDays?: number | null;
+  /** @nullable */
+  newStatus?: string | null;
+  confidence?: number;
+} | null;
+
 export interface Message {
   id: number;
-  shipmentId: number;
+  /**
+     * null for needs-review messages not yet assigned to a shipment
+     * @nullable
+     */
+  shipmentId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   sender: string;
@@ -262,6 +304,33 @@ export interface Message {
   unread: boolean;
   isFlagged: boolean;
   receivedAt: string;
+  /** routed = auto-assigned; needs-review = awaiting manual assignment */
+  routingStatus: MessageRoutingStatus;
+  /**
+     * 0–1 confidence of the auto-routing decision
+     * @nullable
+     */
+  routingConfidence?: number | null;
+  /**
+     * How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable
+     * @nullable
+     */
+  matchMethod?: string | null;
+  /**
+     * The original sender email address
+     * @nullable
+     */
+  rawSenderEmail?: string | null;
+  /**
+     * AI's best guess for assignment (when confidence is low)
+     * @nullable
+     */
+  aiRoutingGuess?: MessageAiRoutingGuess;
+  /**
+     * Low-confidence field extractions awaiting human confirmation
+     * @nullable
+     */
+  pendingExtractionFields?: MessagePendingExtractionFields;
 }
 
 export type MessageInputDirection = typeof MessageInputDirection[keyof typeof MessageInputDirection];
@@ -631,12 +700,60 @@ export interface InboundEmailWebhookResponse {
   documentIds: number[];
 }
 
+export interface MessageAssignInput {
+  /** Customer / buyer name to associate with this sender */
+  buyerName: string;
+  /** Shipment to thread this message into */
+  shipmentId: number;
+}
+
+export interface SendReplyInput {
+  /** Reply body text */
+  body: string;
+  /** Override subject line (defaults to Re: original subject) */
+  subject?: string;
+  /** Recipient email address (defaults to rawSenderEmail) */
+  to?: string;
+}
+
+export interface GmailStatus {
+  connected: boolean;
+  gmailAddress?: string | null;
+  /** True when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set */
+  clientConfigured: boolean;
+}
+
 export type LinkDealToShipmentBody = {
   dealId: number;
 };
 
 export type ListMessagesParams = {
 isFlagged?: boolean;
+};
+
+export type ConnectGmail200 = {
+  /** Google OAuth URL — open in a popup window */
+  authUrl: string;
+};
+
+export type GmailOAuthCallbackParams = {
+code?: string;
+error?: string;
+};
+
+export type DisconnectGmail200 = {
+  disconnected: boolean;
+};
+
+export type TestGmailSendBody = {
+  /** Recipient address for the test email */
+  to?: string;
+};
+
+export type TestGmailSend200 = {
+  sent: boolean;
+  to: string;
+  from: string;
 };
 
 export type ListDocumentsParams = {

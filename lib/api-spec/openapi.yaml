@@ -22,6 +22,7 @@ tags:
   - name: predictions
   - name: copilot
   - name: settings
+  - name: integrations
 paths:
   /healthz:
     get:
@@ -422,6 +423,20 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Message" }
+  /messages/needs-review:
+    get:
+      operationId: listNeedsReviewMessages
+      tags: [messages]
+      summary: Messages that could not be auto-routed and need manual assignment
+      responses:
+        "200":
+          description: Needs-review messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Message" }
+
   /messages/{id}:
     patch:
       operationId: updateMessage
@@ -442,6 +457,146 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Message" }
+
+  /messages/{id}/assign:
+    patch:
+      operationId: assignMessage
+      tags: [messages]
+      summary: Manually assign a needs-review message to a buyer and shipment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageAssignInput" }
+      responses:
+        "200":
+          description: Assigned message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+        "404":
+          description: Message not found
+
+  /messages/{id}/send-reply:
+    post:
+      operationId: sendReply
+      tags: [messages]
+      summary: Send a reply via Gmail (send-as from your real Gmail address)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendReplyInput" }
+      responses:
+        "201":
+          description: Outbound message record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+        "400":
+          description: Gmail not connected or message not found
+
+  /integrations/gmail/status:
+    get:
+      operationId: getGmailStatus
+      tags: [integrations]
+      summary: Get Gmail OAuth connection status
+      responses:
+        "200":
+          description: Gmail status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GmailStatus" }
+
+  /integrations/gmail/connect:
+    get:
+      operationId: connectGmail
+      tags: [integrations]
+      summary: Start Gmail OAuth flow — returns authUrl for client-side popup
+      responses:
+        "200":
+          description: Auth URL to open in a popup
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authUrl]
+                properties:
+                  authUrl: { type: string, description: "Google OAuth URL — open in a popup window" }
+        "400":
+          description: OAuth credentials not configured
+
+  /integrations/gmail/callback:
+    get:
+      operationId: gmailOAuthCallback
+      tags: [integrations]
+      summary: Gmail OAuth callback — exchanges code for tokens
+      parameters:
+        - in: query
+          name: code
+          required: false
+          schema: { type: string }
+        - in: query
+          name: error
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Connected successfully (HTML page)
+
+  /integrations/gmail/disconnect:
+    post:
+      operationId: disconnectGmail
+      tags: [integrations]
+      summary: Revoke and remove stored Gmail OAuth credentials
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [disconnected]
+                properties:
+                  disconnected: { type: boolean }
+
+  /integrations/gmail/test:
+    post:
+      operationId: testGmailSend
+      tags: [integrations]
+      summary: Send a test email through the Gmail pipeline to verify the setup
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to: { type: string, description: "Recipient address for the test email" }
+      responses:
+        "200":
+          description: Test email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sent, to, from]
+                properties:
+                  sent: { type: boolean }
+                  to:   { type: string }
+                  from: { type: string }
+        "400":
+          description: Gmail not connected
 
   /tasks:
     get:
@@ -1108,7 +1263,6 @@ components:
       type: object
       required:
         - id
-        - shipmentId
         - sender
         - channel
         - direction
@@ -1120,25 +1274,47 @@ components:
         - unread
         - isFlagged
         - receivedAt
+        - routingStatus
       properties:
-        id:         { type: integer }
-        shipmentId: { type: integer }
-        supplierId: { type: ["integer", "null"] }
-        sender:     { type: string }
-        recipient:  { type: ["string", "null"], description: "Outbound recipient — supplier email or name" }
-        channel:    { type: string }
-        subject:    { type: ["string", "null"], description: "Subject line for outbound email messages" }
-        direction:  { type: string, enum: [inbound, outbound], default: inbound }
-        snippet:    { type: string }
-        fullBody:   { type: string }
-        aiDraft:    { type: string }
-        aiAction:   { type: string }
+        id:                     { type: integer }
+        shipmentId:             { type: ["integer", "null"], description: "null for needs-review messages not yet assigned to a shipment" }
+        supplierId:             { type: ["integer", "null"] }
+        sender:                 { type: string }
+        recipient:              { type: ["string", "null"], description: "Outbound recipient — supplier email or name" }
+        channel:                { type: string }
+        subject:                { type: ["string", "null"], description: "Subject line for outbound email messages" }
+        direction:              { type: string, enum: [inbound, outbound], default: inbound }
+        snippet:                { type: string }
+        fullBody:               { type: string }
+        aiDraft:                { type: string }
+        aiAction:               { type: string }
         aiTags:
           type: array
           items: { type: string }
-        unread:     { type: boolean }
-        isFlagged:  { type: boolean }
-        receivedAt: { type: string, format: date-time }
+        unread:                 { type: boolean }
+        isFlagged:              { type: boolean }
+        receivedAt:             { type: string, format: date-time }
+        routingStatus:          { type: string, enum: [routed, needs-review], description: "routed = auto-assigned; needs-review = awaiting manual assignment" }
+        routingConfidence:      { type: ["number", "null"], description: "0–1 confidence of the auto-routing decision" }
+        matchMethod:            { type: ["string", "null"], description: "How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable" }
+        rawSenderEmail:         { type: ["string", "null"], description: "The original sender email address" }
+        aiRoutingGuess:
+          type: ["object", "null"]
+          description: "AI's best guess for assignment (when confidence is low)"
+          properties:
+            buyerName:   { type: string }
+            shipmentId:  { type: integer }
+            confidence:  { type: number }
+            reasoning:   { type: string }
+        pendingExtractionFields:
+          type: ["object", "null"]
+          description: "Low-confidence field extractions awaiting human confirmation"
+          properties:
+            exFactoryDate: { type: ["string", "null"] }
+            quantity:      { type: ["integer", "null"] }
+            delayDays:     { type: ["integer", "null"] }
+            newStatus:     { type: ["string", "null"] }
+            confidence:    { type: number }
     MessageInput:
       type: object
       required: [shipmentId, sender, channel, snippet, fullBody]
@@ -1537,3 +1713,26 @@ components:
         documentIds:
           type: array
           items: { type: integer }
+
+    MessageAssignInput:
+      type: object
+      required: [buyerName, shipmentId]
+      properties:
+        buyerName:  { type: string, description: "Customer / buyer name to associate with this sender" }
+        shipmentId: { type: integer, description: "Shipment to thread this message into" }
+
+    SendReplyInput:
+      type: object
+      required: [body]
+      properties:
+        body:       { type: string, description: "Reply body text" }
+        subject:    { type: string, description: "Override subject line (defaults to Re: original subject)" }
+        to:         { type: string, description: "Recipient email address (defaults to rawSenderEmail)" }
+
+    GmailStatus:
+      type: object
+      required: [connected, clientConfigured]
+      properties:
+        connected:        { type: boolean }
+        gmailAddress:     { type: string, nullable: true }
+        clientConfigured: { type: boolean, description: "True when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set" }

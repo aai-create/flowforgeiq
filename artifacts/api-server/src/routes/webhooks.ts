@@ -6,12 +6,17 @@ import {
   shipmentsTable,
   suppliersTable,
   extractionCorrectionsTable,
+  messagesTable,
+  buyerEmailsTable,
 } from "@workspace/db";
 import { InboundEmailWebhookBody } from "@workspace/api-zod";
 import { asc, eq } from "drizzle-orm";
 import { runExtraction } from "../lib/extraction";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
+
+const ROUTING_NEEDS_REVIEW_THRESHOLD = 0.65;
 
 function getMimeFileType(mimeType: string): string {
   if (mimeType.startsWith("image/")) return "image";
@@ -28,10 +33,6 @@ function getMimeFileType(mimeType: string): string {
 
 // ─── Text normalisation ────────────────────────────────────────────────────────
 
-/**
- * Normalises a company name or domain segment for fuzzy comparison.
- * Strips common legal / industry suffixes and punctuation, lower-cases the result.
- */
 function normaliseName(raw: string): string {
   return raw
     .toLowerCase()
@@ -43,15 +44,9 @@ function normaliseName(raw: string): string {
     .trim();
 }
 
-/**
- * Extracts the company-name token from an email domain.
- * e.g. "marco@bridgelinktrading.com" → "bridgelink"
- *      "sales@sun-tex.co.uk"         → "suntex"
- */
 function domainToken(email: string): string {
   const domain = (email.split("@")[1] ?? "").toLowerCase();
   const parts = domain.split(".");
-  // Drop top-level domain segments (last 1–2 parts)
   const keepParts = parts.length > 2 ? parts.slice(0, parts.length - 2) : parts.slice(0, 1);
   return normaliseName(keepParts.join("-"));
 }
@@ -63,17 +58,11 @@ function tokenOverlaps(a: string, b: string): boolean {
 
 // ─── Forwarded-email parsing ───────────────────────────────────────────────────
 
-/**
- * Extracts the original sender's email from the forwarded body text.
- * Handles "---------- Forwarded message ---------" style separators as well as
- * bare "From:" lines in English, French, and German.
- */
 function extractForwardedFrom(textBody: string): string | null {
   if (!textBody) return null;
 
   const EMAIL_RE = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/;
 
-  // Prefer to search within a forwarded section
   const sectionMatch = textBody.match(
     /(?:---------- Forwarded message ---------|-{3,}\s*Original Message\s*-{3,}|Begin forwarded message)/i,
   );
@@ -84,7 +73,6 @@ function extractForwardedFrom(textBody: string): string | null {
   );
   if (fromLine?.[1]) return fromLine[1].toLowerCase();
 
-  // Fallback: first email address found after the separator
   if (sectionMatch) {
     const m = searchText.match(EMAIL_RE);
     if (m?.[1]) return m[1].toLowerCase();
@@ -97,38 +85,26 @@ function extractForwardedFrom(textBody: string): string | null {
 
 type PartyType = "supplier" | "buyer" | "unknown";
 type SupplierMatchMethod = "exact-email" | "exact-domain" | "fuzzy-name";
+type MatchMethod = SupplierMatchMethod | "buyer-learned" | "ai-inferred" | "unresolvable";
 
 interface SupplierRecord { id: number; name: string; contactEmail: string | null }
-interface ShipmentRecord { id: number; poNumber: string; product: string; customerName: string; supplierId: number }
+interface ShipmentRecord { id: number; poNumber: string; product: string; customerName: string; supplierId: number; exFactoryDate: Date; dueDate: Date; }
 
 interface SupplierMatch {
   supplier: SupplierRecord;
   matchedBy: SupplierMatchMethod;
 }
 
-/**
- * Attempts to match an email address to a known supplier.
- *
- * Resolution order (most → least specific):
- *  1. Exact email address match against `contactEmail`
- *  2. Exact domain match (sender's domain == domain part of `contactEmail`)
- *  3. Fuzzy domain-token overlap against supplier name (legacy heuristic)
- *
- * Returns a match object that includes how the match was made so callers can
- * log when the fuzzy fallback is used.
- */
 function matchEmailToSupplier(email: string, suppliers: SupplierRecord[]): SupplierMatch | null {
   const senderEmail = email.toLowerCase();
   const senderDomain = (senderEmail.split("@")[1] ?? "").toLowerCase();
 
-  // ── 1. Exact email match ────────────────────────────────────────────────────
   for (const s of suppliers) {
     if (s.contactEmail && s.contactEmail.toLowerCase() === senderEmail) {
       return { supplier: s, matchedBy: "exact-email" };
     }
   }
 
-  // ── 2. Exact domain match ───────────────────────────────────────────────────
   if (senderDomain) {
     for (const s of suppliers) {
       if (s.contactEmail) {
@@ -140,7 +116,6 @@ function matchEmailToSupplier(email: string, suppliers: SupplierRecord[]): Suppl
     }
   }
 
-  // ── 3. Fuzzy name heuristic (legacy fallback) ───────────────────────────────
   const token = domainToken(email);
   if (!token || token.length < 3) return null;
   for (const s of suppliers) {
@@ -152,11 +127,6 @@ function matchEmailToSupplier(email: string, suppliers: SupplierRecord[]): Suppl
   return null;
 }
 
-/**
- * Attempts to match an email address to a known buyer by comparing the
- * normalised domain token against the customerName values in shipments.
- * Returns the matched customerName, or null.
- */
 function matchEmailToBuyer(email: string, shipments: ShipmentRecord[]): string | null {
   const token = domainToken(email);
   if (!token || token.length < 3) return null;
@@ -167,14 +137,18 @@ function matchEmailToBuyer(email: string, shipments: ShipmentRecord[]): string |
   return null;
 }
 
+function matchEmailToLearnedBuyer(
+  email: string,
+  buyerEmails: { senderEmail: string; buyerName: string; confirmed: boolean }[],
+): { buyerName: string; confirmed: boolean } | null {
+  const lower = email.toLowerCase();
+  const exact = buyerEmails.find(b => b.senderEmail === lower);
+  if (exact) return { buyerName: exact.buyerName, confirmed: exact.confirmed };
+  return null;
+}
+
 // ─── PO / shipment reference scanning ─────────────────────────────────────────
 
-/**
- * Scans subject + body text for shipment-identifying signals (PO numbers,
- * product names / style codes) within the given account-scoped candidates.
- * Returns the single matching shipment id when exactly one candidate matches
- * (confidence gate — prevents false-positive auto-linking on ambiguous hits).
- */
 function scanForShipmentMatch(
   subject: string,
   body: string,
@@ -184,59 +158,217 @@ function scanForShipmentMatch(
   const stripped = raw.replace(/[^a-z0-9]/g, "");
 
   const hits = candidates.filter((s) => {
-    // ── PO number match ──────────────────────────────────────────────────────
     const po = s.poNumber.toLowerCase();
     if (raw.includes(po)) return true;
     const poAlpha = po.replace(/[^a-z0-9]/g, "");
     if (poAlpha.length >= 4 && stripped.includes(poAlpha)) return true;
 
-    // ── Product / style-code match ───────────────────────────────────────────
-    // Product strings like "WOVEN DRESS" are often present verbatim in invoice
-    // subjects. Require >= 6 chars to reduce generic-term false positives.
     const product = s.product.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
     if (product.length >= 6 && raw.includes(product)) return true;
 
-    // Also try stripped product token (removes spaces/hyphens for style codes)
     const productAlpha = product.replace(/\s+/g, "");
     if (productAlpha.length >= 6 && stripped.includes(productAlpha)) return true;
 
     return false;
   });
 
-  // Only auto-link when there is exactly one confident match
   return hits.length === 1 ? hits[0].id : null;
+}
+
+// ─── AI shipment inference ────────────────────────────────────────────────────
+
+interface AiRoutingGuess {
+  buyerName: string | null;
+  shipmentId: number | null;
+  confidence: number;
+  reasoning: string;
+}
+
+async function inferShipmentWithAI(
+  subject: string,
+  body: string,
+  senderEmail: string,
+  candidates: ShipmentRecord[],
+): Promise<AiRoutingGuess | null> {
+  if (!candidates.length) return null;
+
+  const today = new Date("2026-05-18");
+  const shipmentSummaries = candidates
+    .slice(0, 40)
+    .map(s => {
+      const daysToEx = Math.round((new Date(s.exFactoryDate).getTime() - today.getTime()) / 86_400_000);
+      return `ID:${s.id} PO:${s.poNumber} Product:"${s.product}" Customer:"${s.customerName}" ExFactory:${daysToEx}d`;
+    })
+    .join("\n");
+
+  const prompt = `You are a supply-chain email router. Match the inbound email to the most likely shipment.
+
+Active shipments:
+${shipmentSummaries}
+
+Inbound email:
+Sender: ${senderEmail}
+Subject: ${subject || "(no subject)"}
+Body:
+${body?.slice(0, 1500) || "(empty)"}
+
+Reply with JSON only (no markdown):
+{
+  "shipmentId": <integer id or null if no confident match>,
+  "buyerName": "<customer name from shipment or null>",
+  "confidence": <0.0-1.0>,
+  "reasoning": "<one sentence>"
+}`;
+
+  try {
+    const resp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+      max_tokens: 200,
+    });
+
+    const raw = resp.choices[0]?.message?.content?.trim() ?? "";
+    const clean = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+    const parsed = JSON.parse(clean) as AiRoutingGuess;
+
+    if (typeof parsed.shipmentId !== "number" && parsed.shipmentId !== null) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// ─── AI reply drafting ────────────────────────────────────────────────────────
+
+async function draftReplyWithAI(
+  emailBody: string,
+  subject: string,
+  shipment: ShipmentRecord | null,
+): Promise<string> {
+  const shipmentCtx = shipment
+    ? `Shipment context: PO ${shipment.poNumber}, Product: "${shipment.product}", Customer: ${shipment.customerName}.`
+    : "No shipment context available.";
+
+  const prompt = `You are an AI supply-chain trade assistant. Draft a professional, concise reply to this inbound email.
+
+${shipmentCtx}
+
+Inbound email:
+Subject: ${subject || "(no subject)"}
+Body:
+${emailBody?.slice(0, 2000) || "(empty)"}
+
+Write only the reply body — no greeting line needed, just the content. Keep it under 120 words.`;
+
+  try {
+    const resp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 300,
+    });
+    return resp.choices[0]?.message?.content?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+// ─── Structured field extraction from email body ──────────────────────────────
+
+async function extractFieldsFromEmail(
+  body: string,
+  subject: string,
+  shipmentId: number,
+  messageId: number,
+): Promise<void> {
+  const prompt = `Extract shipment-relevant fields from this email body. Return JSON only.
+
+Email:
+Subject: ${subject || "(no subject)"}
+Body:
+${body?.slice(0, 2000)}
+
+Extract these fields if clearly mentioned (leave null otherwise):
+{
+  "exFactoryDate": "<ISO date or null>",
+  "quantity": <integer or null>,
+  "delayDays": <integer or null>,
+  "newStatus": "<on-track|at-risk|delayed or null>",
+  "confidence": <0.0-1.0>
+}`;
+
+  try {
+    const resp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+      max_tokens: 200,
+    });
+
+    const raw = resp.choices[0]?.message?.content?.trim() ?? "";
+    const clean = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+    const parsed = JSON.parse(clean) as {
+      exFactoryDate?: string | null;
+      quantity?: number | null;
+      delayDays?: number | null;
+      newStatus?: string | null;
+      confidence?: number;
+    };
+
+    const conf = parsed.confidence ?? 0;
+
+    if (conf >= 0.85) {
+      const patch: Record<string, unknown> = {};
+      if (parsed.newStatus && ["on-track", "at-risk", "delayed"].includes(parsed.newStatus)) {
+        patch.status = parsed.newStatus;
+      }
+      if (parsed.exFactoryDate) {
+        const d = new Date(parsed.exFactoryDate);
+        if (!isNaN(d.getTime())) patch.exFactoryDate = d;
+      }
+      if (parsed.quantity && parsed.quantity > 0) {
+        patch.quantity = parsed.quantity;
+      }
+      if (Object.keys(patch).length > 0) {
+        await db.update(shipmentsTable).set(patch).where(eq(shipmentsTable.id, shipmentId));
+      }
+    } else if (conf >= 0.45) {
+      await db.update(messagesTable).set({
+        pendingExtractionFields: {
+          exFactoryDate: parsed.exFactoryDate ?? null,
+          quantity: parsed.quantity ?? null,
+          delayDays: parsed.delayDays ?? null,
+          newStatus: parsed.newStatus ?? null,
+          confidence: conf,
+        },
+      }).where(eq(messagesTable.id, messageId));
+    }
+  } catch {
+    // field extraction is best-effort; never throw
+  }
 }
 
 // ─── Email routing context ────────────────────────────────────────────────────
 
 interface EmailRoutingContext {
-  /** Resolved supplier id from sender or forwarded-from email, or null */
   supplierId: number | null;
-  /** Shipment id found by scanning subject/body for PO numbers, or null */
   preMatchedShipmentId: number | null;
-  /**
-   * Shipment ids the extraction pipeline is allowed to match against.
-   * null = unresolvable sender; extraction receives an empty candidate list and
-   *        cannot match any shipment (documents land in the unlinked queue).
-   * number[] = account-scoped ids; extraction is restricted to these shipments.
-   */
   routingShipmentIds: number[] | null;
-  /** Email address of the original (forwarded-from) sender, if detectable */
   forwardedFromEmail: string | null;
-  /** Whether the message body contains a forwarded-email section */
   isForwarded: boolean;
-  /** Party type of the outer (forwarding) sender */
   outerSenderType: PartyType;
-  /** Party type of the inner (original, forwarded-from) sender */
   innerSenderType: PartyType;
-  /** True when the sender could not be matched to any known entity */
   unresolvable: boolean;
-  /** Customer name matched from outer sender (the "account") */
   resolvedCustomerName: string | null;
-  /** How the supplier was matched (null when no supplier was matched) */
   supplierMatchedBy: SupplierMatchMethod | null;
-  /** Name of the matched supplier for logging purposes */
   matchedSupplierName: string | null;
+  confidence: number;
+  matchMethod: MatchMethod;
+  effectiveSenderEmail: string;
+  candidateShipments: ShipmentRecord[];
 }
 
 async function resolveEmailRoutingContext(
@@ -244,7 +376,7 @@ async function resolveEmailRoutingContext(
   subject: string | undefined,
   textBody: string | undefined,
 ): Promise<EmailRoutingContext> {
-  const [suppliers, allShipments] = await Promise.all([
+  const [suppliers, allShipments, allBuyerEmails] = await Promise.all([
     db
       .select({ id: suppliersTable.id, name: suppliersTable.name, contactEmail: suppliersTable.contactEmail })
       .from(suppliersTable),
@@ -255,86 +387,132 @@ async function resolveEmailRoutingContext(
         product: shipmentsTable.product,
         customerName: shipmentsTable.customerName,
         supplierId: shipmentsTable.supplierId,
+        exFactoryDate: shipmentsTable.exFactoryDate,
+        dueDate: shipmentsTable.dueDate,
       })
       .from(shipmentsTable),
+    db.select({ senderEmail: buyerEmailsTable.senderEmail, buyerName: buyerEmailsTable.buyerName, confirmed: buyerEmailsTable.confirmed }).from(buyerEmailsTable),
   ]);
 
-  // ── 1. Resolve outer sender (the forwarder) ─────────────────────────────────
   let outerSenderType: PartyType = "unknown";
   let resolvedCustomerName: string | null = null;
   let supplierId: number | null = null;
   let supplierMatchedBy: SupplierMatchMethod | null = null;
   let matchedSupplierName: string | null = null;
+  let confidence = 0;
+  let matchMethod: MatchMethod = "unresolvable";
+
+  const fromEmail = (from ?? "").toLowerCase();
 
   if (from) {
-    const outerMatch = matchEmailToSupplier(from, suppliers);
-    if (outerMatch) {
-      outerSenderType = "supplier";
-      supplierId = outerMatch.supplier.id;
-      supplierMatchedBy = outerMatch.matchedBy;
-      matchedSupplierName = outerMatch.supplier.name;
+    // 1. Check learned buyer email mappings first
+    const learnedBuyer = matchEmailToLearnedBuyer(fromEmail, allBuyerEmails);
+    if (learnedBuyer) {
+      outerSenderType = "buyer";
+      resolvedCustomerName = learnedBuyer.buyerName;
+      confidence = learnedBuyer.confirmed ? 0.92 : 0.70;
+      matchMethod = "buyer-learned";
     } else {
-      const matchedCustomer = matchEmailToBuyer(from, allShipments);
-      if (matchedCustomer) {
-        outerSenderType = "buyer";
-        resolvedCustomerName = matchedCustomer;
+      const outerMatch = matchEmailToSupplier(from, suppliers);
+      if (outerMatch) {
+        outerSenderType = "supplier";
+        supplierId = outerMatch.supplier.id;
+        supplierMatchedBy = outerMatch.matchedBy;
+        matchedSupplierName = outerMatch.supplier.name;
+        confidence =
+          outerMatch.matchedBy === "exact-email" ? 1.0 :
+          outerMatch.matchedBy === "exact-domain" ? 0.90 :
+          0.72;
+        matchMethod = outerMatch.matchedBy;
+      } else {
+        const matchedCustomer = matchEmailToBuyer(from, allShipments);
+        if (matchedCustomer) {
+          outerSenderType = "buyer";
+          resolvedCustomerName = matchedCustomer;
+          confidence = 0.68;
+          matchMethod = "fuzzy-name";
+        }
       }
     }
   }
 
-  // ── 2. Extract and resolve the forwarded-from sender ───────────────────────
+  // 2. Extract and resolve the forwarded-from sender
   const forwardedFromEmail = textBody ? extractForwardedFrom(textBody) : null;
   const isForwarded = forwardedFromEmail !== null;
   let innerSenderType: PartyType = "unknown";
 
   if (forwardedFromEmail) {
-    const innerMatch = matchEmailToSupplier(forwardedFromEmail, suppliers);
-    if (innerMatch) {
-      innerSenderType = "supplier";
-      // If we didn't get a supplier from the outer sender, derive it from the inner
-      if (supplierId === null) {
-        supplierId = innerMatch.supplier.id;
-        supplierMatchedBy = innerMatch.matchedBy;
-        matchedSupplierName = innerMatch.supplier.name;
+    const innerLearnedBuyer = matchEmailToLearnedBuyer(forwardedFromEmail, allBuyerEmails);
+    if (innerLearnedBuyer && resolvedCustomerName === null) {
+      innerSenderType = "buyer";
+      resolvedCustomerName = innerLearnedBuyer.buyerName;
+      if (confidence < (innerLearnedBuyer.confirmed ? 0.92 : 0.70)) {
+        confidence = innerLearnedBuyer.confirmed ? 0.92 : 0.70;
+        matchMethod = "buyer-learned";
       }
     } else {
-      const matchedInnerCustomer = matchEmailToBuyer(forwardedFromEmail, allShipments);
-      if (matchedInnerCustomer) {
-        innerSenderType = "buyer";
-        if (resolvedCustomerName === null) resolvedCustomerName = matchedInnerCustomer;
+      const innerMatch = matchEmailToSupplier(forwardedFromEmail, suppliers);
+      if (innerMatch) {
+        innerSenderType = "supplier";
+        if (supplierId === null) {
+          supplierId = innerMatch.supplier.id;
+          supplierMatchedBy = innerMatch.matchedBy;
+          matchedSupplierName = innerMatch.supplier.name;
+          const innerConf =
+            innerMatch.matchedBy === "exact-email" ? 1.0 :
+            innerMatch.matchedBy === "exact-domain" ? 0.90 :
+            0.72;
+          if (innerConf > confidence) {
+            confidence = innerConf;
+            matchMethod = innerMatch.matchedBy;
+          }
+        }
+      } else {
+        const matchedInnerCustomer = matchEmailToBuyer(forwardedFromEmail, allShipments);
+        if (matchedInnerCustomer) {
+          innerSenderType = "buyer";
+          if (resolvedCustomerName === null) {
+            resolvedCustomerName = matchedInnerCustomer;
+            if (confidence < 0.68) { confidence = 0.68; matchMethod = "fuzzy-name"; }
+          }
+        }
       }
     }
   }
 
-  // ── 3. Determine resolvability before any auto-linking ──────────────────────
   const unresolvable = outerSenderType === "unknown" && innerSenderType === "unknown";
+  if (unresolvable) {
+    confidence = 0;
+    matchMethod = "unresolvable";
+  }
 
-  // ── 4. Account-scoped shipment candidates + reference scanning ───────────────
-  // IMPORTANT: when sender is unresolvable, skip PO scanning entirely AND record
-  // null as routingShipmentIds so the extraction pipeline also receives an empty
-  // candidate list and cannot auto-link to any shipment.
+  // 3. Account-scoped shipment candidates + reference scanning
   let preMatchedShipmentId: number | null = null;
-  let routingShipmentIds: number[] | null = null; // null = unresolvable
+  let routingShipmentIds: number[] | null = null;
+  let candidateShipments: ShipmentRecord[] = [];
 
   if (!unresolvable) {
-    // Scope candidates to the resolved account to avoid cross-account links
-    let candidateShipments: ShipmentRecord[] = allShipments;
+    let candidates: ShipmentRecord[] = allShipments;
     if (resolvedCustomerName) {
-      candidateShipments = allShipments.filter(
+      candidates = allShipments.filter(
         (s) => s.customerName.toLowerCase() === resolvedCustomerName!.toLowerCase(),
       );
     } else if (supplierId !== null) {
-      candidateShipments = allShipments.filter((s) => s.supplierId === supplierId);
+      candidates = allShipments.filter((s) => s.supplierId === supplierId);
     }
 
-    // Record the scoped ids — extraction is restricted to this set
-    routingShipmentIds = candidateShipments.map((s) => s.id);
+    candidateShipments = candidates;
+    routingShipmentIds = candidates.map((s) => s.id);
 
     preMatchedShipmentId = scanForShipmentMatch(
       subject ?? "",
       textBody ?? "",
-      candidateShipments,
+      candidates,
     );
+
+    if (preMatchedShipmentId) {
+      confidence = Math.max(confidence, 0.88);
+    }
   }
 
   return {
@@ -349,6 +527,10 @@ async function resolveEmailRoutingContext(
     resolvedCustomerName,
     supplierMatchedBy,
     matchedSupplierName,
+    confidence,
+    matchMethod,
+    effectiveSenderEmail: fromEmail,
+    candidateShipments,
   };
 }
 
@@ -369,13 +551,6 @@ async function ingestDocumentFromBase64({
   sourceChannel: string;
   supplierId?: number | null;
   preMatchedShipmentId?: number | null;
-  /**
-   * Account-scoped shipment ids the extraction pipeline may consider.
-   * null  → unresolvable sender; extraction receives empty candidates;
-   *          document will always land as "unmatched" regardless of AI output.
-   * array → restrict matching to these ids only (cross-account boundary enforced).
-   * undefined → not called from the email webhook; use all shipments (legacy path).
-   */
   routingShipmentIds?: number[] | null;
 }): Promise<number> {
   const fileBuffer = Buffer.from(base64Content, "base64");
@@ -422,14 +597,10 @@ async function ingestDocumentFromBase64({
           .orderBy(asc(extractionCorrectionsTable.createdAt)),
       ]);
 
-      // Enforce routing guardrails: scope the shipments visible to the AI.
-      // - routingShipmentIds === null  → unresolvable sender; empty candidate list
-      // - routingShipmentIds is array  → restrict to account-scoped shipments
-      // - routingShipmentIds === undefined → legacy / direct-upload path; no restriction
       const idSet = routingShipmentIds === undefined
         ? null
         : routingShipmentIds === null
-          ? new Set<number>() // empty — AI cannot match any shipment
+          ? new Set<number>()
           : new Set(routingShipmentIds);
 
       const extractionShipments = idSet === null
@@ -462,8 +633,6 @@ async function ingestDocumentFromBase64({
         })
         .where(eq(extractionsTable.id, extraction.id));
 
-      // For unresolvable senders (routingShipmentIds === null), never auto-link
-      // regardless of what the AI returned — document stays in the unlinked queue.
       const allowAiMatch = routingShipmentIds !== null;
       const resolvedShipmentId = allowAiMatch
         ? (result.matchedShipmentId ?? preMatchedShipmentId ?? null)
@@ -502,65 +671,189 @@ router.post("/webhooks/email", async (req, res) => {
 
   const { From, Subject, TextBody, Attachments } = parsed.data;
 
-  // Resolve routing context before processing any attachments
   const ctx = await resolveEmailRoutingContext(From, Subject, TextBody);
 
-  if (ctx.unresolvable) {
-    req.log.warn(
-      { from: From, subject: Subject },
-      "email-webhook: unresolvable sender — no matching supplier or customer; documents will land in unlinked queue",
-    );
-  } else {
-    req.log.info(
-      {
-        from: From,
-        outerSenderType: ctx.outerSenderType,
-        forwardedFrom: ctx.forwardedFromEmail,
-        innerSenderType: ctx.innerSenderType,
-        supplierId: ctx.supplierId,
-        supplierMatchedBy: ctx.supplierMatchedBy,
-        resolvedCustomer: ctx.resolvedCustomerName,
-        preMatchedShipmentId: ctx.preMatchedShipmentId,
-      },
-      "email-webhook: routing context resolved",
-    );
+  let finalShipmentId = ctx.preMatchedShipmentId;
+  let finalConfidence = ctx.confidence;
+  let finalMatchMethod = ctx.matchMethod;
+  let aiGuess: { buyerName: string | null; shipmentId: number | null; confidence: number; reasoning: string } | null = null;
 
-    if (ctx.supplierMatchedBy === "fuzzy-name") {
-      req.log.warn(
-        {
-          from: From,
-          supplierId: ctx.supplierId,
-          supplierName: ctx.matchedSupplierName,
-        },
-        "email-webhook: supplier matched via fuzzy name heuristic — consider setting contactEmail on this supplier to make routing deterministic",
+  // AI inference: run when confidence is below threshold OR when sender is known but no specific
+  // shipment was resolved via reference scan (multiple candidates — need AI to pick one).
+  const needsAiInference = !ctx.unresolvable && ctx.candidateShipments.length > 0 &&
+    (finalConfidence < ROUTING_NEEDS_REVIEW_THRESHOLD || finalShipmentId === null);
+  if (needsAiInference) {
+    try {
+      const guess = await inferShipmentWithAI(
+        Subject ?? "",
+        TextBody ?? "",
+        ctx.effectiveSenderEmail,
+        ctx.candidateShipments,
       );
+      if (guess) {
+        aiGuess = guess;
+        if (guess.shipmentId && guess.confidence >= 0.75) {
+          finalShipmentId = guess.shipmentId;
+          finalConfidence = Math.max(finalConfidence, guess.confidence * 0.9);
+          finalMatchMethod = "ai-inferred";
+        } else if (guess.confidence > finalConfidence) {
+          finalConfidence = guess.confidence * 0.8;
+          finalMatchMethod = "ai-inferred";
+        }
+      }
+    } catch {
+      // AI inference is best-effort
     }
   }
 
-  if (!Attachments || Attachments.length === 0) {
-    res.json({ accepted: true, documentIds: [] });
-    return;
+  // For completely unresolvable senders, also attempt AI inference against ALL shipments
+  if (ctx.unresolvable && ctx.candidateShipments.length === 0) {
+    try {
+      const allShipments = await db
+        .select({
+          id: shipmentsTable.id,
+          poNumber: shipmentsTable.poNumber,
+          product: shipmentsTable.product,
+          customerName: shipmentsTable.customerName,
+          supplierId: shipmentsTable.supplierId,
+          exFactoryDate: shipmentsTable.exFactoryDate,
+          dueDate: shipmentsTable.dueDate,
+        })
+        .from(shipmentsTable);
+      const guess = await inferShipmentWithAI(
+        Subject ?? "",
+        TextBody ?? "",
+        ctx.effectiveSenderEmail,
+        allShipments,
+      );
+      if (guess) {
+        aiGuess = guess;
+        finalConfidence = guess.confidence * 0.6;
+        if (guess.shipmentId && guess.confidence >= 0.8) {
+          finalShipmentId = guess.shipmentId;
+          finalMatchMethod = "ai-inferred";
+        }
+      }
+    } catch {
+      // best-effort
+    }
   }
 
+  // Require BOTH sufficient confidence AND a resolved shipment ID to auto-route.
+  // A high-confidence sender with multiple unresolved candidates still goes to Needs Review.
+  const routingStatus = (finalConfidence >= ROUTING_NEEDS_REVIEW_THRESHOLD && finalShipmentId !== null) ? "routed" : "needs-review";
+
+  // Build a concise snippet from the email body
+  const rawBody = TextBody ?? "";
+  const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
+  const senderLabel =
+    ctx.matchedSupplierName ??
+    ctx.resolvedCustomerName ??
+    From ??
+    "Unknown Sender";
+
+  req.log.info(
+    {
+      from: From,
+      finalConfidence,
+      finalMatchMethod,
+      routingStatus,
+      finalShipmentId,
+    },
+    "email-webhook: routing resolved",
+  );
+
+  // Create the message record
+  const [msg] = await db
+    .insert(messagesTable)
+    .values({
+      shipmentId: routingStatus === "routed" ? finalShipmentId : null,
+      supplierId: ctx.supplierId,
+      sender: senderLabel,
+      channel: "gmail",
+      subject: Subject ?? null,
+      direction: "inbound",
+      snippet: snippet || "(empty email)",
+      fullBody: rawBody,
+      aiDraft: "",
+      aiAction: "",
+      aiTags: [],
+      unread: true,
+      isFlagged: false,
+      routingStatus,
+      routingConfidence: finalConfidence,
+      matchMethod: finalMatchMethod,
+      rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
+      aiRoutingGuess: aiGuess ?? null,
+      receivedAt: new Date(),
+    })
+    .returning();
+
+  // Async: AI reply draft + field extraction
+  setImmediate(async () => {
+    try {
+      const shipment = finalShipmentId
+        ? (await db.select({
+            id: shipmentsTable.id,
+            poNumber: shipmentsTable.poNumber,
+            product: shipmentsTable.product,
+            customerName: shipmentsTable.customerName,
+            supplierId: shipmentsTable.supplierId,
+            exFactoryDate: shipmentsTable.exFactoryDate,
+            dueDate: shipmentsTable.dueDate,
+          }).from(shipmentsTable).where(eq(shipmentsTable.id, finalShipmentId)))[0] ?? null
+        : null;
+
+      const [draft, aiTags] = await Promise.all([
+        draftReplyWithAI(rawBody, Subject ?? "", shipment ?? null),
+        buildAiTags(rawBody, Subject ?? ""),
+      ]);
+
+      const patch: Record<string, unknown> = { aiDraft: draft };
+      if (aiTags.length) patch.aiTags = aiTags;
+      await db.update(messagesTable).set(patch).where(eq(messagesTable.id, msg.id));
+
+      if (finalShipmentId && routingStatus === "routed") {
+        await extractFieldsFromEmail(rawBody, Subject ?? "", finalShipmentId, msg.id);
+      }
+    } catch {
+      // best-effort
+    }
+  });
+
+  // Ingest attachments
   const documentIds: number[] = [];
 
-  for (const attachment of Attachments) {
-    if (!attachment.Content) continue;
-    const docId = await ingestDocumentFromBase64({
-      fileName: attachment.Name,
-      mimeType: attachment.ContentType,
-      base64Content: attachment.Content,
-      // Distinguish forwarded emails from direct uploads; photos use the same path
-      sourceChannel: "email-forward",
-      supplierId: ctx.supplierId,
-      preMatchedShipmentId: ctx.preMatchedShipmentId,
-      // Enforce account boundary in extraction — null = unresolvable, array = scoped
-      routingShipmentIds: ctx.routingShipmentIds,
-    });
-    documentIds.push(docId);
+  if (Attachments && Attachments.length > 0) {
+    for (const attachment of Attachments) {
+      if (!attachment.Content) continue;
+      const docId = await ingestDocumentFromBase64({
+        fileName: attachment.Name,
+        mimeType: attachment.ContentType,
+        base64Content: attachment.Content,
+        sourceChannel: "email-forward",
+        supplierId: ctx.supplierId,
+        preMatchedShipmentId: finalShipmentId,
+        routingShipmentIds: ctx.routingShipmentIds,
+      });
+      documentIds.push(docId);
+    }
   }
 
   res.json({ accepted: true, documentIds });
 });
+
+async function buildAiTags(body: string, subject: string): Promise<string[]> {
+  const text = `${subject} ${body}`.toLowerCase();
+  const tags: string[] = [];
+
+  if (/delay|late|push|congestion|backlog|behind/i.test(text)) tags.push("risk: delay");
+  if (/balance|payment|wire|deposit|due/i.test(text)) tags.push("payment");
+  if (/qc|inspection|audit|sample|approved|reject/i.test(text)) tags.push("milestone: QC");
+  if (/ex.?factory|shipped|dispatch|etd|eta/i.test(text)) tags.push("milestone: ex-factory");
+  if (/quote|rfq|price|cost|usd|unit price/i.test(text)) tags.push("quote");
+
+  return tags.slice(0, 3);
+}
 
 export default router;

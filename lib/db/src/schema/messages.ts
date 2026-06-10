@@ -1,16 +1,16 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
-  shipmentId: integer("shipment_id").notNull(),
+  shipmentId: integer("shipment_id"),
   supplierId: integer("supplier_id"),
   sender: text("sender").notNull(),
-  recipient: text("recipient"),          // for outbound: supplier email or name
-  channel: text("channel").notNull(),    // gmail | whatsapp | sheets | pdf
-  subject: text("subject"),             // for outbound email: subject line
-  direction: text("direction").notNull().default("inbound"), // inbound | outbound
+  recipient: text("recipient"),
+  channel: text("channel").notNull(),
+  subject: text("subject"),
+  direction: text("direction").notNull().default("inbound"),
   snippet: text("snippet").notNull(),
   fullBody: text("full_body").notNull(),
   aiDraft: text("ai_draft").notNull().default(""),
@@ -19,6 +19,12 @@ export const messagesTable = pgTable("messages", {
   unread: boolean("unread").notNull().default(true),
   isFlagged: boolean("is_flagged").notNull().default(false),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  routingStatus: text("routing_status").notNull().default("routed"),
+  routingConfidence: real("routing_confidence"),
+  matchMethod: text("match_method"),
+  rawSenderEmail: text("raw_sender_email"),
+  aiRoutingGuess: jsonb("ai_routing_guess"),
+  pendingExtractionFields: jsonb("pending_extraction_fields"),
 });
 
 export const insertMessageSchema = createInsertSchema(messagesTable).omit({ id: true });

@@ -22,6 +22,7 @@ import type {
 import type {
   AutonomyPolicy,
   AutonomyPolicyInput,
+  ConnectGmail200,
   CopilotProposal,
   CopilotProposalInput,
   CopilotProposalUpdate,
@@ -29,12 +30,15 @@ import type {
   CopilotTriggerResult,
   DealInput,
   DealWithSpread,
+  DisconnectGmail200,
   DocumentUpdate,
   DocumentWithExtraction,
   ExtractionCorrection,
   ExtractionCorrectionInput,
   FactoryQuote,
   FactoryQuoteCreate,
+  GmailOAuthCallbackParams,
+  GmailStatus,
   HealthStatus,
   InboundEmailWebhook,
   InboundEmailWebhookResponse,
@@ -43,6 +47,7 @@ import type {
   ListDocumentsParams,
   ListMessagesParams,
   Message,
+  MessageAssignInput,
   MessageInput,
   MessageUpdate,
   NextPoNumbers,
@@ -53,6 +58,7 @@ import type {
   PredictionAccuracyReport,
   QuoteSelection,
   RiskRadarResponse,
+  SendReplyInput,
   Shipment,
   ShipmentCreate,
   ShipmentPrediction,
@@ -66,6 +72,8 @@ import type {
   SupplierUpdate,
   Task,
   TaskUpdate,
+  TestGmailSend200,
+  TestGmailSendBody,
   UploadDocumentBody
 } from './api.schemas';
 
@@ -1688,6 +1696,83 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateMessageMutationOptions(options));
     }
 
+export const getListNeedsReviewMessagesUrl = () => {
+
+
+
+
+  return `/api/messages/needs-review`
+}
+
+/**
+ * @summary Messages that could not be auto-routed and need manual assignment
+ */
+export const listNeedsReviewMessages = async ( options?: RequestInit): Promise<Message[]> => {
+
+  return customFetch<Message[]>(getListNeedsReviewMessagesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNeedsReviewMessagesQueryKey = () => {
+    return [
+    `/api/messages/needs-review`
+    ] as const;
+    }
+
+
+export const getListNeedsReviewMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listNeedsReviewMessages>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNeedsReviewMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNeedsReviewMessagesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNeedsReviewMessages>>> = ({ signal }) => listNeedsReviewMessages({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNeedsReviewMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNeedsReviewMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listNeedsReviewMessages>>>
+export type ListNeedsReviewMessagesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Messages that could not be auto-routed and need manual assignment
+ */
+
+export function useListNeedsReviewMessages<TData = Awaited<ReturnType<typeof listNeedsReviewMessages>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNeedsReviewMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNeedsReviewMessagesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getUpdateMessageUrl = (id: number,) => {
 
 
@@ -1752,6 +1837,529 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpdateMessageMutationOptions(options));
+    }
+
+export const getAssignMessageUrl = (id: number,) => {
+
+
+
+
+  return `/api/messages/${id}/assign`
+}
+
+/**
+ * @summary Manually assign a needs-review message to a buyer and shipment
+ */
+export const assignMessage = async (id: number,
+    messageAssignInput: MessageAssignInput, options?: RequestInit): Promise<Message> => {
+
+  return customFetch<Message>(getAssignMessageUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      messageAssignInput,)
+  }
+);}
+
+
+
+
+export const getAssignMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignMessage>>, TError,{id: number;data: BodyType<MessageAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignMessage>>, TError,{id: number;data: BodyType<MessageAssignInput>}, TContext> => {
+
+const mutationKey = ['assignMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignMessage>>, {id: number;data: BodyType<MessageAssignInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignMessage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignMessageMutationResult = NonNullable<Awaited<ReturnType<typeof assignMessage>>>
+    export type AssignMessageMutationBody = BodyType<MessageAssignInput>
+    export type AssignMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Manually assign a needs-review message to a buyer and shipment
+ */
+export const useAssignMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignMessage>>, TError,{id: number;data: BodyType<MessageAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignMessage>>,
+        TError,
+        {id: number;data: BodyType<MessageAssignInput>},
+        TContext
+      > => {
+      return useMutation(getAssignMessageMutationOptions(options));
+    }
+
+export const getSendReplyUrl = (id: number,) => {
+
+
+
+
+  return `/api/messages/${id}/send-reply`
+}
+
+/**
+ * @summary Send a reply via Gmail (send-as from your real Gmail address)
+ */
+export const sendReply = async (id: number,
+    sendReplyInput: SendReplyInput, options?: RequestInit): Promise<Message> => {
+
+  return customFetch<Message>(getSendReplyUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sendReplyInput,)
+  }
+);}
+
+
+
+
+export const getSendReplyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendReply>>, TError,{id: number;data: BodyType<SendReplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendReply>>, TError,{id: number;data: BodyType<SendReplyInput>}, TContext> => {
+
+const mutationKey = ['sendReply'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendReply>>, {id: number;data: BodyType<SendReplyInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendReply(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendReplyMutationResult = NonNullable<Awaited<ReturnType<typeof sendReply>>>
+    export type SendReplyMutationBody = BodyType<SendReplyInput>
+    export type SendReplyMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a reply via Gmail (send-as from your real Gmail address)
+ */
+export const useSendReply = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendReply>>, TError,{id: number;data: BodyType<SendReplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendReply>>,
+        TError,
+        {id: number;data: BodyType<SendReplyInput>},
+        TContext
+      > => {
+      return useMutation(getSendReplyMutationOptions(options));
+    }
+
+export const getGetGmailStatusUrl = () => {
+
+
+
+
+  return `/api/integrations/gmail/status`
+}
+
+/**
+ * @summary Get Gmail OAuth connection status
+ */
+export const getGmailStatus = async ( options?: RequestInit): Promise<GmailStatus> => {
+
+  return customFetch<GmailStatus>(getGetGmailStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGmailStatusQueryKey = () => {
+    return [
+    `/api/integrations/gmail/status`
+    ] as const;
+    }
+
+
+export const getGetGmailStatusQueryOptions = <TData = Awaited<ReturnType<typeof getGmailStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGmailStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGmailStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGmailStatus>>> = ({ signal }) => getGmailStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGmailStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGmailStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGmailStatus>>>
+export type GetGmailStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get Gmail OAuth connection status
+ */
+
+export function useGetGmailStatus<TData = Awaited<ReturnType<typeof getGmailStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGmailStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGmailStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getConnectGmailUrl = () => {
+
+
+
+
+  return `/api/integrations/gmail/connect`
+}
+
+/**
+ * @summary Start Gmail OAuth flow — returns authUrl for client-side popup
+ */
+export const connectGmail = async ( options?: RequestInit): Promise<ConnectGmail200> => {
+
+  return customFetch<ConnectGmail200>(getConnectGmailUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getConnectGmailQueryKey = () => {
+    return [
+    `/api/integrations/gmail/connect`
+    ] as const;
+    }
+
+
+export const getConnectGmailQueryOptions = <TData = Awaited<ReturnType<typeof connectGmail>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof connectGmail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getConnectGmailQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof connectGmail>>> = ({ signal }) => connectGmail({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof connectGmail>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ConnectGmailQueryResult = NonNullable<Awaited<ReturnType<typeof connectGmail>>>
+export type ConnectGmailQueryError = ErrorType<void>
+
+
+/**
+ * @summary Start Gmail OAuth flow — returns authUrl for client-side popup
+ */
+
+export function useConnectGmail<TData = Awaited<ReturnType<typeof connectGmail>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof connectGmail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getConnectGmailQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGmailOAuthCallbackUrl = (params?: GmailOAuthCallbackParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/integrations/gmail/callback?${stringifiedParams}` : `/api/integrations/gmail/callback`
+}
+
+/**
+ * @summary Gmail OAuth callback — exchanges code for tokens
+ */
+export const gmailOAuthCallback = async (params?: GmailOAuthCallbackParams, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getGmailOAuthCallbackUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGmailOAuthCallbackQueryKey = (params?: GmailOAuthCallbackParams,) => {
+    return [
+    `/api/integrations/gmail/callback`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGmailOAuthCallbackQueryOptions = <TData = Awaited<ReturnType<typeof gmailOAuthCallback>>, TError = ErrorType<unknown>>(params?: GmailOAuthCallbackParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof gmailOAuthCallback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGmailOAuthCallbackQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof gmailOAuthCallback>>> = ({ signal }) => gmailOAuthCallback(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof gmailOAuthCallback>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GmailOAuthCallbackQueryResult = NonNullable<Awaited<ReturnType<typeof gmailOAuthCallback>>>
+export type GmailOAuthCallbackQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Gmail OAuth callback — exchanges code for tokens
+ */
+
+export function useGmailOAuthCallback<TData = Awaited<ReturnType<typeof gmailOAuthCallback>>, TError = ErrorType<unknown>>(
+ params?: GmailOAuthCallbackParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof gmailOAuthCallback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGmailOAuthCallbackQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDisconnectGmailUrl = () => {
+
+
+
+
+  return `/api/integrations/gmail/disconnect`
+}
+
+/**
+ * @summary Revoke and remove stored Gmail OAuth credentials
+ */
+export const disconnectGmail = async ( options?: RequestInit): Promise<DisconnectGmail200> => {
+
+  return customFetch<DisconnectGmail200>(getDisconnectGmailUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDisconnectGmailMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectGmail>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disconnectGmail>>, TError,void, TContext> => {
+
+const mutationKey = ['disconnectGmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnectGmail>>, void> = () => {
+
+
+          return  disconnectGmail(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisconnectGmailMutationResult = NonNullable<Awaited<ReturnType<typeof disconnectGmail>>>
+
+    export type DisconnectGmailMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke and remove stored Gmail OAuth credentials
+ */
+export const useDisconnectGmail = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectGmail>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof disconnectGmail>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDisconnectGmailMutationOptions(options));
+    }
+
+export const getTestGmailSendUrl = () => {
+
+
+
+
+  return `/api/integrations/gmail/test`
+}
+
+/**
+ * @summary Send a test email through the Gmail pipeline to verify the setup
+ */
+export const testGmailSend = async (testGmailSendBody?: TestGmailSendBody, options?: RequestInit): Promise<TestGmailSend200> => {
+
+  return customFetch<TestGmailSend200>(getTestGmailSendUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      testGmailSendBody,)
+  }
+);}
+
+
+
+
+export const getTestGmailSendMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testGmailSend>>, TError,{data?: BodyType<TestGmailSendBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testGmailSend>>, TError,{data?: BodyType<TestGmailSendBody>}, TContext> => {
+
+const mutationKey = ['testGmailSend'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testGmailSend>>, {data?: BodyType<TestGmailSendBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  testGmailSend(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestGmailSendMutationResult = NonNullable<Awaited<ReturnType<typeof testGmailSend>>>
+    export type TestGmailSendMutationBody = BodyType<TestGmailSendBody> | undefined
+    export type TestGmailSendMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a test email through the Gmail pipeline to verify the setup
+ */
+export const useTestGmailSend = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testGmailSend>>, TError,{data?: BodyType<TestGmailSendBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testGmailSend>>,
+        TError,
+        {data?: BodyType<TestGmailSendBody>},
+        TContext
+      > => {
+      return useMutation(getTestGmailSendMutationOptions(options));
     }
 
 export const getListTasksUrl = () => {

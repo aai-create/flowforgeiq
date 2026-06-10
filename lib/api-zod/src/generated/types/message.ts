@@ -5,11 +5,18 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageAiRoutingGuess } from './messageAiRoutingGuess';
 import type { MessageDirection } from './messageDirection';
+import type { MessagePendingExtractionFields } from './messagePendingExtractionFields';
+import type { MessageRoutingStatus } from './messageRoutingStatus';
 
 export interface Message {
   id: number;
-  shipmentId: number;
+  /**
+     * null for needs-review messages not yet assigned to a shipment
+     * @nullable
+     */
+  shipmentId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   sender: string;
@@ -33,4 +40,31 @@ export interface Message {
   unread: boolean;
   isFlagged: boolean;
   receivedAt: Date;
+  /** routed = auto-assigned; needs-review = awaiting manual assignment */
+  routingStatus: MessageRoutingStatus;
+  /**
+     * 0–1 confidence of the auto-routing decision
+     * @nullable
+     */
+  routingConfidence?: number | null;
+  /**
+     * How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable
+     * @nullable
+     */
+  matchMethod?: string | null;
+  /**
+     * The original sender email address
+     * @nullable
+     */
+  rawSenderEmail?: string | null;
+  /**
+     * AI's best guess for assignment (when confidence is low)
+     * @nullable
+     */
+  aiRoutingGuess?: MessageAiRoutingGuess;
+  /**
+     * Low-confidence field extractions awaiting human confirmation
+     * @nullable
+     */
+  pendingExtractionFields?: MessagePendingExtractionFields;
 }

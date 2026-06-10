@@ -63,6 +63,10 @@ export interface UiMessage {
   supplierId: string;
   aiDraft?: string;
   aiAction?: string;
+  routingStatus?: "routed" | "needs-review";
+  routingConfidence?: number | null;
+  rawSenderEmail?: string | null;
+  matchMethod?: string | null;
 }
 
 export interface UiTask {
@@ -114,7 +118,7 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
 export function adaptMessages(rows: ApiMessage[], shipments: UiShipment[]): UiMessage[] {
   const shipMap = new Map(shipments.map(s => [s.shipmentId, s]));
   return rows.map(m => {
-    const ship = shipMap.get(m.shipmentId);
+    const ship = m.shipmentId != null ? shipMap.get(m.shipmentId) : undefined;
     return {
       id: `m${m.id}`,
       messageId: m.id,
@@ -126,10 +130,14 @@ export function adaptMessages(rows: ApiMessage[], shipments: UiShipment[]): UiMe
       unread: m.unread,
       isFlagged: m.isFlagged,
       aiTags: m.aiTags ?? [],
-      shipmentId: ship ? ship.id : `s${m.shipmentId}`,
+      shipmentId: ship ? ship.id : m.shipmentId != null ? `s${m.shipmentId}` : "unrouted",
       supplierId: ship?.supplier ?? "",
       aiDraft: m.aiDraft || undefined,
       aiAction: m.aiAction || undefined,
+      routingStatus: m.routingStatus as UiMessage["routingStatus"],
+      routingConfidence: m.routingConfidence,
+      rawSenderEmail: m.rawSenderEmail,
+      matchMethod: m.matchMethod,
     };
   });
 }

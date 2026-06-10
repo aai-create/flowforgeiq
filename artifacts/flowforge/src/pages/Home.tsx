@@ -12,7 +12,7 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
-  Pencil, Package, Hash, Bookmark,
+  Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
@@ -29,11 +29,14 @@ import {
   useListCopilotProposals,
   useListSuppliers, useUpdateSupplier,
   createShipmentStageEvent,
+  useListNeedsReviewMessages, useAssignMessage, useSendReply, useGetGmailStatus, connectGmail,
+  useDisconnectGmail,
+  type Message as ApiMessageFull,
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
 import {
-  adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate,
+  adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate, relativeAge,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
 } from "@/lib/adapters";
 
@@ -56,7 +59,7 @@ function RadarIcon({ size = 16, className = "" }: { size?: number; className?: s
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type ActiveView = "inbox" | "calendar" | "buyers" | "import" | "copilot";
+type ActiveView = "inbox" | "calendar" | "buyers" | "import" | "copilot" | "needs-review" | "settings";
 type RightTab   = "message" | "docs" | "risk" | "copilot";
 type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
@@ -1218,6 +1221,277 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Needs Review Panel
+// ─────────────────────────────────────────────────────────────────────────────
+function NeedsReviewPanel({ messages, shipments, onAssigned }: {
+  messages: ApiMessageFull[];
+  shipments: UiShipment[];
+  onAssigned: (msgId: number) => void;
+}) {
+  const assignMutation = useAssignMessage();
+  const [assignments, setAssignments] = useState<Record<number, number>>({});
+  const [assigning, setAssigning] = useState<Record<number, boolean>>({});
+
+  const doAssign = (msgId: number, shipmentId: number, buyerName: string) => {
+    setAssigning(p => ({ ...p, [msgId]: true }));
+    assignMutation.mutate(
+      { id: msgId, data: { shipmentId, buyerName } },
+      {
+        onSuccess: () => { onAssigned(msgId); setAssigning(p => ({ ...p, [msgId]: false })); },
+        onError: () => setAssigning(p => ({ ...p, [msgId]: false })),
+      }
+    );
+  };
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-[#9E9FAE]">
+        <CheckCircle2 size={32} className="text-emerald-400 mb-3 opacity-60"/>
+        <p className="text-sm font-semibold text-[#212833]">All clear — no messages need review</p>
+        <p className="text-[11px] mt-1 max-w-xs">Inbound emails with high confidence are automatically routed. Low-confidence matches land here for manual assignment.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2 shrink-0">
+        <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
+        <div>
+          <p className="text-[11px] font-semibold text-amber-800">
+            {messages.length} email{messages.length !== 1 ? "s" : ""} couldn't be automatically routed
+          </p>
+          <p className="text-[10px] text-amber-700 mt-0.5">Assign each message to the correct shipment. Future emails from the same sender will be auto-routed.</p>
+        </div>
+      </div>
+      {messages.map(msg => {
+        const conf = msg.routingConfidence;
+        const guess = msg.aiRoutingGuess;
+        const guessShip = guess?.shipmentId != null ? shipments.find(s => s.shipmentId === guess.shipmentId) : undefined;
+        const selectedShipId = assignments[msg.id];
+        const selectedShip = selectedShipId != null ? shipments.find(s => s.shipmentId === selectedShipId) : undefined;
+        return (
+          <div key={msg.id} className="bg-white border border-[#E5EAF0] rounded-xl p-3.5 shadow-sm">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-[#F0F4F8] flex items-center justify-center text-xs font-bold text-[#5E687B] shrink-0">{msg.sender.charAt(0)}</div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#212833] truncate">{msg.sender}</div>
+                  <div className="text-[9px] text-[#5E687B] truncate">{msg.rawSenderEmail ?? ""}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {conf != null && (
+                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${conf >= 0.65 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-red-50 text-red-600 border-red-100"}`}>
+                    {Math.round(conf * 100)}% match
+                  </span>
+                )}
+                <span className="text-[9px] text-[#9E9FAE]">{relativeAge(msg.receivedAt)}</span>
+              </div>
+            </div>
+            <div className="text-[10px] text-[#5E687B] bg-[#FAFBFC] rounded-lg p-2 mb-2.5 line-clamp-2 leading-relaxed border border-[#E5EAF0]">
+              {msg.snippet}
+            </div>
+            {guessShip && (
+              <div className="flex items-center gap-1.5 mb-2.5 text-[9px] text-[#5E687B] bg-[#9000FF]/4 rounded-md px-2 py-1.5 border border-[#9000FF]/15">
+                <Sparkles size={9} className="text-[#9000FF] shrink-0"/>
+                <span>AI suggests: <span className="font-semibold text-[#9000FF]">{guessShip.po}</span> · {guessShip.supplier}</span>
+                {!selectedShipId && (
+                  <button onClick={() => setAssignments(p => ({ ...p, [msg.id]: guessShip.shipmentId }))} className="ml-auto text-[8px] font-bold text-[#9000FF] hover:underline shrink-0">Use suggestion</button>
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedShipId ?? ""}
+                onChange={e => { const v = Number(e.target.value); if (v > 0) setAssignments(p => ({ ...p, [msg.id]: v })); else setAssignments(p => { const next = { ...p }; delete next[msg.id]; return next; }); }}
+                className="flex-1 text-[10px] border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#212833] outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/15"
+              >
+                <option value="">— Assign to shipment —</option>
+                {shipments.map(s => (
+                  <option key={s.shipmentId} value={s.shipmentId}>{s.po} · {s.supplier}</option>
+                ))}
+              </select>
+              <button
+                disabled={!selectedShipId || assigning[msg.id]}
+                onClick={() => selectedShipId && doAssign(msg.id, selectedShipId, selectedShip?.customer ?? msg.sender)}
+                className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
+              >
+                {assigning[msg.id] ? "Saving…" : <><Check size={10}/>Assign</>}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gmail Settings Panel
+// ─────────────────────────────────────────────────────────────────────────────
+function GmailSettingsPanel({ status, onGmailStatusChange }: {
+  status: { connected: boolean; gmailAddress?: string | null; clientConfigured: boolean } | undefined;
+  onGmailStatusChange?: () => void;
+}) {
+  const disconnectMutation = useDisconnectGmail();
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "gmail-connected") {
+        onGmailStatusChange?.();
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [onGmailStatusChange]);
+
+  const handleConnect = async () => {
+    try {
+      const res = await connectGmail() as Record<string, unknown> | null | undefined;
+      const authUrl = res?.authUrl;
+      if (typeof authUrl === "string") {
+        window.open(authUrl, "_blank", "width=600,height=700,noopener");
+      }
+    } catch { /* noop */ }
+  };
+
+  const handleDisconnect = () => {
+    disconnectMutation.mutate(undefined, {
+      onSuccess: () => onGmailStatusChange?.(),
+    });
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/integrations/gmail/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (resp.ok) {
+        const data = await resp.json() as { to?: string };
+        setTestResult({ ok: true, msg: `Test email sent to ${data.to ?? "test@example.com"}` });
+      } else {
+        const data = await resp.json() as { error?: string };
+        setTestResult({ ok: false, msg: data.error ?? "Send failed" });
+      }
+    } catch {
+      setTestResult({ ok: false, msg: "Network error" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6 max-w-xl mx-auto w-full">
+      <div className="mb-6">
+        <h2 className="text-sm font-bold text-[#212833] mb-1">Email Integrations</h2>
+        <p className="text-[11px] text-[#5E687B]">Connect Gmail to send replies directly from FlowForge. Inbound emails are received at <span className="font-mono font-semibold">ai@flowforge.com</span> (Postmark webhook).</p>
+      </div>
+
+      {/* Gmail card */}
+      <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+              <Mail size={16} className="text-red-500"/>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-[#212833]">Gmail (Send-as)</div>
+              <div className="text-[10px] text-[#5E687B]">Reply to inbound emails via your Gmail account</div>
+            </div>
+          </div>
+          {status?.connected ? (
+            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
+              <Wifi size={9}/>Connected
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[9px] font-bold text-[#9E9FAE] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-1 rounded-full">
+              <WifiOff size={9}/>Not connected
+            </span>
+          )}
+        </div>
+        {status?.connected && status.gmailAddress && (
+          <div className="text-[10px] text-[#5E687B] bg-[#FAFBFC] rounded-md px-2.5 py-1.5 border border-[#E5EAF0] mb-3 font-mono">
+            {status.gmailAddress}
+          </div>
+        )}
+        {!status?.clientConfigured && (
+          <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-3 flex items-start gap-1.5">
+            <AlertCircle size={10} className="text-amber-500 mt-0.5 shrink-0"/>
+            <span><span className="font-semibold">GOOGLE_CLIENT_ID</span> and <span className="font-semibold">GOOGLE_CLIENT_SECRET</span> env vars are not configured. Set them to enable Gmail OAuth.</span>
+          </div>
+        )}
+        {testResult && (
+          <div className={`text-[10px] rounded-md px-2.5 py-1.5 mb-3 border flex items-center gap-1.5 ${testResult.ok ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+            {testResult.ok ? <CheckCircle2 size={10} className="shrink-0"/> : <AlertCircle size={10} className="shrink-0"/>}
+            {testResult.msg}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          {status?.connected ? (
+            <>
+              <button
+                onClick={handleTest}
+                disabled={testing}
+                className="text-[10px] font-semibold px-3 py-1.5 rounded-md border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors disabled:opacity-40"
+              >
+                {testing ? "Sending…" : "Send test email"}
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={disconnectMutation.isPending}
+                className="text-[10px] text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-md border border-red-100 hover:bg-red-50 transition-colors disabled:opacity-40"
+              >
+                {disconnectMutation.isPending ? "Disconnecting…" : "Disconnect"}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleConnect}
+              disabled={!status?.clientConfigured}
+              className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-md bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ExternalLink size={10}/>Connect Gmail via OAuth
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Inbound email info */}
+      <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+            <Inbox size={16} className="text-blue-500"/>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-[#212833]">Inbound Email Routing</div>
+            <div className="text-[10px] text-[#5E687B]">Emails sent to your ingest address are parsed, matched to shipments, and appear in your inbox.</div>
+          </div>
+        </div>
+        <div className="space-y-1.5 text-[10px] text-[#5E687B]">
+          {[
+            { label: "Ingest endpoint", value: "POST /api/webhooks/email" },
+            { label: "Confidence threshold", value: "65% — below this goes to Needs Review" },
+            { label: "AI model", value: "gpt-4o-mini (shipment matching + draft generation)" },
+          ].map(row => (
+            <div key={row.label} className="flex items-center justify-between gap-2 py-1 border-b border-[#F0F4F8] last:border-0">
+              <span className="text-[#9E9FAE]">{row.label}</span>
+              <span className="font-mono font-semibold text-[#212833]">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
@@ -1234,6 +1508,11 @@ export default function Home() {
   const { data: apiMessages }  = useListMessages();
   const { data: apiTasks }     = useListTasks();
   const { data: apiProposals } = useListCopilotProposals({});
+  const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
+  const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
+  const sendReplyMutation = useSendReply();
+  const [needsReviewMessages, setNeedsReviewMessages] = useState<ApiMessageFull[]>([]);
+  useEffect(() => { if (apiNeedsReview) setNeedsReviewMessages(apiNeedsReview); }, [apiNeedsReview]);
 
   const [stages, setStages]               = useState<UiStage[]>([]);
   const [showStageConfig, setShowStageConfig] = useState(false);
@@ -1700,6 +1979,17 @@ export default function Home() {
   const unreadCount    = messages.filter(m=>m.unread).length;
   const highCount      = tasks.filter(t=>t.urgency==="high").length;
   const isQuotesStage  = activeShipment?.currentStageId === "quotes";
+  const needsReviewCount = needsReviewMessages.length;
+
+  const sendViaGmail = (msgId: number, body: string, subject?: string) => {
+    sendReplyMutation.mutate(
+      { id: msgId, data: { body, subject } },
+      {
+        onSuccess: () => { setRepliedIds(prev => new Set(prev).add(`m${msgId}`)); setComposeText(""); setToast("Sent via Gmail"); },
+        onError: () => setToast("Gmail send failed — check your Gmail connection in Settings"),
+      }
+    );
+  };
 
 
   const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
@@ -1781,6 +2071,14 @@ export default function Home() {
                     </button>
                   );
                 })()}
+                {/* Needs Review */}
+                <button onClick={()=>setActiveView("needs-review")}
+                  className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${activeView==="needs-review"?"bg-amber-50 text-amber-800 font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                  <span className="flex items-center gap-1.5"><AlertCircle className="w-3 h-3 text-amber-500"/><span className="text-xs">Needs Review</span></span>
+                  {needsReviewCount>0
+                    ? <span className={`text-[10px] px-1.5 rounded-full font-bold ${activeView==="needs-review"?"bg-amber-500 text-white":"bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>
+                    : <span className="text-[10px] text-[#9E9FAE]">0</span>}
+                </button>
               </div>
             </div>
 
@@ -1864,10 +2162,15 @@ export default function Home() {
 
           </div>
 
-          {/* Import Documents */}
-          <div className="shrink-0 p-2 border-t border-[#E5EAF0]">
+          {/* Import Documents + Settings */}
+          <div className="shrink-0 p-2 border-t border-[#E5EAF0] space-y-0.5">
             <button onClick={()=>setActiveView("import")} className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm font-semibold text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors">
               <Upload className="w-4 h-4"/>Import Documents
+            </button>
+            <button onClick={()=>setActiveView("settings")} className={`w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm font-semibold transition-colors ${activeView==="settings"?"text-[#9000FF] bg-[#9000FF]/5":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+              <Settings className="w-4 h-4"/><span>Settings</span>
+              {gmailStatus?.connected && <span className="ml-auto w-2 h-2 rounded-full bg-emerald-400 shrink-0"/>}
+              {!gmailStatus?.connected && gmailStatus?.clientConfigured && <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0"/>}
             </button>
           </div>
         </NavSidebar>
@@ -1965,6 +2268,34 @@ export default function Home() {
           {activeView==="calendar"&&<CalendarView shipments={shipments}/>}
           {activeView==="buyers"&&<BuyersView/>}
           {activeView==="import"&&<DocumentIntake onDone={()=>setActiveView("inbox")}/>}
+          {activeView==="needs-review"&&(
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
+                <AlertCircle size={13} className="text-amber-500"/>
+                <span className="text-xs font-bold text-[#212833]">Needs Review</span>
+                {needsReviewCount>0&&<span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full">{needsReviewCount}</span>}
+                <span className="text-[10px] text-[#9E9FAE] ml-1">— Assign unmatched inbound emails to the correct shipment</span>
+              </div>
+              <NeedsReviewPanel
+                messages={needsReviewMessages}
+                shipments={shipments}
+                onAssigned={msgId => {
+                  setNeedsReviewMessages(prev => prev.filter(m => m.id !== msgId));
+                  void refetchNeedsReview();
+                  setToast("Message assigned — sender will be auto-routed next time");
+                }}
+              />
+            </div>
+          )}
+          {activeView==="settings"&&(
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
+                <Settings size={13} className="text-[#5E687B]"/>
+                <span className="text-xs font-bold text-[#212833]">Settings</span>
+              </div>
+              <GmailSettingsPanel status={gmailStatus} onGmailStatusChange={() => { void refetchGmailStatus(); }}/>
+            </div>
+          )}
           {/* ── INBOX VIEW: thread list + detail ── */}
           {activeView==="inbox"&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
 
@@ -1998,6 +2329,11 @@ export default function Home() {
                           <span className={`font-semibold text-[11px] truncate ${msg.unread&&!replied?"text-[#212833]":"text-[#5E687B]"}`}>{msg.sender}</span>
                           {chIcon(msg.channel)}
                           {replied&&<span className="text-[8px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 rounded-full font-semibold flex items-center gap-0.5"><Check size={7}/>Replied</span>}
+                          {msg.routingConfidence != null && msg.routingConfidence < 0.85 && (
+                            <span title={`Routing confidence: ${Math.round(msg.routingConfidence*100)}% (${msg.matchMethod ?? ""})`} className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${msg.routingConfidence>=0.65?"bg-amber-50 text-amber-600 border-amber-100":"bg-red-50 text-red-600 border-red-100"}`}>
+                              {Math.round(msg.routingConfidence*100)}%
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0 ml-2">
                           <button
@@ -2386,15 +2722,26 @@ export default function Home() {
                       onFocus={()=>setComposeFocused(true)} onBlur={()=>setTimeout(()=>setComposeFocused(false),200)}
                       placeholder={repliedIds.has(activeMessage.id)?"Follow up...":"Type a reply or use Edit Draft above..."}
                       className="w-full p-3 h-14 outline-none resize-none text-[11px] bg-transparent leading-relaxed"/>
-                    <div className="bg-[#FAFBFC] border-t border-[#E5EAF0] p-2 flex items-center justify-between">
+                    <div className="bg-[#FAFBFC] border-t border-[#E5EAF0] p-2 flex items-center justify-between gap-2">
                       <div className="flex gap-1 text-[#5E687B]">
                         <button className="p-1 hover:bg-[#E5EAF0] rounded"><Paperclip size={13}/></button>
                         <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="p-1 hover:bg-[#E5EAF0] rounded" title="AI draft"><Sparkles size={13} className="text-[#9000FF]"/></button>
                       </div>
-                      <button onClick={()=>{if(composeText.trim())sendReply(activeMessage.id);}}
-                        className={`px-3 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 transition-all ${composeText.trim()?"bg-[#212833] text-white hover:bg-black":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
-                        Reply<Send size={10}/>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        {activeMessage.channel==="gmail" && gmailStatus?.connected && (
+                          <button
+                            onClick={()=>{ if(composeText.trim()) sendViaGmail(activeMessage.messageId, composeText.trim()); }}
+                            disabled={!composeText.trim() || sendReplyMutation.isPending}
+                            title="Send reply through your connected Gmail account"
+                            className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${composeText.trim()&&!sendReplyMutation.isPending?"bg-blue-600 text-white hover:bg-blue-700":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
+                            <Mail size={10}/>Gmail
+                          </button>
+                        )}
+                        <button onClick={()=>{if(composeText.trim())sendReply(activeMessage.id);}}
+                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 transition-all ${composeText.trim()?"bg-[#212833] text-white hover:bg-black":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
+                          Reply<Send size={10}/>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
