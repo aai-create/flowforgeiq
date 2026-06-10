@@ -10,6 +10,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Optional env: `INBOUND_EMAIL_ADDRESS` — inbound email address for Postmark webhook and chat-forward detection (defaults to `ai@flowforge.com`; surfaced via `GET /settings/inbound-email` and displayed in Settings → Chat Channels)
 
 ## Stack
 

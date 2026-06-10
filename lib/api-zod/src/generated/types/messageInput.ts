@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MessageInputDirection } from './messageInputDirection';
+import type { MessageInputRoutingStatus } from './messageInputRoutingStatus';
 
 export interface MessageInput {
   /** @nullable */
@@ -30,4 +31,21 @@ export interface MessageInput {
   attachmentMimeType?: string;
   /** Original filename of the attachment */
   attachmentName?: string;
+  /** Override auto-routing; defaults to routed */
+  routingStatus?: MessageInputRoutingStatus;
+  /**
+     * 0–1 confidence score from chat ingest
+     * @nullable
+     */
+  routingConfidence?: number | null;
+  /**
+     * How the sender was matched
+     * @nullable
+     */
+  matchMethod?: string | null;
+  /**
+     * Original pasted or forwarded chat text for audit
+     * @nullable
+     */
+  rawChatText?: string | null;
 }

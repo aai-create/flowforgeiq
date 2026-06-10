@@ -53,7 +53,10 @@ router.post("/messages", async (req, res) => {
       aiTags: input.aiTags ?? [],
       unread: false,
       isFlagged: false,
-      routingStatus: "routed",
+      routingStatus: (input.routingStatus as "routed" | "needs-review" | undefined) ?? "routed",
+      routingConfidence: input.routingConfidence ?? null,
+      matchMethod: input.matchMethod ?? null,
+      rawChatText: input.rawChatText ?? null,
       receivedAt: new Date(),
     })
     .returning();

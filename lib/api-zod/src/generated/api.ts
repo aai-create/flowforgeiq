@@ -545,7 +545,11 @@ export const CreateMessageBody = zod.object({
   "aiTags": zod.array(zod.string()).optional(),
   "attachmentBase64": zod.string().optional().describe('Base64-encoded file content (WhatsApp media)'),
   "attachmentMimeType": zod.string().optional().describe('MIME type of the attachment'),
-  "attachmentName": zod.string().optional().describe('Original filename of the attachment')
+  "attachmentName": zod.string().optional().describe('Original filename of the attachment'),
+  "routingStatus": zod.enum(['routed', 'needs-review']).optional().describe('Override auto-routing; defaults to routed'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence score from chat ingest'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit')
 })
 
 

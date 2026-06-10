@@ -235,9 +235,9 @@ const INIT_TASKS: Task[] = [
 const chIcon = (ch: Channel, sz = 12) => {
   if (ch === "whatsapp") return <MessageCircle size={sz} className="text-emerald-500" />;
   if (ch === "gmail")    return <Mail size={sz} className="text-blue-500" />;
-  if (ch === "wechat")   return <MessageSquare size={sz} className="text-green-600" />;
+  if (ch === "wechat")   return <MessageSquare size={sz} className="text-teal-500" />;
   if (ch === "imessage") return <MessageCircle size={sz} className="text-blue-400" />;
-  if (ch === "sms")      return <MessageCircle size={sz} className="text-purple-500" />;
+  if (ch === "sms")      return <MessageCircle size={sz} className="text-slate-400" />;
   if (ch === "sheets")   return <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>;
   return <FileText size={sz} className="text-red-500" />;
 };
@@ -2063,9 +2063,9 @@ export default function Home() {
                   {id:"all"      as Channel|"all", label:"All Inbox", icon:<Inbox className="w-3 h-3"/>,         count:messages.length},
                   {id:"gmail"    as Channel,        label:"Gmail",    icon:<Mail className="w-3 h-3"/>,           count:messages.filter(m=>m.channel==="gmail").length},
                   {id:"whatsapp" as Channel,        label:"WhatsApp", icon:<MessageCircle className="w-3 h-3"/>,  count:messages.filter(m=>m.channel==="whatsapp").length},
-                  {id:"wechat"   as Channel,        label:"WeChat",   icon:<MessageSquare className="w-3 h-3 text-green-600"/>, count:messages.filter(m=>m.channel==="wechat").length},
+                  {id:"wechat"   as Channel,        label:"WeChat",   icon:<MessageSquare className="w-3 h-3 text-teal-500"/>, count:messages.filter(m=>m.channel==="wechat").length},
                   {id:"imessage" as Channel,        label:"iMessage", icon:<MessageCircle className="w-3 h-3 text-blue-400"/>, count:messages.filter(m=>m.channel==="imessage").length},
-                  {id:"sms"      as Channel,        label:"SMS",      icon:<MessageCircle className="w-3 h-3 text-purple-500"/>, count:messages.filter(m=>m.channel==="sms").length},
+                  {id:"sms"      as Channel,        label:"SMS",      icon:<MessageCircle className="w-3 h-3 text-slate-400"/>, count:messages.filter(m=>m.channel==="sms").length},
                   {id:"sheets"   as Channel,        label:"Sheets",   icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>, count:messages.filter(m=>m.channel==="sheets").length},
                   {id:"pdf"      as Channel,        label:"PDFs",     icon:<FileText className="w-3 h-3"/>,       count:messages.filter(m=>m.channel==="pdf").length},
                 ]).map(f=>{
@@ -2409,6 +2409,10 @@ export default function Home() {
                                 aiDraft: pasteChatResult.aiDraft,
                                 aiAction: pasteChatResult.aiAction,
                                 aiTags: pasteChatResult.aiTags,
+                                routingStatus: pasteChatResult.routingStatus,
+                                routingConfidence: pasteChatResult.confidence,
+                                matchMethod: pasteChatResult.matchMethod??null,
+                                rawChatText: pasteChatText,
                               });
                               const newUiMsg: UiMessage = {
                                 id: String(created.id), messageId: created.id, sender: created.sender,
@@ -2416,10 +2420,14 @@ export default function Home() {
                                 snippet: created.snippet, fullBody: created.fullBody, unread: true,
                                 aiTags: created.aiTags??[], shipmentId: created.shipmentId?String(created.shipmentId):"",
                                 supplierId: "", aiDraft: created.aiDraft??"", aiAction: created.aiAction??"",
-                                isFlagged: false, routingStatus: (created.routingStatus as "routed"|"needs-review"),
+                                isFlagged: false, routingStatus: pasteChatResult.routingStatus as "routed"|"needs-review",
                               };
-                              setMessages(prev=>[newUiMsg,...prev]);
-                              setToast("Chat message added to inbox");
+                              if (pasteChatResult.routingStatus === "needs-review") {
+                                setToast("Chat added — no shipment matched, check Needs Review");
+                              } else {
+                                setMessages(prev=>[newUiMsg,...prev]);
+                                setToast("Chat message added to inbox");
+                              }
                               closePasteChat();
                             } catch {
                               setPasteChatError("Failed to save — please try again");

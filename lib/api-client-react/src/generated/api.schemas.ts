@@ -341,6 +341,17 @@ export const MessageInputDirection = {
   outbound: 'outbound',
 } as const;
 
+/**
+ * Override auto-routing; defaults to routed
+ */
+export type MessageInputRoutingStatus = typeof MessageInputRoutingStatus[keyof typeof MessageInputRoutingStatus];
+
+
+export const MessageInputRoutingStatus = {
+  routed: 'routed',
+  'needs-review': 'needs-review',
+} as const;
+
 export interface MessageInput {
   /** @nullable */
   shipmentId?: number | null;
@@ -364,6 +375,23 @@ export interface MessageInput {
   attachmentMimeType?: string;
   /** Original filename of the attachment */
   attachmentName?: string;
+  /** Override auto-routing; defaults to routed */
+  routingStatus?: MessageInputRoutingStatus;
+  /**
+     * 0–1 confidence score from chat ingest
+     * @nullable
+     */
+  routingConfidence?: number | null;
+  /**
+     * How the sender was matched
+     * @nullable
+     */
+  matchMethod?: string | null;
+  /**
+     * Original pasted or forwarded chat text for audit
+     * @nullable
+     */
+  rawChatText?: string | null;
 }
 
 export interface MessageUpdate {

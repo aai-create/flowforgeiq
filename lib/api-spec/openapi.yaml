@@ -1365,6 +1365,10 @@ components:
         attachmentBase64:  { type: string, description: "Base64-encoded file content (WhatsApp media)" }
         attachmentMimeType: { type: string, description: "MIME type of the attachment" }
         attachmentName:    { type: string, description: "Original filename of the attachment" }
+        routingStatus:     { type: string, enum: [routed, needs-review], description: "Override auto-routing; defaults to routed" }
+        routingConfidence: { type: ["number", "null"], description: "0–1 confidence score from chat ingest" }
+        matchMethod:       { type: ["string", "null"], description: "How the sender was matched" }
+        rawChatText:       { type: ["string", "null"], description: "Original pasted or forwarded chat text for audit" }
     MessageUpdate:
       type: object
       properties:

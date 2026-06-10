@@ -58,6 +58,7 @@ export * from './messageAssignInput';
 export * from './messageDirection';
 export * from './messageInput';
 export * from './messageInputDirection';
+export * from './messageInputRoutingStatus';
 export * from './messagePendingExtractionFields';
 export * from './messageRoutingStatus';
 export * from './messageUpdate';
