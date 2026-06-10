@@ -13,6 +13,7 @@ import { InboundEmailWebhookBody } from "@workspace/api-zod";
 import { asc, eq } from "drizzle-orm";
 import { runExtraction, extractFromChatText } from "../lib/extraction";
 import { normaliseChat } from "../lib/chatNormalise";
+import { detectChatForward, CHAT_ROUTING_THRESHOLD } from "../lib/chatDetect";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
@@ -661,65 +662,6 @@ async function ingestDocumentFromBase64({
 
 export { ingestDocumentFromBase64 };
 
-// ─── Chat forward detection ───────────────────────────────────────────────────
-
-interface ChatForwardDetection {
-  isChat: boolean;
-  channel: "whatsapp" | "imessage" | "wechat" | null;
-  chatBody: string | null;
-}
-
-function detectChatForward(subject: string | undefined, textBody: string | undefined): ChatForwardDetection {
-  const body = textBody ?? "";
-  const subj = subject ?? "";
-  const subjL = subj.toLowerCase();
-  const bodyHead = body.slice(0, 500);
-
-  // Infer channel from combined subject + body context
-  const inferChannel = (): "whatsapp" | "imessage" | "wechat" => {
-    const ctx = subjL + " " + bodyHead.toLowerCase();
-    if (/wechat|weixin/.test(ctx)) return "wechat";
-    if (/imessage|iphone|apple\.com/.test(ctx)) return "imessage";
-    return "whatsapp"; // default — WhatsApp is most common supplier channel
-  };
-
-  // 1. WhatsApp timestamp pattern: [DD/MM/YYYY, HH:MM] or similar
-  if (/\[\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4},?\s*\d{1,2}:\d{2}/m.test(body)) {
-    return { isChat: true, channel: "whatsapp", chatBody: body };
-  }
-
-  // 2. Subject starts with "FWD:" or "Fwd:" — explicit forward prefix
-  //    Confirm it looks like a chat by requiring chat-style "Sender: message" lines
-  if (/^(?:fwd?:|re:\s*fwd?:|【?fwd?】?:)/i.test(subj)) {
-    if (/^[^:\n]{1,50}:\s*\S/m.test(body)) {
-      return { isChat: true, channel: inferChannel(), chatBody: body };
-    }
-  }
-
-  // 3. Body contains "Forwarded from [Name]" header (WhatsApp, iMessage, generic)
-  //    Variants: "-- Forwarded from Alice --", "Forwarded from: Guangzhou", etc.
-  if (/(?:^|[\n\r])[-–—]*\s*(?:forwarded from|forward from)[:\s][^\n]{0,80}/im.test(body)) {
-    return { isChat: true, channel: inferChannel(), chatBody: body };
-  }
-
-  // 4. WhatsApp subject keyword
-  if (/whatsapp/i.test(subjL)) {
-    return { isChat: true, channel: "whatsapp", chatBody: body };
-  }
-
-  // 5. iMessage "Begin forwarded message" with Apple/iMessage markers
-  if (/begin forwarded message/i.test(body) && /imessage|iphone|apple\.com/i.test(subjL + " " + bodyHead)) {
-    return { isChat: true, channel: "imessage", chatBody: body };
-  }
-
-  // 6. WeChat / Weixin forward
-  if (/wechat|weixin/i.test(subjL + " " + bodyHead)) {
-    return { isChat: true, channel: "wechat", chatBody: body };
-  }
-
-  return { isChat: false, channel: null, chatBody: null };
-}
-
 // ─── Email webhook route ──────────────────────────────────────────────────────
 
 router.post("/webhooks/email", async (req, res) => {
@@ -750,8 +692,7 @@ router.post("/webhooks/email", async (req, res) => {
         .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id));
 
       const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
-      const CHAT_THRESHOLD = 0.65;
-      const routingStatus = extracted.confidence >= CHAT_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
+      const routingStatus = extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
       const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
 
       await db.insert(messagesTable).values({
