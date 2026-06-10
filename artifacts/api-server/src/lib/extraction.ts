@@ -607,8 +607,8 @@ export async function extractFromChatText(
   const shipCtx = SHIPMENT_CONTEXT(shipments);
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    max_tokens: 600,
+    model: "gpt-5-mini",
+    max_completion_tokens: 1024,
     messages: [{ role: "user", content: `You are a supply-chain chat message processor. Parse informal supplier/buyer chat messages and extract supply-chain data.
 
 Active shipments (for PO matching):
