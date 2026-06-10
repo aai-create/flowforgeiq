@@ -58,6 +58,11 @@ export interface Message {
      */
   rawSenderEmail?: string | null;
   /**
+     * Original pasted or forwarded chat text for audit
+     * @nullable
+     */
+  rawChatText?: string | null;
+  /**
      * AI's best guess for assignment (when confidence is low)
      * @nullable
      */

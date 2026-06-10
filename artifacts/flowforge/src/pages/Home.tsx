@@ -1586,6 +1586,7 @@ export default function Home() {
   const [showHistory, setShowHistory]     = useState(false);
   const [searchMode, setSearchMode]       = useState(false);
   const [searchQuery, setSearchQuery]     = useState("");
+  const [chatTranscriptExpanded, setChatTranscriptExpanded] = useState(false);
 
   // Supplier email editing
   const { data: suppliersData, refetch: refetchSuppliers } = useListSuppliers();
@@ -1723,6 +1724,7 @@ export default function Home() {
   useEffect(() => {
     setEditingEmail(false);
     setEmailDraft("");
+    setChatTranscriptExpanded(false);
   }, [activeMessageId]);
 
   const saveEmail = () => {
@@ -2509,6 +2511,11 @@ export default function Home() {
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className={`font-semibold text-[11px] truncate ${msg.unread&&!replied?"text-[#212833]":"text-[#5E687B]"}`}>{msg.sender}</span>
                           {chIcon(msg.channel)}
+                          {msg.rawChatText && (
+                            <span className="text-[8px] font-bold px-1 py-0.5 rounded border bg-indigo-50 text-indigo-600 border-indigo-100 shrink-0 flex items-center gap-0.5">
+                              <MessageSquare size={7}/>Fwd chat
+                            </span>
+                          )}
                           {replied&&<span className="text-[8px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 rounded-full font-semibold flex items-center gap-0.5"><Check size={7}/>Replied</span>}
                           {msg.routingConfidence != null && msg.routingConfidence < 0.85 && (
                             <span title={`Routing confidence: ${Math.round(msg.routingConfidence*100)}% (${msg.matchMethod ?? ""})`} className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${msg.routingConfidence>=0.65?"bg-amber-50 text-amber-600 border-amber-100":"bg-red-50 text-red-600 border-red-100"}`}>
@@ -2844,7 +2851,14 @@ export default function Home() {
                       <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
                       <div className="min-w-0">
                         <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
-                        <div className="text-[9px] text-[#5E687B] flex items-center gap-1">{chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}</div>
+                        <div className="text-[9px] text-[#5E687B] flex items-center gap-1 flex-wrap">
+                          {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
+                          {activeMessage.rawChatText && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[8px] uppercase tracking-wide">
+                              <MessageSquare size={8}/>Forwarded chat
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="ml-auto flex items-center gap-2">
                         <button
@@ -2857,7 +2871,42 @@ export default function Home() {
                         {repliedIds.has(activeMessage.id)&&<span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
                       </div>
                     </div>
+                    {/* Needs-review banner for chat-forward messages awaiting confirmation */}
+                    {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
+                      <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
+                        <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
+                          <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
+                        </div>
+                        <button
+                          onClick={() => setActiveView("needs-review")}
+                          className="shrink-0 text-[9px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1"
+                        >
+                          <ArrowRight size={9}/>Reassign
+                        </button>
+                      </div>
+                    )}
                     <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
+                    {/* Collapsible chat transcript for forwarded chats */}
+                    {activeMessage.rawChatText && (
+                      <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
+                        <button
+                          onClick={() => setChatTranscriptExpanded(v => !v)}
+                          className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left"
+                        >
+                          <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
+                          <span className="text-[10px] font-bold text-indigo-700 flex-1">Chat transcript</span>
+                          <span className="text-[9px] text-indigo-400 font-medium">{activeMessage.channel === "whatsapp" ? "WhatsApp" : activeMessage.channel === "wechat" ? "WeChat" : activeMessage.channel === "imessage" ? "iMessage" : "Chat"} · forwarded</span>
+                          {chatTranscriptExpanded ? <ChevronUp size={11} className="text-indigo-400 shrink-0"/> : <ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
+                        </button>
+                        {chatTranscriptExpanded && (
+                          <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
+                            <pre className="text-[10px] text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
                     {activeMessage.aiAction&&(
                       <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">

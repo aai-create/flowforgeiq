@@ -67,6 +67,7 @@ export interface UiMessage {
   routingConfidence?: number | null;
   rawSenderEmail?: string | null;
   matchMethod?: string | null;
+  rawChatText?: string | null;
 }
 
 export interface UiTask {
@@ -138,6 +139,7 @@ export function adaptMessages(rows: ApiMessage[], shipments: UiShipment[]): UiMe
       routingConfidence: m.routingConfidence,
       rawSenderEmail: m.rawSenderEmail,
       matchMethod: m.matchMethod,
+      rawChatText: m.rawChatText ?? null,
     };
   });
 }

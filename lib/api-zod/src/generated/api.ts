@@ -513,6 +513,7 @@ export const ListMessagesResponseItem = zod.object({
   "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().optional(),
   "shipmentId": zod.number().optional(),
@@ -579,6 +580,7 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
   "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().optional(),
   "shipmentId": zod.number().optional(),
@@ -629,6 +631,7 @@ export const UpdateMessageResponse = zod.object({
   "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().optional(),
   "shipmentId": zod.number().optional(),
@@ -680,6 +683,7 @@ export const AssignMessageResponse = zod.object({
   "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().optional(),
   "shipmentId": zod.number().optional(),
