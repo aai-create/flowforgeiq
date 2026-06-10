@@ -579,6 +579,99 @@ function applyPoReconciliation(
   return { ...result, reconciliationFindings: poFindings };
 }
 
+// ─── Chat text extraction ──────────────────────────────────────────────────────
+
+export interface ChatExtractedFields {
+  eta?: string;
+  quotePrice?: number;
+  productionPct?: number;
+  qcNote?: string;
+  statusUpdate?: string;
+}
+
+export interface ChatExtractionResult {
+  shipmentId?: number;
+  confidence: number;
+  matchMethod: string;
+  extractedFields: ChatExtractedFields;
+  aiDraft: string;
+  aiAction: string;
+  aiTags: string[];
+}
+
+export async function extractFromChatText(
+  chatText: string,
+  shipments: ShipmentRow[],
+  senderHint?: string,
+): Promise<ChatExtractionResult> {
+  const shipCtx = SHIPMENT_CONTEXT(shipments);
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    max_tokens: 600,
+    messages: [{ role: "user", content: `You are a supply-chain chat message processor. Parse informal supplier/buyer chat messages and extract supply-chain data.
+
+Active shipments (for PO matching):
+${shipCtx}
+
+Sender hint: ${senderHint ?? "(none)"}
+
+Chat text:
+${chatText.slice(0, 3000)}
+
+Reply with JSON only (no markdown):
+{
+  "matchedShipmentId": <integer or null — match to the best shipment above>,
+  "confidence": <0.0–1.0, confidence in the shipment match>,
+  "matchMethod": <"po-reference" | "product-match" | "context-inferred" | "none">,
+  "extractedFields": {
+    "eta": "<descriptive ETA or ISO date string, or null>",
+    "quotePrice": <number or null>,
+    "productionPct": <0–100 integer or null>,
+    "qcNote": "<QC status or findings, or null>",
+    "statusUpdate": "<on-track | at-risk | delayed, or null>"
+  },
+  "aiDraft": "<concise professional reply to this message, under 100 words>",
+  "aiAction": "<one-line action description, e.g. 'Approve 2-day delay and update ETA'>",
+  "aiTags": ["<tag1>", "<tag2>"]
+}` }],
+    response_format: { type: "json_object" },
+  });
+
+  const raw = JSON.parse(response.choices[0]?.message?.content ?? "{}") as {
+    matchedShipmentId?: number | null;
+    confidence?: number;
+    matchMethod?: string;
+    extractedFields?: {
+      eta?: string | null;
+      quotePrice?: number | null;
+      productionPct?: number | null;
+      qcNote?: string | null;
+      statusUpdate?: string | null;
+    };
+    aiDraft?: string;
+    aiAction?: string;
+    aiTags?: string[];
+  };
+
+  const extractedFields: ChatExtractedFields = {};
+  if (raw.extractedFields?.eta) extractedFields.eta = raw.extractedFields.eta;
+  if (raw.extractedFields?.quotePrice != null) extractedFields.quotePrice = raw.extractedFields.quotePrice;
+  if (raw.extractedFields?.productionPct != null) extractedFields.productionPct = raw.extractedFields.productionPct;
+  if (raw.extractedFields?.qcNote) extractedFields.qcNote = raw.extractedFields.qcNote;
+  if (raw.extractedFields?.statusUpdate) extractedFields.statusUpdate = raw.extractedFields.statusUpdate;
+
+  return {
+    shipmentId: typeof raw.matchedShipmentId === "number" ? raw.matchedShipmentId : undefined,
+    confidence: Math.min(Math.max(Number(raw.confidence ?? 0.5), 0), 1),
+    matchMethod: raw.matchMethod ?? "none",
+    extractedFields,
+    aiDraft: raw.aiDraft ?? "",
+    aiAction: raw.aiAction ?? "",
+    aiTags: Array.isArray(raw.aiTags) ? (raw.aiTags as string[]).slice(0, 3) : [],
+  };
+}
+
 export async function runExtraction(input: ExtractionInput): Promise<ExtractionResult> {
   const { doc, fileBuffer, shipments, corrections, supplierId, poLineItemsByShipment } = input;
 

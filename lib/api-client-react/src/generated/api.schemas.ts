@@ -342,7 +342,8 @@ export const MessageInputDirection = {
 } as const;
 
 export interface MessageInput {
-  shipmentId: number;
+  /** @nullable */
+  shipmentId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   sender: string;
@@ -693,6 +694,72 @@ export interface PoNumberingConfigUpdate {
   supplierSuffix?: string;
   /** Reset the sequence counter to this value (must be positive integer) */
   resetSeq?: number;
+}
+
+export interface InboundEmailAddress {
+  /** The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var) */
+  inboundEmailAddress: string;
+}
+
+/**
+ * Source messaging platform
+ */
+export type ChatIngestInputChannel = typeof ChatIngestInputChannel[keyof typeof ChatIngestInputChannel];
+
+
+export const ChatIngestInputChannel = {
+  whatsapp: 'whatsapp',
+  wechat: 'wechat',
+  imessage: 'imessage',
+  sms: 'sms',
+} as const;
+
+export interface ChatIngestInput {
+  /** Raw pasted chat text (WhatsApp export, WeChat transcript, iMessage forward, etc.) */
+  rawText: string;
+  /** Source messaging platform */
+  channel: ChatIngestInputChannel;
+  /** Optional hint for the supplier/contact name when auto-detection may be ambiguous */
+  senderHint?: string;
+}
+
+export interface ChatExtractedFields {
+  /** Estimated arrival or ex-factory date extracted from the message */
+  eta?: string;
+  /** Unit price or total quote amount mentioned */
+  quotePrice?: number;
+  /** Production completion percentage (0–100) */
+  productionPct?: number;
+  /** QC status or findings */
+  qcNote?: string;
+  /** Shipment status signal: on-track | at-risk | delayed */
+  statusUpdate?: string;
+}
+
+export type ChatIngestResultRoutingStatus = typeof ChatIngestResultRoutingStatus[keyof typeof ChatIngestResultRoutingStatus];
+
+
+export const ChatIngestResultRoutingStatus = {
+  routed: 'routed',
+  'needs-review': 'needs-review',
+} as const;
+
+export interface ChatIngestResult {
+  routingStatus: ChatIngestResultRoutingStatus;
+  /** @nullable */
+  shipmentId?: number | null;
+  /** @nullable */
+  supplierId?: number | null;
+  confidence: number;
+  /** @nullable */
+  matchMethod?: string | null;
+  extractedFields?: ChatExtractedFields;
+  sender: string;
+  snippet: string;
+  fullBody: string;
+  aiDraft: string;
+  aiAction: string;
+  aiTags: string[];
 }
 
 export interface InboundEmailWebhookResponse {

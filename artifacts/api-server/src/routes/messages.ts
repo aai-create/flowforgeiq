@@ -10,6 +10,8 @@ import {
 import { z } from "zod/v4";
 import { ingestDocumentFromBase64 } from "./webhooks";
 import { buildRawEmail, getValidAccessToken } from "./integrations";
+import { normaliseChat } from "../lib/chatNormalise";
+import { extractFromChatText } from "../lib/extraction";
 
 const router: IRouter = Router();
 
@@ -217,6 +219,62 @@ router.post("/messages/:id/send-reply", async (req, res) => {
   );
 
   res.status(201).json(ListMessagesResponseItem.parse(outbound[0]));
+});
+
+const CHAT_ROUTING_THRESHOLD = 0.65;
+
+const IngestChatBody = z.object({
+  rawText: z.string().min(1),
+  channel: z.enum(["whatsapp", "wechat", "imessage", "sms"]),
+  senderHint: z.string().optional(),
+});
+
+router.post("/messages/ingest-chat", async (req, res) => {
+  const input = IngestChatBody.parse(req.body);
+
+  const normalised = normaliseChat(input.rawText, input.channel, input.senderHint);
+
+  const shipmentRows = await db
+    .select({
+      id: shipmentsTable.id,
+      poNumber: shipmentsTable.poNumber,
+      product: shipmentsTable.product,
+      customerName: shipmentsTable.customerName,
+      supplierName: suppliersTable.name,
+      status: shipmentsTable.status,
+      currentStageId: shipmentsTable.currentStageId,
+    })
+    .from(shipmentsTable)
+    .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id));
+
+  const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
+
+  const routingStatus =
+    extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null
+      ? "routed"
+      : "needs-review";
+
+  const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
+
+  req.log.info(
+    { channel: input.channel, confidence: extracted.confidence, routingStatus, shipmentId: extracted.shipmentId },
+    "ingest-chat: processed",
+  );
+
+  res.status(200).json({
+    routingStatus,
+    shipmentId: extracted.shipmentId ?? null,
+    supplierId: null,
+    confidence: extracted.confidence,
+    matchMethod: extracted.matchMethod,
+    extractedFields: extracted.extractedFields,
+    sender: normalised.primarySender,
+    snippet,
+    fullBody: input.rawText,
+    aiDraft: extracted.aiDraft,
+    aiAction: extracted.aiAction,
+    aiTags: extracted.aiTags,
+  });
 });
 
 export default router;

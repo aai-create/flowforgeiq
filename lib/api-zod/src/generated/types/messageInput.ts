@@ -8,7 +8,8 @@
 import type { MessageInputDirection } from './messageInputDirection';
 
 export interface MessageInput {
-  shipmentId: number;
+  /** @nullable */
+  shipmentId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   sender: string;

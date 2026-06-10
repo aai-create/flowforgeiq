@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Settings2, Save, Eye, RefreshCw } from "lucide-react";
-import { useGetPoNumberingConfig, useUpdatePoNumberingConfig } from "@workspace/api-client-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone } from "lucide-react";
+import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 
 function buildPreview(prefix: string, format: string, suffix: string, seq: number) {
@@ -11,6 +11,9 @@ function buildPreview(prefix: string, format: string, suffix: string, seq: numbe
 export function Settings() {
   const { data: config, isLoading } = useGetPoNumberingConfig();
   const updateMutation = useUpdatePoNumberingConfig();
+  const { data: inboundEmailData } = useGetInboundEmailAddress();
+  const inboundEmail = inboundEmailData?.inboundEmailAddress || "ai@flowforge.com";
+  const [emailCopied, setEmailCopied] = useState(false);
 
   const [prefix, setPrefix] = useState("PO-");
   const [sequenceFormat, setSequenceFormat] = useState("{seq}");
@@ -152,6 +155,59 @@ export function Settings() {
                   </div>
                 </div>
               )}
+            </section>
+
+            {/* Channels section */}
+            <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+              <h2 className="text-sm font-bold text-[#212833] mb-1">Chat Channels</h2>
+              <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
+                Ingest WhatsApp, WeChat, iMessage, and SMS messages into FlowForge. Use the
+                paste-to-process button (<span className="font-mono text-[11px] bg-[#F0F4F8] px-1 rounded">clipboard icon</span>) in the inbox toolbar,
+                or forward chat exports directly to the inbound email address below.
+              </p>
+
+              {/* Channel status grid */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {[
+                  { name: "WhatsApp", icon: <MessageCircle className="w-4 h-4 text-emerald-500"/>, desc: "Paste or forward WhatsApp exports" },
+                  { name: "WeChat", icon: <MessageSquare className="w-4 h-4 text-green-600"/>, desc: "Paste WeChat chat history" },
+                  { name: "iMessage", icon: <MessageCircle className="w-4 h-4 text-blue-400"/>, desc: "Forward or paste iMessage threads" },
+                  { name: "SMS", icon: <Smartphone className="w-4 h-4 text-purple-500"/>, desc: "Paste SMS message exports" },
+                ].map(ch => (
+                  <div key={ch.name} className="flex items-start gap-3 p-3 border border-[#E5EAF0] rounded-lg">
+                    <div className="w-7 h-7 rounded-md bg-[#F0F4F8] flex items-center justify-center shrink-0">{ch.icon}</div>
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-semibold text-[#212833]">{ch.name}</span>
+                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 rounded-full">Active</span>
+                      </div>
+                      <p className="text-[10px] text-[#9E9FAE]">{ch.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Inbound email */}
+              <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Mail className="w-3 h-3 text-[#9000FF]"/>
+                  <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Inbound email address</span>
+                </div>
+                <p className="text-[10px] text-[#9E9FAE] mb-2.5">
+                  Forward supplier chat exports to this address to ingest them automatically.
+                  Controlled by the <code className="font-mono bg-white border border-[#E5EAF0] px-1 rounded text-[10px] text-[#212833]">INBOUND_EMAIL_ADDRESS</code> environment variable.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">
+                    {inboundEmail}
+                  </code>
+                  <button
+                    onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setEmailCopied(true);setTimeout(()=>setEmailCopied(false),1800);});}}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
+                    {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>Copied!</> : <><Copy className="w-3 h-3"/>Copy</>}
+                  </button>
+                </div>
+              </div>
             </section>
 
           </div>

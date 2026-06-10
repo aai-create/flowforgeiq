@@ -531,7 +531,7 @@ export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
 
 
 export const CreateMessageBody = zod.object({
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish(),
   "supplierId": zod.number().nullish(),
   "sender": zod.string(),
   "recipient": zod.string().optional().describe('Outbound recipient — supplier email or name'),
@@ -1308,6 +1308,45 @@ export const SaveExtractionCorrectionResponse = zod.object({
   "originalValue": zod.string().nullish(),
   "correctedValue": zod.string(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get the configured inbound email address for chat/email forwarding
+ */
+export const GetInboundEmailAddressResponse = zod.object({
+  "inboundEmailAddress": zod.string().describe('The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var)')
+})
+
+
+/**
+ * @summary Process a pasted chat message (WhatsApp/WeChat/iMessage) and extract supply-chain data — preview only, does not save
+ */
+export const IngestChatBody = zod.object({
+  "rawText": zod.string().describe('Raw pasted chat text (WhatsApp export, WeChat transcript, iMessage forward, etc.)'),
+  "channel": zod.enum(['whatsapp', 'wechat', 'imessage', 'sms']).describe('Source messaging platform'),
+  "senderHint": zod.string().optional().describe('Optional hint for the supplier\/contact name when auto-detection may be ambiguous')
+})
+
+export const IngestChatResponse = zod.object({
+  "routingStatus": zod.enum(['routed', 'needs-review']),
+  "shipmentId": zod.number().nullish(),
+  "supplierId": zod.number().nullish(),
+  "confidence": zod.number(),
+  "matchMethod": zod.string().nullish(),
+  "extractedFields": zod.object({
+  "eta": zod.string().optional().describe('Estimated arrival or ex-factory date extracted from the message'),
+  "quotePrice": zod.number().optional().describe('Unit price or total quote amount mentioned'),
+  "productionPct": zod.number().optional().describe('Production completion percentage (0–100)'),
+  "qcNote": zod.string().optional().describe('QC status or findings'),
+  "statusUpdate": zod.string().optional().describe('Shipment status signal: on-track | at-risk | delayed')
+}).optional(),
+  "sender": zod.string(),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string())
 })
 
 

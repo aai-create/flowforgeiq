@@ -11,7 +11,8 @@ import {
 } from "@workspace/db";
 import { InboundEmailWebhookBody } from "@workspace/api-zod";
 import { asc, eq } from "drizzle-orm";
-import { runExtraction } from "../lib/extraction";
+import { runExtraction, extractFromChatText } from "../lib/extraction";
+import { normaliseChat } from "../lib/chatNormalise";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
@@ -660,6 +661,41 @@ async function ingestDocumentFromBase64({
 
 export { ingestDocumentFromBase64 };
 
+// ─── Chat forward detection ───────────────────────────────────────────────────
+
+interface ChatForwardDetection {
+  isChat: boolean;
+  channel: "whatsapp" | "imessage" | "wechat" | null;
+  chatBody: string | null;
+}
+
+function detectChatForward(subject: string | undefined, textBody: string | undefined): ChatForwardDetection {
+  const body = textBody ?? "";
+  const subj = (subject ?? "").toLowerCase();
+
+  // WhatsApp export: lines with [DD/MM/YYYY, HH:MM:SS] pattern
+  if (/\[\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4},?\s*\d{1,2}:\d{2}/m.test(body)) {
+    return { isChat: true, channel: "whatsapp", chatBody: body };
+  }
+
+  // WhatsApp subject hint
+  if (/whatsapp/i.test(subj)) {
+    return { isChat: true, channel: "whatsapp", chatBody: body };
+  }
+
+  // iMessage Begin forwarded message with Apple/iMessage markers
+  if (/begin forwarded message/i.test(body) && /imessage|iphone|apple\.com/i.test(subj + " " + body.slice(0, 300))) {
+    return { isChat: true, channel: "imessage", chatBody: body };
+  }
+
+  // WeChat / Weixin forward
+  if (/wechat|weixin/i.test(subj + " " + body.slice(0, 200))) {
+    return { isChat: true, channel: "wechat", chatBody: body };
+  }
+
+  return { isChat: false, channel: null, chatBody: null };
+}
+
 // ─── Email webhook route ──────────────────────────────────────────────────────
 
 router.post("/webhooks/email", async (req, res) => {
@@ -670,6 +706,58 @@ router.post("/webhooks/email", async (req, res) => {
   }
 
   const { From, Subject, TextBody, Attachments } = parsed.data;
+
+  // ── Chat-forward detection: handle before normal email routing ──────────────
+  const chatDetection = detectChatForward(Subject, TextBody);
+  if (chatDetection.isChat && chatDetection.chatBody && chatDetection.channel) {
+    try {
+      const normalised = normaliseChat(chatDetection.chatBody, chatDetection.channel, undefined);
+      const shipmentRows = await db
+        .select({
+          id: shipmentsTable.id,
+          poNumber: shipmentsTable.poNumber,
+          product: shipmentsTable.product,
+          customerName: shipmentsTable.customerName,
+          supplierName: suppliersTable.name,
+          status: shipmentsTable.status,
+          currentStageId: shipmentsTable.currentStageId,
+        })
+        .from(shipmentsTable)
+        .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id));
+
+      const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
+      const CHAT_THRESHOLD = 0.65;
+      const routingStatus = extracted.confidence >= CHAT_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
+      const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
+
+      await db.insert(messagesTable).values({
+        shipmentId: routingStatus === "routed" ? (extracted.shipmentId ?? null) : null,
+        supplierId: null,
+        sender: normalised.primarySender,
+        channel: chatDetection.channel,
+        direction: "inbound",
+        snippet: snippet || "(empty chat)",
+        fullBody: chatDetection.chatBody,
+        rawChatText: chatDetection.chatBody,
+        aiDraft: extracted.aiDraft,
+        aiAction: extracted.aiAction,
+        aiTags: extracted.aiTags,
+        unread: true,
+        isFlagged: false,
+        routingStatus,
+        routingConfidence: extracted.confidence,
+        matchMethod: extracted.matchMethod,
+        rawSenderEmail: From ?? null,
+        receivedAt: new Date(),
+      });
+
+      req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus }, "email-webhook: chat forward ingested");
+      res.json({ accepted: true, documentIds: [] });
+      return;
+    } catch (err) {
+      req.log.error({ err }, "email-webhook: chat forward processing failed, falling through to normal handling");
+    }
+  }
 
   const ctx = await resolveEmailRoutingContext(From, Subject, TextBody);
 

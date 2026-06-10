@@ -52,7 +52,7 @@ export interface UiMessage {
   id: string;
   messageId: number;
   sender: string;
-  channel: "gmail" | "whatsapp" | "sheets" | "pdf";
+  channel: "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
   timestamp: string;
   snippet: string;
   fullBody: string;

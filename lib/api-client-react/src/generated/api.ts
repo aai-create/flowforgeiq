@@ -22,6 +22,8 @@ import type {
 import type {
   AutonomyPolicy,
   AutonomyPolicyInput,
+  ChatIngestInput,
+  ChatIngestResult,
   ConnectGmail200,
   CopilotProposal,
   CopilotProposalInput,
@@ -40,6 +42,7 @@ import type {
   GmailOAuthCallbackParams,
   GmailStatus,
   HealthStatus,
+  InboundEmailAddress,
   InboundEmailWebhook,
   InboundEmailWebhookResponse,
   LinkDealToShipmentBody,
@@ -3756,6 +3759,154 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getSaveExtractionCorrectionMutationOptions(options));
+    }
+
+export const getGetInboundEmailAddressUrl = () => {
+
+
+
+
+  return `/api/settings/inbound-email`
+}
+
+/**
+ * @summary Get the configured inbound email address for chat/email forwarding
+ */
+export const getInboundEmailAddress = async ( options?: RequestInit): Promise<InboundEmailAddress> => {
+
+  return customFetch<InboundEmailAddress>(getGetInboundEmailAddressUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInboundEmailAddressQueryKey = () => {
+    return [
+    `/api/settings/inbound-email`
+    ] as const;
+    }
+
+
+export const getGetInboundEmailAddressQueryOptions = <TData = Awaited<ReturnType<typeof getInboundEmailAddress>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboundEmailAddress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInboundEmailAddressQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboundEmailAddress>>> = ({ signal }) => getInboundEmailAddress({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInboundEmailAddress>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInboundEmailAddressQueryResult = NonNullable<Awaited<ReturnType<typeof getInboundEmailAddress>>>
+export type GetInboundEmailAddressQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the configured inbound email address for chat/email forwarding
+ */
+
+export function useGetInboundEmailAddress<TData = Awaited<ReturnType<typeof getInboundEmailAddress>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboundEmailAddress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInboundEmailAddressQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getIngestChatUrl = () => {
+
+
+
+
+  return `/api/messages/ingest-chat`
+}
+
+/**
+ * @summary Process a pasted chat message (WhatsApp/WeChat/iMessage) and extract supply-chain data — preview only, does not save
+ */
+export const ingestChat = async (chatIngestInput: ChatIngestInput, options?: RequestInit): Promise<ChatIngestResult> => {
+
+  return customFetch<ChatIngestResult>(getIngestChatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      chatIngestInput,)
+  }
+);}
+
+
+
+
+export const getIngestChatMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestChat>>, TError,{data: BodyType<ChatIngestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestChat>>, TError,{data: BodyType<ChatIngestInput>}, TContext> => {
+
+const mutationKey = ['ingestChat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestChat>>, {data: BodyType<ChatIngestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  ingestChat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestChatMutationResult = NonNullable<Awaited<ReturnType<typeof ingestChat>>>
+    export type IngestChatMutationBody = BodyType<ChatIngestInput>
+    export type IngestChatMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Process a pasted chat message (WhatsApp/WeChat/iMessage) and extract supply-chain data — preview only, does not save
+ */
+export const useIngestChat = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestChat>>, TError,{data: BodyType<ChatIngestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ingestChat>>,
+        TError,
+        {data: BodyType<ChatIngestInput>},
+        TContext
+      > => {
+      return useMutation(getIngestChatMutationOptions(options));
     }
 
 export const getGetPoNumberingConfigUrl = () => {

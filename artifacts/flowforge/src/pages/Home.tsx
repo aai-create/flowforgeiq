@@ -12,7 +12,7 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
-  Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff,
+  Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff, Clipboard, Copy,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
@@ -30,8 +30,9 @@ import {
   useListSuppliers, useUpdateSupplier,
   createShipmentStageEvent,
   useListNeedsReviewMessages, useAssignMessage, useSendReply, useGetGmailStatus, connectGmail,
-  useDisconnectGmail,
+  useDisconnectGmail, useGetInboundEmailAddress, useIngestChat,
   type Message as ApiMessageFull,
+  type ChatIngestResult,
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
@@ -61,7 +62,7 @@ function RadarIcon({ size = 16, className = "" }: { size?: number; className?: s
 // ─────────────────────────────────────────────────────────────────────────────
 type ActiveView = "inbox" | "calendar" | "buyers" | "import" | "copilot" | "needs-review" | "settings";
 type RightTab   = "message" | "docs" | "risk" | "copilot";
-type Channel    = "gmail" | "whatsapp" | "sheets" | "pdf";
+type Channel    = "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
 interface Stage { id: string; label: string; }
@@ -234,6 +235,9 @@ const INIT_TASKS: Task[] = [
 const chIcon = (ch: Channel, sz = 12) => {
   if (ch === "whatsapp") return <MessageCircle size={sz} className="text-emerald-500" />;
   if (ch === "gmail")    return <Mail size={sz} className="text-blue-500" />;
+  if (ch === "wechat")   return <MessageSquare size={sz} className="text-green-600" />;
+  if (ch === "imessage") return <MessageCircle size={sz} className="text-blue-400" />;
+  if (ch === "sms")      return <MessageCircle size={sz} className="text-purple-500" />;
   if (ch === "sheets")   return <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>;
   return <FileText size={sz} className="text-red-500" />;
 };
@@ -1335,6 +1339,9 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
   onGmailStatusChange?: () => void;
 }) {
   const disconnectMutation = useDisconnectGmail();
+  const { data: inboundEmailData } = useGetInboundEmailAddress();
+  const inboundEmail = inboundEmailData?.inboundEmailAddress || "ai@flowforge.com";
+  const [copied, setCopied] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -1391,7 +1398,12 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
     <div className="flex-1 overflow-y-auto p-6 max-w-xl mx-auto w-full">
       <div className="mb-6">
         <h2 className="text-sm font-bold text-[#212833] mb-1">Email Integrations</h2>
-        <p className="text-[11px] text-[#5E687B]">Connect Gmail to send replies directly from FlowForge. Inbound emails are received at <span className="font-mono font-semibold">ai@flowforge.com</span> (Postmark webhook).</p>
+        <p className="text-[11px] text-[#5E687B]">Connect Gmail to send replies directly from FlowForge. Inbound emails and forwarded chats are received at{" "}
+          <button onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});}} className="inline-flex items-center gap-1 text-[#212833] hover:text-[#9000FF] transition-colors group" title="Copy to clipboard">
+            <span className="font-mono font-semibold">{inboundEmail}</span>
+            {copied ? <Check size={9} className="text-emerald-500"/> : <Copy size={9} className="opacity-0 group-hover:opacity-60"/>}
+          </button>{" "}(Postmark webhook).
+        </p>
       </div>
 
       {/* Gmail card */}
@@ -1511,6 +1523,14 @@ export default function Home() {
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
   const sendReplyMutation = useSendReply();
+  const ingestChatMutation = useIngestChat();
+  const [showPasteChat, setShowPasteChat] = useState(false);
+  const [pasteChatChannel, setPasteChatChannel] = useState<"whatsapp" | "wechat" | "imessage" | "sms">("whatsapp");
+  const [pasteChatText, setPasteChatText] = useState("");
+  const [pasteChatSenderHint, setPasteChatSenderHint] = useState("");
+  const [pasteChatResult, setPasteChatResult] = useState<ChatIngestResult | null>(null);
+  const [pasteChatError, setPasteChatError] = useState<string | null>(null);
+  const closePasteChat = () => { setShowPasteChat(false); setPasteChatResult(null); setPasteChatText(""); setPasteChatSenderHint(""); setPasteChatError(null); };
   const [needsReviewMessages, setNeedsReviewMessages] = useState<ApiMessageFull[]>([]);
   useEffect(() => { if (apiNeedsReview) setNeedsReviewMessages(apiNeedsReview); }, [apiNeedsReview]);
 
@@ -2043,6 +2063,9 @@ export default function Home() {
                   {id:"all"      as Channel|"all", label:"All Inbox", icon:<Inbox className="w-3 h-3"/>,         count:messages.length},
                   {id:"gmail"    as Channel,        label:"Gmail",    icon:<Mail className="w-3 h-3"/>,           count:messages.filter(m=>m.channel==="gmail").length},
                   {id:"whatsapp" as Channel,        label:"WhatsApp", icon:<MessageCircle className="w-3 h-3"/>,  count:messages.filter(m=>m.channel==="whatsapp").length},
+                  {id:"wechat"   as Channel,        label:"WeChat",   icon:<MessageSquare className="w-3 h-3 text-green-600"/>, count:messages.filter(m=>m.channel==="wechat").length},
+                  {id:"imessage" as Channel,        label:"iMessage", icon:<MessageCircle className="w-3 h-3 text-blue-400"/>, count:messages.filter(m=>m.channel==="imessage").length},
+                  {id:"sms"      as Channel,        label:"SMS",      icon:<MessageCircle className="w-3 h-3 text-purple-500"/>, count:messages.filter(m=>m.channel==="sms").length},
                   {id:"sheets"   as Channel,        label:"Sheets",   icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>, count:messages.filter(m=>m.channel==="sheets").length},
                   {id:"pdf"      as Channel,        label:"PDFs",     icon:<FileText className="w-3 h-3"/>,       count:messages.filter(m=>m.channel==="pdf").length},
                 ]).map(f=>{
@@ -2257,11 +2280,161 @@ export default function Home() {
                 </div>
               </>}
             </div>}
+            {activeView==="inbox"&&<button onClick={()=>setShowPasteChat(true)} className="hover:text-[#212833] p-1" title="Paste chat message (WhatsApp / WeChat / iMessage)"><Clipboard size={15}/></button>}
             <button className="hover:text-[#212833] p-1 relative"><Bell size={15}/>{unreadCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}</button>
             <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
             <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">AX</div>
           </div>
         </div>
+
+          {/* ── PASTE CHAT MODAL ── */}
+          {showPasteChat&&(
+            <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={()=>{if(!ingestChatMutation.isPending)closePasteChat();}}>
+              <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"/>
+              <div className="relative bg-white rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.18)] border border-[#E5EAF0] w-full max-w-[520px] mx-4 overflow-hidden" onClick={e=>e.stopPropagation()}>
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5EAF0]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF]"><Clipboard size={15}/></div>
+                    <div>
+                      <div className="text-sm font-bold text-[#212833]">Paste Chat Message</div>
+                      <div className="text-[10px] text-[#5E687B]">Paste a WhatsApp, WeChat, or iMessage export — AI will extract supply-chain data</div>
+                    </div>
+                  </div>
+                  <button onClick={closePasteChat} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={16}/></button>
+                </div>
+
+                {!pasteChatResult ? (
+                  <div className="p-5 space-y-4">
+                    {/* Channel selector */}
+                    <div>
+                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Source platform</div>
+                      <div className="flex gap-2">
+                        {(["whatsapp","wechat","imessage","sms"] as const).map(ch=>(
+                          <button key={ch} onClick={()=>setPasteChatChannel(ch)} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${pasteChatChannel===ch?"bg-[#9000FF]/5 border-[#9000FF]/30 text-[#9000FF]":"border-[#E5EAF0] text-[#5E687B] hover:border-[#C0C8D4]"}`}>
+                            {chIcon(ch as Channel,11)}
+                            {ch==="whatsapp"?"WhatsApp":ch==="wechat"?"WeChat":ch==="imessage"?"iMessage":"SMS"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sender hint */}
+                    <div>
+                      <label className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 block">Supplier / sender name <span className="font-normal normal-case opacity-70">(optional, helps matching)</span></label>
+                      <input value={pasteChatSenderHint} onChange={e=>setPasteChatSenderHint(e.target.value)} placeholder="e.g. Guangzhou Metalworks" className="w-full text-xs border border-[#E5EAF0] rounded-lg px-3 py-2 outline-none focus:border-[#9000FF]/40 focus:ring-2 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4]"/>
+                    </div>
+
+                    {/* Chat text */}
+                    <div>
+                      <label className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 block">Paste chat text</label>
+                      <textarea value={pasteChatText} onChange={e=>setPasteChatText(e.target.value)} placeholder={"[23/05/2026, 14:32] Supplier: Hi, quick update on PO-2026-0142...\n[23/05/2026, 14:33] Me: Thanks, noted!"} rows={7} className="w-full text-[11px] font-mono border border-[#E5EAF0] rounded-lg px-3 py-2.5 outline-none focus:border-[#9000FF]/40 focus:ring-2 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4] resize-none"/>
+                    </div>
+
+                    {pasteChatError&&<div className="text-[10px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex items-center gap-1.5"><AlertCircle size={11} className="shrink-0"/>{pasteChatError}</div>}
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button onClick={closePasteChat} className="text-xs px-3 py-1.5 border border-[#E5EAF0] rounded-lg text-[#5E687B] hover:bg-[#F0F4F8] font-medium">Cancel</button>
+                      <button
+                        disabled={!pasteChatText.trim()||ingestChatMutation.isPending}
+                        onClick={async()=>{
+                          setPasteChatError(null);
+                          try {
+                            const result = await ingestChatMutation.mutateAsync({ data: { rawText: pasteChatText, channel: pasteChatChannel, ...(pasteChatSenderHint.trim()?{senderHint:pasteChatSenderHint.trim()}:{}) } });
+                            setPasteChatResult(result);
+                          } catch {
+                            setPasteChatError("Processing failed — check your text and try again");
+                          }
+                        }}
+                        className="text-xs px-4 py-1.5 bg-[#9000FF] text-white rounded-lg font-semibold hover:bg-[#7A00D9] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                        {ingestChatMutation.isPending?<><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block"/>Processing…</>:<><Sparkles size={11}/>Process</>}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Result preview */
+                  <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
+                    {/* Routing badge */}
+                    <div className="flex items-center gap-2">
+                      {pasteChatResult.routingStatus==="routed"
+                        ? <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full"><CheckCircle2 size={10}/>Matched to shipment</span>
+                        : <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full"><AlertCircle size={10}/>Needs review — no shipment matched</span>}
+                      <span className="text-[9px] text-[#9E9FAE]">confidence {Math.round(pasteChatResult.confidence*100)}%</span>
+                    </div>
+
+                    {/* Sender + shipment */}
+                    <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 space-y-1.5 text-[11px]">
+                      <div className="flex items-center gap-2"><span className="text-[#5E687B] w-20 shrink-0">Sender:</span><span className="font-semibold text-[#212833]">{pasteChatResult.sender}</span></div>
+                      {pasteChatResult.shipmentId&&<div className="flex items-center gap-2"><span className="text-[#5E687B] w-20 shrink-0">Shipment:</span><span className="font-semibold text-[#9000FF]">{shipments.find(s=>s.shipmentId===pasteChatResult!.shipmentId)?.po??`#${pasteChatResult.shipmentId}`}</span></div>}
+                      {pasteChatResult.matchMethod&&<div className="flex items-center gap-2"><span className="text-[#5E687B] w-20 shrink-0">Match via:</span><span className="text-[#212833]">{pasteChatResult.matchMethod}</span></div>}
+                    </div>
+
+                    {/* Extracted fields */}
+                    {pasteChatResult.extractedFields&&Object.values(pasteChatResult.extractedFields).some(v=>v!=null)&&(
+                      <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3">
+                        <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Extracted fields</div>
+                        <div className="space-y-1 text-[11px]">
+                          {pasteChatResult.extractedFields.eta&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">ETA:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.eta}</span></div>}
+                          {pasteChatResult.extractedFields.quotePrice!=null&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">Quote:</span><span className="text-[#212833]">${pasteChatResult.extractedFields.quotePrice}</span></div>}
+                          {pasteChatResult.extractedFields.productionPct!=null&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">Production:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.productionPct}% complete</span></div>}
+                          {pasteChatResult.extractedFields.qcNote&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">QC:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.qcNote}</span></div>}
+                          {pasteChatResult.extractedFields.statusUpdate&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">Status:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.statusUpdate}</span></div>}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI draft */}
+                    {pasteChatResult.aiDraft&&(
+                      <div className="bg-[#9000FF]/[0.03] border border-[#9000FF]/10 rounded-xl p-3">
+                        <div className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Sparkles size={9}/>AI draft reply</div>
+                        <p className="text-[11px] text-[#212833] leading-relaxed">{pasteChatResult.aiDraft}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <button onClick={()=>setPasteChatResult(null)} className="text-xs px-3 py-1.5 border border-[#E5EAF0] rounded-lg text-[#5E687B] hover:bg-[#F0F4F8] font-medium flex items-center gap-1"><ChevronLeft size={11}/>Back</button>
+                      <div className="flex gap-2">
+                        <button onClick={closePasteChat} className="text-xs px-3 py-1.5 border border-[#E5EAF0] rounded-lg text-[#5E687B] hover:bg-[#F0F4F8] font-medium">Discard</button>
+                        <button
+                          onClick={async()=>{
+                            try {
+                              const created = await createMessage({
+                                shipmentId: pasteChatResult.shipmentId??null,
+                                supplierId: pasteChatResult.supplierId??null,
+                                sender: pasteChatResult.sender,
+                                channel: pasteChatChannel,
+                                direction: "inbound",
+                                snippet: pasteChatResult.snippet,
+                                fullBody: pasteChatResult.fullBody,
+                                aiDraft: pasteChatResult.aiDraft,
+                                aiAction: pasteChatResult.aiAction,
+                                aiTags: pasteChatResult.aiTags,
+                              });
+                              const newUiMsg: UiMessage = {
+                                id: String(created.id), messageId: created.id, sender: created.sender,
+                                channel: pasteChatChannel as UiMessage["channel"], timestamp: "Just now",
+                                snippet: created.snippet, fullBody: created.fullBody, unread: true,
+                                aiTags: created.aiTags??[], shipmentId: created.shipmentId?String(created.shipmentId):"",
+                                supplierId: "", aiDraft: created.aiDraft??"", aiAction: created.aiAction??"",
+                                isFlagged: false, routingStatus: (created.routingStatus as "routed"|"needs-review"),
+                              };
+                              setMessages(prev=>[newUiMsg,...prev]);
+                              setToast("Chat message added to inbox");
+                              closePasteChat();
+                            } catch {
+                              setPasteChatError("Failed to save — please try again");
+                            }
+                          }}
+                          className="text-xs px-4 py-1.5 bg-[#9000FF] text-white rounded-lg font-semibold hover:bg-[#7A00D9] flex items-center gap-1.5">
+                          <Check size={11}/>Add to Inbox
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── FULL-PAGE VIEWS ── */}
           {activeView==="copilot"&&<CopilotQueue/>}
@@ -2663,7 +2836,7 @@ export default function Home() {
                       <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
                       <div className="min-w-0">
                         <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
-                        <div className="text-[9px] text-[#5E687B] flex items-center gap-1">{chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}</div>
+                        <div className="text-[9px] text-[#5E687B] flex items-center gap-1">{chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}</div>
                       </div>
                       <div className="ml-auto flex items-center gap-2">
                         <button

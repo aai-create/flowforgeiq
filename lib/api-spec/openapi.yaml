@@ -925,6 +925,35 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ExtractionCorrection" }
 
+  /settings/inbound-email:
+    get:
+      operationId: getInboundEmailAddress
+      tags: [settings]
+      summary: Get the configured inbound email address for chat/email forwarding
+      responses:
+        "200":
+          description: Inbound email address
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InboundEmailAddress" }
+
+  /messages/ingest-chat:
+    post:
+      operationId: ingestChat
+      tags: [messages]
+      summary: Process a pasted chat message (WhatsApp/WeChat/iMessage) and extract supply-chain data — preview only, does not save
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatIngestInput" }
+      responses:
+        "200":
+          description: Extraction result preview (not yet saved — call POST /messages to confirm)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatIngestResult" }
+
   /settings/po-numbering:
     get:
       operationId: getPoNumberingConfig
@@ -1317,9 +1346,9 @@ components:
             confidence:    { type: number }
     MessageInput:
       type: object
-      required: [shipmentId, sender, channel, snippet, fullBody]
+      required: [sender, channel, snippet, fullBody]
       properties:
-        shipmentId:        { type: integer }
+        shipmentId:        { type: ["integer", "null"] }
         supplierId:        { type: ["integer", "null"] }
         sender:            { type: string }
         recipient:         { type: string, description: "Outbound recipient — supplier email or name" }
@@ -1704,6 +1733,48 @@ components:
         sequenceFormat: { type: string }
         supplierSuffix: { type: string }
         resetSeq:       { type: integer, description: "Reset the sequence counter to this value (must be positive integer)" }
+
+    InboundEmailAddress:
+      type: object
+      required: [inboundEmailAddress]
+      properties:
+        inboundEmailAddress: { type: string, description: "The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var)" }
+
+    ChatIngestInput:
+      type: object
+      required: [rawText, channel]
+      properties:
+        rawText:    { type: string, description: "Raw pasted chat text (WhatsApp export, WeChat transcript, iMessage forward, etc.)" }
+        channel:    { type: string, enum: [whatsapp, wechat, imessage, sms], description: "Source messaging platform" }
+        senderHint: { type: string, description: "Optional hint for the supplier/contact name when auto-detection may be ambiguous" }
+
+    ChatExtractedFields:
+      type: object
+      properties:
+        eta:           { type: string,  description: "Estimated arrival or ex-factory date extracted from the message" }
+        quotePrice:    { type: number,  description: "Unit price or total quote amount mentioned" }
+        productionPct: { type: integer, description: "Production completion percentage (0–100)" }
+        qcNote:        { type: string,  description: "QC status or findings" }
+        statusUpdate:  { type: string,  description: "Shipment status signal: on-track | at-risk | delayed" }
+
+    ChatIngestResult:
+      type: object
+      required: [routingStatus, confidence, sender, snippet, fullBody, aiDraft, aiAction, aiTags]
+      properties:
+        routingStatus:   { type: string, enum: [routed, needs-review] }
+        shipmentId:      { type: ["integer", "null"] }
+        supplierId:      { type: ["integer", "null"] }
+        confidence:      { type: number }
+        matchMethod:     { type: ["string", "null"] }
+        extractedFields: { $ref: "#/components/schemas/ChatExtractedFields" }
+        sender:          { type: string }
+        snippet:         { type: string }
+        fullBody:        { type: string }
+        aiDraft:         { type: string }
+        aiAction:        { type: string }
+        aiTags:
+          type: array
+          items: { type: string }
 
     InboundEmailWebhookResponse:
       type: object

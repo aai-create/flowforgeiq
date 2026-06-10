@@ -25,6 +25,11 @@ function makePreview(cfg: { prefix: string; sequenceFormat: string; supplierSuff
   return { buyerPo, supplierPo };
 }
 
+router.get("/settings/inbound-email", (req, res) => {
+  const inboundEmailAddress = process.env.INBOUND_EMAIL_ADDRESS ?? "";
+  res.json({ inboundEmailAddress });
+});
+
 router.get("/settings/po-numbering", async (req, res) => {
   const cfg = await getConfig();
   res.json({ ...cfg, preview: makePreview(cfg) });
