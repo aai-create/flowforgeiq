@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
@@ -20,6 +21,7 @@ import {
   useListStages,
   useListDeals,
   updatePayment,
+  getListShipmentsQueryKey,
 } from "@workspace/api-client-react";
 import type { Shipment, Task, SupplierSummary, DealWithSpread } from "@workspace/api-client-react";
 import {
@@ -129,12 +131,17 @@ const financeChartConfig: ChartConfig = {
   unpaid: { label: "Unpaid", color: "#9000FF" },
 };
 
+const monthlyChartConfig: ChartConfig = {
+  total: { label: "Paid", color: "#10B981" },
+};
+
 interface RecoveryForm { paymentId: number; amount: string; date: string; }
 
 function FinanceCardContent({
   shipments, rangeStart, rangeEnd,
 }: { shipments: Shipment[]; rangeStart: Date | null; rangeEnd: Date | null }) {
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const [recoveryForm, setRecoveryForm] = useState<RecoveryForm | null>(null);
   const [recoveryOverrides, setRecoveryOverrides] = useState<Record<number, number>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -145,8 +152,29 @@ function FinanceCardContent({
     return payments.filter(p => inRange(p.dueDate, rangeStart, rangeEnd));
   }, [shipments, rangeStart, rangeEnd]);
 
-  const totalUnpaid  = allPayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
-  const totalPaid    = allPayments.filter(p =>  p.paid).reduce((s, p) => s + p.amountUsd, 0);
+  // Both totals use paidAt (actual recorded payment date) as the source of truth.
+  // A payment is "paid to date" when paidAt is set; "outstanding" when paidAt is null.
+  const totalPaidToDate  = allPayments.filter(p => p.paidAt != null).reduce((s, p) => s + p.amountUsd, 0);
+  const totalOutstanding = allPayments.filter(p => p.paidAt == null).reduce((s, p) => s + p.amountUsd, 0);
+
+  // Monthly payments chart — buckets payments by the month of paidAt
+  const monthlyPaidData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of allPayments) {
+      if (p.paidAt == null) continue;
+      const d = new Date(p.paidAt);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      map.set(key, (map.get(key) ?? 0) + p.amountUsd);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, total]) => {
+        const [y, m] = key.split("-");
+        const label = new Date(Number(y), Number(m) - 1, 1)
+          .toLocaleString("en-US", { month: "short", year: "2-digit" });
+        return { name: label, total };
+      });
+  }, [allPayments]);
 
   // Per-payment rows for the Intermediary Recovery section
   const intermediaryPayments = useMemo(() => {
@@ -194,6 +222,7 @@ function FinanceCardContent({
     setRecoveryForm(null);
     try {
       await updatePayment(paymentId, { intermediaryRecoveredUsd: amountUsd, intermediaryRecoveredAt: recoveredAt });
+      void queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
     } catch {
       // rollback on error
       setRecoveryOverrides(prev => { const next = { ...prev }; delete next[paymentId]; return next; });
@@ -219,18 +248,19 @@ function FinanceCardContent({
         : d <= 90     ? "61–90 days"
         : null;
       if (!key) continue;
-      if (p.paid) buckets[key].paid   += p.amountUsd;
-      else        buckets[key].unpaid += p.amountUsd;
+      if (p.paidAt != null) buckets[key].paid   += p.amountUsd;
+      else                  buckets[key].unpaid += p.amountUsd;
     }
     return Object.entries(buckets).map(([name, v]) => ({ name, ...v }));
   }, [allPayments]);
 
-  // Unpaid ranked by supplier — includes intermediary advance breakdown
+  // Outstanding ranked by supplier — includes intermediary advance breakdown
+  // Uses paidAt == null (recorded-payment semantics) consistent with totalOutstanding above
   const bySupplier = useMemo(() => {
     const map = new Map<string, { supplier: string; unpaid: number; overdue: number; intermediaryAdvance: number; intermediaryRecovered: number }>();
     for (const s of shipments) {
       for (const p of s.payments) {
-        if (p.paid) continue;
+        if (p.paidAt != null) continue;
         if (!inRange(p.dueDate, rangeStart, rangeEnd)) continue;
         const e = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0, intermediaryAdvance: 0, intermediaryRecovered: 0 };
         e.unpaid += p.amountUsd;
@@ -248,35 +278,57 @@ function FinanceCardContent({
       {/* KPI trio */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Total Unpaid",  value: fmtUsd(totalUnpaid),           color: "text-[#212833]"   },
-          { label: "Total Paid",    value: fmtUsd(totalPaid),             color: "text-emerald-600" },
-          { label: "Total Exposure",value: fmtUsd(totalUnpaid + totalPaid), color: "text-[#5E687B]" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3 text-center">
+          { label: "Outstanding Balance", value: fmtUsd(totalOutstanding), color: "text-[#212833]",   title: "Milestones with no recorded paidAt date" },
+          { label: "Paid to Date",        value: fmtUsd(totalPaidToDate),  color: "text-emerald-600", title: "Milestones with a recorded paidAt date" },
+          { label: "Total Exposure",      value: fmtUsd(totalOutstanding + totalPaidToDate), color: "text-[#5E687B]", title: "Outstanding + Paid to date" },
+        ].map(({ label, value, color, title }) => (
+          <div key={label} className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3 text-center" title={title}>
             <div className={`text-lg font-bold ${color}`}>{value}</div>
             <div className="text-[10px] text-[#5E687B] mt-0.5">{label}</div>
           </div>
         ))}
       </div>
 
+      {/* Monthly payments timeline — grouped by paidAt */}
+      {monthlyPaidData.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-3">
+            Payments Recorded by Month
+          </div>
+          <ChartContainer config={monthlyChartConfig} className="h-[160px] w-full">
+            <BarChart data={monthlyPaidData} barCategoryGap="35%">
+              <CartesianGrid vertical={false} stroke="#F0F4F8" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#5E687B" }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={v => fmtUsd(Number(v))} tick={{ fontSize: 10, fill: "#9E9FAE" }} axisLine={false} tickLine={false} width={52} />
+              <ChartTooltip content={<ChartTooltipContent formatter={(v) => [fmtUsd(Number(v)), "Paid"]} />} />
+              <Bar dataKey="total" fill="var(--color-total)" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ChartContainer>
+          <div className="flex items-center gap-1.5 justify-center mt-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+            <span className="text-[10px] text-[#5E687B]">Payments recorded (paidAt date)</span>
+          </div>
+        </div>
+      )}
+
       {/* Paid vs Unpaid bar chart per time bucket */}
       <div>
         <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-3">
-          Cash Flow by Due Date — Paid vs Unpaid
+          Cash Flow by Due Date — Paid vs Outstanding
         </div>
         <ChartContainer config={financeChartConfig} className="h-[180px] w-full">
           <BarChart data={chartData} barCategoryGap="30%" barGap={4}>
             <CartesianGrid vertical={false} stroke="#F0F4F8" />
             <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#5E687B" }} axisLine={false} tickLine={false} />
             <YAxis tickFormatter={v => fmtUsd(Number(v))} tick={{ fontSize: 10, fill: "#9E9FAE" }} axisLine={false} tickLine={false} width={52} />
-            <ChartTooltip content={<ChartTooltipContent formatter={(v, n) => [`${fmtUsd(Number(v))}`, n === "paid" ? "Paid" : "Unpaid"]} />} />
+            <ChartTooltip content={<ChartTooltipContent formatter={(v, n) => [`${fmtUsd(Number(v))}`, n === "paid" ? "Paid" : "Outstanding"]} />} />
             <Bar dataKey="paid"   fill="var(--color-paid)"   radius={[3, 3, 0, 0]} />
             <Bar dataKey="unpaid" fill="var(--color-unpaid)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ChartContainer>
         <div className="flex items-center gap-4 justify-center mt-1">
           <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Paid</span>
-          <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-[#9000FF] inline-block" />Unpaid</span>
+          <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-[#9000FF] inline-block" />Outstanding</span>
         </div>
       </div>
 
@@ -1271,7 +1323,9 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
 // ─── Main Reports page ────────────────────────────────────────────────────────
 export function Reports() {
   const [location, navigate] = useLocation();
-  const { data: apiShipments, isLoading: loadingShipments } = useListShipments();
+  const { data: apiShipments, isLoading: loadingShipments } = useListShipments(
+    { query: { queryKey: getListShipmentsQueryKey(), refetchInterval: 30_000 } },
+  );
   const { data: apiTasks,     isLoading: loadingTasks     } = useListTasks();
   const { data: apiStages,    isLoading: loadingStages    } = useListStages();
   const { data: apiSuppliers, isLoading: loadingSuppliers } = useListSuppliers();
@@ -1329,7 +1383,9 @@ export function Reports() {
     return payments.filter(p => inRange(p.dueDate, rangeStart, rangeEnd));
   }, [allShipments, rangeStart, rangeEnd, hasRange]);
 
-  const totalUnpaid   = financePayments.filter(p => !p.paid).reduce((s, p) => s + p.amountUsd, 0);
+  // Both outer KPI values use paidAt as source of truth (consistent with FinanceCardContent)
+  const totalPaidToDate   = financePayments.filter(p => p.paidAt != null).reduce((s, p) => s + p.amountUsd, 0);
+  const totalUnpaid       = financePayments.filter(p => p.paidAt == null).reduce((s, p) => s + p.amountUsd, 0);
   const onTimeCount   = filteredShipments.filter(s => s.status === "on-track").length;
   const onTimePct     = filteredShipments.length > 0 ? Math.round((onTimeCount / filteredShipments.length) * 100) : 0;
   const supplierCount = new Set(filteredShipments.map(s => s.supplierId)).size;
@@ -1362,8 +1418,13 @@ export function Reports() {
       title: "Finance",
       iconColor: "text-emerald-600",
       iconBg: "bg-emerald-50",
-      kpi: fmtUsd(totalUnpaid),
-      subtitle: hasRange ? "unpaid payments due in selected window" : "total unpaid across all shipments",
+      kpi: (
+        <span>
+          {fmtUsd(totalPaidToDate)}{" "}
+          <span className="text-sm font-medium text-[#5E687B]">paid to date</span>
+        </span>
+      ),
+      subtitle: `${fmtUsd(totalUnpaid)} outstanding${hasRange ? " in selected window" : " across all shipments"}`,
       content: <FinanceCardContent shipments={allShipments} rangeStart={rangeStart} rangeEnd={rangeEnd} />,
     },
     {
