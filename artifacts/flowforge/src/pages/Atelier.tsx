@@ -155,6 +155,25 @@ function stageIndex(stage: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  const q = query.trim();
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-amber-200 text-amber-900 rounded-[2px] px-[1px]">
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 export function Atelier() {
@@ -637,7 +656,7 @@ export function Atelier() {
                               onClick={e => copyPo(shipment.po, e)}
                               title="Copy supplier PO"
                               className={`group/po flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20 hover:bg-[#9000FF]/15" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"}`}>
-                              {shipment.po}
+                              {highlightMatch(shipment.po, poSearch)}
                               {copiedPo === shipment.po
                                 ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                 : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
@@ -652,7 +671,7 @@ export function Atelier() {
                                     onClick={e => copyPo(bpo, e)}
                                     title="Copy buyer PO"
                                     className="group/bpo flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
-                                    {bpo}
+                                    {highlightMatch(bpo, poSearch)}
                                     {copiedPo === bpo
                                       ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                       : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/bpo:opacity-60 shrink-0 transition-opacity" />}
@@ -665,7 +684,7 @@ export function Atelier() {
                                 onClick={e => copyPo(shipment.buyerPoNumber!, e)}
                                 title="Copy buyer PO"
                                 className="group/bpo flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
-                                {shipment.buyerPoNumber}
+                                {highlightMatch(shipment.buyerPoNumber!, poSearch)}
                                 {copiedPo === shipment.buyerPoNumber
                                   ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                   : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/bpo:opacity-60 shrink-0 transition-opacity" />}
