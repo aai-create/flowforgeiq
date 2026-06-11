@@ -1198,10 +1198,28 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
 // ─────────────────────────────────────────────────────────────────────────────
 // Search results  (P2)
 // ─────────────────────────────────────────────────────────────────────────────
-function SearchResults({ query, messages, onOpen }: { query: string; messages: Message[]; onOpen: (id: string) => void }) {
-  if (!query.trim()) return null;
-  const q = query.toLowerCase();
-  const matched = messages.filter(m => m.sender.toLowerCase().includes(q) || m.snippet.toLowerCase().includes(q) || m.fullBody.toLowerCase().includes(q));
+function SearchResults({ query, messages, shipments, onOpen }: { query: string; messages: UiMessage[]; shipments: UiShipment[]; onOpen: (id: string) => void }) {
+  const shipmentMap = useMemo(() => new Map(shipments.map(s => [s.id, s])), [shipments]);
+
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  const q = trimmed.toLowerCase();
+
+  const getPoMatch = (m: UiMessage): string | null => {
+    const s = shipmentMap.get(m.shipmentId);
+    if (!s) return null;
+    if (s.po.toLowerCase().includes(q)) return s.po;
+    if (s.buyerPoNumber?.toLowerCase().includes(q)) return s.buyerPoNumber;
+    return s.buyerPoNumbers.find(p => p.toLowerCase().includes(q)) ?? null;
+  };
+
+  const matched = messages.filter(m =>
+    m.sender.toLowerCase().includes(q) ||
+    m.snippet.toLowerCase().includes(q) ||
+    m.fullBody.toLowerCase().includes(q) ||
+    getPoMatch(m) !== null
+  );
+
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5EAF0] rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] z-50 mx-6 overflow-hidden max-h-[280px] overflow-y-auto">
       <div className="px-3 py-2 border-b border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between">
@@ -1210,16 +1228,24 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
       </div>
       {matched.length===0 ? (
         <div className="py-6 text-center text-xs text-[#9E9FAE]">No messages match "{query}"</div>
-      ) : matched.map(m=>(
-        <button key={m.id} onClick={()=>onOpen(m.id)} className="w-full text-left px-3 py-2.5 hover:bg-[#FAFBFC] border-b border-[#E5EAF0] last:border-b-0 transition-colors">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-xs font-semibold text-[#212833]">{m.sender}</span>
-            {chIcon(m.channel)}
-            <span className="text-[9px] text-[#9E9FAE] ml-auto">{m.timestamp}</span>
-          </div>
-          <div className="text-[10px] text-[#5E687B] line-clamp-1">{m.snippet}</div>
-        </button>
-      ))}
+      ) : matched.map(m => {
+        const poMatch = getPoMatch(m);
+        return (
+          <button key={m.id} onClick={()=>onOpen(m.id)} className="w-full text-left px-3 py-2.5 hover:bg-[#FAFBFC] border-b border-[#E5EAF0] last:border-b-0 transition-colors">
+            <div className="flex items-center gap-2 mb-0.5 min-w-0">
+              <span className="text-xs font-semibold text-[#212833] truncate">{m.sender}</span>
+              {chIcon(m.channel)}
+              {poMatch && (
+                <span className="shrink-0 text-[9px] font-semibold bg-[#9000FF]/10 text-[#9000FF] px-1.5 py-0.5 rounded-full leading-none">
+                  PO {poMatch}
+                </span>
+              )}
+              <span className="text-[9px] text-[#9E9FAE] ml-auto shrink-0">{m.timestamp}</span>
+            </div>
+            <div className="text-[10px] text-[#5E687B] line-clamp-1">{m.snippet}</div>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -2324,7 +2350,7 @@ export default function Home() {
                 <input autoFocus type="text" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}
                   placeholder="Search messages, POs, suppliers..."
                   className="w-full pl-14 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"/>
-                {searchQuery&&<SearchResults query={searchQuery} messages={messages} onOpen={id=>{openMessage(id);setSearchMode(false);setSearchQuery("");}}/>}
+                {searchQuery&&<SearchResults query={searchQuery} messages={messages} shipments={shipments} onOpen={id=>{openMessage(id);setSearchMode(false);setSearchQuery("");}}/>}
               </>
             ) : (
               <AICopilotBar
