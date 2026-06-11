@@ -598,6 +598,14 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
 export const ListNeedsReviewMessagesResponse = zod.array(ListNeedsReviewMessagesResponseItem)
 
 
+/**
+ * @summary Permanently delete a message
+ */
+export const DeleteMessageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
 export const UpdateMessageParams = zod.object({
   "id": zod.coerce.number()
 })

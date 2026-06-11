@@ -80,6 +80,16 @@ router.post("/messages", async (req, res) => {
   res.status(201).json(ListMessagesResponseItem.parse(inserted));
 });
 
+router.delete("/messages/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const [deleted] = await db.delete(messagesTable).where(eq(messagesTable.id, id)).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.status(204).end();
+});
+
 router.patch("/messages/:id", async (req, res) => {
   const id = Number(req.params.id);
   const input = UpdateMessageBody.parse(req.body);

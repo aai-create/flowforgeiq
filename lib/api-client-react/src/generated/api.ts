@@ -1776,6 +1776,76 @@ export function useListNeedsReviewMessages<TData = Awaited<ReturnType<typeof lis
 
 
 
+export const getDeleteMessageUrl = (id: number,) => {
+
+
+
+
+  return `/api/messages/${id}`
+}
+
+/**
+ * @summary Permanently delete a message
+ */
+export const deleteMessage = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMessageUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMessageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMessage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMessage>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMessage>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMessage(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMessageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMessage>>>
+
+    export type DeleteMessageMutationError = ErrorType<void>
+
+    /**
+ * @summary Permanently delete a message
+ */
+export const useDeleteMessage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMessage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMessage>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMessageMutationOptions(options));
+    }
+
 export const getUpdateMessageUrl = (id: number,) => {
 
 

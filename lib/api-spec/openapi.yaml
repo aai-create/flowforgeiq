@@ -438,6 +438,20 @@ paths:
                 items: { $ref: "#/components/schemas/Message" }
 
   /messages/{id}:
+    delete:
+      operationId: deleteMessage
+      tags: [messages]
+      summary: Permanently delete a message
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Message not found
     patch:
       operationId: updateMessage
       tags: [messages]

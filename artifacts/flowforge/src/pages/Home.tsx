@@ -30,7 +30,7 @@ import {
   useListSuppliers, useUpdateSupplier,
   createShipmentStageEvent,
   useListNeedsReviewMessages, useAssignMessage, useSendReply, useGetGmailStatus, connectGmail,
-  useDisconnectGmail, useGetInboundEmailAddress, useIngestChat,
+  useDisconnectGmail, useGetInboundEmailAddress, useIngestChat, useDeleteMessage,
   type Message as ApiMessageFull,
   type ChatIngestResult,
 } from "@workspace/api-client-react";
@@ -1227,14 +1227,28 @@ function SearchResults({ query, messages, onOpen }: { query: string; messages: M
 // ─────────────────────────────────────────────────────────────────────────────
 // Needs Review Panel
 // ─────────────────────────────────────────────────────────────────────────────
-function NeedsReviewPanel({ messages, shipments, onAssigned }: {
+function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDeleteFailed }: {
   messages: ApiMessageFull[];
   shipments: UiShipment[];
   onAssigned: (msgId: number) => void;
+  onDeleted: (msgId: number) => void;
+  onDeleteFailed: (msg: ApiMessageFull) => void;
 }) {
   const assignMutation = useAssignMessage();
+  const deleteMutation = useDeleteMessage();
   const [assignments, setAssignments] = useState<Record<number, number>>({});
   const [assigning, setAssigning] = useState<Record<number, boolean>>({});
+
+  const doDelete = (msg: ApiMessageFull) => {
+    if (!window.confirm("Permanently delete this message? This cannot be undone.")) return;
+    onDeleted(msg.id);
+    deleteMutation.mutate(
+      { id: msg.id },
+      {
+        onError: () => { onDeleteFailed(msg); },
+      }
+    );
+  };
 
   const doAssign = (msgId: number, shipmentId: number, buyerName: string) => {
     setAssigning(p => ({ ...p, [msgId]: true }));
@@ -1322,6 +1336,13 @@ function NeedsReviewPanel({ messages, shipments, onAssigned }: {
                 className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
               >
                 {assigning[msg.id] ? "Saving…" : <><Check size={10}/>Assign</>}
+              </button>
+              <button
+                onClick={() => doDelete(msg)}
+                title="Delete message"
+                className="p-1.5 rounded-lg border border-[#E5EAF0] text-[#9E9FAE] hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors shrink-0"
+              >
+                <Trash2 size={12}/>
               </button>
             </div>
           </div>
@@ -1523,6 +1544,7 @@ export default function Home() {
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
   const sendReplyMutation = useSendReply();
+  const deleteMessageMutation = useDeleteMessage();
   const ingestChatMutation = useIngestChat();
   const [showPasteChat, setShowPasteChat] = useState(false);
   const [pasteChatChannel, setPasteChatChannel] = useState<"whatsapp" | "wechat" | "imessage" | "sms">("whatsapp");
@@ -1711,7 +1733,7 @@ export default function Home() {
     }));
   }, [messages]);
 
-  const activeMessage  = messages.find(m => m.id === activeMessageId) || messages[0];
+  const activeMessage  = activeMessageId === "__cleared__" ? undefined : (messages.find(m => m.id === activeMessageId) || messages[0]);
   const activeShipment = activeMessage ? shipments.find(s => s.id === activeMessage.shipmentId) : undefined;
   const activeStage    = activeShipment ? stages.find(s => s.id === activeShipment.currentStageId) : null;
   const activeStageIdx = activeShipment ? stages.findIndex(s => s.id === activeShipment.currentStageId) : -1;
@@ -1803,6 +1825,17 @@ export default function Home() {
     const next = !msg.isFlagged;
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isFlagged: next } : m));
     updateMessage(msg.messageId, { isFlagged: next }).catch(() => {});
+  };
+  const deleteInboxMessage = (msgId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Permanently delete this message? This cannot be undone.")) return;
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    if (activeMessageId === msgId) {
+      setActiveMessageId("__cleared__");
+    }
+    deleteMessageMutation.mutate({ id: msg.messageId });
   };
   const selectShipment = (id: string) => {
     const next = selectedShipmentId===id ? null : id;
@@ -2467,6 +2500,16 @@ export default function Home() {
                   void refetchNeedsReview();
                   setToast("Message assigned — sender will be auto-routed next time");
                 }}
+                onDeleted={msgId => {
+                  setNeedsReviewMessages(prev => prev.filter(m => m.id !== msgId));
+                  setToast("Message deleted");
+                  setTimeout(() => setToast(null), 3000);
+                }}
+                onDeleteFailed={msg => {
+                  setNeedsReviewMessages(prev => [msg, ...prev]);
+                  setToast("Delete failed — message restored");
+                  setTimeout(() => setToast(null), 3000);
+                }}
               />
             </div>
           )}
@@ -2530,6 +2573,12 @@ export default function Home() {
                             className={`p-0.5 rounded transition-all ${msg.isFlagged?"text-amber-500 opacity-100":"text-[#9E9FAE] opacity-0 group-hover/row:opacity-100"} hover:scale-110`}>
                             <Bookmark size={11} className={msg.isFlagged?"fill-amber-400":""}/>
                           </button>
+                          <button
+                            onClick={e=>deleteInboxMessage(msg.id,e)}
+                            title="Delete message"
+                            className="p-0.5 rounded text-[#9E9FAE] opacity-0 group-hover/row:opacity-100 hover:text-red-500 hover:scale-110 transition-all">
+                            <Trash2 size={11}/>
+                          </button>
                           <span className={`text-[9px] ${msg.unread&&!replied?"text-[#9000FF] font-semibold":"text-[#5E687B]"}`}>{msg.timestamp}</span>
                         </div>
                       </div>
@@ -2553,8 +2602,16 @@ export default function Home() {
             {/* Col B — Thread detail */}
             <ResizablePanel defaultSize={62} minSize={30} className="bg-white flex flex-col min-w-0 border-l border-[#E5EAF0]">
             <div className="flex flex-col h-full overflow-hidden">
+              {/* Cleared pane — shown after deleting the active message */}
+              {activeMessageId === "__cleared__" && (
+                <div className="flex-1 flex flex-col items-center justify-center text-center text-[#9E9FAE]">
+                  <Trash2 size={28} className="mb-3 opacity-30"/>
+                  <p className="text-sm font-semibold text-[#5E687B]">Message deleted</p>
+                  <p className="text-[11px] mt-1">Select another message from the list</p>
+                </div>
+              )}
               {/* Compose panel (replaces normal detail when open) */}
-              {showComposePanel && activeShipment && (
+              {!activeMessageId.startsWith("__") && showComposePanel && activeShipment && (
                 <ComposePanel
                   shipment={activeShipment}
                   supplierEmail={activeSupplierEmail}
@@ -2754,8 +2811,8 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Tabs + tab content — hidden while compose panel is open */}
-              {!showComposePanel && <><div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
+              {/* Tabs + tab content — hidden while compose panel is open or detail pane is cleared */}
+              {!showComposePanel && activeMessageId !== "__cleared__" && <><div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
                 {([
                   {id:"message" as RightTab, label:"Message"},
                   {id:"docs"    as RightTab, label:"Docs"},
