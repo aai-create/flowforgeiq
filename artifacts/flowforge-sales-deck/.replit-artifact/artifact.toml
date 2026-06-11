@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/flowforge-sales-deck/"
+title = "FlowForge Sales Playbook"
+version = "1.0.0"
+id = "artifacts/flowforge-sales-deck"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/flowforge-sales-deck/" ]
+localPort = 25633
+
+[services.development]
+run = "pnpm --filter @workspace/flowforge-sales-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/flowforge-sales-deck", "run", "build" ]
+publicDir = "artifacts/flowforge-sales-deck/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25633"
+BASE_PATH = "/flowforge-sales-deck/"
