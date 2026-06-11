@@ -294,7 +294,18 @@ export const UpdateShipmentParams = zod.object({
 export const UpdateShipmentBody = zod.object({
   "status": zod.string().optional(),
   "currentStageId": zod.string().optional(),
-  "assigneeId": zod.string().nullish()
+  "assigneeId": zod.string().nullish(),
+  "supplierId": zod.number().optional(),
+  "product": zod.string().optional(),
+  "category": zod.string().optional(),
+  "customerName": zod.string().optional(),
+  "dueDate": zod.coerce.date().optional(),
+  "exFactoryDate": zod.coerce.date().optional(),
+  "destination": zod.string().optional(),
+  "via": zod.string().optional(),
+  "notes": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "unitCostUsd": zod.number().nullish()
 })
 
 export const UpdateShipmentResponse = zod.object({

@@ -11,4 +11,18 @@ export interface ShipmentUpdate {
   currentStageId?: string;
   /** @nullable */
   assigneeId?: string | null;
+  supplierId?: number;
+  product?: string;
+  category?: string;
+  customerName?: string;
+  dueDate?: Date;
+  exFactoryDate?: Date;
+  destination?: string;
+  via?: string;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  quantity?: number | null;
+  /** @nullable */
+  unitCostUsd?: number | null;
 }

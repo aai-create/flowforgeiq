@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -315,11 +315,13 @@ export function Atelier() {
   };
 
   const [showNewPO, setShowNewPO] = useState(false);
+  const [editingShipmentId, setEditingShipmentId] = useState<number | null>(null);
   const [buyerPoMode, setBuyerPoMode] = useState<"auto" | "provided">("auto");
   const { data: poConfig } = useGetPoNumberingConfig();
   const { data: existingDeals } = useListDeals();
   const queryClient = useQueryClient();
   const shipmentsQueryKey = getListShipmentsQueryKey();
+  const updateShipmentMutation = useUpdateShipment();
   const { mutate: linkDeal } = useLinkDealToShipment({
     mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: shipmentsQueryKey }); } },
   });
@@ -351,8 +353,13 @@ export function Atelier() {
   const createShipmentMutation = useCreateShipment();
   const createSupplierMutation = useCreateSupplier();
 
+  const toDateInput = (iso: string) => {
+    try { return new Date(iso).toISOString().slice(0, 10); } catch { return ""; }
+  };
+
   const resetNewPO = () => {
     setShowNewPO(false);
+    setEditingShipmentId(null);
     setNewPOError(null);
     setPoNumberError(null);
     setMilestonesError(null);
@@ -363,6 +370,65 @@ export function Atelier() {
     setMilestones(defaultMilestones);
     setBuyerPoMode("auto");
     setNewPOForm({ poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "", buyerUnitPrice: "", buyerQuantity: "" });
+  };
+
+  const openEditPO = (shipment: UiShipment) => {
+    setEditingShipmentId(shipment.shipmentId);
+    setSupplierQuery(shipment.supplier);
+    setNewPOForm({
+      poNumber: shipment.po,
+      buyerPoNumber: shipment.buyerPoNumber ?? "",
+      product: shipment.product,
+      category: shipment.category,
+      customerName: shipment.customer,
+      supplierId: String(shipment.supplierId),
+      dueDate: toDateInput(shipment.rawDueDate),
+      exFactoryDate: toDateInput(shipment.rawExFactoryDate),
+      destination: shipment.destination,
+      via: shipment.via,
+      notes: shipment.notes ?? "",
+      quantity: shipment.quantity != null ? String(shipment.quantity) : "",
+      unitCostUsd: shipment.unitCostUsd != null ? String(shipment.unitCostUsd) : "",
+      buyerUnitPrice: "",
+      buyerQuantity: "",
+    });
+    setNewPOError(null);
+    setPoNumberError(null);
+    setMilestonesError(null);
+    setShowNewPO(true);
+  };
+
+  const submitEditPO = async () => {
+    setNewPOError(null);
+    const resolvedSupplierId = newPOForm.supplierId;
+    if (!newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate || !newPOForm.destination.trim()) {
+      setNewPOError("Please fill in all required fields."); return;
+    }
+    try {
+      const updated = await updateShipmentMutation.mutateAsync({
+        id: editingShipmentId!,
+        data: {
+          supplierId: Number(resolvedSupplierId),
+          product: newPOForm.product.trim(),
+          category: newPOForm.category.trim(),
+          customerName: newPOForm.customerName.trim(),
+          dueDate: new Date(newPOForm.dueDate).toISOString(),
+          exFactoryDate: new Date(newPOForm.exFactoryDate).toISOString(),
+          destination: newPOForm.destination.trim(),
+          via: newPOForm.via || undefined,
+          notes: newPOForm.notes.trim() || null,
+          quantity: newPOForm.quantity ? Number(newPOForm.quantity) : null,
+          unitCostUsd: newPOForm.unitCostUsd ? Number(newPOForm.unitCostUsd) : null,
+        },
+      });
+      const adapted = adaptShipments([updated], stages);
+      setShipments(prev => prev.map(s => s.shipmentId === editingShipmentId ? (adapted[0] ?? s) : s));
+      resetNewPO();
+      setToast("PO updated");
+      setTimeout(() => setToast(null), 3000);
+    } catch {
+      setNewPOError("Failed to update PO. Please try again.");
+    }
   };
 
   const submitNewPO = async () => {
@@ -1024,6 +1090,7 @@ export function Atelier() {
                                 onClick={e => e.stopPropagation()}
                                 className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
                                 {[
+                                  { label: "Edit PO", action: () => { openEditPO(shipment); setMoreMenuId(null); } },
                                   { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
                                   { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
                                   { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
@@ -1346,16 +1413,19 @@ export function Atelier() {
       );
     })()}
 
-    {/* ── NEW PO DIALOG ── */}
+    {/* ── NEW PO / EDIT PO DIALOG ── */}
     <Dialog open={showNewPO} onOpenChange={open => { if (!open) resetNewPO(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-[#212833]">New Purchase Order</DialogTitle>
+          <DialogTitle className="text-base font-bold text-[#212833]">
+            {editingShipmentId !== null ? "Edit Purchase Order" : "New Purchase Order"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
 
-          {/* PO Document upload */}
+          {/* PO Document upload — create mode only */}
+          {editingShipmentId === null && (
           <div>
             <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">PO Document <span className="text-[#9E9FAE] font-normal">(optional — PDF, Excel, Word)</span></label>
             {newPOFile ? (
@@ -1385,8 +1455,26 @@ export function Atelier() {
               </div>
             )}
           </div>
+          )}
 
-          {/* Buyer PO + Supplier PO pair */}
+          {/* PO Numbers — create mode: full form; edit mode: read-only display */}
+          {editingShipmentId !== null ? (
+          <div className="space-y-2 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers (read-only)</span>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div>
+                <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Buyer PO</label>
+                <input readOnly value={newPOForm.buyerPoNumber || "—"}
+                  className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Supplier PO</label>
+                <input readOnly value={newPOForm.poNumber}
+                  className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
+              </div>
+            </div>
+          </div>
+          ) : (
           <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers</span>
@@ -1501,6 +1589,7 @@ export function Atelier() {
               <p className="text-[11px] text-red-600">{poNumberError}</p>
             )}
           </div>
+          )}
 
           {/* Product */}
           <div>
@@ -1696,7 +1785,8 @@ export function Atelier() {
             })()}
           </div>
 
-          {/* Payment Milestones */}
+          {/* Payment Milestones — create mode only */}
+          {editingShipmentId === null && (
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-semibold text-[#5E687B]">Payment Milestones</label>
@@ -1753,6 +1843,7 @@ export function Atelier() {
               <p className="text-[11px] text-red-600 mt-1">{milestonesError}</p>
             )}
           </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -1772,13 +1863,23 @@ export function Atelier() {
           <button onClick={resetNewPO} className="px-4 py-2 text-sm text-[#5E687B] hover:text-[#212833] transition-colors">
             Cancel
           </button>
-          <button onClick={submitNewPO}
-            disabled={createShipmentMutation.isPending || createSupplierMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
-            {(createShipmentMutation.isPending || createSupplierMutation.isPending)
-              ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Creating…</>
-              : <><Plus className="w-3.5 h-3.5"/>Create PO{newPOFile ? " + upload doc" : ""}</>}
-          </button>
+          {editingShipmentId !== null ? (
+            <button onClick={submitEditPO}
+              disabled={updateShipmentMutation.isPending || createSupplierMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
+              {(updateShipmentMutation.isPending || createSupplierMutation.isPending)
+                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Saving…</>
+                : <>Save Changes</>}
+            </button>
+          ) : (
+            <button onClick={submitNewPO}
+              disabled={createShipmentMutation.isPending || createSupplierMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
+              {(createShipmentMutation.isPending || createSupplierMutation.isPending)
+                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Creating…</>
+                : <><Plus className="w-3.5 h-3.5"/>Create PO{newPOFile ? " + upload doc" : ""}</>}
+            </button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -38,12 +38,21 @@ export interface UiShipment {
   buyerPoNumber: string | null;
   buyerPoNumbers: string[];
   product: string;
+  category: string;
   supplier: string;
+  supplierId: number;
   customer: string;
   status: UiShipmentStatus;
   currentStageId: string;
   currentStage: string; // label, for Atelier
   dueDate: string;
+  rawDueDate: string;
+  rawExFactoryDate: string;
+  destination: string;
+  via: string;
+  notes: string | null;
+  quantity: number | null;
+  unitCostUsd: number | null;
   payments: UiPayment[];
   quotes?: UiFactoryQuote[];
   spreadUsd: number | null;
@@ -102,12 +111,21 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     buyerPoNumber: s.buyerPoNumber ?? null,
     buyerPoNumbers: s.buyerPoNumbers ?? [],
     product: s.product,
+    category: s.category,
     supplier: s.supplierName,
+    supplierId: s.supplierId,
     customer: s.customerName,
     status: (s.status as UiShipmentStatus),
     currentStageId: s.currentStageId,
     currentStage: labelById.get(s.currentStageId) ?? s.currentStageId,
     dueDate: shortDate(s.dueDate),
+    rawDueDate: s.dueDate,
+    rawExFactoryDate: s.exFactoryDate,
+    destination: s.destination,
+    via: s.via,
+    notes: s.notes ?? null,
+    quantity: s.quantity ?? null,
+    unitCostUsd: s.unitCostUsd ?? null,
     assigneeId: s.assigneeId ?? null,
     assigneeName: s.assigneeName ?? null,
     payments: s.payments.length === 0

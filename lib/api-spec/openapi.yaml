@@ -1673,6 +1673,17 @@ components:
         status:         { type: string }
         currentStageId: { type: string }
         assigneeId:     { type: ["string", "null"] }
+        supplierId:     { type: integer }
+        product:        { type: string }
+        category:       { type: string }
+        customerName:   { type: string }
+        dueDate:        { type: string, format: date-time }
+        exFactoryDate:  { type: string, format: date-time }
+        destination:    { type: string }
+        via:            { type: string }
+        notes:          { type: ["string", "null"] }
+        quantity:       { type: ["integer", "null"] }
+        unitCostUsd:    { type: ["integer", "null"] }
 
     StageEvent:
       type: object
