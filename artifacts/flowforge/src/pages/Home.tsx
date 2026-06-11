@@ -1604,9 +1604,27 @@ export default function Home() {
   useEffect(() => {
     if (!activeMessageId && messages.length > 0) setActiveMessageId(messages[0].id);
   }, [messages, activeMessageId]);
-  const [selectedShipmentId, setSelectedShipmentId] = useState<string|null>(null);
-  const [channelFilter, setChannelFilter] = useState<Channel|"all">("all");
-  const [supplierFilter, setSupplierFilter] = useState<string|null>(null);
+  // Restore inbox filter state from sessionStorage. We read the initial URL
+  // params (before any URL-sync effects run) so genuine deep-links from Reports
+  // or Risk Radar still take priority over persisted values.
+  const initialSearchRef = useRef(window.location.search);
+  const [selectedShipmentId, setSelectedShipmentId] = useState<string|null>(() => {
+    const initParams = new URLSearchParams(initialSearchRef.current);
+    if (initParams.has("shipment")) return null; // deep-link effect will set it
+    return sessionStorage.getItem("flowforge:selectedShipmentId");
+  });
+  const [channelFilter, setChannelFilter] = useState<Channel|"all">(() => {
+    const initParams = new URLSearchParams(initialSearchRef.current);
+    if (initParams.has("shipment") || initParams.has("supplier")) return "all";
+    const saved = sessionStorage.getItem("flowforge:channelFilter");
+    const VALID_CHANNELS = ["all", "gmail", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
+    return VALID_CHANNELS.includes(saved ?? "") ? (saved as Channel | "all") : "all";
+  });
+  const [supplierFilter, setSupplierFilter] = useState<string|null>(() => {
+    const initParams = new URLSearchParams(initialSearchRef.current);
+    if (initParams.has("supplier")) return null; // deep-link effect will set it
+    return sessionStorage.getItem("flowforge:supplierFilter");
+  });
   const [flaggedFilter, setFlaggedFilter] = useState(false);
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
@@ -1684,10 +1702,12 @@ export default function Home() {
   // Reports navigates here with these params so users land on the right filtered view.
   // ?tab= alone (without supplier/shipment) is also honoured so deep-links that only
   // specify a tab land on the right panel.
+  // We read initialSearchRef.current (the URL at page mount) instead of the live `search`
+  // so that URL-sync effects writing params after mount don't look like genuine deep-links.
   const urlParamsApplied = useRef(false);
   useEffect(() => {
     if (urlParamsApplied.current || !messages.length) return;
-    const params = new URLSearchParams(search);
+    const params = new URLSearchParams(initialSearchRef.current);
     const supplierParam = params.get("supplier");
     const shipmentParam = params.get("shipment");
     const tabParam = params.get("tab");
@@ -1711,7 +1731,7 @@ export default function Home() {
       const first = messages.find(m => m.supplierId === supplierParam);
       if (first) setActiveMessageId(first.id);
     }
-  }, [messages, search]);
+  }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep ?tab= in sync with rightTab so the URL is bookmarkable and the back
   // button can restore the active tab. Use replace (not push) so tab switches
@@ -1754,6 +1774,33 @@ export default function Home() {
     }
     navigate(`?${params.toString()}`, { replace: true });
   }, [supplierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist inbox filters to sessionStorage so they are restored when the user
+  // navigates away and returns (same tab/session). Cleared values remove the key
+  // so a fresh session starts with no filter applied.
+  useEffect(() => {
+    if (selectedShipmentId) {
+      sessionStorage.setItem("flowforge:selectedShipmentId", selectedShipmentId);
+    } else {
+      sessionStorage.removeItem("flowforge:selectedShipmentId");
+    }
+  }, [selectedShipmentId]);
+
+  useEffect(() => {
+    if (channelFilter !== "all") {
+      sessionStorage.setItem("flowforge:channelFilter", channelFilter);
+    } else {
+      sessionStorage.removeItem("flowforge:channelFilter");
+    }
+  }, [channelFilter]);
+
+  useEffect(() => {
+    if (supplierFilter) {
+      sessionStorage.setItem("flowforge:supplierFilter", supplierFilter);
+    } else {
+      sessionStorage.removeItem("flowforge:supplierFilter");
+    }
+  }, [supplierFilter]);
 
   const SUPPLIERS = useMemo(() => {
     const totalCounts = new Map<string, number>();
