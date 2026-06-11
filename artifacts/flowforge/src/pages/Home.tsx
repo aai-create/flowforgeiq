@@ -12,7 +12,7 @@ import {
   ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
-  Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff, Clipboard, Copy,
+  Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff, Clipboard, Copy, Circle,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
@@ -1879,6 +1879,14 @@ export default function Home() {
     setAdvanceNote("");
     setToast("Stage advanced");
   };
+
+  const toggleTask = (id: string) => {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const nextDone = !t.done;
+    setTasks(prev => prev.map(x => x.id === id ? { ...x, done: nextDone } : x));
+    updateTask(t.taskId, { done: nextDone }).catch(() => {});
+  };
   const sendReply = (msgId: string) => {
     setRepliedIds(prev => new Set(prev).add(msgId));
     setMessages(prev => prev.map(m => m.id===msgId ? {...m, unread:false} : m));
@@ -2217,6 +2225,43 @@ export default function Home() {
                 </button>
               )}
             </div>
+
+            {tasks.length > 0 && (
+              <>
+                <div className="mx-3 h-px bg-[#E5EAF0]"/>
+                <div className="px-3 py-2">
+                  <div className="flex items-center justify-between px-2 mb-1.5">
+                    <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                      <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
+                    </div>
+                    <span className="text-[9px] text-[#5E687B]">{tasks.filter(t => t.done).length}/{tasks.length} done</span>
+                  </div>
+                  <div className="space-y-1">
+                    {tasks.slice(0, 5).map(task => (
+                      <div key={task.id}
+                        className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white hover:shadow-sm border border-transparent hover:border-[#9000FF]/20 cursor-pointer transition-all ${task.done ? "opacity-50" : ""}`}>
+                        <button onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
+                          className={`mt-0.5 shrink-0 transition-colors ${task.done ? "text-[#9000FF]" : "text-[#D6E3EB] hover:text-[#9000FF]"}`}>
+                          {task.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
+                            <p className={`text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 ${task.done ? "line-through text-[#5E687B]" : ""}`}>{task.title}</p>
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-[#5E687B] pl-3">
+                            <CalendarClock className="w-2.5 h-2.5" />
+                            <span className="truncate">{task.source}</span>
+                            <span className="opacity-40">·</span>
+                            <span className={`shrink-0 ${task.urgency === "high" && !task.done ? "text-red-500 font-semibold" : ""}`}>{task.sourceAge}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
           </div>
 

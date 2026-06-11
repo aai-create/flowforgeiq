@@ -26,8 +26,9 @@ function ReportsPage() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Atelier} />
+      <Route path="/" component={Home} />
       <Route path="/inbox" component={Home} />
+      <Route path="/orders" component={Atelier} />
       <Route path="/command" component={Atelier} />
       <Route path="/risk-radar" component={RiskRadarPage} />
       <Route path="/reports" component={ReportsPage} />

@@ -26,8 +26,8 @@ export function NavSidebar({
   const [location, navigate] = useLocation();
 
   const navItems = [
-    { icon: LayoutGrid,  label: "My Orders",  to: "/",            count: counts.myOrders  ?? null },
     { icon: Inbox,       label: "Inbox",       to: "/inbox",       count: counts.inbox     ?? null },
+    { icon: LayoutGrid,  label: "My Orders",   to: "/orders",      count: counts.myOrders  ?? null },
     { icon: Calendar,    label: "Calendar",    to: "/inbox",       count: null              },
     { icon: ShieldAlert, label: "Risk Radar",  to: "/risk-radar",  count: counts.riskRadar ?? null },
     { icon: BarChart3,   label: "Reports",     to: "/reports",     count: null              },
@@ -39,6 +39,8 @@ export function NavSidebar({
   function isActive(label: string, to: string) {
     if (label === "Calendar") return isCalendarActive;
     if (label === "Inbox" && isCalendarActive) return false;
+    if (label === "Inbox") return location === to || location === "/";
+    if (label === "My Orders") return location === to || location === "/command";
     return location === to;
   }
 
