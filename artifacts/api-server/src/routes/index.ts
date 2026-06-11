@@ -12,6 +12,7 @@ import copilotRouter from "./copilot";
 import webhooksRouter from "./webhooks";
 import settingsRouter from "./settings";
 import integrationsRouter from "./integrations";
+import rfqsRouter from "./rfqs";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(copilotRouter);
 router.use(webhooksRouter);
 router.use(settingsRouter);
 router.use(integrationsRouter);
+router.use(rfqsRouter);
 
 export default router;

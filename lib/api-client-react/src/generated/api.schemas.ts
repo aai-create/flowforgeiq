@@ -825,6 +825,165 @@ export interface GmailStatus {
   clientConfigured: boolean;
 }
 
+export type RfqQuoteStatus = typeof RfqQuoteStatus[keyof typeof RfqQuoteStatus];
+
+
+export const RfqQuoteStatus = {
+  pending: 'pending',
+  received: 'received',
+  accepted: 'accepted',
+} as const;
+
+export interface RfqQuote {
+  id: number;
+  rfqId: number;
+  /** @nullable */
+  supplierId?: number | null;
+  factoryName: string;
+  country: string;
+  unitPriceUsd: number;
+  leadTimeDays: number;
+  moq: number;
+  /** @nullable */
+  notes?: string | null;
+  status: RfqQuoteStatus;
+  sortOrder: number;
+}
+
+export type RfqQuoteCreateStatus = typeof RfqQuoteCreateStatus[keyof typeof RfqQuoteCreateStatus];
+
+
+export const RfqQuoteCreateStatus = {
+  pending: 'pending',
+  received: 'received',
+  accepted: 'accepted',
+} as const;
+
+export interface RfqQuoteCreate {
+  supplierId?: number;
+  factoryName: string;
+  country?: string;
+  unitPriceUsd: number;
+  leadTimeDays: number;
+  moq: number;
+  notes?: string;
+  status?: RfqQuoteCreateStatus;
+}
+
+export type RfqQuoteUpdateStatus = typeof RfqQuoteUpdateStatus[keyof typeof RfqQuoteUpdateStatus];
+
+
+export const RfqQuoteUpdateStatus = {
+  pending: 'pending',
+  received: 'received',
+  accepted: 'accepted',
+} as const;
+
+export interface RfqQuoteUpdate {
+  factoryName?: string;
+  country?: string;
+  unitPriceUsd?: number;
+  leadTimeDays?: number;
+  moq?: number;
+  /** @nullable */
+  notes?: string | null;
+  status?: RfqQuoteUpdateStatus;
+}
+
+export type RfqWithQuotesStatus = typeof RfqWithQuotesStatus[keyof typeof RfqWithQuotesStatus];
+
+
+export const RfqWithQuotesStatus = {
+  open: 'open',
+  accepted: 'accepted',
+  cancelled: 'cancelled',
+} as const;
+
+export interface RfqWithQuotes {
+  id: number;
+  product: string;
+  category: string;
+  buyerName: string;
+  targetPriceUsd: number;
+  quantity: number;
+  deadline: string;
+  status: RfqWithQuotesStatus;
+  /** @nullable */
+  notes?: string | null;
+  /**
+     * Shipment ID created when this RFQ was converted to a PO
+     * @nullable
+     */
+  convertedShipmentId?: number | null;
+  createdAt: string;
+  quotes: RfqQuote[];
+}
+
+export interface RfqCreate {
+  product: string;
+  category?: string;
+  buyerName: string;
+  targetPriceUsd: number;
+  quantity: number;
+  deadline: string;
+  notes?: string;
+}
+
+export type RfqUpdateStatus = typeof RfqUpdateStatus[keyof typeof RfqUpdateStatus];
+
+
+export const RfqUpdateStatus = {
+  open: 'open',
+  accepted: 'accepted',
+  cancelled: 'cancelled',
+} as const;
+
+export interface RfqUpdate {
+  product?: string;
+  category?: string;
+  buyerName?: string;
+  targetPriceUsd?: number;
+  quantity?: number;
+  deadline?: string;
+  /** @nullable */
+  notes?: string | null;
+  status?: RfqUpdateStatus;
+}
+
+export interface RfqConvertInput {
+  /** The RFQ quote ID to mark as accepted */
+  acceptedQuoteId: number;
+  /** Supplier-facing PO number (trader→supplier) */
+  poNumber: string;
+  supplierId: number;
+  dueDate: string;
+  exFactoryDate: string;
+  destination: string;
+  via?: string;
+  notes?: string;
+  /** Deposit percentage (default 30) */
+  depositPct?: number;
+}
+
+export interface ProformaInvoice {
+  rfqId: number;
+  shipmentId: number;
+  poNumber: string;
+  buyerName: string;
+  product: string;
+  quantity: number;
+  unitPriceUsd: number;
+  totalUsd: number;
+  depositPct: number;
+  depositUsd: number;
+  balanceUsd: number;
+  paymentTerms?: string;
+  deadline: string;
+  supplierName?: string;
+  supplierCountry?: string;
+  generatedAt: string;
+}
+
 export type LinkDealToShipmentBody = {
   dealId: number;
 };

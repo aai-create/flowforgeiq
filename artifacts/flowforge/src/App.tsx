@@ -6,6 +6,7 @@ import { CopilotProvider } from "@/lib/CopilotContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { Atelier } from "@/pages/Atelier";
+import { RFQs } from "@/pages/RFQs";
 import { RiskRadar } from "@/pages/RiskRadar";
 import { Reports } from "@/pages/Reports";
 import { Suppliers } from "@/pages/Suppliers";
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/inbox" component={Home} />
       <Route path="/orders" component={Atelier} />
       <Route path="/command" component={Atelier} />
+      <Route path="/rfqs" component={RFQs} />
       <Route path="/risk-radar" component={RiskRadarPage} />
       <Route path="/reports" component={ReportsPage} />
       <Route path="/suppliers" component={Suppliers} />

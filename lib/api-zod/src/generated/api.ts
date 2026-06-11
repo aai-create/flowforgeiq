@@ -1425,3 +1425,223 @@ export const ConsumeNextPoNumbersResponse = zod.object({
 })
 
 
+/**
+ * @summary List all RFQs
+ */
+export const ListRfqsResponseItem = zod.object({
+  "id": zod.number(),
+  "product": zod.string(),
+  "category": zod.string(),
+  "buyerName": zod.string(),
+  "targetPriceUsd": zod.number(),
+  "quantity": zod.number(),
+  "deadline": zod.coerce.date(),
+  "status": zod.enum(['open', 'accepted', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
+  "createdAt": zod.coerce.date(),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "rfqId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "factoryName": zod.string(),
+  "country": zod.string(),
+  "unitPriceUsd": zod.number(),
+  "leadTimeDays": zod.number(),
+  "moq": zod.number(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'received', 'accepted']),
+  "sortOrder": zod.number()
+}))
+})
+export const ListRfqsResponse = zod.array(ListRfqsResponseItem)
+
+
+/**
+ * @summary Create a new RFQ
+ */
+export const CreateRfqBody = zod.object({
+  "product": zod.string(),
+  "category": zod.string().optional(),
+  "buyerName": zod.string(),
+  "targetPriceUsd": zod.number(),
+  "quantity": zod.number(),
+  "deadline": zod.coerce.date(),
+  "notes": zod.string().optional()
+})
+
+
+export const GetRfqParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetRfqResponse = zod.object({
+  "id": zod.number(),
+  "product": zod.string(),
+  "category": zod.string(),
+  "buyerName": zod.string(),
+  "targetPriceUsd": zod.number(),
+  "quantity": zod.number(),
+  "deadline": zod.coerce.date(),
+  "status": zod.enum(['open', 'accepted', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
+  "createdAt": zod.coerce.date(),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "rfqId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "factoryName": zod.string(),
+  "country": zod.string(),
+  "unitPriceUsd": zod.number(),
+  "leadTimeDays": zod.number(),
+  "moq": zod.number(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'received', 'accepted']),
+  "sortOrder": zod.number()
+}))
+})
+
+
+export const UpdateRfqParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateRfqBody = zod.object({
+  "product": zod.string().optional(),
+  "category": zod.string().optional(),
+  "buyerName": zod.string().optional(),
+  "targetPriceUsd": zod.number().optional(),
+  "quantity": zod.number().optional(),
+  "deadline": zod.coerce.date().optional(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['open', 'accepted', 'cancelled']).optional()
+})
+
+export const UpdateRfqResponse = zod.object({
+  "id": zod.number(),
+  "product": zod.string(),
+  "category": zod.string(),
+  "buyerName": zod.string(),
+  "targetPriceUsd": zod.number(),
+  "quantity": zod.number(),
+  "deadline": zod.coerce.date(),
+  "status": zod.enum(['open', 'accepted', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
+  "createdAt": zod.coerce.date(),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "rfqId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "factoryName": zod.string(),
+  "country": zod.string(),
+  "unitPriceUsd": zod.number(),
+  "leadTimeDays": zod.number(),
+  "moq": zod.number(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'received', 'accepted']),
+  "sortOrder": zod.number()
+}))
+})
+
+
+export const AddRfqQuoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddRfqQuoteBody = zod.object({
+  "supplierId": zod.number().optional(),
+  "factoryName": zod.string(),
+  "country": zod.string().optional(),
+  "unitPriceUsd": zod.number(),
+  "leadTimeDays": zod.number(),
+  "moq": zod.number(),
+  "notes": zod.string().optional(),
+  "status": zod.enum(['pending', 'received', 'accepted']).optional()
+})
+
+
+export const UpdateRfqQuoteParams = zod.object({
+  "id": zod.coerce.number(),
+  "quoteId": zod.coerce.number()
+})
+
+export const UpdateRfqQuoteBody = zod.object({
+  "factoryName": zod.string().optional(),
+  "country": zod.string().optional(),
+  "unitPriceUsd": zod.number().optional(),
+  "leadTimeDays": zod.number().optional(),
+  "moq": zod.number().optional(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'received', 'accepted']).optional()
+})
+
+export const UpdateRfqQuoteResponse = zod.object({
+  "id": zod.number(),
+  "rfqId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "factoryName": zod.string(),
+  "country": zod.string(),
+  "unitPriceUsd": zod.number(),
+  "leadTimeDays": zod.number(),
+  "moq": zod.number(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pending', 'received', 'accepted']),
+  "sortOrder": zod.number()
+})
+
+
+export const DeleteRfqQuoteParams = zod.object({
+  "id": zod.coerce.number(),
+  "quoteId": zod.coerce.number()
+})
+
+
+/**
+ * @summary Accept winning quote and create a live shipment + deal
+ */
+export const ConvertRfqToPoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ConvertRfqToPoBody = zod.object({
+  "acceptedQuoteId": zod.number().describe('The RFQ quote ID to mark as accepted'),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "supplierId": zod.number(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string(),
+  "via": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "depositPct": zod.number().optional().describe('Deposit percentage (default 30)')
+})
+
+
+/**
+ * @summary Get proforma invoice data for a converted RFQ
+ */
+export const GetRfqProformaParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetRfqProformaResponse = zod.object({
+  "rfqId": zod.number(),
+  "shipmentId": zod.number(),
+  "poNumber": zod.string(),
+  "buyerName": zod.string(),
+  "product": zod.string(),
+  "quantity": zod.number(),
+  "unitPriceUsd": zod.number(),
+  "totalUsd": zod.number(),
+  "depositPct": zod.number(),
+  "depositUsd": zod.number(),
+  "balanceUsd": zod.number(),
+  "paymentTerms": zod.string().optional(),
+  "deadline": zod.coerce.date(),
+  "supplierName": zod.string().optional(),
+  "supplierCountry": zod.string().optional(),
+  "generatedAt": zod.coerce.date()
+})
+
+

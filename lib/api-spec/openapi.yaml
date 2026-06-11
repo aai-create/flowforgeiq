@@ -17,6 +17,7 @@ tags:
   - name: messages
   - name: tasks
   - name: deals
+  - name: rfqs
   - name: documents
   - name: extractions
   - name: predictions
@@ -1017,6 +1018,184 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/NextPoNumbers" }
 
+  /rfqs:
+    get:
+      operationId: listRfqs
+      tags: [rfqs]
+      summary: List all RFQs
+      responses:
+        "200":
+          description: All RFQs with embedded quotes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RfqWithQuotes" }
+    post:
+      operationId: createRfq
+      tags: [rfqs]
+      summary: Create a new RFQ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RfqCreate" }
+      responses:
+        "201":
+          description: Created RFQ
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RfqWithQuotes" }
+
+  /rfqs/{id}:
+    get:
+      operationId: getRfq
+      tags: [rfqs]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: RFQ with embedded quotes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RfqWithQuotes" }
+        "404":
+          description: Not found
+    patch:
+      operationId: updateRfq
+      tags: [rfqs]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RfqUpdate" }
+      responses:
+        "200":
+          description: Updated RFQ
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RfqWithQuotes" }
+        "404":
+          description: Not found
+
+  /rfqs/{id}/quotes:
+    post:
+      operationId: addRfqQuote
+      tags: [rfqs]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RfqQuoteCreate" }
+      responses:
+        "201":
+          description: Created quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RfqQuote" }
+        "404":
+          description: RFQ not found
+
+  /rfqs/{id}/quotes/{quoteId}:
+    patch:
+      operationId: updateRfqQuote
+      tags: [rfqs]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: quoteId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RfqQuoteUpdate" }
+      responses:
+        "200":
+          description: Updated quote
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RfqQuote" }
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteRfqQuote
+      tags: [rfqs]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: quoteId
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /rfqs/{id}/convert:
+    post:
+      operationId: convertRfqToPo
+      tags: [rfqs]
+      summary: Accept winning quote and create a live shipment + deal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RfqConvertInput" }
+      responses:
+        "201":
+          description: Newly created shipment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "400":
+          description: Validation error (no accepted quote, already converted, etc.)
+        "404":
+          description: RFQ not found
+
+  /rfqs/{id}/proforma:
+    get:
+      operationId: getRfqProforma
+      tags: [rfqs]
+      summary: Get proforma invoice data for a converted RFQ
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Proforma invoice data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProformaInvoice" }
+        "404":
+          description: Not found or not yet converted
+
 components:
   schemas:
     HealthStatus:
@@ -1826,3 +2005,121 @@ components:
         connected:        { type: boolean }
         gmailAddress:     { type: string, nullable: true }
         clientConfigured: { type: boolean, description: "True when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set" }
+
+    RfqQuote:
+      type: object
+      required: [id, rfqId, factoryName, country, unitPriceUsd, leadTimeDays, moq, status, sortOrder]
+      properties:
+        id:            { type: integer }
+        rfqId:         { type: integer }
+        supplierId:    { type: ["integer", "null"] }
+        factoryName:   { type: string }
+        country:       { type: string }
+        unitPriceUsd:  { type: number }
+        leadTimeDays:  { type: integer }
+        moq:           { type: integer }
+        notes:         { type: ["string", "null"] }
+        status:        { type: string, enum: [pending, received, accepted] }
+        sortOrder:     { type: integer }
+
+    RfqQuoteCreate:
+      type: object
+      required: [factoryName, unitPriceUsd, leadTimeDays, moq]
+      properties:
+        supplierId:   { type: integer }
+        factoryName:  { type: string }
+        country:      { type: string }
+        unitPriceUsd: { type: number }
+        leadTimeDays: { type: integer }
+        moq:          { type: integer }
+        notes:        { type: string }
+        status:       { type: string, enum: [pending, received, accepted] }
+
+    RfqQuoteUpdate:
+      type: object
+      properties:
+        factoryName:  { type: string }
+        country:      { type: string }
+        unitPriceUsd: { type: number }
+        leadTimeDays: { type: integer }
+        moq:          { type: integer }
+        notes:        { type: ["string", "null"] }
+        status:       { type: string, enum: [pending, received, accepted] }
+
+    RfqWithQuotes:
+      type: object
+      required: [id, product, category, buyerName, targetPriceUsd, quantity, deadline, status, createdAt, quotes]
+      properties:
+        id:             { type: integer }
+        product:        { type: string }
+        category:       { type: string }
+        buyerName:      { type: string }
+        targetPriceUsd: { type: number }
+        quantity:       { type: integer }
+        deadline:       { type: string, format: date-time }
+        status:         { type: string, enum: [open, accepted, cancelled] }
+        notes:          { type: ["string", "null"] }
+        convertedShipmentId: { type: ["integer", "null"], description: "Shipment ID created when this RFQ was converted to a PO" }
+        createdAt:      { type: string, format: date-time }
+        quotes:
+          type: array
+          items: { $ref: "#/components/schemas/RfqQuote" }
+
+    RfqCreate:
+      type: object
+      required: [product, buyerName, targetPriceUsd, quantity, deadline]
+      properties:
+        product:        { type: string }
+        category:       { type: string }
+        buyerName:      { type: string }
+        targetPriceUsd: { type: number }
+        quantity:       { type: integer }
+        deadline:       { type: string, format: date-time }
+        notes:          { type: string }
+
+    RfqUpdate:
+      type: object
+      properties:
+        product:        { type: string }
+        category:       { type: string }
+        buyerName:      { type: string }
+        targetPriceUsd: { type: number }
+        quantity:       { type: integer }
+        deadline:       { type: string, format: date-time }
+        notes:          { type: ["string", "null"] }
+        status:         { type: string, enum: [open, accepted, cancelled] }
+
+    RfqConvertInput:
+      type: object
+      required: [acceptedQuoteId, poNumber, supplierId, dueDate, exFactoryDate, destination]
+      properties:
+        acceptedQuoteId: { type: integer, description: "The RFQ quote ID to mark as accepted" }
+        poNumber:        { type: string, description: "Supplier-facing PO number (trader→supplier)" }
+        supplierId:      { type: integer }
+        dueDate:         { type: string, format: date-time }
+        exFactoryDate:   { type: string, format: date-time }
+        destination:     { type: string }
+        via:             { type: string }
+        notes:           { type: string }
+        depositPct:      { type: integer, description: "Deposit percentage (default 30)" }
+
+    ProformaInvoice:
+      type: object
+      required: [rfqId, shipmentId, poNumber, buyerName, product, quantity, unitPriceUsd, totalUsd, depositPct, depositUsd, balanceUsd, deadline, generatedAt]
+      properties:
+        rfqId:        { type: integer }
+        shipmentId:   { type: integer }
+        poNumber:     { type: string }
+        buyerName:    { type: string }
+        product:      { type: string }
+        quantity:     { type: integer }
+        unitPriceUsd: { type: number }
+        totalUsd:     { type: number }
+        depositPct:   { type: integer }
+        depositUsd:   { type: number }
+        balanceUsd:   { type: number }
+        paymentTerms: { type: string }
+        deadline:     { type: string, format: date-time }
+        supplierName: { type: string }
+        supplierCountry: { type: string }
+        generatedAt:  { type: string, format: date-time }
