@@ -14,6 +14,8 @@ export const copilotProposalsTable = pgTable("copilot_proposals", {
   status: text("status").notNull().default("pending"), // pending | approved | edited | rejected | snoozed | auto_executed
   snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
   editedPayload: jsonb("edited_payload"), // user's modified version of payload
+  userEditedContent: text("user_edited_content"), // extracted edited draftBody text for learning
+  editDistance: real("edit_distance"), // normalized 0–1; 0 = identical to AI draft, 1 = completely rewritten
   auditTrail: jsonb("audit_trail").notNull().default([]), // array of { at, actor, action, note }
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

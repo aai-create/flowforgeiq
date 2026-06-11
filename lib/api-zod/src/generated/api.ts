@@ -1179,6 +1179,8 @@ export const ListCopilotProposalsResponseItem = zod.object({
   "status": zod.string(),
   "snoozedUntil": zod.coerce.date().nullish(),
   "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1219,6 +1221,8 @@ export const UpdateCopilotProposalResponse = zod.object({
   "status": zod.string(),
   "snoozedUntil": zod.coerce.date().nullish(),
   "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1244,6 +1248,8 @@ export const TriggerCopilotResponse = zod.object({
   "status": zod.string(),
   "snoozedUntil": zod.coerce.date().nullish(),
   "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1270,10 +1276,17 @@ export const GetCopilotSummaryResponse = zod.object({
   "status": zod.string(),
   "snoozedUntil": zod.coerce.date().nullish(),
   "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
-})).optional()
+})).optional(),
+  "draftQuality": zod.array(zod.object({
+  "actionType": zod.string(),
+  "avgEditDistance": zod.number().describe('Average normalized edit distance (0–1) across approved edits for this action type'),
+  "sampleCount": zod.number().describe('Number of user-edited proposals used in this average')
+})).optional().describe('Per-action-type average edit distance, reflecting how much users tend to modify AI drafts')
 })
 
 

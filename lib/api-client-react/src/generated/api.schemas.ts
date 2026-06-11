@@ -718,6 +718,16 @@ export interface CopilotProposal {
   snoozedUntil?: string | null;
   /** @nullable */
   editedPayload?: CopilotProposalEditedPayload;
+  /**
+     * Extracted edited draftBody text saved when user approves an edit
+     * @nullable
+     */
+  userEditedContent?: string | null;
+  /**
+     * Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten
+     * @nullable
+     */
+  editDistance?: number | null;
   auditTrail?: CopilotProposalAuditTrailItem[];
   createdAt: string;
   updatedAt: string;
@@ -750,6 +760,14 @@ export interface CopilotTriggerResult {
   proposals?: CopilotProposal[];
 }
 
+export interface CopilotDraftQualityEntry {
+  actionType: string;
+  /** Average normalized edit distance (0–1) across approved edits for this action type */
+  avgEditDistance: number;
+  /** Number of user-edited proposals used in this average */
+  sampleCount: number;
+}
+
 export interface CopilotSummary {
   pending: number;
   autoExecuted: number;
@@ -758,6 +776,8 @@ export interface CopilotSummary {
   watched: number;
   highlights?: string[];
   recentActions?: CopilotProposal[];
+  /** Per-action-type average edit distance, reflecting how much users tend to modify AI drafts */
+  draftQuality?: CopilotDraftQualityEntry[];
 }
 
 export interface AutonomyPolicy {

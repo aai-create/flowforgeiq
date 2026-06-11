@@ -11,12 +11,13 @@ import {
   getListAutonomyPoliciesQueryKey,
   type CopilotProposal,
   type AutonomyPolicy,
+  type CopilotDraftQualityEntry,
 } from "@workspace/api-client-react";
 import {
   Sparkles, CheckCircle2, XCircle, Clock, Edit3, Send, RefreshCw,
   AlertCircle, Zap, MessageCircle, Mail, DollarSign, FileText,
   ArrowUpRight, Settings, ChevronDown, ChevronRight, X, RotateCcw,
-  BrainCircuit, Shield, Bot, Play, Eye, ThumbsUp, TrendingUp,
+  BrainCircuit, Shield, Bot, Play, Eye, ThumbsUp, TrendingUp, BarChart2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -88,9 +89,98 @@ function policyColor(p: PolicyLevel) {
   return "text-emerald-600 bg-emerald-50 border-emerald-100";
 }
 
+function editDistanceColor(d: number) {
+  if (d < 0.2) return "text-emerald-600";
+  if (d < 0.5) return "text-amber-500";
+  return "text-red-500";
+}
+
+function editDistanceLabel(d: number) {
+  if (d < 0.1) return "Minimal edits";
+  if (d < 0.3) return "Light edits";
+  if (d < 0.6) return "Moderate edits";
+  return "Heavy edits";
+}
+
 function getPayload(p: CopilotProposal): Record<string, unknown> {
   const active = (p.editedPayload ?? p.payload) as Record<string, unknown>;
   return active;
+}
+
+// ─── Draft Quality Panel ──────────────────────────────────────────────────────
+function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <TrendingUp size={20} className="text-[#9E9FAE] mx-auto mb-2" />
+        <p className="text-[11px] text-[#5E687B]">No edits recorded yet.</p>
+        <p className="text-[10px] text-[#9E9FAE] mt-1">Edit and approve a draft to start training the copilot.</p>
+      </div>
+    );
+  }
+
+  const total = entries.reduce((s, e) => s + e.sampleCount, 0);
+  const overallAvg = entries.reduce((s, e) => s + e.avgEditDistance * e.sampleCount, 0) / total;
+
+  return (
+    <div className="space-y-3">
+      {/* Overall summary */}
+      <div className="flex items-center gap-3 p-3 bg-[#9000FF]/5 border border-[#9000FF]/10 rounded-xl">
+        <BrainCircuit size={14} className="text-[#9000FF] shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-semibold text-[#212833]">
+            Learning from {total} edit{total > 1 ? "s" : ""}
+          </div>
+          <div className="text-[10px] text-[#5E687B]">
+            Overall avg change: <span className={`font-bold ${editDistanceColor(overallAvg)}`}>{Math.round(overallAvg * 100)}%</span>
+            {" · "}{editDistanceLabel(overallAvg)} — copilot uses these to guide future drafts
+          </div>
+        </div>
+      </div>
+
+      {/* Per-action-type breakdown */}
+      <div className="space-y-2">
+        {entries.map(entry => {
+          const pct = Math.round(entry.avgEditDistance * 100);
+          const barWidth = Math.max(4, pct);
+          return (
+            <div key={entry.actionType} className="bg-white border border-[#E5EAF0] rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2 mb-1.5">
+                {actionTypeIcon(entry.actionType, 11)}
+                <span className="text-[11px] font-semibold text-[#212833]">{actionTypeLabel(entry.actionType)}</span>
+                <span className={`ml-auto text-[10px] font-bold ${editDistanceColor(entry.avgEditDistance)}`}>
+                  {pct}% avg change
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-1.5 bg-[#F0F4F8] rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    entry.avgEditDistance < 0.2
+                      ? "bg-emerald-400"
+                      : entry.avgEditDistance < 0.5
+                      ? "bg-amber-400"
+                      : "bg-red-400"
+                  }`}
+                  style={{ width: `${barWidth}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-[9px] text-[#9E9FAE]">{editDistanceLabel(entry.avgEditDistance)}</span>
+                <span className="text-[9px] text-[#9E9FAE]">{entry.sampleCount} sample{entry.sampleCount > 1 ? "s" : ""}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-[9px] text-[#9E9FAE] text-center leading-relaxed px-2">
+        Higher % = you changed the AI draft more. The copilot injects your past edits as examples when generating similar drafts.
+      </p>
+    </div>
+  );
 }
 
 // ─── Proposal Card ─────────────────────────────────────────────────────────────
@@ -115,6 +205,8 @@ function ProposalCard({
   const isPending = proposal.status === "pending" || proposal.status === "edited";
   const isAutoExecuted = proposal.status === "auto_executed";
   const draftBody = (payload.draftBody as string) || (payload.messageSnippet as string) || "";
+  const previousEdits = payload.previousEdits as Array<{ aiDraft: string; userEdit: string; editDistance: number }> | undefined;
+  const hasFewShot = previousEdits && previousEdits.length > 0;
 
   return (
     <div className={`border rounded-xl transition-all ${
@@ -147,6 +239,22 @@ function ProposalCard({
             <span className="text-[9px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-1.5 py-0.5 rounded-full">
               {triggerTypeLabel(proposal.triggerType)}
             </span>
+            {hasFewShot && (
+              <span className="text-[9px] text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                <TrendingUp size={8} /> adapted
+              </span>
+            )}
+            {proposal.editDistance != null && (
+              <span className={`text-[9px] border px-1.5 py-0.5 rounded-full font-medium ${
+                proposal.editDistance < 0.2
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                  : proposal.editDistance < 0.5
+                  ? "bg-amber-50 text-amber-700 border-amber-100"
+                  : "bg-red-50 text-red-700 border-red-100"
+              }`}>
+                {Math.round(proposal.editDistance * 100)}% edited
+              </span>
+            )}
           </div>
           {/* Reasoning preview */}
           <p className="text-[11px] text-[#5E687B] leading-snug line-clamp-2">{proposal.reasoning}</p>
@@ -213,6 +321,40 @@ function ProposalCard({
               </div>
             )}
           </div>
+
+          {/* Few-shot examples used to guide this draft */}
+          {hasFewShot && (
+            <div className="border border-[#9000FF]/15 rounded-xl overflow-hidden">
+              <div className="px-3 py-2 bg-[#9000FF]/5 flex items-center gap-1.5">
+                <TrendingUp size={10} className="text-[#9000FF]" />
+                <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">
+                  Adapted from {previousEdits!.length} past edit{previousEdits!.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="divide-y divide-[#E5EAF0]">
+                {previousEdits!.slice(0, 2).map((ex, i) => (
+                  <div key={i} className="px-3 py-2 bg-white">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[9px] text-[#9E9FAE] font-medium">Edit #{i + 1}</span>
+                      <span className={`text-[9px] font-semibold ${editDistanceColor(ex.editDistance)}`}>
+                        {Math.round(ex.editDistance * 100)}% changed
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-[8px] font-bold text-[#9E9FAE] uppercase mb-0.5">AI original</div>
+                        <p className="text-[9px] text-[#5E687B] line-clamp-2 leading-relaxed">{ex.aiDraft}</p>
+                      </div>
+                      <div>
+                        <div className="text-[8px] font-bold text-emerald-600 uppercase mb-0.5">You wrote</div>
+                        <p className="text-[9px] text-[#212833] line-clamp-2 leading-relaxed">{ex.userEdit}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* AI reasoning */}
           <div className="bg-[#9000FF]/5 border border-[#9000FF]/10 rounded-lg px-3 py-2 flex gap-2">
@@ -288,14 +430,27 @@ function EditDraftModal({
 }) {
   const payload = getPayload(proposal);
   const [body, setBody] = useState(String(payload.draftBody ?? ""));
+  const originalBody = String((proposal.payload as Record<string, unknown>).draftBody ?? "");
+
+  // Show live word-count diff as a rough edit signal to the user
+  const origWords = originalBody.trim().split(/\s+/).filter(Boolean).length;
+  const curWords = body.trim().split(/\s+/).filter(Boolean).length;
+  const wordDelta = curWords - origWords;
+
+  const previousEdits = payload.previousEdits as Array<{ aiDraft: string; userEdit: string; editDistance: number }> | undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-[#E5EAF0] w-full max-w-lg mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl border border-[#E5EAF0] w-full max-w-xl mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5EAF0]">
           <div className="flex items-center gap-2">
             <Edit3 size={15} className="text-[#9000FF]" />
             <span className="font-bold text-sm text-[#212833]">Edit Draft</span>
+            {previousEdits && previousEdits.length > 0 && (
+              <span className="text-[9px] text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ml-1">
+                <TrendingUp size={8} /> based on {previousEdits.length} past edit{previousEdits.length > 1 ? "s" : ""}
+              </span>
+            )}
           </div>
           <button onClick={onClose} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={14} /></button>
         </div>
@@ -306,14 +461,23 @@ function EditDraftModal({
             AI reasoning: <span className="text-[#212833]">{proposal.reasoning}</span>
           </div>
 
-          <div className="mt-3 mb-1 text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Message draft</div>
+          <div className="mt-3 mb-1 text-[9px] font-bold text-[#5E687B] uppercase tracking-wider flex items-center justify-between">
+            <span>Message draft</span>
+            {body !== originalBody && (
+              <span className={`text-[9px] font-normal ${wordDelta > 0 ? "text-blue-500" : wordDelta < 0 ? "text-amber-500" : "text-[#9E9FAE]"}`}>
+                {wordDelta > 0 ? `+${wordDelta}` : wordDelta} words vs AI draft
+              </span>
+            )}
+          </div>
           <textarea
             className="w-full border border-[#E5EAF0] rounded-xl px-3 py-2.5 text-xs text-[#212833] leading-relaxed outline-none focus:border-[#9000FF]/40 focus:ring-2 focus:ring-[#9000FF]/10 resize-none transition-all"
             rows={7}
             value={body}
             onChange={e => setBody(e.target.value)}
           />
-          <p className="text-[9px] text-[#9E9FAE] mt-1">Your edits are saved and used to improve future drafts for this supplier.</p>
+          <p className="text-[9px] text-[#9E9FAE] mt-1">
+            Your edits are saved and used to improve future drafts for this supplier and action type.
+          </p>
         </div>
 
         <div className="px-5 py-4 border-t border-[#E5EAF0] flex gap-2 justify-end">
@@ -409,6 +573,7 @@ export function CopilotQueue() {
 
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "auto_executed" | "rejected">("all");
   const [showPolicies, setShowPolicies] = useState(false);
+  const [showQuality, setShowQuality] = useState(false);
   const [editingProposal, setEditingProposal] = useState<CopilotProposal | null>(null);
 
   // Build a map of shipmentId → PO number from proposals payload
@@ -437,6 +602,9 @@ export function CopilotQueue() {
 
   const pending = proposals.filter(p => p.status === "pending" || p.status === "edited").length;
   const autoRan = proposals.filter(p => p.status === "auto_executed").length;
+
+  const draftQuality: CopilotDraftQualityEntry[] = summary?.draftQuality ?? [];
+  const totalEdits = draftQuality.reduce((s, e) => s + e.sampleCount, 0);
 
   function handleApprove(id: number) {
     updateProposal({
@@ -536,6 +704,20 @@ export function CopilotQueue() {
                 <div className="text-[9px] text-[#5E687B]">{stat.label}</div>
               </div>
             ))}
+            {/* Draft quality stat */}
+            <button
+              onClick={() => { setShowQuality(v => !v); setShowPolicies(false); }}
+              className={`text-center transition-all rounded-xl px-2 py-1 border ${
+                showQuality
+                  ? "bg-[#9000FF]/8 border-[#9000FF]/20"
+                  : "border-transparent hover:bg-[#F0F4F8]"
+              }`}
+            >
+              <div className="text-lg font-bold text-[#9000FF]">{totalEdits}</div>
+              <div className="text-[9px] text-[#5E687B] flex items-center gap-0.5 justify-center">
+                <TrendingUp size={8} className="text-[#9000FF]" /> Edits learned
+              </div>
+            </button>
           </div>
         </div>
 
@@ -559,7 +741,18 @@ export function CopilotQueue() {
           <div className="flex-1" />
 
           <button
-            onClick={() => setShowPolicies(v => !v)}
+            onClick={() => { setShowQuality(v => !v); setShowPolicies(false); }}
+            className={`flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+              showQuality
+                ? "bg-[#9000FF] text-white border-[#9000FF]"
+                : "text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] bg-white"
+            }`}
+          >
+            <BarChart2 size={11} /> Draft Quality
+          </button>
+
+          <button
+            onClick={() => { setShowPolicies(v => !v); setShowQuality(false); }}
             className={`flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
               showPolicies
                 ? "bg-[#9000FF] text-white border-[#9000FF]"
@@ -673,6 +866,27 @@ export function CopilotQueue() {
             </div>
           )}
         </div>
+
+        {/* ── Draft Quality Panel ── */}
+        {showQuality && (
+          <div className="w-[320px] border-l border-[#E5EAF0] bg-white flex flex-col shrink-0 overflow-y-auto">
+            <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <BarChart2 size={14} className="text-[#9000FF]" />
+                <span className="text-xs font-bold text-[#212833]">Draft Quality</span>
+              </div>
+              <button onClick={() => setShowQuality(false)} className="text-[#5E687B] hover:text-[#212833] p-1">
+                <X size={13} />
+              </button>
+            </div>
+            <div className="p-4 flex-1">
+              <p className="text-[10px] text-[#5E687B] mb-4 leading-relaxed">
+                Tracks how much you edit AI drafts per action type. Higher = bigger gap between AI suggestion and your preference. The copilot uses your past edits as examples when generating new drafts.
+              </p>
+              <DraftQualityPanel entries={draftQuality} />
+            </div>
+          </div>
+        )}
 
         {/* ── Autonomy Policy Panel ── */}
         {showPolicies && (

@@ -2023,20 +2023,22 @@ components:
       type: object
       required: [id, shipmentId, triggerType, actionType, payload, reasoning, confidence, status, createdAt, updatedAt]
       properties:
-        id:             { type: integer }
-        shipmentId:     { type: integer }
-        triggerType:    { type: string }
-        triggerRef:     { type: ["string", "null"] }
-        actionType:     { type: string }
-        payload:        { type: object, additionalProperties: true }
-        reasoning:      { type: string }
-        confidence:     { type: number }
-        status:         { type: string }
-        snoozedUntil:   { type: ["string", "null"], format: date-time }
-        editedPayload:  { type: ["object", "null"], additionalProperties: true }
-        auditTrail:     { type: array, items: { type: object, additionalProperties: true } }
-        createdAt:      { type: string, format: date-time }
-        updatedAt:      { type: string, format: date-time }
+        id:                  { type: integer }
+        shipmentId:          { type: integer }
+        triggerType:         { type: string }
+        triggerRef:          { type: ["string", "null"] }
+        actionType:          { type: string }
+        payload:             { type: object, additionalProperties: true }
+        reasoning:           { type: string }
+        confidence:          { type: number }
+        status:              { type: string }
+        snoozedUntil:        { type: ["string", "null"], format: date-time }
+        editedPayload:       { type: ["object", "null"], additionalProperties: true }
+        userEditedContent:   { type: ["string", "null"], description: "Extracted edited draftBody text saved when user approves an edit" }
+        editDistance:        { type: ["number", "null"], description: "Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten" }
+        auditTrail:          { type: array, items: { type: object, additionalProperties: true } }
+        createdAt:           { type: string, format: date-time }
+        updatedAt:           { type: string, format: date-time }
 
     CopilotProposalInput:
       type: object
@@ -2068,6 +2070,14 @@ components:
           type: array
           items: { $ref: "#/components/schemas/CopilotProposal" }
 
+    CopilotDraftQualityEntry:
+      type: object
+      required: [actionType, avgEditDistance, sampleCount]
+      properties:
+        actionType:       { type: string }
+        avgEditDistance:  { type: number, description: "Average normalized edit distance (0–1) across approved edits for this action type" }
+        sampleCount:      { type: integer, description: "Number of user-edited proposals used in this average" }
+
     CopilotSummary:
       type: object
       required: [pending, autoExecuted, snoozed, rejected, watched]
@@ -2083,6 +2093,10 @@ components:
         recentActions:
           type: array
           items: { $ref: "#/components/schemas/CopilotProposal" }
+        draftQuality:
+          type: array
+          description: "Per-action-type average edit distance, reflecting how much users tend to modify AI drafts"
+          items: { $ref: "#/components/schemas/CopilotDraftQualityEntry" }
 
     AutonomyPolicy:
       type: object

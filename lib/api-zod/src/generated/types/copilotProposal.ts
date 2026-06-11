@@ -24,6 +24,16 @@ export interface CopilotProposal {
   snoozedUntil?: Date | null;
   /** @nullable */
   editedPayload?: CopilotProposalEditedPayload;
+  /**
+     * Extracted edited draftBody text saved when user approves an edit
+     * @nullable
+     */
+  userEditedContent?: string | null;
+  /**
+     * Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten
+     * @nullable
+     */
+  editDistance?: number | null;
   auditTrail?: CopilotProposalAuditTrailItem[];
   createdAt: Date;
   updatedAt: Date;

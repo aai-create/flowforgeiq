@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, copilotProposalsTable, autonomyPoliciesTable, shipmentsTable, messagesTable, suppliersTable, paymentsTable } from "@workspace/db";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import {
   CreateCopilotProposalBody,
   UpdateCopilotProposalBody,
@@ -12,6 +12,47 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { z } from "zod";
 
 const router: IRouter = Router();
+
+// ─── Edit-distance helpers ────────────────────────────────────────────────────
+function wordLevenshtein(a: string, b: string): number {
+  const aW = a.trim().split(/\s+/);
+  const bW = b.trim().split(/\s+/);
+  const m = aW.length;
+  const n = bW.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = aW[i - 1] === bW[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  const maxLen = Math.max(m, n);
+  return maxLen === 0 ? 0 : dp[m][n] / maxLen;
+}
+
+function normalizedEditDistance(original: string, edited: string): number {
+  if (!original && !edited) return 0;
+  if (!original || !edited) return 1;
+  if (original === edited) return 0;
+  return Math.min(1, wordLevenshtein(original, edited));
+}
+
+// ─── Draft-quality helpers ────────────────────────────────────────────────────
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  reply: "Draft Reply",
+  nudge: "Follow-up Nudge",
+  payment_reminder: "Payment Reminder",
+  doc_request: "Doc Request",
+  escalation: "Escalation",
+  stage_advance: "Advance Stage",
+};
+
+function actionLabel(t: string) {
+  return ACTION_TYPE_LABELS[t] ?? t;
+}
 
 // ─── List proposals ──────────────────────────────────────────────────────────
 router.get("/copilot/proposals", async (req, res) => {
@@ -79,6 +120,19 @@ router.patch("/copilot/proposals/:id", async (req, res) => {
   if (input.editedPayload) {
     updateData.editedPayload = input.editedPayload as Record<string, unknown>;
     if (!input.status) updateData.status = "edited";
+
+    // Compute edit distance between original draftBody and edited draftBody
+    const origPayload = existing.payload as Record<string, unknown>;
+    const editedPayload = input.editedPayload as Record<string, unknown>;
+    const originalBody = typeof origPayload.draftBody === "string" ? origPayload.draftBody : "";
+    const editedBody = typeof editedPayload.draftBody === "string" ? editedPayload.draftBody : "";
+
+    if (originalBody || editedBody) {
+      const dist = normalizedEditDistance(originalBody, editedBody);
+      updateData.editDistance = dist;
+      // Store the final user-edited text for few-shot retrieval later
+      updateData.userEditedContent = editedBody || null;
+    }
   }
   if (input.snoozedUntil) {
     updateData.snoozedUntil = new Date(input.snoozedUntil);
@@ -118,11 +172,38 @@ router.get("/copilot/summary", async (_req, res) => {
   if (autoExecuted > 0) highlights.push(`${autoExecuted} action${autoExecuted > 1 ? "s" : ""} auto-executed while you were away`);
   if (snoozed > 0) highlights.push(`${snoozed} item${snoozed > 1 ? "s" : ""} snoozed for later review`);
 
+  // ── Draft-quality metrics ──────────────────────────────────────────────────
+  const editedProposals = allProposals.filter(
+    p => p.editDistance !== null && p.editDistance !== undefined && p.userEditedContent !== null
+  );
+
+  const byActionType: Record<string, number[]> = {};
+  for (const p of editedProposals) {
+    if (!byActionType[p.actionType]) byActionType[p.actionType] = [];
+    byActionType[p.actionType].push(p.editDistance as number);
+  }
+
+  const draftQuality = Object.entries(byActionType)
+    .map(([actionType, distances]) => ({
+      actionType,
+      avgEditDistance: distances.reduce((a, b) => a + b, 0) / distances.length,
+      sampleCount: distances.length,
+    }))
+    .sort((a, b) => b.avgEditDistance - a.avgEditDistance);
+
+  // Surface action types where users significantly diverge from AI drafts (>30% change)
+  const highEditTypes = draftQuality.filter(q => q.avgEditDistance > 0.3);
+  for (const q of highEditTypes) {
+    highlights.push(
+      `${actionLabel(q.actionType)} drafts are edited heavily on average (${Math.round(q.avgEditDistance * 100)}% change) — copilot is learning from ${q.sampleCount} edit${q.sampleCount > 1 ? "s" : ""}`
+    );
+  }
+
   const recentActions = allProposals
     .filter(p => p.status === "auto_executed" || p.status === "approved")
     .slice(0, 5);
 
-  res.json({ pending, autoExecuted, snoozed, rejected, watched, highlights, recentActions });
+  res.json({ pending, autoExecuted, snoozed, rejected, watched, highlights, recentActions, draftQuality });
 });
 
 // ─── Autonomy policies ────────────────────────────────────────────────────────

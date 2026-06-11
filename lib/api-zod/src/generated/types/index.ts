@@ -18,6 +18,7 @@ export * from './chatIngestResult';
 export * from './chatIngestResultRoutingStatus';
 export * from './connectGmail200';
 export * from './contributingSignal';
+export * from './copilotDraftQualityEntry';
 export * from './copilotProposal';
 export * from './copilotProposalAuditTrailItem';
 export * from './copilotProposalEditedPayload';

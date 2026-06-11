@@ -1,5 +1,5 @@
 import { db, shipmentsTable, messagesTable, paymentsTable, copilotProposalsTable, autonomyPoliciesTable, suppliersTable } from "@workspace/db";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, isNotNull, and } from "drizzle-orm";
 
 export type ProposalCandidate = {
   shipmentId: number;
@@ -13,6 +13,12 @@ export type ProposalCandidate = {
   confidence: number;
 };
 
+type FewShotEdit = {
+  aiDraft: string;
+  userEdit: string;
+  editDistance: number;
+};
+
 const TODAY = new Date("2026-05-18");
 
 function daysSince(d: Date): number {
@@ -21,6 +27,76 @@ function daysSince(d: Date): number {
 
 function daysUntil(d: Date): number {
   return Math.floor((d.getTime() - TODAY.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Fetch past user edits for a specific supplier + action type combination.
+ * Returns up to 3 most-recent edits that have both an original draft and a
+ * user-edited version, sorted by significance (highest edit distance first so
+ * the most instructive examples appear first).
+ *
+ * Retrieval strategy (strict supplier-scoping):
+ * 1. Primary: proposals for EXACTLY this supplier AND this action type.
+ * 2. Fallback (only when primary is empty): proposals for any supplier but
+ *    the same action type — gives the copilot some style signal even when
+ *    the supplier is new.
+ */
+async function getFewShotEdits(
+  supplierName: string,
+  actionType: string
+): Promise<FewShotEdit[]> {
+  const editedProposals = await db
+    .select()
+    .from(copilotProposalsTable)
+    .where(
+      and(
+        isNotNull(copilotProposalsTable.userEditedContent),
+        isNotNull(copilotProposalsTable.editDistance),
+        eq(copilotProposalsTable.actionType, actionType)
+      )
+    )
+    .orderBy(desc(copilotProposalsTable.updatedAt))
+    .limit(40);
+
+  function toFewShot(rows: typeof editedProposals): FewShotEdit[] {
+    return rows
+      .filter(p => {
+        const pl = p.payload as Record<string, unknown>;
+        return typeof pl.draftBody === "string" && typeof p.userEditedContent === "string";
+      })
+      .map(p => ({
+        aiDraft: (p.payload as Record<string, unknown>).draftBody as string,
+        userEdit: p.userEditedContent as string,
+        editDistance: p.editDistance as number,
+      }))
+      .sort((a, b) => b.editDistance - a.editDistance) // most-changed first = most instructive
+      .slice(0, 3);
+  }
+
+  // Primary: strict match on supplier name stored in payload
+  const sameSupplierRows = editedProposals.filter(p => {
+    const pl = p.payload as Record<string, unknown>;
+    return pl.supplierName === supplierName;
+  });
+
+  const primary = toFewShot(sameSupplierRows);
+  if (primary.length > 0) return primary;
+
+  // Fallback: any supplier for the same action type (cross-supplier style signal)
+  return toFewShot(editedProposals);
+}
+
+/**
+ * Build a `previousEdits` annotation to inject into a proposal payload so
+ * that downstream consumers (AI chat, auto-execute, etc.) can use past edits
+ * as few-shot guidance.  Only included when there are relevant past edits.
+ */
+async function buildFewShotAnnotation(
+  supplierName: string,
+  actionType: string
+): Promise<FewShotEdit[] | null> {
+  const edits = await getFewShotEdits(supplierName, actionType);
+  return edits.length > 0 ? edits : null;
 }
 
 export async function generateProposals(): Promise<ProposalCandidate[]> {
@@ -60,6 +136,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
 
     // 1. Unread messages that have an AI draft ready
     for (const msg of shipMessages.filter(m => m.unread && m.aiDraft)) {
+      const fewShot = await buildFewShotAnnotation(supplierName, "reply");
       candidates.push({
         shipmentId: s.id,
         poNumber: s.poNumber,
@@ -69,13 +146,15 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
         actionType: "reply",
         payload: {
           poNumber: s.poNumber,
+          supplierName,
           draftBody: msg.aiDraft,
           channel: msg.channel,
           sender: msg.sender,
           messageSnippet: msg.snippet,
           aiAction: msg.aiAction,
+          ...(fewShot ? { previousEdits: fewShot } : {}),
         },
-        reasoning: `Unread message from ${msg.sender} via ${msg.channel} requires a response. AI has drafted a reply based on the message content and current shipment stage (${s.currentStageId}).`,
+        reasoning: `Unread message from ${msg.sender} via ${msg.channel} requires a response. AI has drafted a reply based on the message content and current shipment stage (${s.currentStageId}).${fewShot ? ` Copilot adapted tone using ${fewShot.length} past edit${fewShot.length > 1 ? "s" : ""} for this supplier.` : ""}`,
         confidence: 0.85,
       });
     }
@@ -84,6 +163,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     for (const pmt of shipPayments.filter(p => !p.paid)) {
       const due = daysUntil(new Date(pmt.dueDate));
       if (due <= 0) {
+        const fewShot = await buildFewShotAnnotation(supplierName, "payment_reminder");
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -93,15 +173,18 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           actionType: "payment_reminder",
           payload: {
             poNumber: s.poNumber,
+            supplierName,
             paymentLabel: pmt.label,
             amountUsd: pmt.amountUsd,
             dueDate: pmt.dueDate,
             daysOverdue: Math.abs(due),
+            ...(fewShot ? { previousEdits: fewShot } : {}),
           },
           reasoning: `${pmt.label} of $${pmt.amountUsd.toLocaleString()} was due ${Math.abs(due)} day(s) ago for ${s.poNumber}. Payment needs to be arranged to avoid release hold.`,
           confidence: 0.95,
         });
       } else if (due <= 3) {
+        const fewShot = await buildFewShotAnnotation(supplierName, "payment_reminder");
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -111,10 +194,12 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           actionType: "payment_reminder",
           payload: {
             poNumber: s.poNumber,
+            supplierName,
             paymentLabel: pmt.label,
             amountUsd: pmt.amountUsd,
             dueDate: pmt.dueDate,
             daysUntilDue: due,
+            ...(fewShot ? { previousEdits: fewShot } : {}),
           },
           reasoning: `${pmt.label} of $${pmt.amountUsd.toLocaleString()} for ${s.poNumber} is due in ${due} day(s). Proactive reminder recommended to ensure on-time payment.`,
           confidence: 0.88,
@@ -128,6 +213,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
       const daysSinceLastMsg = daysSince(new Date(lastMsg.receivedAt));
       if (daysSinceLastMsg >= 3 && s.status !== "delivered") {
         const stageLabel = s.currentStageId.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        const fewShot = await buildFewShotAnnotation(supplierName, "nudge");
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -137,12 +223,14 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           actionType: "nudge",
           payload: {
             poNumber: s.poNumber,
+            supplierName,
             daysSilent: daysSinceLastMsg,
             currentStage: s.currentStageId,
             draftBody: `Hi, following up on ${s.poNumber} — could you provide an update on the current ${stageLabel} stage? We want to ensure we're on track for the ex-factory date.`,
             channel: lastMsg.channel,
+            ...(fewShot ? { previousEdits: fewShot } : {}),
           },
-          reasoning: `No communication on ${s.poNumber} for ${daysSinceLastMsg} days while at ${stageLabel} stage. A follow-up nudge will keep the shipment moving forward.`,
+          reasoning: `No communication on ${s.poNumber} for ${daysSinceLastMsg} days while at ${stageLabel} stage. A follow-up nudge will keep the shipment moving forward.${fewShot ? ` Tone adapted from ${fewShot.length} past nudge edit${fewShot.length > 1 ? "s" : ""}.` : ""}`,
           confidence: 0.75,
         });
       }
@@ -152,6 +240,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     if (s.status === "delayed") {
       const daysToExFactory = daysUntil(new Date(s.exFactoryDate));
       if (daysToExFactory <= 7) {
+        const fewShot = await buildFewShotAnnotation(supplierName, "escalation");
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -161,9 +250,11 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           actionType: "escalation",
           payload: {
             poNumber: s.poNumber,
+            supplierName,
             daysToExFactory,
             currentStage: s.currentStageId,
             draftBody: `URGENT: ${s.poNumber} is currently delayed with only ${daysToExFactory} days to ex-factory. Immediate action required to mitigate impact on customer delivery.`,
+            ...(fewShot ? { previousEdits: fewShot } : {}),
           },
           reasoning: `${s.poNumber} is marked delayed with ex-factory in ${daysToExFactory} day(s). Escalation draft prepared for management review.`,
           confidence: 0.92,
@@ -175,6 +266,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     if (s.currentStageId === "qc" || s.currentStageId === "production") {
       const daysToExFactory = daysUntil(new Date(s.exFactoryDate));
       if (daysToExFactory <= 5 && daysToExFactory > 0) {
+        const fewShot = await buildFewShotAnnotation(supplierName, "doc_request");
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -184,12 +276,14 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           actionType: "doc_request",
           payload: {
             poNumber: s.poNumber,
+            supplierName,
             currentStage: s.currentStageId,
             daysToExFactory,
             requiredDocs: ["Commercial Invoice", "Packing List", "Certificate of Origin", "B/L Draft"],
             draftBody: `With ex-factory approaching in ${daysToExFactory} days for ${s.poNumber}, please begin preparing: Commercial Invoice, Packing List, Certificate of Origin, and B/L Draft.`,
+            ...(fewShot ? { previousEdits: fewShot } : {}),
           },
-          reasoning: `${s.poNumber} is ${daysToExFactory} day(s) from ex-factory but still at ${s.currentStageId.replace(/_/g, " ")} stage. Shipping documents need to be requested proactively.`,
+          reasoning: `${s.poNumber} is ${daysToExFactory} day(s) from ex-factory but still at ${s.currentStageId.replace(/_/g, " ")} stage. Shipping documents need to be requested proactively.${fewShot ? ` Phrasing refined from ${fewShot.length} past doc-request edit${fewShot.length > 1 ? "s" : ""}.` : ""}`,
           confidence: 0.82,
         });
       }
