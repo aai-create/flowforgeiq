@@ -3,8 +3,9 @@ import { NavSidebar } from "@/components/NavSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { HELP_SECTIONS } from "@/lib/helpContent";
+import { SCREENSHOT_COMPONENTS } from "@/lib/helpScreenshots";
 import {
-  Search, BookOpen, ChevronRight, X, ArrowRight,
+  Search, ChevronRight, X, ArrowRight,
   MessageCircle, ClipboardList, Inbox, Wand2, CheckCircle2,
   FileQuestion, Package, BarChart3, FilePlus, TrendingUp,
   ShieldAlert, AlertTriangle, BellRing, DollarSign, Users,
@@ -348,27 +349,12 @@ export function Help() {
                         ))}
                       </div>
 
-                      {/* Screenshot placeholder */}
-                      <div className="rounded-xl overflow-hidden border border-[#E5EAF0] bg-[#F7F9FA]">
-                        <img
-                          src={`/docs/${section.screenshot}`}
-                          alt={`Screenshot: ${section.title}`}
-                          className="w-full block"
-                          onError={e => {
-                            const img = e.currentTarget;
-                            img.style.display = "none";
-                            const placeholder = img.nextElementSibling as HTMLElement | null;
-                            if (placeholder) placeholder.style.display = "flex";
-                          }}
-                        />
-                        <div
-                          className="hidden items-center justify-center h-[120px] text-[#9E9FAE] text-xs gap-2"
-                          style={{ display: "none" }}
-                        >
-                          <BookOpen className="w-4 h-4 opacity-40" />
-                          <span>Screenshot coming soon</span>
+                      {/* Inline UI illustration */}
+                      {SCREENSHOT_COMPONENTS[section.id] && (
+                        <div className="rounded-xl overflow-hidden border border-[#E5EAF0]">
+                          {React.createElement(SCREENSHOT_COMPONENTS[section.id])}
                         </div>
-                      </div>
+                      )}
 
                       <div className="mt-6 border-t border-[#E5EAF0]" />
                     </section>
