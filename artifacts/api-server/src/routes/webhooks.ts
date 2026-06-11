@@ -224,7 +224,7 @@ Reply with JSON only (no markdown):
 
   try {
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
       max_tokens: 200,
@@ -267,7 +267,7 @@ Write only the reply body — no greeting line needed, just the content. Keep it
 
   try {
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
       max_tokens: 300,
@@ -304,7 +304,7 @@ Extract these fields if clearly mentioned (leave null otherwise):
 
   try {
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
       max_tokens: 200,

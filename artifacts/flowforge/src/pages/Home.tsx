@@ -1537,7 +1537,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
           {[
             { label: "Ingest endpoint", value: "POST /api/webhooks/email" },
             { label: "Confidence threshold", value: "65% — below this goes to Needs Review" },
-            { label: "AI model", value: "gpt-4o-mini (shipment matching + draft generation)" },
+            { label: "AI model", value: "gpt-5-mini (shipment matching + draft generation)" },
           ].map(row => (
             <div key={row.label} className="flex items-center justify-between gap-2 py-1 border-b border-[#F0F4F8] last:border-0">
               <span className="text-[#9E9FAE]">{row.label}</span>
