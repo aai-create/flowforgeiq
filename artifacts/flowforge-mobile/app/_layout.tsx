@@ -25,7 +25,9 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="document/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }
