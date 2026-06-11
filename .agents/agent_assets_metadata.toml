@@ -18,6 +18,12 @@ uri = "file://artifacts/flowforge-video/public/images/bg-dark-tech.png"
 type = "image"
 title = "Dark tech abstract texture"
 
+[[generated]]
+id = "aWaskygT6D0gT8Ax_rMv3"
+uri = "file://artifacts/flowforge-mobile/assets/images/icon.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "_9ZvNMjB4OrocZCpIN4zd"
 uri = "file://sample-pos/PO-1001-778143.pdf"
