@@ -6,11 +6,12 @@ import { useCopilotHint } from "@/lib/CopilotContext";
 import {
   useListSuppliers,
   useListShipments,
+  useListStages,
   useUpdateSupplier,
   useCreateSupplier,
   useGetRiskRadar,
 } from "@workspace/api-client-react";
-import type { SupplierSummary, Shipment } from "@workspace/api-client-react";
+import type { SupplierSummary, Shipment, Stage } from "@workspace/api-client-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -146,11 +147,16 @@ function EditableField({ label, value, icon: Icon, placeholder, type = "text", o
 interface DetailPanelProps {
   supplier: SupplierSummary;
   shipments: Shipment[];
+  stages: Stage[];
   onClose: () => void;
   onUpdate: (updated: SupplierSummary) => void;
 }
 
-function SupplierDetailPanel({ supplier, shipments, onClose, onUpdate }: DetailPanelProps) {
+function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }: DetailPanelProps) {
+  const stageLabel = useMemo(() => {
+    const map = new Map(stages.map(st => [st.id, st.label]));
+    return (id: string) => map.get(id) ?? id;
+  }, [stages]);
   const [, navigate] = useLocation();
   const updateMutation = useUpdateSupplier();
   const [saving, setSaving] = useState(false);
@@ -270,11 +276,11 @@ function SupplierDetailPanel({ supplier, shipments, onClose, onUpdate }: DetailP
                   return (
                     <button
                       key={s.id}
-                      onClick={() => navigate(`/?shipment=${s.id}`)}
+                      onClick={() => navigate(`/inbox?shipment=${s.id}`)}
                       className="w-full text-left flex items-center gap-2 p-2 rounded-lg border border-[#E5EAF0] hover:border-[#9000FF]/30 hover:bg-[#FAFBFC] group transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
+                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                           <span className="font-mono text-[10px] text-[#5E687B] bg-[#F0F4F8] px-1.5 py-0.5 rounded">
                             {s.poNumber}
                           </span>
@@ -283,7 +289,12 @@ function SupplierDetailPanel({ supplier, shipments, onClose, onUpdate }: DetailP
                           </span>
                         </div>
                         <p className="text-[11px] text-[#212833] font-medium truncate">{s.product}</p>
-                        <p className="text-[10px] text-[#9E9FAE]">Due {shortDate(s.dueDate)}{days < 0 ? ` · ${Math.abs(days)}d late` : days <= 7 ? ` · ${days}d` : ""}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-[#7A00D9] bg-[#9000FF]/8 px-1.5 py-0.5 rounded truncate max-w-[140px]">
+                            {stageLabel(s.currentStageId)}
+                          </span>
+                          <span className="text-[10px] text-[#9E9FAE]">Due {shortDate(s.dueDate)}{days < 0 ? ` · ${Math.abs(days)}d late` : days <= 7 ? ` · ${days}d` : ""}</span>
+                        </div>
                       </div>
                       <ArrowRight className="w-3.5 h-3.5 text-[#9000FF] opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
                     </button>
@@ -302,7 +313,7 @@ function SupplierDetailPanel({ supplier, shipments, onClose, onUpdate }: DetailP
                   {recent.map(s => (
                     <button
                       key={s.id}
-                      onClick={() => navigate(`/?shipment=${s.id}`)}
+                      onClick={() => navigate(`/inbox?shipment=${s.id}`)}
                       className="w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#FAFBFC] group transition-colors"
                     >
                       <span className="text-[11px] text-[#5E687B] truncate">{s.product}</span>
@@ -433,9 +444,11 @@ export function Suppliers() {
   ]);
   const { data: suppliersData } = useListSuppliers();
   const { data: shipmentsData } = useListShipments();
+  const { data: stagesData } = useListStages();
   const { data: radarData } = useGetRiskRadar();
   const [suppliers, setSuppliers] = useState<SupplierSummary[]>([]);
   const shipments: Shipment[] = shipmentsData ?? [];
+  const stages: Stage[] = stagesData ?? [];
 
   useEffect(() => {
     if (suppliersData) setSuppliers(suppliersData);
@@ -668,6 +681,7 @@ export function Suppliers() {
               <SupplierDetailPanel
                 supplier={selectedSupplier}
                 shipments={shipments}
+                stages={stages}
                 onClose={() => setSelectedId(null)}
                 onUpdate={updated => setSuppliers(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s))}
               />
