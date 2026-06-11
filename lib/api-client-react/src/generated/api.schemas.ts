@@ -5,6 +5,56 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
+
+
+export const TeamMemberRole = {
+  admin: 'admin',
+  member: 'member',
+} as const;
+
+export interface TeamMember {
+  clerkUserId: string;
+  email: string;
+  name: string;
+  role: TeamMemberRole;
+  createdAt: string;
+}
+
+export interface TeamInvitation {
+  id: number;
+  email: string;
+  role: string;
+  token: string;
+  invitedBy: string;
+  createdAt: string;
+  /** @nullable */
+  acceptedAt?: string | null;
+}
+
+export interface TeamResponse {
+  members: TeamMember[];
+  pendingInvitations: TeamInvitation[];
+}
+
+export type TeamInviteInputRole = typeof TeamInviteInputRole[keyof typeof TeamInviteInputRole];
+
+
+export const TeamInviteInputRole = {
+  admin: 'admin',
+  member: 'member',
+} as const;
+
+export interface TeamInviteInput {
+  email: string;
+  role?: TeamInviteInputRole;
+}
+
+export interface TeamInviteResponse {
+  invitation: TeamInvitation;
+  inviteUrl: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -186,6 +236,16 @@ export interface Shipment {
      * @nullable
      */
   spreadPct?: number | null;
+  /**
+     * Clerk userId of the assigned team member
+     * @nullable
+     */
+  assigneeId?: string | null;
+  /**
+     * Display name of the assigned team member
+     * @nullable
+     */
+  assigneeName?: string | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }
@@ -224,6 +284,8 @@ export interface ShipmentCreate {
 export interface ShipmentUpdate {
   status?: string;
   currentStageId?: string;
+  /** @nullable */
+  assigneeId?: string | null;
 }
 
 export interface StageEvent {
@@ -233,6 +295,8 @@ export interface StageEvent {
   toStageId: string;
   /** @nullable */
   note?: string | null;
+  /** @nullable */
+  actorName?: string | null;
   createdAt: string;
 }
 
@@ -1044,5 +1108,30 @@ export type UploadDocumentBody = {
 export type ListCopilotProposalsParams = {
 status?: string;
 shipmentId?: number;
+};
+
+export type GetMyProfile200 = {
+  user: TeamMember;
+};
+
+export type ProvisionSelfBody = {
+  name?: string;
+  email?: string;
+};
+
+export type ProvisionSelf200 = {
+  user: TeamMember;
+};
+
+export type ProvisionSelf201 = {
+  user: TeamMember;
+};
+
+export type AcceptInviteBody = {
+  token: string;
+};
+
+export type AcceptInvite200 = {
+  user: TeamMember;
 };
 

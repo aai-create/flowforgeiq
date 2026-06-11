@@ -20,6 +20,7 @@ export const shipmentsTable = pgTable("shipments", {
   notes: text("notes"),
   quantity: integer("quantity"),
   unitCostUsd: integer("unit_cost_usd"),
+  assigneeId: text("assignee_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

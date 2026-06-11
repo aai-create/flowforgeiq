@@ -226,6 +226,8 @@ export const ListShipmentsResponseItem = zod.object({
   "unitCostUsd": zod.number().nullish(),
   "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -291,7 +293,8 @@ export const UpdateShipmentParams = zod.object({
 
 export const UpdateShipmentBody = zod.object({
   "status": zod.string().optional(),
-  "currentStageId": zod.string().optional()
+  "currentStageId": zod.string().optional(),
+  "assigneeId": zod.string().nullish()
 })
 
 export const UpdateShipmentResponse = zod.object({
@@ -316,6 +319,8 @@ export const UpdateShipmentResponse = zod.object({
   "unitCostUsd": zod.number().nullish(),
   "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -449,6 +454,7 @@ export const ListShipmentStageEventsResponseItem = zod.object({
   "fromStageId": zod.string(),
   "toStageId": zod.string(),
   "note": zod.string().nullish(),
+  "actorName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListShipmentStageEventsResponse = zod.array(ListShipmentStageEventsResponseItem)
@@ -1648,6 +1654,105 @@ export const GetRfqProformaResponse = zod.object({
   "supplierName": zod.string().optional(),
   "supplierCountry": zod.string().optional(),
   "generatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List team members and pending invitations
+ */
+export const GetTeamResponse = zod.object({
+  "members": zod.array(zod.object({
+  "clerkUserId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['admin', 'member']),
+  "createdAt": zod.coerce.date()
+})),
+  "pendingInvitations": zod.array(zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "token": zod.string(),
+  "invitedBy": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "acceptedAt": zod.coerce.date().nullish()
+}))
+})
+
+
+/**
+ * @summary Get the current user's team profile
+ */
+export const GetMyProfileResponse = zod.object({
+  "user": zod.object({
+  "clerkUserId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['admin', 'member']),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary JIT-provision the authenticated user in the team (first user becomes admin)
+ */
+export const ProvisionSelfBody = zod.object({
+  "name": zod.string().optional(),
+  "email": zod.string().optional()
+})
+
+export const ProvisionSelfResponse = zod.object({
+  "user": zod.object({
+  "clerkUserId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['admin', 'member']),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Invite a colleague by email (admin only)
+ */
+export const InviteTeamMemberBody = zod.object({
+  "email": zod.string(),
+  "role": zod.enum(['admin', 'member']).optional()
+})
+
+
+/**
+ * @summary Remove a team member (admin only)
+ */
+export const RemoveTeamMemberParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+
+/**
+ * @summary Cancel a pending invitation (admin only)
+ */
+export const CancelInvitationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Accept a team invitation using a token
+ */
+export const AcceptInviteBody = zod.object({
+  "token": zod.string()
+})
+
+export const AcceptInviteResponse = zod.object({
+  "user": zod.object({
+  "clerkUserId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['admin', 'member']),
+  "createdAt": zod.coerce.date()
+})
 })
 
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation } from "wouter";
-import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, FileQuestion } from "lucide-react";
+import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion } from "lucide-react";
+import { useUser, useClerk } from "@clerk/react";
 
 interface NavSidebarProps {
   showBrand?: boolean;
@@ -24,6 +25,8 @@ export function NavSidebar({
   children,
 }: NavSidebarProps) {
   const [location, navigate] = useLocation();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   const navItems = [
     { icon: Inbox,        label: "Inbox",       to: "/inbox",       count: counts.inbox     ?? null },
@@ -55,6 +58,9 @@ export function NavSidebar({
       navigate(to);
     }
   }
+
+  const displayName = user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
+  const initials = displayName.charAt(0).toUpperCase() || "?";
 
   return (
     <div className="w-[240px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
@@ -94,6 +100,27 @@ export function NavSidebar({
       {children && (
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {children}
+        </div>
+      )}
+      {/* User profile footer */}
+      {isLoaded && user && (
+        <div className="mt-auto border-t border-[#E5EAF0] p-2 shrink-0">
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
+            <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0">
+              <span className="text-[10px] font-bold text-[#9000FF]">{initials}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold text-[#212833] truncate">{displayName}</div>
+              <div className="text-[9px] text-[#9E9FAE] truncate">{user.primaryEmailAddress?.emailAddress}</div>
+            </div>
+            <button
+              onClick={() => void signOut()}
+              title="Sign out"
+              className="p-1 text-[#9E9FAE] hover:text-[#212833] hover:bg-[#E5EAF0] rounded transition-colors shrink-0"
+            >
+              <LogOut className="w-3 h-3" />
+            </button>
+          </div>
         </div>
       )}
     </div>

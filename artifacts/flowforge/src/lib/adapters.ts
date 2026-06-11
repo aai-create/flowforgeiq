@@ -48,6 +48,8 @@ export interface UiShipment {
   quotes?: UiFactoryQuote[];
   spreadUsd: number | null;
   spreadPct: number | null;
+  assigneeId: string | null;
+  assigneeName: string | null;
 }
 
 export interface UiMessage {
@@ -106,6 +108,8 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     currentStageId: s.currentStageId,
     currentStage: labelById.get(s.currentStageId) ?? s.currentStageId,
     dueDate: shortDate(s.dueDate),
+    assigneeId: s.assigneeId ?? null,
+    assigneeName: s.assigneeName ?? null,
     payments: s.payments.length === 0
       ? [
           { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null },

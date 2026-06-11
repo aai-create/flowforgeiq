@@ -9,4 +9,6 @@
 export interface ShipmentUpdate {
   status?: string;
   currentStageId?: string;
+  /** @nullable */
+  assigneeId?: string | null;
 }

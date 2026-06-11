@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap } from "lucide-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown } from "lucide-react";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
+import { useUser, useClerk } from "@clerk/react";
+
+type SettingsTab = "general" | "channels" | "team";
 
 function BeeperSection() {
   const [open, setOpen] = useState(false);
@@ -49,12 +52,297 @@ function buildPreview(prefix: string, format: string, suffix: string, seq: numbe
   return { buyerPo, supplierPo: buyerPo + suffix };
 }
 
+interface TeamMember {
+  clerkUserId: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+}
+
+interface TeamInvitation {
+  id: number;
+  email: string;
+  role: string;
+  token: string;
+  invitedBy: string;
+  createdAt: string;
+  acceptedAt: string | null;
+}
+
+function TeamSection() {
+  const { user } = useUser();
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
+  const [myRole, setMyRole] = useState<string>("member");
+  const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviting, setInviting] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{ url: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const loadTeam = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${basePath}api/team`);
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json() as { members: TeamMember[]; pendingInvitations: TeamInvitation[] };
+      setMembers(data.members);
+      setPendingInvitations(data.pendingInvitations);
+      const me = data.members.find(m => m.clerkUserId === user?.id);
+      if (me) setMyRole(me.role);
+    } catch {
+      setError("Could not load team data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadTeam(); }, []);
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim() || !inviteEmail.includes("@")) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    setInviting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${basePath}api/team/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+      });
+      if (res.status === 403) { setError("Only admins can invite team members."); return; }
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json() as { inviteUrl: string };
+      setInviteResult({ url: data.inviteUrl });
+      setInviteEmail("");
+      void loadTeam();
+    } catch {
+      setError("Failed to send invite. Please try again.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRemove = async (clerkUserId: string) => {
+    if (!confirm("Remove this team member?")) return;
+    try {
+      await fetch(`${basePath}api/team/${clerkUserId}`, { method: "DELETE" });
+      void loadTeam();
+    } catch {
+      setError("Failed to remove member.");
+    }
+  };
+
+  const handleCancelInvitation = async (id: number) => {
+    try {
+      await fetch(`${basePath}api/team/invitations/${id}`, { method: "DELETE" });
+      void loadTeam();
+    } catch {
+      setError("Failed to cancel invitation.");
+    }
+  };
+
+  const copyInviteLink = (url: string) => {
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-[#9E9FAE] py-4">
+        <RefreshCw className="w-3 h-3 animate-spin" /> Loading team…
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-100 text-red-700 text-xs px-3 py-2 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Members list */}
+      <div className="bg-white border border-[#E5EAF0] rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-[#9000FF]" />
+          <span className="text-xs font-bold text-[#212833]">Team members</span>
+          <span className="ml-auto text-[10px] font-bold bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full">{members.length}</span>
+        </div>
+        {members.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-[#9E9FAE]">No members yet.</div>
+        ) : (
+          <ul className="divide-y divide-[#E5EAF0]">
+            {members.map(m => (
+              <li key={m.clerkUserId} className="flex items-center gap-3 px-4 py-3">
+                <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0">
+                  <span className="text-[11px] font-bold text-[#9000FF]">
+                    {m.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-[#212833] truncate">{m.name}</span>
+                    {m.clerkUserId === user?.id && (
+                      <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/15 px-1 py-0.5 rounded-full">You</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-[#9E9FAE] truncate">{m.email}</div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                    m.role === "admin"
+                      ? "bg-amber-50 text-amber-700 border-amber-100"
+                      : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"
+                  }`}>
+                    {m.role === "admin" && <Crown className="w-2.5 h-2.5" />}
+                    {m.role}
+                  </span>
+                  {myRole === "admin" && m.clerkUserId !== user?.id && (
+                    <button
+                      onClick={() => void handleRemove(m.clerkUserId)}
+                      className="p-1 text-[#9E9FAE] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Pending invitations */}
+      {pendingInvitations.length > 0 && (
+        <div className="bg-white border border-[#E5EAF0] rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
+            <UserPlus className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-xs font-bold text-[#212833]">Pending invitations</span>
+            <span className="ml-auto text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded-full">{pendingInvitations.length}</span>
+          </div>
+          <ul className="divide-y divide-[#E5EAF0]">
+            {pendingInvitations.map(inv => (
+              <li key={inv.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-[#212833] truncate">{inv.email}</div>
+                  <div className="text-[10px] text-[#9E9FAE]">
+                    Invited as <span className="font-medium">{inv.role}</span>
+                    {" · "}
+                    {new Date(inv.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => copyInviteLink(window.location.origin + inv.token)}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium border border-[#E5EAF0] rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors"
+                  >
+                    <Copy className="w-2.5 h-2.5" />
+                    Copy link
+                  </button>
+                  {myRole === "admin" && (
+                    <button
+                      onClick={() => void handleCancelInvitation(inv.id)}
+                      className="p-1 text-[#9E9FAE] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Invite form (admin only) */}
+      {myRole === "admin" && (
+        <div className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Plus className="w-3.5 h-3.5 text-[#9000FF]" />
+            <h3 className="text-xs font-bold text-[#212833]">Invite a colleague</h3>
+          </div>
+          <p className="text-[11px] text-[#5E687B] mb-4 leading-relaxed">
+            Enter their email address and share the invite link. They'll need to create an account or sign in with the same email.
+          </p>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && void handleInvite()}
+              placeholder="colleague@company.com"
+              className="flex-1 border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"
+            />
+            <select
+              value={inviteRole}
+              onChange={e => setInviteRole(e.target.value as "admin" | "member")}
+              className="border border-[#E5EAF0] rounded-md px-2.5 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] bg-white"
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button
+            onClick={() => void handleInvite()}
+            disabled={inviting}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors"
+          >
+            {inviting ? <><RefreshCw className="w-3 h-3 animate-spin" />Sending…</> : <><UserPlus className="w-3 h-3" />Generate invite link</>}
+          </button>
+
+          {inviteResult && (
+            <div className="mt-4 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Invite link created</div>
+              <p className="text-[11px] text-[#5E687B] mb-2">
+                Share this link with your colleague. It grants them access to FlowForge as a <strong>{inviteRole}</strong>.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-[10px] font-mono text-[#212833] bg-white border border-[#E5EAF0] rounded px-2 py-1.5 truncate">
+                  {inviteResult.url}
+                </code>
+                <button
+                  onClick={() => copyInviteLink(inviteResult.url)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white transition-colors shrink-0"
+                >
+                  {copied ? <><Check className="w-3 h-3 text-emerald-500" />Copied!</> : <><Copy className="w-3 h-3" />Copy</>}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {myRole !== "admin" && (
+        <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-4 text-center">
+          <p className="text-[11px] text-[#9E9FAE]">
+            Only admins can invite and remove team members. Contact your admin to make changes.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Settings() {
   const { data: config, isLoading } = useGetPoNumberingConfig();
   const updateMutation = useUpdatePoNumberingConfig();
   const { data: inboundEmailData } = useGetInboundEmailAddress();
   const inboundEmail = inboundEmailData?.inboundEmailAddress || "ai@flowforge.com";
   const [emailCopied, setEmailCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+
+  const { signOut } = useClerk();
+  const { user } = useUser();
 
   const [prefix, setPrefix] = useState("PO-");
   const [sequenceFormat, setSequenceFormat] = useState("{seq}");
@@ -89,170 +377,226 @@ export function Settings() {
     } catch {}
   };
 
+  const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+    { id: "general", label: "General", icon: <Settings2 className="w-3.5 h-3.5" /> },
+    { id: "channels", label: "Chat Channels", icon: <MessageCircle className="w-3.5 h-3.5" /> },
+    { id: "team", label: "Team", icon: <Users className="w-3.5 h-3.5" /> },
+  ];
+
   return (
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
       <NavSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="h-12 border-b border-[#E5EAF0] flex items-center px-6 shrink-0 bg-white">
+        <div className="h-12 border-b border-[#E5EAF0] flex items-center px-6 shrink-0 bg-white justify-between">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-[#9000FF]" />
             <h1 className="text-sm font-bold text-[#212833]">Settings</h1>
           </div>
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-[#9000FF]">
+                    {(user.fullName ?? user.firstName ?? "U").charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-xs text-[#5E687B]">{user.fullName ?? user.primaryEmailAddress?.emailAddress}</span>
+              </div>
+              <button
+                onClick={() => void signOut()}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] rounded-md transition-colors"
+              >
+                <LogOut className="w-3 h-3" />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-[#E5EAF0] bg-white px-6 flex gap-1 shrink-0">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors -mb-px ${
+                activeTab === tab.id
+                  ? "border-[#9000FF] text-[#9000FF]"
+                  : "border-transparent text-[#5E687B] hover:text-[#212833]"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-xl space-y-8">
 
-            <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
-              <h2 className="text-sm font-bold text-[#212833] mb-1">PO Numbering Scheme</h2>
-              <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
-                Configure how buyer-facing and supplier-facing PO numbers are generated.
-                Both sides share the same prefix and sequence; the supplier PO gets an extra suffix to distinguish
-                the two sides of each deal.
-              </p>
+            {activeTab === "general" && (
+              <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#212833] mb-1">PO Numbering Scheme</h2>
+                <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
+                  Configure how buyer-facing and supplier-facing PO numbers are generated.
+                  Both sides share the same prefix and sequence; the supplier PO gets an extra suffix to distinguish
+                  the two sides of each deal.
+                </p>
 
-              {isLoading ? (
-                <div className="flex items-center gap-2 text-xs text-[#9E9FAE]">
-                  <RefreshCw className="w-3 h-3 animate-spin" /> Loading…
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">Prefix</label>
-                      <input value={prefix} onChange={e => setPrefix(e.target.value)}
-                        placeholder="PO-"
-                        className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier suffix</label>
-                      <input value={supplierSuffix} onChange={e => setSupplierSuffix(e.target.value)}
-                        placeholder="S"
-                        className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
-                    </div>
+                {isLoading ? (
+                  <div className="flex items-center gap-2 text-xs text-[#9E9FAE]">
+                    <RefreshCw className="w-3 h-3 animate-spin" /> Loading…
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                      Sequence format
-                      <span className="text-[#9E9FAE] font-normal ml-1">
-                        — use <code className="font-mono bg-[#F0F4F8] px-1 rounded text-[11px]">{"{seq}"}</code> as the counter placeholder
-                      </span>
-                    </label>
-                    <input value={sequenceFormat} onChange={e => setSequenceFormat(e.target.value)}
-                      placeholder="{seq}"
-                      className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
-                    <p className="text-[10px] text-[#9E9FAE] mt-1">
-                      Examples: <code className="font-mono">{"{seq}"}</code> → 0001 &nbsp;·&nbsp;
-                      <code className="font-mono">2026-{"{seq}"}</code> → 2026-0001
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                      Reset counter to
-                      <span className="text-[#9E9FAE] font-normal ml-1">(optional — leave blank to keep the current counter)</span>
-                    </label>
-                    <input type="number" min="1" value={resetSeq} onChange={e => setResetSeq(e.target.value)}
-                      placeholder={String(config?.nextSeq ?? 1)}
-                      className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors" />
-                  </div>
-
-                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-                    <div className="flex items-center gap-1.5 mb-2.5">
-                      <Eye className="w-3 h-3 text-[#9000FF]" />
-                      <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Live preview — next PO pair</span>
-                    </div>
+                ) : (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Buyer PO (buyer → trader)</div>
-                        <code className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                          {preview.buyerPo}
-                        </code>
+                        <label className="block text-xs font-semibold text-[#5E687B] mb-1">Prefix</label>
+                        <input value={prefix} onChange={e => setPrefix(e.target.value)}
+                          placeholder="PO-"
+                          className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
                       </div>
                       <div>
-                        <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Supplier PO (trader → supplier)</div>
-                        <code className="text-sm font-mono font-bold text-[#9000FF] bg-[#9000FF]/8 px-2 py-0.5 rounded border border-[#9000FF]/20">
-                          {preview.supplierPo}
-                        </code>
+                        <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier suffix</label>
+                        <input value={supplierSuffix} onChange={e => setSupplierSuffix(e.target.value)}
+                          placeholder="S"
+                          className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
                       </div>
                     </div>
-                    <p className="text-[10px] text-[#9E9FAE] mt-2.5">
-                      Counter is currently at <strong className="text-[#5E687B]">{config?.nextSeq ?? "—"}</strong>.
-                      It advances by 1 each time you use "Auto-fill" in the New PO form.
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-3 pt-1">
-                    <button onClick={() => void handleSave()}
-                      disabled={updateMutation.isPending}
-                      className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
-                      {updateMutation.isPending
-                        ? <><RefreshCw className="w-3 h-3 animate-spin" />Saving…</>
-                        : saved
-                          ? <><span className="text-emerald-300">✓</span> Saved!</>
-                          : <><Save className="w-3 h-3" />Save settings</>}
+                    <div>
+                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                        Sequence format
+                        <span className="text-[#9E9FAE] font-normal ml-1">
+                          — use <code className="font-mono bg-[#F0F4F8] px-1 rounded text-[11px]">{"{seq}"}</code> as the counter placeholder
+                        </span>
+                      </label>
+                      <input value={sequenceFormat} onChange={e => setSequenceFormat(e.target.value)}
+                        placeholder="{seq}"
+                        className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
+                      <p className="text-[10px] text-[#9E9FAE] mt-1">
+                        Examples: <code className="font-mono">{"{seq}"}</code> → 0001 &nbsp;·&nbsp;
+                        <code className="font-mono">2026-{"{seq}"}</code> → 2026-0001
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                        Reset counter to
+                        <span className="text-[#9E9FAE] font-normal ml-1">(optional — leave blank to keep the current counter)</span>
+                      </label>
+                      <input type="number" min="1" value={resetSeq} onChange={e => setResetSeq(e.target.value)}
+                        placeholder={String(config?.nextSeq ?? 1)}
+                        className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors" />
+                    </div>
+
+                    <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+                      <div className="flex items-center gap-1.5 mb-2.5">
+                        <Eye className="w-3 h-3 text-[#9000FF]" />
+                        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Live preview — next PO pair</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Buyer PO (buyer → trader)</div>
+                          <code className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                            {preview.buyerPo}
+                          </code>
+                        </div>
+                        <div>
+                          <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Supplier PO (trader → supplier)</div>
+                          <code className="text-sm font-mono font-bold text-[#9000FF] bg-[#9000FF]/8 px-2 py-0.5 rounded border border-[#9000FF]/20">
+                            {preview.supplierPo}
+                          </code>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-[#9E9FAE] mt-2.5">
+                        Counter is currently at <strong className="text-[#5E687B]">{config?.nextSeq ?? "—"}</strong>.
+                        It advances by 1 each time you use "Auto-fill" in the New PO form.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-1">
+                      <button onClick={() => void handleSave()}
+                        disabled={updateMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
+                        {updateMutation.isPending
+                          ? <><RefreshCw className="w-3 h-3 animate-spin" />Saving…</>
+                          : saved
+                            ? <><span className="text-emerald-300">✓</span> Saved!</>
+                            : <><Save className="w-3 h-3" />Save settings</>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeTab === "channels" && (
+              <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#212833] mb-1">Chat Channels</h2>
+                <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
+                  Ingest WhatsApp, WeChat, iMessage, and SMS messages into FlowForge. Use the
+                  paste-to-process button (<span className="font-mono text-[11px] bg-[#F0F4F8] px-1 rounded">clipboard icon</span>) in the inbox toolbar,
+                  or forward chat exports directly to the inbound email address below.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  {[
+                    { name: "WhatsApp", icon: <MessageCircle className="w-4 h-4 text-emerald-500"/>, desc: "Paste or forward WhatsApp exports" },
+                    { name: "WeChat", icon: <MessageSquare className="w-4 h-4 text-teal-500"/>, desc: "Paste WeChat chat history" },
+                    { name: "iMessage", icon: <MessageCircle className="w-4 h-4 text-blue-400"/>, desc: "Forward or paste iMessage threads" },
+                    { name: "SMS", icon: <Smartphone className="w-4 h-4 text-slate-400"/>, desc: "Paste SMS message exports" },
+                  ].map(ch => (
+                    <div key={ch.name} className="flex items-start gap-3 p-3 border border-[#E5EAF0] rounded-lg">
+                      <div className="w-7 h-7 rounded-md bg-[#F0F4F8] flex items-center justify-center shrink-0">{ch.icon}</div>
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-xs font-semibold text-[#212833]">{ch.name}</span>
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 rounded-full">Active</span>
+                        </div>
+                        <p className="text-[10px] text-[#9E9FAE]">{ch.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <BeeperSection />
+
+                <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Mail className="w-3 h-3 text-[#9000FF]"/>
+                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Inbound email address</span>
+                  </div>
+                  <p className="text-[10px] text-[#9E9FAE] mb-2.5">
+                    Forward supplier chat exports to this address to ingest them automatically.
+                    Controlled by the <code className="font-mono bg-white border border-[#E5EAF0] px-1 rounded text-[10px] text-[#212833]">INBOUND_EMAIL_ADDRESS</code> environment variable.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">
+                      {inboundEmail}
+                    </code>
+                    <button
+                      onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setEmailCopied(true);setTimeout(()=>setEmailCopied(false),1800);});}}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
+                      {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>Copied!</> : <><Copy className="w-3 h-3"/>Copy</>}
                     </button>
                   </div>
                 </div>
-              )}
-            </section>
+              </section>
+            )}
 
-            {/* Channels section */}
-            <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
-              <h2 className="text-sm font-bold text-[#212833] mb-1">Chat Channels</h2>
-              <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
-                Ingest WhatsApp, WeChat, iMessage, and SMS messages into FlowForge. Use the
-                paste-to-process button (<span className="font-mono text-[11px] bg-[#F0F4F8] px-1 rounded">clipboard icon</span>) in the inbox toolbar,
-                or forward chat exports directly to the inbound email address below.
-              </p>
-
-              {/* Channel status grid */}
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                {[
-                  { name: "WhatsApp", icon: <MessageCircle className="w-4 h-4 text-emerald-500"/>, desc: "Paste or forward WhatsApp exports" },
-                  { name: "WeChat", icon: <MessageSquare className="w-4 h-4 text-teal-500"/>, desc: "Paste WeChat chat history" },
-                  { name: "iMessage", icon: <MessageCircle className="w-4 h-4 text-blue-400"/>, desc: "Forward or paste iMessage threads" },
-                  { name: "SMS", icon: <Smartphone className="w-4 h-4 text-slate-400"/>, desc: "Paste SMS message exports" },
-                ].map(ch => (
-                  <div key={ch.name} className="flex items-start gap-3 p-3 border border-[#E5EAF0] rounded-lg">
-                    <div className="w-7 h-7 rounded-md bg-[#F0F4F8] flex items-center justify-center shrink-0">{ch.icon}</div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-semibold text-[#212833]">{ch.name}</span>
-                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 rounded-full">Active</span>
-                      </div>
-                      <p className="text-[10px] text-[#9E9FAE]">{ch.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Beeper automation upgrade */}
-              <BeeperSection />
-
-              {/* Inbound email */}
-              <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Mail className="w-3 h-3 text-[#9000FF]"/>
-                  <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Inbound email address</span>
+            {activeTab === "team" && (
+              <div>
+                <div className="mb-4">
+                  <h2 className="text-sm font-bold text-[#212833] mb-1">Team access</h2>
+                  <p className="text-xs text-[#5E687B] leading-relaxed">
+                    Invite colleagues to collaborate on FlowForge. Admins can manage team members and settings.
+                    Members can view and act on all shipments.
+                  </p>
                 </div>
-                <p className="text-[10px] text-[#9E9FAE] mb-2.5">
-                  Forward supplier chat exports to this address to ingest them automatically.
-                  Controlled by the <code className="font-mono bg-white border border-[#E5EAF0] px-1 rounded text-[10px] text-[#212833]">INBOUND_EMAIL_ADDRESS</code> environment variable.
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">
-                    {inboundEmail}
-                  </code>
-                  <button
-                    onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setEmailCopied(true);setTimeout(()=>setEmailCopied(false),1800);});}}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
-                    {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>Copied!</> : <><Copy className="w-3 h-3"/>Copy</>}
-                  </button>
-                </div>
+                <TeamSection />
               </div>
-            </section>
+            )}
 
           </div>
         </div>

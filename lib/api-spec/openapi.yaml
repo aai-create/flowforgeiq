@@ -24,6 +24,7 @@ tags:
   - name: copilot
   - name: settings
   - name: integrations
+  - name: team
 paths:
   /healthz:
     get:
@@ -1196,8 +1197,211 @@ paths:
         "404":
           description: Not found or not yet converted
 
+  /team:
+    get:
+      operationId: getTeam
+      tags: [team]
+      summary: List team members and pending invitations
+      responses:
+        "200":
+          description: Team data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TeamResponse" }
+        "401":
+          description: Unauthorized
+
+  /team/me:
+    get:
+      operationId: getMyProfile
+      tags: [team]
+      summary: Get the current user's team profile
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/TeamMember" }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not provisioned
+
+  /team/provision-self:
+    post:
+      operationId: provisionSelf
+      tags: [team]
+      summary: JIT-provision the authenticated user in the team (first user becomes admin)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:  { type: string }
+                email: { type: string }
+      responses:
+        "200":
+          description: Already provisioned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/TeamMember" }
+        "201":
+          description: Newly provisioned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/TeamMember" }
+        "401":
+          description: Unauthorized
+
+  /team/invite:
+    post:
+      operationId: inviteTeamMember
+      tags: [team]
+      summary: Invite a colleague by email (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TeamInviteInput" }
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TeamInviteResponse" }
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin only
+
+  /team/{userId}:
+    delete:
+      operationId: removeTeamMember
+      tags: [team]
+      summary: Remove a team member (admin only)
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Removed
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin only
+
+  /team/invitations/{id}:
+    delete:
+      operationId: cancelInvitation
+      tags: [team]
+      summary: Cancel a pending invitation (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Cancelled
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin only
+
+  /team/accept-invite:
+    post:
+      operationId: acceptInvite
+      tags: [team]
+      summary: Accept a team invitation using a token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/TeamMember" }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Invitation not found
+
 components:
   schemas:
+    TeamMember:
+      type: object
+      required: [clerkUserId, email, name, role, createdAt]
+      properties:
+        clerkUserId: { type: string }
+        email:       { type: string }
+        name:        { type: string }
+        role:        { type: string, enum: [admin, member] }
+        createdAt:   { type: string, format: date-time }
+
+    TeamInvitation:
+      type: object
+      required: [id, email, role, token, invitedBy, createdAt]
+      properties:
+        id:         { type: integer }
+        email:      { type: string }
+        role:       { type: string }
+        token:      { type: string }
+        invitedBy:  { type: string }
+        createdAt:  { type: string, format: date-time }
+        acceptedAt: { type: ["string", "null"], format: date-time }
+
+    TeamResponse:
+      type: object
+      required: [members, pendingInvitations]
+      properties:
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/TeamMember" }
+        pendingInvitations:
+          type: array
+          items: { $ref: "#/components/schemas/TeamInvitation" }
+
+    TeamInviteInput:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string }
+        role:  { type: string, enum: [admin, member] }
+
+    TeamInviteResponse:
+      type: object
+      required: [invitation, inviteUrl]
+      properties:
+        invitation: { $ref: "#/components/schemas/TeamInvitation" }
+        inviteUrl:  { type: string }
+
     HealthStatus:
       type: object
       required: [status]
@@ -1416,6 +1620,8 @@ components:
         unitCostUsd:    { type: integer, nullable: true }
         spreadUsd:      { type: ["number", "null"], description: "Gross spread in USD (buyer total − supplier cost). Null if no deal is linked." }
         spreadPct:      { type: ["number", "null"], description: "Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero." }
+        assigneeId:     { type: ["string", "null"], description: "Clerk userId of the assigned team member" }
+        assigneeName:   { type: ["string", "null"], description: "Display name of the assigned team member" }
         payments:
           type: array
           items: { $ref: "#/components/schemas/Payment" }
@@ -1466,6 +1672,7 @@ components:
       properties:
         status:         { type: string }
         currentStageId: { type: string }
+        assigneeId:     { type: ["string", "null"] }
 
     StageEvent:
       type: object
@@ -1476,6 +1683,7 @@ components:
         fromStageId: { type: string }
         toStageId:   { type: string }
         note:        { type: ["string", "null"] }
+        actorName:   { type: ["string", "null"] }
         createdAt:   { type: string, format: date-time }
     StageEventInput:
       type: object

@@ -13,5 +13,7 @@ export interface StageEvent {
   toStageId: string;
   /** @nullable */
   note?: string | null;
+  /** @nullable */
+  actorName?: string | null;
   createdAt: Date;
 }

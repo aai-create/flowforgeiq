@@ -13,6 +13,7 @@ import webhooksRouter from "./webhooks";
 import settingsRouter from "./settings";
 import integrationsRouter from "./integrations";
 import rfqsRouter from "./rfqs";
+import teamRouter from "./team";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(webhooksRouter);
 router.use(settingsRouter);
 router.use(integrationsRouter);
 router.use(rfqsRouter);
+router.use(teamRouter);
 
 export default router;

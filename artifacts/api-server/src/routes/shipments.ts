@@ -9,6 +9,7 @@ import {
   dealsTable,
   poNumberingConfigTable,
   dealShipmentsTable,
+  teamUsersTable,
 } from "@workspace/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
@@ -36,10 +37,12 @@ async function loadShipment(id: number) {
       supplierName: suppliersTable.name,
       buyerPoNumber: dealsTable.buyerPoNumber,
       buyerTotalUsd: dealsTable.buyerTotalUsd,
+      assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
+    .leftJoin(teamUsersTable, eq(shipmentsTable.assigneeId, teamUsersTable.clerkUserId))
     .where(eq(shipmentsTable.id, id));
   if (!row) return null;
   const linkedDeals = await db
@@ -60,7 +63,7 @@ async function loadShipment(id: number) {
     spreadPct = buyerTotalUsd > 0 ? (spreadUsd / buyerTotalUsd) * 100 : null;
   }
 
-  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
+  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, assigneeName: row.assigneeName ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
 }
 
 router.get("/shipments", async (_req, res) => {
@@ -70,10 +73,12 @@ router.get("/shipments", async (_req, res) => {
       supplierName: suppliersTable.name,
       buyerPoNumber: dealsTable.buyerPoNumber,
       buyerTotalUsd: dealsTable.buyerTotalUsd,
+      assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
+    .leftJoin(teamUsersTable, eq(shipmentsTable.assigneeId, teamUsersTable.clerkUserId))
     .orderBy(asc(shipmentsTable.id));
   const [allPayments, allQuotes, allDealShipments] = await Promise.all([
     shipments.length
@@ -94,7 +99,7 @@ router.get("/shipments", async (_req, res) => {
     if (!buyerPoByShipment[shipmentId]) buyerPoByShipment[shipmentId] = [];
     buyerPoByShipment[shipmentId].push(buyerPoNumber);
   }
-  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd }) => {
+  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd, assigneeName }) => {
     const payments = allPayments.filter(p => p.shipmentId === shipment.id);
     let spreadUsd: number | null = null;
     let spreadPct: number | null = null;
@@ -107,6 +112,7 @@ router.get("/shipments", async (_req, res) => {
       ...shipment,
       supplierName,
       buyerPoNumber: buyerPoNumber ?? null,
+      assigneeName: assigneeName ?? null,
       buyerPoNumbers: buyerPoByShipment[shipment.id] ?? [],
       payments,
       quotes: allQuotes.filter(q => q.shipmentId === shipment.id),
@@ -318,6 +324,8 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
     return;
   }
 
+  const actorName = (req as unknown as { actorName?: string }).actorName ?? null;
+
   const [event] = await db.transaction(async (tx) => {
     await tx.update(shipmentsTable)
       .set({ currentStageId: input.toStageId, status: "on-track" })
@@ -329,6 +337,7 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
         fromStageId: input.fromStageId,
         toStageId: input.toStageId,
         note: input.note ?? null,
+        actorName,
       })
       .returning();
   });

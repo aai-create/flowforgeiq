@@ -46,6 +46,16 @@ export interface Shipment {
      * @nullable
      */
   spreadPct?: number | null;
+  /**
+     * Clerk userId of the assigned team member
+     * @nullable
+     */
+  assigneeId?: string | null;
+  /**
+     * Display name of the assigned team member
+     * @nullable
+     */
+  assigneeName?: string | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }
