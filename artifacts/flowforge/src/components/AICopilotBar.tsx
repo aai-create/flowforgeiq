@@ -310,7 +310,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
               </div>
 
               {!loading && !error && hasConversation && (
-                <div className="px-4 py-2 border-t border-[#F0F4F8] flex flex-wrap gap-2">
+                <div className="px-4 py-2 border-t border-[#F0F4F8] flex flex-wrap items-center gap-2">
                   {ACTION_CHIPS.map(chip => (
                     <button
                       key={chip}
@@ -323,6 +323,14 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                       {chip}
                     </button>
                   ))}
+                  {conversationHistory.length >= 4 && (
+                    <button
+                      onClick={clear}
+                      className="ml-auto text-[10px] text-[#9E9FAE] hover:text-[#5E687B] transition-colors font-medium"
+                    >
+                      New conversation
+                    </button>
+                  )}
                 </div>
               )}
             </div>
