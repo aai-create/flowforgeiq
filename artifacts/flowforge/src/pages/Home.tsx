@@ -1556,6 +1556,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
 export default function Home() {
   const search = useSearch();
   const [, navigate] = useLocation();
+  const fromRiskRadar = new URLSearchParams(search).get("from") === "risk-radar";
   useCopilotHint("Draft a reply or ask about shipment status", [
     "Draft a reply to this supplier",
     "Any overdue payments on this PO?",
@@ -2379,6 +2380,15 @@ export default function Home() {
                   : activeView==="buyers"    ? "Buyer Chatbot"
                   : "Doc Intelligence"}
             </span>
+            {fromRiskRadar && (
+              <button
+                onClick={() => navigate("/risk-radar")}
+                className="flex items-center gap-1 text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] bg-[#F5EEFF] hover:bg-[#EDD9FF] border border-[#DDB8FF] rounded-md px-2 py-0.5 transition-colors shrink-0"
+              >
+                <ChevronLeft size={11} />
+                Risk Radar
+              </button>
+            )}
           </div>
 
           <div className="flex-1 max-w-md mx-5 relative">

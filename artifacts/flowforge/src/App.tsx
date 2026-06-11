@@ -148,7 +148,7 @@ function AppLayout() {
 
 function RiskRadarPage() {
   const [, navigate] = useLocation();
-  return <RiskRadar onNavigateToShipment={id => navigate(`/inbox?shipment=${id}`)} />;
+  return <RiskRadar onNavigateToShipment={id => navigate(`/inbox?shipment=${id}&from=risk-radar`)} />;
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
