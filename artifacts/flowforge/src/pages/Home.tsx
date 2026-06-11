@@ -1608,6 +1608,14 @@ export default function Home() {
   const [showHistory, setShowHistory]     = useState(false);
   const [searchMode, setSearchMode]       = useState(false);
   const [searchQuery, setSearchQuery]     = useState("");
+  const [copiedPo, setCopiedPo]           = useState<string | null>(null);
+
+  const copyPo = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedPo(text);
+    setTimeout(() => setCopiedPo(null), 1500);
+  };
   const [chatTranscriptExpanded, setChatTranscriptExpanded] = useState(false);
 
   // Supplier email editing
@@ -2670,22 +2678,48 @@ export default function Home() {
                   <div className="flex items-start justify-between mb-2.5">
                     <div>
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier</span>
-                        <span className="font-bold text-xs text-[#212833]">{activeShipment.po}</span>
+                        <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                        <button
+                          type="button"
+                          onClick={e => copyPo(activeShipment.po, e)}
+                          title="Copy supplier PO"
+                          className="group/spo flex items-center gap-1 font-mono font-bold text-xs text-[#212833] hover:text-[#5E687B] transition-colors">
+                          {activeShipment.po}
+                          {copiedPo === activeShipment.po
+                            ? <Check size={9} className="text-emerald-500 shrink-0" />
+                            : <Copy size={9} className="opacity-0 group-hover/spo:opacity-50 shrink-0 transition-opacity" />}
+                        </button>
+                        <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer PO</span>
                         {activeShipment.buyerPoNumbers && activeShipment.buyerPoNumbers.length > 0 ? (
                           <>
-                            <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer</span>
-                            <span className="font-bold text-xs text-emerald-700 font-mono">{activeShipment.buyerPoNumbers[0]}</span>
-                            {activeShipment.buyerPoNumbers.length > 1 && (
-                              <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded" title={activeShipment.buyerPoNumbers.join(", ")}>+{activeShipment.buyerPoNumbers.length - 1}</span>
-                            )}
+                            {activeShipment.buyerPoNumbers.map(bpo => (
+                              <button
+                                key={bpo}
+                                type="button"
+                                onClick={e => copyPo(bpo, e)}
+                                title="Copy buyer PO"
+                                className="group/bpo flex items-center gap-1 font-mono font-bold text-xs text-emerald-700 hover:text-emerald-600 transition-colors">
+                                {bpo}
+                                {copiedPo === bpo
+                                  ? <Check size={9} className="text-emerald-500 shrink-0" />
+                                  : <Copy size={9} className="opacity-0 group-hover/bpo:opacity-50 shrink-0 transition-opacity" />}
+                              </button>
+                            ))}
                           </>
                         ) : activeShipment.buyerPoNumber ? (
-                          <>
-                            <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer</span>
-                            <span className="font-bold text-xs text-emerald-700 font-mono">{activeShipment.buyerPoNumber}</span>
-                          </>
-                        ) : null}
+                          <button
+                            type="button"
+                            onClick={e => copyPo(activeShipment.buyerPoNumber!, e)}
+                            title="Copy buyer PO"
+                            className="group/bpo flex items-center gap-1 font-mono font-bold text-xs text-emerald-700 hover:text-emerald-600 transition-colors">
+                            {activeShipment.buyerPoNumber}
+                            {copiedPo === activeShipment.buyerPoNumber
+                              ? <Check size={9} className="text-emerald-500 shrink-0" />
+                              : <Copy size={9} className="opacity-0 group-hover/bpo:opacity-50 shrink-0 transition-opacity" />}
+                          </button>
+                        ) : (
+                          <span className="font-mono text-xs text-[#C0C8D4]">—</span>
+                        )}
                         <span className="text-[9px] bg-[#E5EAF0] text-[#5E687B] px-1.5 rounded font-medium">{activeShipment.customer}</span>
                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${statusCls(activeShipment.status)}`}>{activeShipment.status==="on-track"?<Check size={8}/>:<AlertCircle size={8}/>}{activeShipment.status}</span>
                       </div>

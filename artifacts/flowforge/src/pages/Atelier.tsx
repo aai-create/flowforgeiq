@@ -16,7 +16,7 @@ import {
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
   MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft, Upload,
-  HelpCircle, Link2,
+  HelpCircle, Link2, Copy, Check as CheckIcon,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -242,6 +242,15 @@ export function Atelier() {
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
+  const [poSearch, setPoSearch] = useState("");
+  const [copiedPo, setCopiedPo] = useState<string | null>(null);
+
+  const copyPo = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedPo(text);
+    setTimeout(() => setCopiedPo(null), 1500);
+  };
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
@@ -457,6 +466,13 @@ export function Atelier() {
   const visibleShipments = shipments.filter(s => {
     if (customerFilter && s.customer !== customerFilter) return false;
     if (statusFilter !== "all" && s.status !== statusFilter) return false;
+    if (poSearch.trim()) {
+      const q = poSearch.toLowerCase().trim();
+      const matchesSupplier = s.po.toLowerCase().includes(q);
+      const matchesBuyer = (s.buyerPoNumbers ?? []).some(bpo => bpo.toLowerCase().includes(q))
+        || (s.buyerPoNumber ?? "").toLowerCase().includes(q);
+      if (!matchesSupplier && !matchesBuyer) return false;
+    }
     return true;
   });
 
@@ -552,14 +568,30 @@ export function Atelier() {
 
         {/* CENTER PANE — Shipment Command Horizon */}
         <div className="flex-1 bg-white flex flex-col min-w-0">
-          <div className="h-12 border-b border-[#E5EAF0] flex items-center justify-between px-5 shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="h-12 border-b border-[#E5EAF0] flex items-center gap-3 px-5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <h1 className="text-sm font-bold text-[#212833]">My Orders</h1>
               <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
                 {visibleShipments.length} of {shipments.length} POs
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            {/* PO Search */}
+            <div className="flex-1 max-w-[220px] relative">
+              <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9E9FAE] pointer-events-none" />
+              <input
+                type="text"
+                value={poSearch}
+                onChange={e => setPoSearch(e.target.value)}
+                placeholder="Supplier or buyer PO…"
+                className="w-full pl-7 pr-2 py-1.5 text-[11px] bg-[#F0F4F8] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4] transition-all"
+              />
+              {poSearch && (
+                <button onClick={() => setPoSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE] hover:text-[#5E687B]">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 ml-auto shrink-0">
               {/* Status filter chips */}
               {(["all", "on-track", "at-risk", "delayed"] as const).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
@@ -599,30 +631,56 @@ export function Atelier() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier</span>
-                            <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0]"}`}>
+                            <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                            <button
+                              type="button"
+                              onClick={e => copyPo(shipment.po, e)}
+                              title="Copy supplier PO"
+                              className={`group/po flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20 hover:bg-[#9000FF]/15" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"}`}>
                               {shipment.po}
-                            </span>
+                              {copiedPo === shipment.po
+                                ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
+                                : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
+                            </button>
+                            <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer PO</span>
                             {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
                               <>
-                                <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer</span>
-                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                  {shipment.buyerPoNumbers[0]}
-                                </span>
-                                {shipment.buyerPoNumbers.length > 1 && (
-                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none" title={shipment.buyerPoNumbers.join(", ")}>
-                                    +{shipment.buyerPoNumbers.length - 1}
-                                  </span>
-                                )}
+                                {shipment.buyerPoNumbers.map((bpo) => (
+                                  <button
+                                    key={bpo}
+                                    type="button"
+                                    onClick={e => copyPo(bpo, e)}
+                                    title="Copy buyer PO"
+                                    className="group/bpo flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
+                                    {bpo}
+                                    {copiedPo === bpo
+                                      ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
+                                      : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/bpo:opacity-60 shrink-0 transition-opacity" />}
+                                  </button>
+                                ))}
                               </>
                             ) : shipment.buyerPoNumber ? (
+                              <button
+                                type="button"
+                                onClick={e => copyPo(shipment.buyerPoNumber!, e)}
+                                title="Copy buyer PO"
+                                className="group/bpo flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
+                                {shipment.buyerPoNumber}
+                                {copiedPo === shipment.buyerPoNumber
+                                  ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
+                                  : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/bpo:opacity-60 shrink-0 transition-opacity" />}
+                              </button>
+                            ) : (
                               <>
-                                <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer</span>
-                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                  {shipment.buyerPoNumber}
-                                </span>
+                                <span className="font-mono text-[10px] text-[#C0C8D4] px-1.5 py-0.5 rounded border border-dashed border-[#E5EAF0]">—</span>
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); setActiveShipmentId(shipment.id); setLinkPanelShipmentId(shipment.shipmentId); }}
+                                  className="text-[9px] font-semibold text-[#9000FF] hover:underline flex items-center gap-0.5 transition-colors">
+                                  <Link2 className="w-2.5 h-2.5" />Link deal
+                                </button>
                               </>
-                            ) : null}
+                            )}
                             <span className="text-[10px] bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] px-1.5 py-0.5 rounded font-medium">
                               {shipment.customer}
                             </span>
