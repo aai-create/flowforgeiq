@@ -176,6 +176,16 @@ export interface Shipment {
   notes?: string | null;
   quantity?: number | null;
   unitCostUsd?: number | null;
+  /**
+     * Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.
+     * @nullable
+     */
+  spreadUsd?: number | null;
+  /**
+     * Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.
+     * @nullable
+     */
+  spreadPct?: number | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }
@@ -204,6 +214,10 @@ export interface ShipmentCreate {
   notes?: string;
   quantity?: number;
   unitCostUsd?: number;
+  /** Buyer-facing unit price (USD). Used to set/update the linked deal's pricing. */
+  buyerUnitPrice?: number;
+  /** Total buyer quantity. Together with buyerUnitPrice, determines buyerTotalUsd on the linked deal. */
+  buyerQuantity?: number;
   payments?: PaymentMilestoneInput[];
 }
 

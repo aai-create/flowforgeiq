@@ -25,5 +25,9 @@ export interface ShipmentCreate {
   notes?: string;
   quantity?: number;
   unitCostUsd?: number;
+  /** Buyer-facing unit price (USD). Used to set/update the linked deal's pricing. */
+  buyerUnitPrice?: number;
+  /** Total buyer quantity. Together with buyerUnitPrice, determines buyerTotalUsd on the linked deal. */
+  buyerQuantity?: number;
   payments?: PaymentMilestoneInput[];
 }

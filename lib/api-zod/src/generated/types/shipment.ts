@@ -36,6 +36,16 @@ export interface Shipment {
   notes?: string | null;
   quantity?: number | null;
   unitCostUsd?: number | null;
+  /**
+     * Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.
+     * @nullable
+     */
+  spreadUsd?: number | null;
+  /**
+     * Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.
+     * @nullable
+     */
+  spreadPct?: number | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }

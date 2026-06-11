@@ -224,6 +224,8 @@ export const ListShipmentsResponseItem = zod.object({
   "notes": zod.string().nullish(),
   "quantity": zod.number().nullish(),
   "unitCostUsd": zod.number().nullish(),
+  "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -273,6 +275,8 @@ export const CreateShipmentBody = zod.object({
   "notes": zod.string().optional(),
   "quantity": zod.number().optional(),
   "unitCostUsd": zod.number().optional(),
+  "buyerUnitPrice": zod.number().optional().describe('Buyer-facing unit price (USD). Used to set\/update the linked deal\'s pricing.'),
+  "buyerQuantity": zod.number().optional().describe('Total buyer quantity. Together with buyerUnitPrice, determines buyerTotalUsd on the linked deal.'),
   "payments": zod.array(zod.object({
   "label": zod.string(),
   "percent": zod.number(),
@@ -310,6 +314,8 @@ export const UpdateShipmentResponse = zod.object({
   "notes": zod.string().nullish(),
   "quantity": zod.number().nullish(),
   "unitCostUsd": zod.number().nullish(),
+  "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),

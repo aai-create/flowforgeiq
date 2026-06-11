@@ -35,6 +35,7 @@ async function loadShipment(id: number) {
       shipment: shipmentsTable,
       supplierName: suppliersTable.name,
       buyerPoNumber: dealsTable.buyerPoNumber,
+      buyerTotalUsd: dealsTable.buyerTotalUsd,
     })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
@@ -49,7 +50,17 @@ async function loadShipment(id: number) {
   const buyerPoNumbers = linkedDeals.map(d => d.buyerPoNumber);
   const payments = await db.select().from(paymentsTable).where(eq(paymentsTable.shipmentId, id)).orderBy(asc(paymentsTable.sortOrder));
   const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, id)).orderBy(asc(factoryQuotesTable.sortOrder));
-  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerPoNumbers, payments, quotes };
+
+  const buyerTotalUsd = row.buyerTotalUsd ?? null;
+  let spreadUsd: number | null = null;
+  let spreadPct: number | null = null;
+  if (buyerTotalUsd !== null) {
+    const supplierCostUsd = payments.reduce((sum, p) => sum + p.amountUsd, 0);
+    spreadUsd = buyerTotalUsd - supplierCostUsd;
+    spreadPct = buyerTotalUsd > 0 ? (spreadUsd / buyerTotalUsd) * 100 : null;
+  }
+
+  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
 }
 
 router.get("/shipments", async (_req, res) => {
@@ -58,6 +69,7 @@ router.get("/shipments", async (_req, res) => {
       shipment: shipmentsTable,
       supplierName: suppliersTable.name,
       buyerPoNumber: dealsTable.buyerPoNumber,
+      buyerTotalUsd: dealsTable.buyerTotalUsd,
     })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
@@ -82,28 +94,56 @@ router.get("/shipments", async (_req, res) => {
     if (!buyerPoByShipment[shipmentId]) buyerPoByShipment[shipmentId] = [];
     buyerPoByShipment[shipmentId].push(buyerPoNumber);
   }
-  const out = shipments.map(({ shipment, supplierName, buyerPoNumber }) =>
-    ListShipmentsResponseItem.parse({
+  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd }) => {
+    const payments = allPayments.filter(p => p.shipmentId === shipment.id);
+    let spreadUsd: number | null = null;
+    let spreadPct: number | null = null;
+    if (buyerTotalUsd !== null && buyerTotalUsd !== undefined) {
+      const supplierCostUsd = payments.reduce((sum, p) => sum + p.amountUsd, 0);
+      spreadUsd = buyerTotalUsd - supplierCostUsd;
+      spreadPct = buyerTotalUsd > 0 ? (spreadUsd / buyerTotalUsd) * 100 : null;
+    }
+    return ListShipmentsResponseItem.parse({
       ...shipment,
       supplierName,
       buyerPoNumber: buyerPoNumber ?? null,
       buyerPoNumbers: buyerPoByShipment[shipment.id] ?? [],
-      payments: allPayments.filter(p => p.shipmentId === shipment.id),
+      payments,
       quotes: allQuotes.filter(q => q.shipmentId === shipment.id),
-    }),
-  );
+      spreadUsd,
+      spreadPct,
+    });
+  });
   res.json(out);
 });
 
-async function getOrCreateDeal(buyerPoNumber: string, customerName: string): Promise<number> {
+async function getOrCreateDeal(
+  buyerPoNumber: string,
+  customerName: string,
+  buyerUnitPrice?: number,
+  buyerQuantity?: number,
+): Promise<number> {
   const [existing] = await db.select({ id: dealsTable.id }).from(dealsTable).where(eq(dealsTable.buyerPoNumber, buyerPoNumber));
-  if (existing) return existing.id;
+  if (existing) {
+    const update: Record<string, unknown> = {};
+    if (buyerUnitPrice !== undefined) update.buyerUnitPrice = buyerUnitPrice;
+    if (buyerQuantity !== undefined) update.buyerQuantity = buyerQuantity;
+    if (buyerUnitPrice !== undefined && buyerQuantity !== undefined) {
+      update.buyerTotalUsd = buyerUnitPrice * buyerQuantity;
+    }
+    if (Object.keys(update).length) {
+      await db.update(dealsTable).set(update).where(eq(dealsTable.id, existing.id));
+    }
+    return existing.id;
+  }
+  const resolvedUnitPrice = buyerUnitPrice ?? 0;
+  const resolvedQuantity = buyerQuantity ?? 0;
   const [created] = await db.insert(dealsTable).values({
     buyerPoNumber,
     customerName,
-    buyerTotalUsd: 0,
-    buyerUnitPrice: 0,
-    buyerQuantity: 0,
+    buyerTotalUsd: resolvedUnitPrice * resolvedQuantity,
+    buyerUnitPrice: resolvedUnitPrice,
+    buyerQuantity: resolvedQuantity,
     currency: "USD",
   }).returning({ id: dealsTable.id });
   return created!.id;
@@ -148,7 +188,9 @@ router.post("/shipments", async (req, res) => {
 
   if (buyerPoNumber && buyerPoNumber.trim()) {
     try {
-      const dealId = await getOrCreateDeal(buyerPoNumber.trim(), shipmentFields.customerName);
+      const bup = (parsed as typeof parsed & { buyerUnitPrice?: number }).buyerUnitPrice;
+      const bqty = (parsed as typeof parsed & { buyerQuantity?: number }).buyerQuantity;
+      const dealId = await getOrCreateDeal(buyerPoNumber.trim(), shipmentFields.customerName, bup, bqty);
       await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, row.id));
       row = { ...row, dealId };
       await db.insert(dealShipmentsTable).values({ dealId, shipmentId: row.id }).catch(() => {});

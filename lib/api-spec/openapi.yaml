@@ -1414,6 +1414,8 @@ components:
         notes:          { type: ["string", "null"] }
         quantity:       { type: integer, nullable: true }
         unitCostUsd:    { type: integer, nullable: true }
+        spreadUsd:      { type: ["number", "null"], description: "Gross spread in USD (buyer total − supplier cost). Null if no deal is linked." }
+        spreadPct:      { type: ["number", "null"], description: "Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero." }
         payments:
           type: array
           items: { $ref: "#/components/schemas/Payment" }
@@ -1447,6 +1449,8 @@ components:
         notes:          { type: string }
         quantity:       { type: integer }
         unitCostUsd:    { type: integer }
+        buyerUnitPrice: { type: number, description: "Buyer-facing unit price (USD). Used to set/update the linked deal's pricing." }
+        buyerQuantity:  { type: integer, description: "Total buyer quantity. Together with buyerUnitPrice, determines buyerTotalUsd on the linked deal." }
         payments:
           type: array
           items: { $ref: "#/components/schemas/PaymentMilestoneInput" }

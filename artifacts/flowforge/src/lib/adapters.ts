@@ -46,6 +46,8 @@ export interface UiShipment {
   dueDate: string;
   payments: UiPayment[];
   quotes?: UiFactoryQuote[];
+  spreadUsd: number | null;
+  spreadPct: number | null;
 }
 
 export interface UiMessage {
@@ -113,6 +115,8 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
       factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id, validityDate: q.validityDate, notes: q.notes,
     })),
+    spreadUsd: s.spreadUsd ?? null,
+    spreadPct: s.spreadPct ?? null,
   }));
 }
 

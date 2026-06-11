@@ -2811,6 +2811,44 @@ export default function Home() {
                       );
                     })}
                   </div>
+                  {/* Your Spread row */}
+                  {activeShipment.spreadPct !== null && activeShipment.spreadPct !== undefined ? (() => {
+                    const pct = activeShipment.spreadPct!;
+                    const usd = activeShipment.spreadUsd;
+                    const supplierCostUsd = activeShipment.payments.reduce((sum, p) => sum + p.amountUsd, 0);
+                    const buyerTotalUsd = usd !== null && usd !== undefined ? usd + supplierCostUsd : null;
+                    const barCls = pct >= 25 ? "bg-emerald-500" : pct >= 10 ? "bg-amber-400" : "bg-red-500";
+                    const textCls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                    const bgCls = pct >= 25 ? "bg-emerald-50 border-emerald-100" : pct >= 10 ? "bg-amber-50 border-amber-100" : "bg-red-50 border-red-100";
+                    const label = pct >= 25 ? "Healthy" : pct >= 10 ? "Thin" : "Loss";
+                    return (
+                      <div className={`mt-2.5 pt-2.5 border-t border-[#E5EAF0]`}>
+                        <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <DollarSign size={8} className="text-[#9000FF]"/>Your Spread
+                        </div>
+                        <div className={`rounded-lg border px-3 py-2 ${bgCls}`}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-sm font-bold ${textCls}`}>{pct.toFixed(1)}%</span>
+                              {usd !== null && usd !== undefined && (
+                                <span className={`text-[10px] font-semibold ${textCls}`}>· ${Math.round(usd).toLocaleString()}</span>
+                              )}
+                              <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${textCls} opacity-80`}>{label}</span>
+                            </div>
+                          </div>
+                          <div className="h-1 w-full bg-white/60 rounded-full overflow-hidden mb-1.5">
+                            <div className={`h-full rounded-full transition-all ${barCls}`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}/>
+                          </div>
+                          {buyerTotalUsd !== null && (
+                            <div className="flex items-center justify-between text-[9px] text-[#5E687B]">
+                              <span>Supplier: ${supplierCostUsd.toLocaleString()}</span>
+                              <span>Buyer: ${Math.round(buyerTotalUsd).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })() : null}
                   {/* Supplier contact email */}
                   {activeSupplier ? (
                     <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">

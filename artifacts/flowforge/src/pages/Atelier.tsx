@@ -304,6 +304,7 @@ export function Atelier() {
     supplierId: "", dueDate: "", exFactoryDate: "",
     destination: "", via: "OCEAN", notes: "",
     quantity: "", unitCostUsd: "",
+    buyerUnitPrice: "", buyerQuantity: "",
   });
   type Milestone = { label: string; percent: string; dueDate: string };
   const defaultMilestones: Milestone[] = [
@@ -333,7 +334,7 @@ export function Atelier() {
     setSupplierOpen(false);
     setMilestones(defaultMilestones);
     setBuyerPoMode("auto");
-    setNewPOForm({ poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "" });
+    setNewPOForm({ poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", notes: "", quantity: "", unitCostUsd: "", buyerUnitPrice: "", buyerQuantity: "" });
   };
 
   const submitNewPO = async () => {
@@ -373,6 +374,8 @@ export function Atelier() {
           currentStageId: stages[0]?.id ?? "stage-1",
           quantity: qty,
           unitCostUsd: unitCost,
+          buyerUnitPrice: newPOForm.buyerUnitPrice ? Number(newPOForm.buyerUnitPrice) : undefined,
+          buyerQuantity: newPOForm.buyerQuantity ? Number(newPOForm.buyerQuantity) : undefined,
           payments: milestones.map(m => ({
             label: m.label,
             percent: Number(m.percent),
@@ -650,6 +653,24 @@ export function Atelier() {
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusCls(shipment.status)}`}>
                           {shipment.status === "at-risk" ? "At Risk" : shipment.status === "delayed" ? "Delayed" : "On Track"}
                         </span>
+                        {shipment.spreadPct !== null ? (() => {
+                          const pct = shipment.spreadPct!;
+                          const cls = pct >= 25
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : pct >= 10
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-red-50 text-red-700 border-red-200";
+                          return (
+                            <span className={`flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`} title="Your spread (buyer price − supplier cost)">
+                              <DollarSign className="w-2.5 h-2.5" />
+                              {pct.toFixed(1)}%{shipment.spreadUsd !== null ? ` · $${Math.round(shipment.spreadUsd!).toLocaleString()}` : ""}
+                            </span>
+                          );
+                        })() : (
+                          <span className="flex items-center gap-0.5 text-[9px] text-[#C0C8D4] px-1.5 py-0.5 rounded border border-[#E5EAF0]" title="No deal linked — add a buyer PO to see spread">
+                            <DollarSign className="w-2.5 h-2.5" />—
+                          </span>
+                        )}
                         {riskByShipmentId.has(shipment.shipmentId) && (() => {
                           const score = riskByShipmentId.get(shipment.shipmentId)!;
                           return (
@@ -1556,10 +1577,47 @@ export function Atelier() {
           </div>
           {newPOForm.quantity && newPOForm.unitCostUsd && (
             <div className="flex items-center gap-1.5 text-xs text-[#5E687B] bg-[#F7F9FA] rounded-md px-3 py-2">
-              <span className="font-medium">Total order value:</span>
+              <span className="font-medium">Supplier total:</span>
               <span className="text-[#212833] font-semibold">${(Number(newPOForm.quantity) * Number(newPOForm.unitCostUsd)).toLocaleString()}</span>
             </div>
           )}
+
+          {/* Buyer Price (for spread tracking) */}
+          <div>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+              Buyer Price <span className="text-[#9E9FAE] font-normal">(optional — sets your spread for this PO)</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] text-[#5E687B] mb-1">Buyer Unit Price (USD)</label>
+                <input type="number" min="0" step="0.01" value={newPOForm.buyerUnitPrice}
+                  onChange={e => setNewPOForm(p => ({ ...p, buyerUnitPrice: e.target.value }))}
+                  placeholder="e.g. 6.50"
+                  className="w-full border border-[#E5EAF0] rounded-md px-2 py-1.5 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors"/>
+              </div>
+              <div>
+                <label className="block text-[10px] text-[#5E687B] mb-1">Buyer Quantity</label>
+                <input type="number" min="1" value={newPOForm.buyerQuantity}
+                  onChange={e => setNewPOForm(p => ({ ...p, buyerQuantity: e.target.value }))}
+                  placeholder="e.g. 5000"
+                  className="w-full border border-[#E5EAF0] rounded-md px-2 py-1.5 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors"/>
+              </div>
+            </div>
+            {newPOForm.buyerUnitPrice && newPOForm.buyerQuantity && newPOForm.quantity && newPOForm.unitCostUsd && (() => {
+              const buyerTotal = Number(newPOForm.buyerUnitPrice) * Number(newPOForm.buyerQuantity);
+              const supplierTotal = Number(newPOForm.quantity) * Number(newPOForm.unitCostUsd);
+              const spreadUsd = buyerTotal - supplierTotal;
+              const spreadPct = buyerTotal > 0 ? (spreadUsd / buyerTotal) * 100 : 0;
+              const spreadCls = spreadPct >= 25 ? "text-emerald-700" : spreadPct >= 10 ? "text-amber-700" : "text-red-700";
+              return (
+                <div className={`mt-1.5 flex items-center gap-1.5 text-xs bg-[#F7F9FA] rounded-md px-3 py-2 ${spreadCls}`}>
+                  <DollarSign className="w-3 h-3 shrink-0"/>
+                  <span className="font-semibold">Your spread: {spreadPct.toFixed(1)}% · ${Math.round(spreadUsd).toLocaleString()}</span>
+                  <span className="text-[#9E9FAE] font-normal ml-1">(buyer ${buyerTotal.toLocaleString()} − supplier ${supplierTotal.toLocaleString()})</span>
+                </div>
+              );
+            })()}
+          </div>
 
           {/* Payment Milestones */}
           <div>
