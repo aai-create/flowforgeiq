@@ -55,6 +55,8 @@ export interface UiShipment {
   unitCostUsd: number | null;
   payments: UiPayment[];
   quotes?: UiFactoryQuote[];
+  buyerUnitPrice: number | null;
+  buyerQuantity: number | null;
   spreadUsd: number | null;
   spreadPct: number | null;
   assigneeId: string | null;
@@ -137,6 +139,8 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
       factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id, validityDate: q.validityDate, notes: q.notes,
     })),
+    buyerUnitPrice: s.buyerUnitPrice ?? null,
+    buyerQuantity: s.buyerQuantity ?? null,
     spreadUsd: s.spreadUsd ?? null,
     spreadPct: s.spreadPct ?? null,
   }));

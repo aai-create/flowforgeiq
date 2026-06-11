@@ -57,6 +57,7 @@ import type {
   MessageInput,
   MessageUpdate,
   NextPoNumbers,
+  PatchShipmentDealBody,
   Payment,
   PaymentUpdate,
   PoNumberingConfig,
@@ -1212,6 +1213,78 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateFactoryQuoteMutationOptions(options));
+    }
+
+export const getPatchShipmentDealUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deal`
+}
+
+/**
+ * @summary Set or update buyer unit price and quantity on the linked deal
+ */
+export const patchShipmentDeal = async (id: number,
+    patchShipmentDealBody: PatchShipmentDealBody, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getPatchShipmentDealUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchShipmentDealBody,)
+  }
+);}
+
+
+
+
+export const getPatchShipmentDealMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchShipmentDeal>>, TError,{id: number;data: BodyType<PatchShipmentDealBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchShipmentDeal>>, TError,{id: number;data: BodyType<PatchShipmentDealBody>}, TContext> => {
+
+const mutationKey = ['patchShipmentDeal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchShipmentDeal>>, {id: number;data: BodyType<PatchShipmentDealBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchShipmentDeal(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchShipmentDealMutationResult = NonNullable<Awaited<ReturnType<typeof patchShipmentDeal>>>
+    export type PatchShipmentDealMutationBody = BodyType<PatchShipmentDealBody>
+    export type PatchShipmentDealMutationError = ErrorType<void>
+
+    /**
+ * @summary Set or update buyer unit price and quantity on the linked deal
+ */
+export const usePatchShipmentDeal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchShipmentDeal>>, TError,{id: number;data: BodyType<PatchShipmentDealBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchShipmentDeal>>,
+        TError,
+        {id: number;data: BodyType<PatchShipmentDealBody>},
+        TContext
+      > => {
+      return useMutation(getPatchShipmentDealMutationOptions(options));
     }
 
 export const getLinkDealToShipmentUrl = (id: number,) => {

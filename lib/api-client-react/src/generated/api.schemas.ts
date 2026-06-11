@@ -158,6 +158,13 @@ export interface QuoteSelection {
   quoteId: number;
 }
 
+export interface PatchShipmentDealBody {
+  /** Buyer-facing unit price (USD) */
+  buyerUnitPrice?: number;
+  /** Total buyer quantity */
+  buyerQuantity?: number;
+}
+
 export interface DealInput {
   buyerPoNumber: string;
   customerName: string;
@@ -226,6 +233,16 @@ export interface Shipment {
   notes?: string | null;
   quantity?: number | null;
   unitCostUsd?: number | null;
+  /**
+     * Buyer-facing unit price from the linked deal. Null if no deal is linked.
+     * @nullable
+     */
+  buyerUnitPrice?: number | null;
+  /**
+     * Buyer quantity from the linked deal. Null if no deal is linked.
+     * @nullable
+     */
+  buyerQuantity?: number | null;
   /**
      * Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.
      * @nullable

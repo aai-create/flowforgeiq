@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -329,6 +329,16 @@ export function Atelier() {
     mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: shipmentsQueryKey }); } },
   });
   const [linkPanelShipmentId, setLinkPanelShipmentId] = useState<number | null>(null);
+  const [buyerPriceFormId, setBuyerPriceFormId] = useState<string | null>(null);
+  const [buyerPriceDraft, setBuyerPriceDraft] = useState({ unitPrice: "", quantity: "" });
+  const { mutate: patchDealForShipment, isPending: patchDealPending } = usePatchShipmentDeal({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: shipmentsQueryKey });
+        setBuyerPriceFormId(null);
+      },
+    },
+  });
   const [newPOForm, setNewPOForm] = useState({
     poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
@@ -995,6 +1005,88 @@ export function Atelier() {
                               <p className="text-[9px] text-[#C0C8D4] italic px-3 py-2">All available deals are already linked</p>
                             )}
                           </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Buyer Price — edit buyer unit price & quantity for spread tracking */}
+                    {isActive && (
+                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
+                            <DollarSign className="w-2.5 h-2.5"/>Buyer Price
+                          </span>
+                          <button type="button"
+                            onClick={() => {
+                              if (buyerPriceFormId === shipment.id) {
+                                setBuyerPriceFormId(null);
+                              } else {
+                                setBuyerPriceFormId(shipment.id);
+                                setBuyerPriceDraft({
+                                  unitPrice: shipment.buyerUnitPrice != null ? String(shipment.buyerUnitPrice) : "",
+                                  quantity: shipment.buyerQuantity != null ? String(shipment.buyerQuantity) : "",
+                                });
+                              }
+                            }}
+                            className="text-[9px] font-semibold text-[#9000FF] hover:underline">
+                            {buyerPriceFormId === shipment.id ? "Cancel" : shipment.spreadPct !== null ? "Edit" : "Add"}
+                          </button>
+                        </div>
+                        {shipment.spreadPct !== null && buyerPriceFormId !== shipment.id && (
+                          <div className="text-[10px] text-[#5E687B]">
+                            ${shipment.buyerUnitPrice?.toFixed(2) ?? "—"} × {shipment.buyerQuantity?.toLocaleString() ?? "—"} &nbsp;·&nbsp;
+                            <span className={`font-semibold ${shipment.spreadPct >= 25 ? "text-emerald-700" : shipment.spreadPct >= 10 ? "text-amber-700" : "text-red-700"}`}>
+                              {shipment.spreadPct.toFixed(1)}% spread
+                            </span>
+                          </div>
+                        )}
+                        {shipment.spreadPct === null && buyerPriceFormId !== shipment.id && (
+                          <span className="text-[9px] text-[#C0C8D4] italic">No buyer price set — spread unavailable</span>
+                        )}
+                        {buyerPriceFormId === shipment.id && (
+                          <>
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1">
+                                <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
+                                <input type="number" min="0" step="0.01"
+                                  value={buyerPriceDraft.unitPrice}
+                                  onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                              </div>
+                              <div className="flex-1">
+                                <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Quantity</label>
+                                <input type="number" min="1" step="1"
+                                  value={buyerPriceDraft.quantity}
+                                  onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                              </div>
+                              <button type="button"
+                                disabled={!buyerPriceDraft.unitPrice || !buyerPriceDraft.quantity || patchDealPending}
+                                onClick={() => {
+                                  const up = Number(buyerPriceDraft.unitPrice);
+                                  const qty = Number(buyerPriceDraft.quantity);
+                                  if (!up || !qty) return;
+                                  patchDealForShipment({ id: shipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
+                                }}
+                                className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
+                                {patchDealPending ? "…" : "Save"}
+                              </button>
+                            </div>
+                            {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
+                              const buyerTotal = Number(buyerPriceDraft.unitPrice) * Number(buyerPriceDraft.quantity);
+                              const supplierTotal = shipment.payments.reduce((s, p) => s + p.amountUsd, 0);
+                              const spread = buyerTotal - supplierTotal;
+                              const pct = buyerTotal > 0 ? (spread / buyerTotal) * 100 : 0;
+                              const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                              return (
+                                <div className={`mt-1 text-[9px] font-semibold ${cls}`}>
+                                  Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
+                                </div>
+                              );
+                            })()}
+                          </>
                         )}
                       </div>
                     )}

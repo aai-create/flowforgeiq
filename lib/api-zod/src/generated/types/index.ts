@@ -67,6 +67,7 @@ export * from './messagePendingExtractionFields';
 export * from './messageRoutingStatus';
 export * from './messageUpdate';
 export * from './nextPoNumbers';
+export * from './patchShipmentDealBody';
 export * from './payment';
 export * from './paymentMilestoneInput';
 export * from './paymentUpdate';

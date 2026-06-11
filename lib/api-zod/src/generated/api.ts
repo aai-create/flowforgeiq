@@ -224,6 +224,8 @@ export const ListShipmentsResponseItem = zod.object({
   "notes": zod.string().nullish(),
   "quantity": zod.number().nullish(),
   "unitCostUsd": zod.number().nullish(),
+  "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
+  "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
   "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
@@ -328,6 +330,8 @@ export const UpdateShipmentResponse = zod.object({
   "notes": zod.string().nullish(),
   "quantity": zod.number().nullish(),
   "unitCostUsd": zod.number().nullish(),
+  "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
+  "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
   "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
@@ -428,6 +432,76 @@ export const CreateFactoryQuoteBody = zod.object({
   "moq": zod.number(),
   "validityDate": zod.string().optional(),
   "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Set or update buyer unit price and quantity on the linked deal
+ */
+export const PatchShipmentDealParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchShipmentDealBody = zod.object({
+  "buyerUnitPrice": zod.number().optional().describe('Buyer-facing unit price (USD)'),
+  "buyerQuantity": zod.number().optional().describe('Total buyer quantity')
+})
+
+export const PatchShipmentDealResponse = zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().nullish().describe('Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumbers": zod.array(zod.string()).optional().describe('All buyer-facing PO numbers linked to this shipment via the deal_shipments join table.'),
+  "product": zod.string(),
+  "category": zod.string(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string(),
+  "customerName": zod.string(),
+  "dealId": zod.number().nullish(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string(),
+  "via": zod.string(),
+  "notes": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "unitCostUsd": zod.number().nullish(),
+  "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
+  "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
+  "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "label": zod.string(),
+  "percent": zod.number(),
+  "amountUsd": zod.number(),
+  "paid": zod.boolean(),
+  "dueDate": zod.coerce.date(),
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.')
+})),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "factory": zod.string(),
+  "country": zod.string(),
+  "unitPrice": zod.number(),
+  "leadDays": zod.number(),
+  "moq": zod.number(),
+  "selected": zod.boolean(),
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+}))
 })
 
 

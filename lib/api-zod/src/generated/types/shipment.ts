@@ -37,6 +37,16 @@ export interface Shipment {
   quantity?: number | null;
   unitCostUsd?: number | null;
   /**
+     * Buyer-facing unit price from the linked deal. Null if no deal is linked.
+     * @nullable
+     */
+  buyerUnitPrice?: number | null;
+  /**
+     * Buyer quantity from the linked deal. Null if no deal is linked.
+     * @nullable
+     */
+  buyerQuantity?: number | null;
+  /**
      * Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.
      * @nullable
      */

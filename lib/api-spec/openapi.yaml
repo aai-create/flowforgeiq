@@ -286,6 +286,30 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FactoryQuote" }
 
+  /shipments/{id}/deal:
+    patch:
+      operationId: patchShipmentDeal
+      tags: [shipments]
+      summary: Set or update buyer unit price and quantity on the linked deal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatchShipmentDealBody" }
+      responses:
+        "200":
+          description: Updated shipment with recalculated spread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "404":
+          description: Shipment not found
+
   /shipments/{id}/deals:
     post:
       operationId: linkDealToShipment
@@ -1517,6 +1541,12 @@ components:
       properties:
         quoteId: { type: integer }
 
+    PatchShipmentDealBody:
+      type: object
+      properties:
+        buyerUnitPrice: { type: number, description: "Buyer-facing unit price (USD)" }
+        buyerQuantity:  { type: integer, description: "Total buyer quantity" }
+
     DealInput:
       type: object
       required: [buyerPoNumber, customerName, buyerTotalUsd, buyerUnitPrice, buyerQuantity]
@@ -1618,6 +1648,8 @@ components:
         notes:          { type: ["string", "null"] }
         quantity:       { type: integer, nullable: true }
         unitCostUsd:    { type: integer, nullable: true }
+        buyerUnitPrice: { type: ["number", "null"], description: "Buyer-facing unit price from the linked deal. Null if no deal is linked." }
+        buyerQuantity:  { type: ["integer", "null"], description: "Buyer quantity from the linked deal. Null if no deal is linked." }
         spreadUsd:      { type: ["number", "null"], description: "Gross spread in USD (buyer total − supplier cost). Null if no deal is linked." }
         spreadPct:      { type: ["number", "null"], description: "Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero." }
         assigneeId:     { type: ["string", "null"], description: "Clerk userId of the assigned team member" }

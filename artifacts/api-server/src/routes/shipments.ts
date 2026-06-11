@@ -37,6 +37,8 @@ async function loadShipment(id: number) {
       supplierName: suppliersTable.name,
       buyerPoNumber: dealsTable.buyerPoNumber,
       buyerTotalUsd: dealsTable.buyerTotalUsd,
+      buyerUnitPrice: dealsTable.buyerUnitPrice,
+      buyerQuantity: dealsTable.buyerQuantity,
       assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
@@ -63,7 +65,7 @@ async function loadShipment(id: number) {
     spreadPct = buyerTotalUsd > 0 ? (spreadUsd / buyerTotalUsd) * 100 : null;
   }
 
-  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, assigneeName: row.assigneeName ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
+  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerUnitPrice: row.buyerUnitPrice ?? null, buyerQuantity: row.buyerQuantity ?? null, assigneeName: row.assigneeName ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
 }
 
 router.get("/shipments", async (_req, res) => {
@@ -73,6 +75,8 @@ router.get("/shipments", async (_req, res) => {
       supplierName: suppliersTable.name,
       buyerPoNumber: dealsTable.buyerPoNumber,
       buyerTotalUsd: dealsTable.buyerTotalUsd,
+      buyerUnitPrice: dealsTable.buyerUnitPrice,
+      buyerQuantity: dealsTable.buyerQuantity,
       assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
@@ -99,7 +103,7 @@ router.get("/shipments", async (_req, res) => {
     if (!buyerPoByShipment[shipmentId]) buyerPoByShipment[shipmentId] = [];
     buyerPoByShipment[shipmentId].push(buyerPoNumber);
   }
-  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd, assigneeName }) => {
+  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd, buyerUnitPrice, buyerQuantity, assigneeName }) => {
     const payments = allPayments.filter(p => p.shipmentId === shipment.id);
     let spreadUsd: number | null = null;
     let spreadPct: number | null = null;
@@ -112,6 +116,8 @@ router.get("/shipments", async (_req, res) => {
       ...shipment,
       supplierName,
       buyerPoNumber: buyerPoNumber ?? null,
+      buyerUnitPrice: buyerUnitPrice ?? null,
+      buyerQuantity: buyerQuantity ?? null,
       assigneeName: assigneeName ?? null,
       buyerPoNumbers: buyerPoByShipment[shipment.id] ?? [],
       payments,
@@ -343,6 +349,67 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
   });
 
   res.status(201).json(ListShipmentStageEventsResponseItem.parse(event));
+});
+
+// PATCH /shipments/:id/deal — set or update buyerUnitPrice / buyerQuantity on the linked deal
+router.patch("/shipments/:id/deal", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const rawBody = req.body as Record<string, unknown>;
+  const buyerUnitPrice = rawBody.buyerUnitPrice !== undefined ? Number(rawBody.buyerUnitPrice) : undefined;
+  const buyerQuantity  = rawBody.buyerQuantity  !== undefined ? Number(rawBody.buyerQuantity)  : undefined;
+  if (buyerUnitPrice !== undefined && (!Number.isFinite(buyerUnitPrice) || buyerUnitPrice < 0)) {
+    res.status(400).json({ error: "buyerUnitPrice must be a non-negative number" }); return;
+  }
+  if (buyerQuantity !== undefined && (!Number.isFinite(buyerQuantity) || buyerQuantity < 1 || !Number.isInteger(buyerQuantity))) {
+    res.status(400).json({ error: "buyerQuantity must be a positive integer" }); return;
+  }
+
+  const shipment = await loadShipment(id);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
+
+  let dealId: number | null = shipment.dealId ?? null;
+
+  if (!dealId) {
+    const [dealLink] = await db.select({ dealId: dealShipmentsTable.dealId })
+      .from(dealShipmentsTable)
+      .where(eq(dealShipmentsTable.shipmentId, id));
+    if (dealLink) {
+      dealId = dealLink.dealId;
+      // Promote the join-table link to the canonical FK so loadShipment can find it
+      await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, id));
+    }
+  }
+
+  if (!dealId) {
+    const buyerPoNumber = shipment.buyerPoNumber ?? shipment.poNumber;
+    const resolvedUnitPrice = buyerUnitPrice ?? 0;
+    const resolvedQuantity = buyerQuantity ?? 0;
+    const [created] = await db.insert(dealsTable).values({
+      buyerPoNumber,
+      customerName: shipment.customerName ?? "",
+      buyerUnitPrice: resolvedUnitPrice,
+      buyerQuantity: resolvedQuantity,
+      buyerTotalUsd: resolvedUnitPrice * resolvedQuantity,
+    }).returning({ id: dealsTable.id });
+    dealId = created.id;
+    await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, id));
+    await db.insert(dealShipmentsTable).values({ dealId, shipmentId: id }).catch(() => {});
+  } else {
+    const [existingDeal] = await db.select().from(dealsTable).where(eq(dealsTable.id, dealId));
+    if (existingDeal) {
+      const up = buyerUnitPrice !== undefined ? buyerUnitPrice : (existingDeal.buyerUnitPrice ?? 0);
+      const qty = buyerQuantity !== undefined ? buyerQuantity : (existingDeal.buyerQuantity ?? 0);
+      const update: Record<string, unknown> = { buyerTotalUsd: up * qty };
+      if (buyerUnitPrice !== undefined) update.buyerUnitPrice = buyerUnitPrice;
+      if (buyerQuantity !== undefined) update.buyerQuantity = buyerQuantity;
+      await db.update(dealsTable).set(update).where(eq(dealsTable.id, dealId));
+    }
+  }
+
+  const out = await loadShipment(id);
+  if (!out) { res.status(500).json({ error: "Failed to reload shipment" }); return; }
+  res.json(ListShipmentsResponseItem.parse(out));
 });
 
 // POST /shipments/:id/deals — link an existing deal (by dealId) to this shipment

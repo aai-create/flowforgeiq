@@ -31,6 +31,7 @@ import {
   createShipmentStageEvent,
   useListNeedsReviewMessages, useAssignMessage, useSendReply, useGetGmailStatus, connectGmail,
   useDisconnectGmail, useGetInboundEmailAddress, useIngestChat, useDeleteMessage,
+  usePatchShipmentDeal,
   type Message as ApiMessageFull,
   type ChatIngestResult,
 } from "@workspace/api-client-react";
@@ -1663,6 +1664,26 @@ export default function Home() {
   };
   const [chatTranscriptExpanded, setChatTranscriptExpanded] = useState(false);
 
+  // Buyer price editing
+  const [editingBuyerPrice, setEditingBuyerPrice] = useState(false);
+  const [buyerPriceDraft, setBuyerPriceDraft] = useState({ unitPrice: "", quantity: "" });
+  const { mutate: patchDealForShipment, isPending: patchDealPending } = usePatchShipmentDeal({
+    mutation: {
+      onSuccess: (updated) => {
+        setShipments(prev => prev.map(s => s.shipmentId === updated.id ? {
+          ...s,
+          buyerUnitPrice: updated.buyerUnitPrice ?? null,
+          buyerQuantity: updated.buyerQuantity ?? null,
+          spreadUsd: updated.spreadUsd ?? null,
+          spreadPct: updated.spreadPct ?? null,
+        } : s));
+        setEditingBuyerPrice(false);
+        setToast("Buyer price updated");
+        setTimeout(() => setToast(null), 2500);
+      },
+    },
+  });
+
   // Supplier email editing
   const { data: suppliersData, refetch: refetchSuppliers } = useListSuppliers();
   const apiSuppliers = suppliersData ?? [];
@@ -1829,6 +1850,7 @@ export default function Home() {
     setEditingEmail(false);
     setEmailDraft("");
     setChatTranscriptExpanded(false);
+    setEditingBuyerPrice(false);
   }, [activeMessageId]);
 
   const saveEmail = () => {
@@ -2929,20 +2951,80 @@ export default function Home() {
                     })}
                   </div>
                   {/* Your Spread row */}
-                  {activeShipment.spreadPct !== null && activeShipment.spreadPct !== undefined ? (() => {
-                    const pct = activeShipment.spreadPct!;
-                    const usd = activeShipment.spreadUsd;
-                    const supplierCostUsd = activeShipment.payments.reduce((sum, p) => sum + p.amountUsd, 0);
-                    const buyerTotalUsd = usd !== null && usd !== undefined ? usd + supplierCostUsd : null;
-                    const barCls = pct >= 25 ? "bg-emerald-500" : pct >= 10 ? "bg-amber-400" : "bg-red-500";
-                    const textCls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
-                    const bgCls = pct >= 25 ? "bg-emerald-50 border-emerald-100" : pct >= 10 ? "bg-amber-50 border-amber-100" : "bg-red-50 border-red-100";
-                    const label = pct >= 25 ? "Healthy" : pct >= 10 ? "Thin" : "Loss";
-                    return (
-                      <div className={`mt-2.5 pt-2.5 border-t border-[#E5EAF0]`}>
-                        <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                          <DollarSign size={8} className="text-[#9000FF]"/>Your Spread
+                  <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
+                    <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
+                      {!editingBuyerPrice && (
+                        <button
+                          onClick={() => {
+                            setEditingBuyerPrice(true);
+                            setBuyerPriceDraft({
+                              unitPrice: activeShipment.buyerUnitPrice != null ? String(activeShipment.buyerUnitPrice) : "",
+                              quantity: activeShipment.buyerQuantity != null ? String(activeShipment.buyerQuantity) : "",
+                            });
+                          }}
+                          className="text-[9px] font-semibold text-[#9000FF] hover:underline">
+                          {activeShipment.spreadPct !== null ? "Edit" : "Add Buyer Price"}
+                        </button>
+                      )}
+                      {editingBuyerPrice && (
+                        <button onClick={() => setEditingBuyerPrice(false)} className="text-[9px] text-[#5E687B] hover:underline">Cancel</button>
+                      )}
+                    </div>
+                    {editingBuyerPrice ? (
+                      <div className="space-y-2">
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
+                            <input type="number" min="0" step="0.01" autoFocus
+                              value={buyerPriceDraft.unitPrice}
+                              onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
+                              placeholder="0.00"
+                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Quantity</label>
+                            <input type="number" min="1" step="1"
+                              value={buyerPriceDraft.quantity}
+                              onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
+                              placeholder="0"
+                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <button
+                            disabled={!buyerPriceDraft.unitPrice || !buyerPriceDraft.quantity || patchDealPending}
+                            onClick={() => {
+                              const up = Number(buyerPriceDraft.unitPrice);
+                              const qty = Number(buyerPriceDraft.quantity);
+                              if (!up || !qty) return;
+                              patchDealForShipment({ id: activeShipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
+                            }}
+                            className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
+                            {patchDealPending ? "…" : "Save"}
+                          </button>
                         </div>
+                        {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
+                          const buyerTotal = Number(buyerPriceDraft.unitPrice) * Number(buyerPriceDraft.quantity);
+                          const supplierTotal = activeShipment.payments.reduce((s, p) => s + p.amountUsd, 0);
+                          const spread = buyerTotal - supplierTotal;
+                          const pct = buyerTotal > 0 ? (spread / buyerTotal) * 100 : 0;
+                          const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                          return (
+                            <div className={`text-[9px] font-semibold ${cls}`}>
+                              Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ) : activeShipment.spreadPct !== null && activeShipment.spreadPct !== undefined ? (() => {
+                      const pct = activeShipment.spreadPct!;
+                      const usd = activeShipment.spreadUsd;
+                      const supplierCostUsd = activeShipment.payments.reduce((sum, p) => sum + p.amountUsd, 0);
+                      const buyerTotalUsd = usd !== null && usd !== undefined ? usd + supplierCostUsd : null;
+                      const barCls = pct >= 25 ? "bg-emerald-500" : pct >= 10 ? "bg-amber-400" : "bg-red-500";
+                      const textCls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                      const bgCls = pct >= 25 ? "bg-emerald-50 border-emerald-100" : pct >= 10 ? "bg-amber-50 border-amber-100" : "bg-red-50 border-red-100";
+                      const label = pct >= 25 ? "Healthy" : pct >= 10 ? "Thin" : "Loss";
+                      return (
                         <div className={`rounded-lg border px-3 py-2 ${bgCls}`}>
                           <div className="flex items-center justify-between mb-1.5">
                             <div className="flex items-center gap-1.5">
@@ -2963,9 +3045,11 @@ export default function Home() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })() : null}
+                      );
+                    })() : (
+                      <p className="text-[9px] text-[#C0C8D4] italic">No buyer price set — click "Add Buyer Price" to track your spread</p>
+                    )}
+                  </div>
                   {/* Supplier contact email */}
                   {activeSupplier ? (
                     <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
