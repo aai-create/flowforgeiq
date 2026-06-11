@@ -515,8 +515,8 @@ export const ListMessagesResponseItem = zod.object({
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
-  "buyerName": zod.string().optional(),
-  "shipmentId": zod.number().optional(),
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
   "confidence": zod.number().optional(),
   "reasoning": zod.string().optional()
 }).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
@@ -582,8 +582,8 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
-  "buyerName": zod.string().optional(),
-  "shipmentId": zod.number().optional(),
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
   "confidence": zod.number().optional(),
   "reasoning": zod.string().optional()
 }).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
@@ -633,8 +633,8 @@ export const UpdateMessageResponse = zod.object({
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
-  "buyerName": zod.string().optional(),
-  "shipmentId": zod.number().optional(),
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
   "confidence": zod.number().optional(),
   "reasoning": zod.string().optional()
 }).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
@@ -685,8 +685,8 @@ export const AssignMessageResponse = zod.object({
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "aiRoutingGuess": zod.object({
-  "buyerName": zod.string().optional(),
-  "shipmentId": zod.number().optional(),
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
   "confidence": zod.number().optional(),
   "reasoning": zod.string().optional()
 }).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),

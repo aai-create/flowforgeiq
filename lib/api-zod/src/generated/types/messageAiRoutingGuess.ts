@@ -11,8 +11,10 @@
  * @nullable
  */
 export type MessageAiRoutingGuess = {
-  buyerName?: string;
-  shipmentId?: number;
+  /** @nullable */
+  buyerName?: string | null;
+  /** @nullable */
+  shipmentId?: number | null;
   confidence?: number;
   reasoning?: string;
 } | null;

@@ -1332,8 +1332,8 @@ components:
           type: ["object", "null"]
           description: "AI's best guess for assignment (when confidence is low)"
           properties:
-            buyerName:   { type: string }
-            shipmentId:  { type: integer }
+            buyerName:   { type: ["string", "null"] }
+            shipmentId:  { type: ["integer", "null"] }
             confidence:  { type: number }
             reasoning:   { type: string }
         pendingExtractionFields:
