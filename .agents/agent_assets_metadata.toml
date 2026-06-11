@@ -53,3 +53,15 @@ id = "Qbw0tKw_pcJDj7FTZkLZR"
 uri = "file://artifacts/flowforge-video/public/audio/bg_music.mp3"
 type = "audio"
 title = "background music"
+
+[[outputs]]
+id = "alm0jt9W5JG1He3PaZumx"
+uri = "file://.local/outputs/FlowForge-Sourcing.pptx"
+type = "slides"
+title = "FlowForge-Sourcing.pptx"
+
+[[outputs]]
+id = "-PiE-lHJleuKji-b-yaAu"
+uri = "file://.local/outputs/FlowForge-Sourcing.pdf"
+type = "pdf"
+title = "FlowForge-Sourcing.pdf"
