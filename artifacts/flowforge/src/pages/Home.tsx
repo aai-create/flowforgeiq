@@ -32,6 +32,7 @@ import {
   useListNeedsReviewMessages, useAssignMessage, useSendReply, useGetGmailStatus, connectGmail,
   useDisconnectGmail, useGetInboundEmailAddress, useIngestChat, useDeleteMessage,
   usePatchShipmentDeal,
+  useSaveExtractionCorrection,
   type Message as ApiMessageFull,
   type ChatIngestResult,
 } from "@workspace/api-client-react";
@@ -767,12 +768,60 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
   const provenance = ext?.fieldProvenance as Record<string, { confidence: number; snippet: string }> | undefined;
   const findings = ext?.reconciliationFindings ?? [];
 
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [corrections, setCorrections] = useState<Record<string, { value: string; confidence: number }>>({});
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  const { mutate: saveCorrection, isPending } = useSaveExtractionCorrection();
+
   const FIELD_LABELS: [string, string][] = [
     ["documentType", "Doc Type"], ["poNumber", "PO Number"], ["invoiceNumber", "Invoice #"],
     ["supplier", "Supplier"], ["buyer", "Buyer"], ["totalAmount", "Total Amount"],
     ["currency", "Currency"], ["incoterms", "Incoterms"], ["paymentTerms", "Payment Terms"],
     ["etd", "ETD"], ["eta", "ETA"], ["qcResult", "QC Result"],
   ];
+
+  function startEdit(key: string, currentVal: string) {
+    setEditingKey(key);
+    setEditValue(currentVal);
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  }
+
+  function cancelEdit() {
+    setEditingKey(null);
+    setEditValue("");
+  }
+
+  function commitEdit(key: string, originalVal: string) {
+    if (!ext || editValue.trim() === "" || editValue === originalVal) {
+      cancelEdit();
+      return;
+    }
+    const correctedValue = editValue.trim();
+    const docType = (corrections["documentType"]?.value ?? (fields?.["documentType"] as string | undefined) ?? "unknown");
+    saveCorrection(
+      {
+        id: ext.id,
+        data: {
+          documentType: docType,
+          fieldPath: key,
+          originalValue: originalVal,
+          correctedValue,
+        },
+      },
+      {
+        onSuccess: () => {
+          setCorrections((prev) => ({ ...prev, [key]: { value: correctedValue, confidence: 1 } }));
+          setEditingKey(null);
+          setEditValue("");
+        },
+        onError: () => {
+          cancelEdit();
+        },
+      }
+    );
+  }
 
   return (
     <div>
@@ -793,24 +842,71 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
         {ext && fields && Object.keys(fields).length > 0 && (
           <div className="divide-y divide-[#F0F4F8]">
             {FIELD_LABELS.map(([key, label]) => {
-              const val = fields[key];
-              if (val == null || val === "") return null;
+              const rawVal = fields[key];
+              if (rawVal == null || rawVal === "") return null;
+              const correction = corrections[key];
+              const displayVal = correction ? correction.value : String(rawVal);
               const prov = provenance?.[key];
+              const displayConfidence = correction ? correction.confidence : prov?.confidence;
+              const isEditing = editingKey === key;
               return (
                 <div key={key} className="px-3 py-1.5 group">
                   <div className="flex items-start gap-2">
                     <span className="text-[10px] text-[#5E687B] font-medium w-[100px] shrink-0 pt-0.5">{label}</span>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[11px] font-medium text-[#212833]">{String(val)}</span>
-                      {prov?.snippet && (
+                      {isEditing ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            ref={editInputRef}
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitEdit(key, String(rawVal));
+                              if (e.key === "Escape") cancelEdit();
+                            }}
+                            onBlur={() => commitEdit(key, String(rawVal))}
+                            disabled={isPending}
+                            className="flex-1 text-[11px] font-medium text-[#212833] border border-[#5E687B] rounded px-1.5 py-0.5 outline-none focus:border-[#212833] bg-white min-w-0"
+                          />
+                          <button
+                            onMouseDown={(e) => { e.preventDefault(); commitEdit(key, String(rawVal)); }}
+                            className="text-[#5E687B] hover:text-green-600 shrink-0"
+                            title="Save"
+                          >
+                            <Check size={11} />
+                          </button>
+                          <button
+                            onMouseDown={(e) => { e.preventDefault(); cancelEdit(); }}
+                            className="text-[#5E687B] hover:text-red-500 shrink-0"
+                            title="Cancel"
+                          >
+                            <X size={11} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(key, displayVal)}
+                          className="flex items-center gap-1 group/edit text-left w-full"
+                          title="Click to correct"
+                        >
+                          <span className={`text-[11px] font-medium ${correction ? "text-green-700" : "text-[#212833]"}`}>
+                            {displayVal}
+                          </span>
+                          <Pencil size={9} className="text-[#C5CDD8] group-hover/edit:text-[#5E687B] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      )}
+                      {!isEditing && prov?.snippet && !correction && (
                         <p className="text-[9px] text-[#5E687B] italic mt-0.5 truncate" title={prov.snippet}>
                           "{prov.snippet}"
                         </p>
                       )}
+                      {correction && !isEditing && (
+                        <p className="text-[9px] text-green-600 mt-0.5">corrected</p>
+                      )}
                     </div>
-                    {prov && (
-                      <span className="text-[8px] font-bold text-[#9E9FAE] shrink-0 pt-0.5">
-                        {Math.round(prov.confidence * 100)}%
+                    {displayConfidence != null && !isEditing && (
+                      <span className={`text-[8px] font-bold shrink-0 pt-0.5 ${correction ? "text-green-600" : "text-[#9E9FAE]"}`}>
+                        {Math.round(displayConfidence * 100)}%
                       </span>
                     )}
                   </div>
