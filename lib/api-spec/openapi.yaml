@@ -1683,7 +1683,7 @@ components:
         fromStageId: { type: string }
         toStageId:   { type: string }
         note:        { type: ["string", "null"] }
-        actorName:   { type: ["string", "null"] }
+        createdBy:   { type: ["string", "null"], description: "Name of the user who made the change, set server-side from the authenticated session" }
         createdAt:   { type: string, format: date-time }
     StageEventInput:
       type: object
@@ -1692,6 +1692,7 @@ components:
         fromStageId: { type: string }
         toStageId:   { type: string }
         note:        { type: string }
+        createdBy:   { type: string, description: "Display name of the author; overridden server-side by the authenticated user's name when available" }
 
     Message:
       type: object

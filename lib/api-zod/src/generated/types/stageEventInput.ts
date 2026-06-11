@@ -10,4 +10,6 @@ export interface StageEventInput {
   fromStageId: string;
   toStageId: string;
   note?: string;
+  /** Display name of the author; overridden server-side by the authenticated user's name when available */
+  createdBy?: string;
 }

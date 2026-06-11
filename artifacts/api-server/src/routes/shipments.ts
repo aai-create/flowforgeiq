@@ -324,7 +324,7 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
     return;
   }
 
-  const actorName = (req as unknown as { actorName?: string }).actorName ?? null;
+  const createdBy = req.actorName ?? input.createdBy ?? null;
 
   const [event] = await db.transaction(async (tx) => {
     await tx.update(shipmentsTable)
@@ -337,7 +337,7 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
         fromStageId: input.fromStageId,
         toStageId: input.toStageId,
         note: input.note ?? null,
-        actorName,
+        createdBy,
       })
       .returning();
   });

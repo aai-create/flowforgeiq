@@ -295,8 +295,11 @@ export interface StageEvent {
   toStageId: string;
   /** @nullable */
   note?: string | null;
-  /** @nullable */
-  actorName?: string | null;
+  /**
+     * Name of the user who made the change, set server-side from the authenticated session
+     * @nullable
+     */
+  createdBy?: string | null;
   createdAt: string;
 }
 
@@ -304,6 +307,8 @@ export interface StageEventInput {
   fromStageId: string;
   toStageId: string;
   note?: string;
+  /** Display name of the author; overridden server-side by the authenticated user's name when available */
+  createdBy?: string;
 }
 
 export type MessageDirection = typeof MessageDirection[keyof typeof MessageDirection];

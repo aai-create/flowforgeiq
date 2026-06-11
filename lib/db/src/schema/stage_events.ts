@@ -9,7 +9,7 @@ export const stageEventsTable = pgTable("stage_events", {
   fromStageId: text("from_stage_id").notNull(),
   toStageId: text("to_stage_id").notNull(),
   note: text("note"),
-  actorName: text("actor_name"),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

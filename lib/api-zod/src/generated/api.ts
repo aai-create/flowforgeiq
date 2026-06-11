@@ -454,7 +454,7 @@ export const ListShipmentStageEventsResponseItem = zod.object({
   "fromStageId": zod.string(),
   "toStageId": zod.string(),
   "note": zod.string().nullish(),
-  "actorName": zod.string().nullish(),
+  "createdBy": zod.string().nullish().describe('Name of the user who made the change, set server-side from the authenticated session'),
   "createdAt": zod.coerce.date()
 })
 export const ListShipmentStageEventsResponse = zod.array(ListShipmentStageEventsResponseItem)
@@ -470,7 +470,8 @@ export const CreateShipmentStageEventParams = zod.object({
 export const CreateShipmentStageEventBody = zod.object({
   "fromStageId": zod.string(),
   "toStageId": zod.string(),
-  "note": zod.string().optional()
+  "note": zod.string().optional(),
+  "createdBy": zod.string().optional().describe('Display name of the author; overridden server-side by the authenticated user\'s name when available')
 })
 
 
