@@ -227,6 +227,15 @@ router.patch("/documents/:id", async (req, res) => {
   res.json(ListDocumentsResponseItem.parse(doc));
 });
 
+router.get("/extractions/:id/corrections", async (req, res) => {
+  const id = Number(req.params.id);
+  const corrections = await db.select()
+    .from(extractionCorrectionsTable)
+    .where(eq(extractionCorrectionsTable.extractionId, id))
+    .orderBy(asc(extractionCorrectionsTable.createdAt));
+  res.json(corrections);
+});
+
 router.post("/extractions/:id/corrections", async (req, res) => {
   const { id } = SaveExtractionCorrectionParams.parse(req.params);
   const input = SaveExtractionCorrectionBody.parse(req.body);

@@ -1414,6 +1414,23 @@ export const InboundEmailWebhookResponse = zod.object({
 })
 
 
+export const GetExtractionCorrectionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetExtractionCorrectionsResponseItem = zod.object({
+  "id": zod.number(),
+  "extractionId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "documentType": zod.string(),
+  "fieldPath": zod.string(),
+  "originalValue": zod.string().nullish(),
+  "correctedValue": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const GetExtractionCorrectionsResponse = zod.array(GetExtractionCorrectionsResponseItem)
+
+
 export const SaveExtractionCorrectionParams = zod.object({
   "id": zod.coerce.number()
 })

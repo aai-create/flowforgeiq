@@ -3855,6 +3855,77 @@ export const useInboundEmailWebhook = <TError = ErrorType<unknown>,
       return useMutation(getInboundEmailWebhookMutationOptions(options));
     }
 
+export const getGetExtractionCorrectionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/extractions/${id}/corrections`
+}
+
+export const getExtractionCorrections = async (id: number, options?: RequestInit): Promise<ExtractionCorrection[]> => {
+
+  return customFetch<ExtractionCorrection[]>(getGetExtractionCorrectionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExtractionCorrectionsQueryKey = (id: number,) => {
+    return [
+    `/api/extractions/${id}/corrections`
+    ] as const;
+    }
+
+
+export const getGetExtractionCorrectionsQueryOptions = <TData = Awaited<ReturnType<typeof getExtractionCorrections>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExtractionCorrections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExtractionCorrectionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExtractionCorrections>>> = ({ signal }) => getExtractionCorrections(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExtractionCorrections>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExtractionCorrectionsQueryResult = NonNullable<Awaited<ReturnType<typeof getExtractionCorrections>>>
+export type GetExtractionCorrectionsQueryError = ErrorType<unknown>
+
+
+
+export function useGetExtractionCorrections<TData = Awaited<ReturnType<typeof getExtractionCorrections>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExtractionCorrections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExtractionCorrectionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getSaveExtractionCorrectionUrl = (id: number,) => {
 
 

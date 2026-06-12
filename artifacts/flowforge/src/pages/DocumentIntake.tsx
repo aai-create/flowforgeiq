@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import {
   useListDocuments, useUploadDocument, useUpdateDocument,
-  useSaveExtractionCorrection, useListShipments,
+  useSaveExtractionCorrection, useListShipments, useGetExtractionCorrections,
 } from "@workspace/api-client-react";
 import type {
   DocumentWithExtraction, Extraction, ExtractedFields,
@@ -214,20 +214,21 @@ interface FieldRowProps {
   snippet?: string;
   extractionId: number;
   documentType: string;
+  isCorrected?: boolean;
   onCorrect: (field: string, corrected: string) => void;
 }
 
-function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, documentType, onCorrect }: FieldRowProps) {
+function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, documentType, isCorrected, onCorrect }: FieldRowProps) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(String(value ?? ""));
-  const [saved, setSaved] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const { mutate: saveCorrection } = useSaveExtractionCorrection();
 
   const handleSave = () => {
     if (draft === String(value ?? "")) { setEditing(false); return; }
     saveCorrection({ id: extractionId, data: { documentType, fieldPath, correctedValue: draft, originalValue: String(value ?? "") } }, {
-      onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2000); onCorrect(fieldPath, draft); },
+      onSuccess: () => { setJustSaved(true); setTimeout(() => setJustSaved(false), 2000); onCorrect(fieldPath, draft); },
     });
     setEditing(false);
   };
@@ -235,11 +236,11 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
   const displayVal = String(value ?? "—");
   const isEmpty = !value;
   const showConfidence = !isEmpty;
-  const isInferred = !isEmpty && confidence < 0.65;
-  const hasSnippet = !!snippet && !isEmpty;
+  const isInferred = !isEmpty && !isCorrected && confidence < 0.65;
+  const hasSnippet = !!snippet && !isEmpty && !isCorrected;
 
   return (
-    <div className={`border-b border-[#F0F4F8] last:border-b-0 transition-colors ${expanded ? "bg-amber-50/40 border-l-2 border-l-amber-400" : ""}`}>
+    <div className={`border-b border-[#F0F4F8] last:border-b-0 transition-colors ${expanded ? "bg-amber-50/40 border-l-2 border-l-amber-400" : isCorrected ? "bg-emerald-50/30" : ""}`}>
       <div className={`flex items-center gap-2 py-2 group ${expanded ? "px-[calc(0.75rem-2px)]" : "px-3"}`}>
         <div className="w-[130px] shrink-0 text-[10px] text-[#5E687B] font-medium">{label}</div>
         <div className="flex-1 min-w-0">
@@ -256,31 +257,38 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
               <button onClick={() => setEditing(false)} className="p-0.5 text-[#5E687B] hover:text-[#212833]"><X size={12} /></button>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5">
-              <span className={`text-[11px] font-medium ${isEmpty ? "text-[#C0C8D4] italic" : isInferred ? "text-amber-700" : "text-[#212833]"}`}>
-                {displayVal}
-              </span>
-              {isInferred && (
-                <span className="text-[8px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded" title="AI inferred this value — please verify">
-                  inferred
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[11px] font-medium ${isEmpty ? "text-[#C0C8D4] italic" : isCorrected ? "text-emerald-700" : isInferred ? "text-amber-700" : "text-[#212833]"}`}>
+                  {displayVal}
                 </span>
-              )}
-              {saved && <Check size={10} className="text-emerald-500" />}
-              {!editing && (
-                <button
-                  onClick={() => { setDraft(String(value ?? "")); setEditing(true); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#9E9FAE] hover:text-[#9000FF]"
-                >
-                  <Edit2 size={10} />
-                </button>
+                {isInferred && (
+                  <span className="text-[8px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded" title="AI inferred this value — please verify">
+                    inferred
+                  </span>
+                )}
+                {justSaved && <Check size={10} className="text-emerald-500" />}
+                {!editing && (
+                  <button
+                    onClick={() => { setDraft(String(value ?? "")); setEditing(true); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#9E9FAE] hover:text-[#9000FF]"
+                  >
+                    <Edit2 size={10} />
+                  </button>
+                )}
+              </div>
+              {isCorrected && !editing && (
+                <span className="text-[9px] font-semibold text-emerald-600 flex items-center gap-0.5">
+                  <Check size={8} />corrected
+                </span>
               )}
             </div>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {showConfidence && (
-            <div className={`text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(confidence)}`}>
-              {Math.round(confidence * 100)}%
+            <div className={`text-[8px] font-semibold px-1 py-0.5 rounded border ${isCorrected ? "text-emerald-600 bg-emerald-50 border-emerald-200" : confidenceColor(confidence)}`}>
+              {isCorrected ? "100%" : `${Math.round(confidence * 100)}%`}
             </div>
           )}
           {hasSnippet && (
@@ -322,8 +330,25 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
   const lineItems = ext?.lineItems ?? [];
   const findings = ext?.reconciliationFindings ?? [];
   const [localFields, setLocalFields] = useState<Record<string, string>>({});
+  const [dbCorrectedFields, setDbCorrectedFields] = useState<Set<string>>(new Set());
   const [linkOpen, setLinkOpen] = useState(false);
   const { mutate: updateDoc } = useUpdateDocument();
+
+  const { data: savedCorrections } = useGetExtractionCorrections(ext?.id ?? 0, {
+    query: { enabled: !!ext?.id, queryKey: ["getExtractionCorrections", ext?.id] },
+  });
+
+  useEffect(() => {
+    if (!savedCorrections) return;
+    const latestByField = new Map<string, string>();
+    for (const c of savedCorrections) {
+      latestByField.set(c.fieldPath, c.correctedValue);
+    }
+    const corrected: Record<string, string> = {};
+    latestByField.forEach((val, field) => { corrected[field] = val; });
+    setLocalFields(corrected);
+    setDbCorrectedFields(new Set(latestByField.keys()));
+  }, [savedCorrections]);
 
   const fieldMap: { label: string; key: keyof ExtractedFields }[] = [
     { label: "Document Type", key: "documentType" },
@@ -345,6 +370,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
 
   const handleCorrect = (field: string, val: string) => {
     setLocalFields(prev => ({ ...prev, [field]: val }));
+    setDbCorrectedFields(prev => new Set([...prev, field]));
   };
 
   const handleLink = (shipmentId: number | null) => {
@@ -488,6 +514,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
                   snippet={provenance[key]?.snippet}
                   extractionId={ext.id}
                   documentType={fields.documentType ?? "other"}
+                  isCorrected={dbCorrectedFields.has(key)}
                   onCorrect={handleCorrect}
                 />
               ))}
@@ -853,6 +880,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
       {/* Right panel — detail or empty state */}
       {selectedDoc ? (
         <DocumentDetail
+          key={selectedDoc.id}
           doc={selectedDoc}
           shipments={shipmentOptions}
           onBack={() => setSelectedDocId(null)}
