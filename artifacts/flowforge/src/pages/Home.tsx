@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -773,6 +774,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
   const [corrections, setCorrections] = useState<Record<string, { value: string; confidence: number }>>({});
   const editInputRef = useRef<HTMLInputElement>(null);
 
+  const queryClient = useQueryClient();
   const { mutate: saveCorrection, isPending } = useSaveExtractionCorrection();
 
   const FIELD_LABELS: [string, string][] = [
@@ -815,6 +817,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
           setCorrections((prev) => ({ ...prev, [key]: { value: correctedValue, confidence: 1 } }));
           setEditingKey(null);
           setEditValue("");
+          queryClient.invalidateQueries({ queryKey: ["getExtractionCorrections", ext.id] });
         },
         onError: () => {
           cancelEdit();

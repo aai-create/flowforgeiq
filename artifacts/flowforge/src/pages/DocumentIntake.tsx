@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Upload, FileText, Image, FileSpreadsheet, Mic, X, CheckCircle2,
   AlertCircle, Clock, ChevronRight, ChevronDown, ChevronUp, Edit2, Check,
@@ -223,12 +224,18 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(String(value ?? ""));
   const [justSaved, setJustSaved] = useState(false);
+  const queryClient = useQueryClient();
   const { mutate: saveCorrection } = useSaveExtractionCorrection();
 
   const handleSave = () => {
     if (draft === String(value ?? "")) { setEditing(false); return; }
     saveCorrection({ id: extractionId, data: { documentType, fieldPath, correctedValue: draft, originalValue: String(value ?? "") } }, {
-      onSuccess: () => { setJustSaved(true); setTimeout(() => setJustSaved(false), 2000); onCorrect(fieldPath, draft); },
+      onSuccess: () => {
+        setJustSaved(true);
+        setTimeout(() => setJustSaved(false), 2000);
+        onCorrect(fieldPath, draft);
+        queryClient.invalidateQueries({ queryKey: ["getExtractionCorrections", extractionId] });
+      },
     });
     setEditing(false);
   };
