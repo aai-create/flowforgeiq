@@ -325,7 +325,7 @@ If asked to draft a reply, write a clear, professional message the buyer can sen
   ];
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
+    model: "gpt-5-mini",
     messages,
   });
 
