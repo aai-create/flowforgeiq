@@ -1,0 +1,244 @@
+# Flow Forge sales playbook — presentation spec
+
+## Slide 1 — Title / positioning
+**Title:** Flow Forge  
+**Subtitle:** A supply chain communication platform for managing supplier, buyer, and shipment workflows
+
+**Content:**
+- Built for sourcing agencies, manufacturers, and trading teams managing many active POs, shipments, and supplier conversations
+- Centralizes fragmented communication and workflow tracking across email and messaging channels
+- Designed to reduce manual follow-up, missed updates, and operational drag
+
+**Speaker note:**
+Open with the category clearly. Do not pitch this as “just an AI app.” Pitch it as an operational platform for supply chain communication.
+
+---
+
+## Slide 2 — The problem
+**Title:** Supply chain operations still run on fragmented communication
+
+**Content:**
+- Teams are chasing suppliers across email, WhatsApp, WeChat, and manual follow-ups
+- Shipment status, payment tracking, and PO coordination often live in people’s heads or scattered tools
+- Manual tracking creates delays, surprises, and avoidable mistakes
+- Smaller and mid-sized operators often do not have a purpose-built system for this workflow
+
+**Speaker note:**
+Make the pain operational and concrete: supplier chasing, shipment surprises, and time lost to coordination.
+
+---
+
+## Slide 3 — Why now
+**Title:** Why teams need this now
+
+**Content:**
+- Global supply chains are more volatile than ever
+- Tariffs, geopolitical uncertainty, oil/shipping disruption, and sudden policy shifts create more exceptions to manage
+- When uncertainty rises, communication gaps become more expensive
+- Teams need faster visibility, cleaner coordination, and fewer manual handoffs
+
+**Speaker note:**
+This slide creates urgency. The point is not just “efficiency.” It is resilience in a volatile operating environment.
+
+---
+
+## Slide 4 — Origin story
+**Title:** We built Flow Forge for ourselves first
+
+**Content:**
+- The concept came from real pain inside Sourceaccess’s own workflow
+- The team wanted a better way to manage supplier communication, tracking, and follow-up without constant manual effort
+- Instead of building software for the sake of it, the team built the tool they wished they already had
+- That story becomes the foundation of the sales narrative
+
+**Speaker note:**
+This is a trust slide. It says: we know this workflow because we lived it.
+
+---
+
+## Slide 5 — What Flow Forge is
+**Title:** What Flow Forge does
+
+**Content:**
+- A supply chain communication platform that helps teams manage workflows across suppliers, manufacturers, buyers, and shipments
+- Centralizes communication inputs and turns them into actionable workflow context
+- Helps teams handle multiple POs, SKUs, projects, and moving parts at the same time
+- Best fit for operators with meaningful volume and coordination complexity
+
+**Speaker note:**
+Keep this operational. Avoid overly technical language.
+
+---
+
+## Slide 6 — Who it is for
+**Title:** Ideal customer profile
+
+**Content:**
+- Sourcing agencies with many concurrent customer and supplier workflows
+- Manufacturers managing many suppliers and buyers
+- Teams with roughly 20–50+ active POs, SKUs, or projects where coordination overhead becomes material
+- Best early adopters are businesses without heavy in-house software teams
+
+**Speaker note:**
+Be specific. This helps the audience qualify themselves quickly.
+
+---
+
+## Slide 7 — How it works
+**Title:** How Flow Forge fits into the workflow
+
+**Content:**
+- Teams forward relevant messages and updates into the system through a companion app workflow
+- The platform identifies the relevant context and routes the information into the correct operating instance
+- PO-related information and communication history become easier to track and act on
+- The goal is to reduce fragmented coordination, not force a full rip-and-replace of existing systems
+
+**Speaker note:**
+Important: describe the workflow accurately. Do not imply full passive monitoring.
+
+---
+
+## Slide 8 — Messaging and integrations
+**Title:** Built for real-world communication stacks
+
+**Content:**
+- Supports workflows that begin in tools like WhatsApp and WeChat through manual forwarding into the companion app
+- Automatic monitoring of those chat apps is not the model; those ecosystems are walled gardens
+- Integrations with systems like SAP or Oracle are possible as custom-scoped projects
+- The value proposition is flexibility without requiring a full system overhaul
+
+**Speaker note:**
+This slide reduces buyer anxiety. It answers “will this work with how we already operate?”
+
+---
+
+## Slide 9 — ROI
+**Title:** The ROI is operational
+
+**Content:**
+- Faster response times across supplier and buyer communication
+- Fewer shipment surprises and less manual coordination overhead
+- Less time spent tracking details manually
+- Example directional metrics discussed:
+  - 50% faster response times
+  - 30% fewer shipment surprises
+  - 80% reduction in manual tracking
+
+**Speaker note:**
+Frame these as directional early metrics or placeholders until pilot data validates them. Do not overstate precision yet.
+
+---
+
+## Slide 10 — Before vs. after
+**Title:** Before Flow Forge / After Flow Forge
+
+**Content:**
+- **Before:** scattered messages, manual tracking, reactive follow-up, limited visibility
+- **After:** centralized workflow context, cleaner communication capture, faster action, better tracking discipline
+- **Before:** people remember the workflow
+- **After:** the process is more visible and structured
+
+**Speaker note:**
+Keep it simple and visual. This should be an easy skim slide.
+
+---
+
+## Slide 11 — Competitive landscape
+**Title:** Why Flow Forge vs. enterprise systems or custom builds
+
+**Content:**
+- SAP, Oracle, and Salesforce can support pieces of this workflow, but are often heavy, generalized, or require custom implementation
+- Custom internal tools require engineering bandwidth and ongoing maintenance
+- Flow Forge is positioned as a focused, operationally simple layer for this specific problem
+- Especially attractive for teams that need something usable without building from scratch
+
+**Speaker note:**
+This is not about claiming nobody else exists. It is about explaining the wedge.
+
+---
+
+## Slide 12 — Pilot structure
+**Title:** Pilot program
+
+**Content:**
+- Initial pilot term: 3 months free
+- In exchange, pilot partners commit to monthly feedback calls
+- Goal is to validate workflow fit, ROI, and product improvements with real users
+- Pilot starts small rather than moving an entire business onto the platform immediately
+
+**Speaker note:**
+This lowers risk. Make the pilot sound disciplined and collaborative.
+
+---
+
+## Slide 13 — Pricing
+**Title:** Founding member pricing
+
+**Content:**
+- Founding offer discussed: $99/month or $1,000/year
+- Framed as locked-in founding pricing
+- Broader pricing likely evolves by company size and complexity
+- Custom integrations and enterprise requirements priced separately
+
+**Speaker note:**
+Keep the pricing story simple. Founder pricing helps create urgency without overcomplicating packaging.
+
+---
+
+## Slide 14 — Proof / case study placeholder
+**Title:** What pilot proof will look like
+
+**Content:**
+- Anonymized case study format for sourcing agencies and manufacturers
+- Show workflow baseline, changes introduced, and outcomes observed
+- This becomes the proof layer that supports future ROI claims
+- Use one-slide snapshots that are specific but not identity-revealing
+
+**Speaker note:**
+If no proof exists yet, make this a placeholder or “what we are measuring in pilots” slide.
+
+---
+
+## Slide 15 — Product roadmap
+**Title:** Expansion opportunities over time
+
+**Content:**
+- Supplier directory / marketplace where suppliers can be discovered and receive RFQs
+- Localization path includes Simplified Chinese, Traditional Chinese, and Korean
+- Future industry expansion beyond manufacturing and sourcing is possible once initial fit is proven
+- Financing / payment orchestration ideas remain future-phase, not core launch scope
+
+**Speaker note:**
+Keep roadmap focused. Show upside without muddying the current product story.
+
+---
+
+## Slide 16 — Call to action
+**Title:** Pilot with us
+
+**Content:**
+- Looking for a small number of founding pilot partners
+- Best fit: teams with real workflow complexity and openness to monthly feedback
+- Start with a contained workflow, prove value, then expand
+
+**Speaker note:**
+End with a low-risk, concrete next step.
+
+## Build notes for Replit
+
+- Keep visual style simple and operator-focused
+- Prefer process diagrams, before/after layouts, and ROI visuals over dense text
+- Avoid overclaiming product maturity before pilots are complete
+- Keep “AI” supportive, not the whole headline
+- Make sure the deck tells a clean story:
+  1. problem
+  2. urgency
+  3. founder story
+  4. product
+  5. ROI
+  6. proof
+  7. pilot
+  8. pricing
+  9. roadmap
+
+If you want, I can do the **next pass as copy-ready slide text only** so you can paste it directly into Replit slide-by-slide.
