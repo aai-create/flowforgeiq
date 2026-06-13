@@ -560,6 +560,60 @@ function reconcileDocument(
   return findings;
 }
 
+/**
+ * Programmatically overrides extractedFields with any saved corrections that
+ * are in scope for this extraction context (same modality + supplier scoping).
+ * This runs after the AI extraction so corrections always win, even when the
+ * model ignores the prompt guidance.
+ */
+function applyCorrectionsToResult(
+  result: ExtractionResult,
+  corrections: CorrectionRow[],
+  modality: string,
+  supplierId?: number,
+): ExtractionResult {
+  const applicableDocTypes = new Set([
+    "any",
+    modality,
+    ...(MODALITY_DOC_TYPES[modality] ?? []),
+  ]);
+
+  const relevant = corrections.filter(c => {
+    if (!applicableDocTypes.has(c.documentType)) return false;
+    if (c.supplierId !== null) {
+      return supplierId !== undefined && c.supplierId === supplierId;
+    }
+    return true;
+  });
+
+  if (!relevant.length) return result;
+
+  const overrides: Partial<ExtractedFields> = {};
+  for (const c of relevant) {
+    const field = c.fieldPath as keyof ExtractedFields;
+    // Type-coerce the stored string value into the field's expected type
+    if (field === "totalAmount") {
+      const num = Number(c.correctedValue);
+      if (!isNaN(num)) overrides[field] = num;
+    } else if (field === "qcIssues" || field === "detectedEntities") {
+      try {
+        const parsed: unknown = JSON.parse(c.correctedValue);
+        if (Array.isArray(parsed)) overrides[field] = parsed as string[];
+      } catch {
+        overrides[field] = [c.correctedValue];
+      }
+    } else {
+      // All remaining ExtractedFields values are strings
+      (overrides as Record<string, unknown>)[field] = c.correctedValue;
+    }
+  }
+
+  return {
+    ...result,
+    extractedFields: { ...result.extractedFields, ...overrides },
+  };
+}
+
 // Patch reconciliation findings with PO line-item comparison after extraction
 function applyPoReconciliation(
   result: ExtractionResult,
@@ -676,19 +730,27 @@ export async function runExtraction(input: ExtractionInput): Promise<ExtractionR
   const { doc, fileBuffer, shipments, corrections, supplierId, poLineItemsByShipment } = input;
 
   let result: ExtractionResult;
+  let modality: string;
 
   if (doc.fileType === "image") {
+    modality = "image";
     const base64 = fileBuffer.toString("base64");
     result = await extractFromImage(base64, doc.mimeType, doc, shipments, corrections, supplierId);
   } else if (doc.fileType === "audio") {
+    modality = "audio";
     result = await extractFromAudio(fileBuffer, doc.mimeType, doc, shipments, corrections, supplierId);
   } else if (doc.fileType === "spreadsheet") {
+    modality = "spreadsheet";
     const csvText = await parseSpreadsheet(fileBuffer, doc.fileName);
     result = await extractFromSpreadsheetText(csvText, doc, shipments, corrections, supplierId);
   } else {
+    modality = "pdf";
     const text = await parsePdf(fileBuffer);
     result = await extractFromPdfOrText(text, doc, shipments, corrections, supplierId);
   }
+
+  // Programmatically apply saved corrections so they always win over the AI output
+  result = applyCorrectionsToResult(result, corrections, modality, supplierId);
 
   // Apply PO line-item reconciliation now that matchedShipmentId is known
   return applyPoReconciliation(result, shipments, poLineItemsByShipment);
