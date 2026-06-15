@@ -2,7 +2,6 @@ export default function Slide06Workflow() {
   return (
     <div className="w-screen h-screen overflow-hidden relative" style={{ background: "#0B0F1A", fontFamily: "var(--font-display-family)" }}>
       <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(124,58,237,0.06) 1px, transparent 1px)", backgroundSize: "3.5vw 3.5vw" }} />
-
       <div className="relative z-10 flex flex-col h-full" style={{ padding: "3.5vh 7vw" }}>
         <div style={{ marginBottom: "2.5vh" }}>
           <div style={{ fontSize: "1.1vw", color: "#7C3AED", fontFamily: "var(--font-body-family)", fontWeight: 500, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "0.8vh" }}>How It Fits</div>
@@ -40,7 +39,7 @@ export default function Slide06Workflow() {
             </div>
 
             <div style={{ background: "#131929", borderRadius: "0.6vw", border: "1px solid rgba(124,58,237,0.22)", padding: "1.5vh 1.8vw", flex: 1 }}>
-              <div style={{ fontSize: "1.4vw", fontWeight: 600, color: "#F1F5F9", fontFamily: "var(--font-body-family)", marginBottom: "0.4vh" }}>SAP / Oracle integration is a scoped project</div>
+              <div style={{ fontSize: "1.4vw", fontWeight: 600, color: "#F1F5F9", fontFamily: "var(--font-body-family)", marginBottom: "0.4vh" }}>Downstream ERP/systems integration is a scoped project</div>
               <div style={{ fontSize: "1.25vw", color: "#64748B", fontFamily: "var(--font-body-family)", lineHeight: 1.45 }}>ERP connections are possible and supported — but priced separately from standard tiers. We say this upfront so expectations are set correctly.</div>
             </div>
 
