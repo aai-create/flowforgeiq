@@ -5,7 +5,7 @@
     "filepath": "src/pages/slides/Slide01Title.tsx",
     "title": "Title",
     "description": "FlowForge brand title slide with tagline and product positioning",
-    "speakerNotes": "Open by acknowledging the room knows this pain personally.\n\n- Every buyer in this room has a WhatsApp group with a factory they've never met in person.\n- They have a shared sheet someone is always behind on updating.\n- FlowForge is the single workspace that replaces the fragmented stack — not by asking suppliers to change, but by connecting to what they already use.\n- Deck takes 20 minutes. Happy to go deeper on any module."
+    "speakerNotes": "Open by acknowledging the room knows this pain personally.\n\n- Every buyer here has a WhatsApp group with a factory they've never met in person.\n- They have a shared sheet someone is always behind on updating.\n- FlowForge is the single workspace that replaces the fragmented stack — not by asking suppliers to change, but by connecting to what they already use.\n- Deck takes 20 minutes. Happy to go deeper on anything."
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567802",
@@ -13,102 +13,110 @@
     "filepath": "src/pages/slides/Slide02Problem.tsx",
     "title": "The Problem",
     "description": "Three pain points: 47+ message threads, 4+ disconnected channels, days lost to late detection",
-    "speakerNotes": "Let the numbers do the work — don't explain them, just let the audience sit with them.\n\n- 47 threads per shipment is a conservative estimate for teams managing 50+ POs.\n- Four channels means four different apps open simultaneously, no unified history.\n- The 'Days' stat is the one that costs money: by the time a delay is visible, it's too late to reroute or expedite.\n- Ask: 'How many of you found out about a delay from a supplier's WhatsApp message that someone on your team missed?' — pause for hands."
+    "speakerNotes": "Let the numbers do the work — don't explain them, just let the audience sit with them.\n\n- 47 threads per shipment is a conservative estimate for teams managing 50+ POs.\n- Four channels means four different apps open simultaneously, no unified history.\n- The 'Days' stat is the one that costs money: by the time a delay is visible, it's too late to reroute or expedite.\n- Ask: 'How many of you found out about a delay from a WhatsApp message that someone on your team missed?' — pause for hands."
   },
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+    "id": "c3d4e5f6-7890-abcd-ef12-345678900301",
     "position": 3,
-    "filepath": "src/pages/slides/Slide03Solution.tsx",
-    "title": "Solution Overview",
-    "description": "Five capability pillars: Unified Inbox, AI Copilot, Stage Tracker, Risk Radar, Payment Orchestration",
-    "speakerNotes": "Position this as the overview — you'll go deep on each module in the next five slides.\n\n- The key framing: FlowForge is not a new channel. It sits on top of the channels they already use.\n- Five modules, but they're designed to work together — a reply from the Inbox advances the Stage Tracker automatically.\n- The right column shows the same five modules in a scannable card format — reference it if anyone asks 'what's included.'\n- Transition: 'Let me walk you through each one.'"
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567804",
-    "position": 4,
-    "filepath": "src/pages/slides/Slide04UnifiedInbox.tsx",
-    "title": "Unified Inbox",
-    "description": "All channels in one feed, AI-tagged messages, reply advances shipment stage",
-    "speakerNotes": "This is often the fastest win to demonstrate in a live demo.\n\n- The inbox is thread-per-shipment, not thread-per-contact — that's the key architectural difference from email.\n- Show the tag on the first row: 'risk: delay 2d' — this is AI-generated on arrival, not manually added.\n- The draft reply at the bottom is what the AI pre-populates. The buyer reads it, edits if needed, sends.\n- When they send, the shipment stage advances automatically — one action does three things.\n- If they push back on 'will my suppliers adopt this?' — remind them: suppliers don't change anything."
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567805",
-    "position": 5,
-    "filepath": "src/pages/slides/Slide05AICopilot.tsx",
-    "title": "AI Copilot",
-    "description": "Extract structured data, draft context-aware replies, route messages to correct shipment threads",
-    "speakerNotes": "The three capabilities are sequential — extraction enables drafting, routing happens alongside both.\n\n- Extract: works on PDFs, Excel attachments, WhatsApp text, forwarded emails. The buyer doesn't re-key data.\n- Draft: the system knows the shipment context — current stage, supplier, open tasks — so the draft isn't generic.\n- Route: configurable confidence threshold. Teams that want aggressive routing set it lower; conservative teams set it higher. Low-confidence matches go to Needs Review, never auto-file incorrectly.\n- Good objection to pre-empt: 'What if the AI gets it wrong?' — answer is the threshold system and the Needs Review queue."
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567806",
-    "position": 6,
-    "filepath": "src/pages/slides/Slide06StageTracker.tsx",
-    "title": "Stage Tracker",
-    "description": "11-stage shipment pipeline from Spec Sheet to Delivered with full audit trail",
-    "speakerNotes": "Walk the pipeline left to right — the audience will recognize the stages from their own work.\n\n- The purple dot in the visual is at Ex-Factory — the most commercially critical handoff point.\n- Each advance takes one click plus an optional note. That note is the audit trail entry.\n- Finance teams love this: they can see exactly when Deposit was triggered, when balance was due, what note accompanied each advance.\n- Replying from the Inbox clears the task — there's no separate 'update the tracker' step.\n- If they use an ERP: the Stage Tracker sits in front of the ERP, feeding it. Not a replacement."
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567807",
-    "position": 7,
-    "filepath": "src/pages/slides/Slide07RiskRadar.tsx",
-    "title": "Risk Radar",
-    "description": "Financial exposure x delay probability scoring, plain-language risk signals, one-click to inbox thread",
-    "speakerNotes": "Risk Radar is the slide that closes deals with ops-focused buyers.\n\n- Score = exposure (dollar value) x probability (signal strength). Not a gut feeling, a formula.\n- The color coding is immediate: red is act now, yellow is watch, purple is on track.\n- The signal is one plain sentence — 'port congestion' — not a dashboard of raw data.\n- One click from the risk row opens the supplier thread. No search, no context-switching.\n- Ask: 'If you had this list ranked by financial exposure every morning, how many hours would you save per week?' — let them do the math."
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567808",
-    "position": 8,
-    "filepath": "src/pages/slides/Slide08Payments.tsx",
-    "title": "Payment Orchestration",
-    "description": "Deposit and balance payment tracking with intermediary financing support and recovery panel",
-    "speakerNotes": "Lead with the standard payment flow, then introduce the intermediary financing model as a differentiator.\n\n- Every shipment has two payment events: 30% deposit before production, 70% balance on ex-factory. Both have due dates, wire references, and paid confirmations recorded.\n- The Finance calendar view shows all payment due dates across every active shipment on one monthly grid — essential for treasury planning.\n- Intermediary financing: this is the three-party model where an intermediary fronts capital so the supplier starts immediately. FlowForge tracks the entire recovery cycle.\n- If the prospect doesn't use intermediary financing now: 'It's there when you need it — some of our customers added it in year two as their volume grew.'"
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567809",
-    "position": 9,
-    "filepath": "src/pages/slides/Slide09ICP.tsx",
-    "title": "Ideal Customer Profile",
-    "description": "Three customer segments: Retail Buyers, Global Sourcing Teams, Trade Finance Intermediaries",
-    "speakerNotes": "Use this slide to confirm where the prospect fits — then tailor the rest of the conversation.\n\n- Retail Buyers: 20-200 POs, VP Supply Chain or Head of Sourcing is the economic buyer. Pain is operational — they're drowning in WhatsApp threads.\n- Global Sourcing Teams: multiple buyers, multiple suppliers, one team. They need audit trails and compliance records. COO or Director of Operations is the economic buyer.\n- Trade Finance Intermediaries: unique in that they have a different financial relationship — they're the ones fronting capital and need recovery tracking. Finance Director or Treasury Head.\n- For mixed organizations (all three apply): position FlowForge as the platform that serves all three layers simultaneously."
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567810",
-    "position": 10,
-    "filepath": "src/pages/slides/Slide10WhyNow.tsx",
+    "filepath": "src/pages/slides/Slide03WhyNow.tsx",
     "title": "Why Now",
-    "description": "Three market forces: AI-first procurement, supply chain visibility as a board priority, legacy process limits",
-    "speakerNotes": "This slide creates urgency without pressure tactics — let the market forces speak.\n\n- AI: buyers who adopt AI-assisted procurement tools now are compounding an advantage. The cost of waiting is falling further behind peers who are already using extraction and drafting.\n- Visibility: post-disruption, every executive team has a slide in their board deck about supply chain resilience. FlowForge directly addresses that requirement.\n- Fragility: this is the internal urgency driver. Teams growing from 20 POs to 80 POs hit a wall where their current process breaks. That wall is usually painful enough to drive a decision.\n- Ask: 'Which of these three resonates most with where your team is right now?' — the answer tells you which value prop to lead with."
+    "description": "Three market forces creating urgency: AI-first procurement, board-level supply chain mandate, process fragility at 50+ POs",
+    "speakerNotes": "This slide creates urgency without pressure tactics — let the market forces speak.\n\n- AI: buyers who adopt AI-assisted procurement tools now are compounding an advantage. The cost of waiting is falling further behind peers who are already using extraction and drafting.\n- Visibility: post-disruption, every executive team has a slide in their board deck about supply chain resilience. FlowForge directly addresses that requirement.\n- Scale: this is the internal urgency driver. Teams growing from 20 POs to 80 POs hit a wall where their current process breaks. That wall is usually painful enough to drive a decision.\n- Ask: 'Which of these three resonates most with where your team is right now?' — the answer tells you which value prop to lead with."
   },
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567811",
+    "id": "d4e5f6a7-890b-cdef-1234-567890ab0401",
+    "position": 4,
+    "filepath": "src/pages/slides/Slide04OriginStory.tsx",
+    "title": "Origin Story",
+    "description": "We built this for ourselves first — the founding team's pain, the cost of delayed discovery, and the decision to build the communication layer",
+    "speakerNotes": "This is the trust slide. Tell the story, don't pitch it.\n\n- The founding team ran sourcing operations across factories in Asia and LATAM. This isn't a tool built by engineers who heard about supply chain — it's built by people who lived the problem.\n- Do NOT name a specific company. Say 'our founding team' — that's the right level of generality at this stage.\n- The cost example (expedited freight, markdown) is relatable to anyone in the room who has had a similar experience. Let them connect it to their own story.\n- The quote at the bottom is the positioning anchor: the problem is structural (no unified place), not operational (bad suppliers or tools)."
+  },
+  {
+    "id": "e5f6a7b8-90cd-ef12-3456-7890abcd0501",
+    "position": 5,
+    "filepath": "src/pages/slides/Slide05WhatItIs.tsx",
+    "title": "What FlowForge Does",
+    "description": "Condensed product overview: communication + coordination layer, four capabilities, what it is not, AI's supporting role",
+    "speakerNotes": "This is the 'so what' slide. Keep AI in its supporting role — it's not the headline.\n\n- The key framing: FlowForge is not a new channel. It sits on top of the channels they already use.\n- Four capabilities, not five — we've tightened the messaging. The inbox, AI assist, stage tracker, and risk+payments are the four pillars.\n- The 'what it is NOT' panel is one of the most important parts of this slide. Pre-empt the ERP and monitoring objections before they're raised.\n- 'Zero supplier onboarding' is the clearest competitive advantage. Reinforce it here before going into detail.\n- Transition: 'Let me show you exactly how it fits into a real workflow.'"
+  },
+  {
+    "id": "f6a7b8c9-0def-1234-5678-90abcdef0601",
+    "position": 6,
+    "filepath": "src/pages/slides/Slide06Workflow.tsx",
+    "title": "How It Fits the Workflow",
+    "description": "Forwarding and companion-app model: how messages arrive, honest about no passive monitoring, SAP/Oracle integration as scoped project",
+    "speakerNotes": "This is the honesty slide. Prospects respect it.\n\n- Walk through each ingestion method: forward from WhatsApp chat exports, email via Postmark, mobile app for on-the-go pasting.\n- Explicitly address passive monitoring before they ask: 'We don't silently read your WhatsApp groups. Ingestion is buyer-initiated. This is a deliberate choice for compliance and trust.'\n- SAP/Oracle: say it upfront. 'ERP integration is possible and supported, but it's priced and scoped separately. We won't promise it's included and then surprise you.'\n- The honest pitch at the bottom is the close for this slide: 'Start with 5 shipments in 2 weeks. Prove it before you commit.'"
+  },
+  {
+    "id": "a7b8c9d0-ef12-3456-7890-abcdef010701",
+    "position": 7,
+    "filepath": "src/pages/slides/Slide07ICP.tsx",
+    "title": "Ideal Customer Profile",
+    "description": "Primary: retail and apparel buyers with 20-200 active POs. Secondary: sourcing agencies. Not the primary fit: trade finance intermediaries.",
+    "speakerNotes": "Use this slide to confirm where the prospect fits — then tailor the rest of the conversation.\n\n- Primary ICP is the retail or apparel buying team managing 20–200 active POs across 2+ channels. The economic buyer is VP Supply Chain or Head of Sourcing.\n- Secondary ICP is the sourcing agency — multiple clients, multiple suppliers, needs audit trail and compliance. COO or Director of Operations.\n- Trade finance: we support the three-party payment model, but position it as a module, not the core. Don't lead with it in pilot conversations.\n- The qualifying question on the right side is the single most useful thing on this slide. Ask it: 'How many active POs, and how many channels?' — 20+ POs across 2+ channels is a FlowForge prospect."
+  },
+  {
+    "id": "b8c9d0e1-f234-5678-90ab-cdef01230801",
+    "position": 8,
+    "filepath": "src/pages/slides/Slide08ROI.tsx",
+    "title": "ROI",
+    "description": "Directional early metrics: 50% faster response times, 30% fewer shipment surprises, 80% reduction in manual tracking",
+    "speakerNotes": "Frame these as directional indicators, not audited proof — that framing makes them more credible, not less.\n\n- 50% faster responses: the mechanism is clear — AI draft + full context means no digging. A buyer who used to spend 15 minutes per reply now spends 3.\n- 30% fewer surprises: risk scoring surfaces delays before they become crises. The window to act is what has value — rerouting a shipment costs less than a markdown.\n- 80% reduction in manual tracking: this is the one that resonates with ops-focused buyers. The math is simple: reply once, tracker advances automatically, team sees it.\n- After presenting: 'The pilot is designed to help you measure your own version of these numbers. We'll baseline you in week 1.'\n- The disclaimer is important and earns trust: say it aloud — 'These are directional, not audited. The pilot will show you your specific numbers.'"
+  },
+  {
+    "id": "c9d0e1f2-3456-78ab-cdef-012345670901",
+    "position": 9,
+    "filepath": "src/pages/slides/Slide09BeforeAfter.tsx",
+    "title": "Before / After",
+    "description": "Two-column comparison: before (scattered, reactive, manual) vs after (centralized, structured, automated) across 5 operational dimensions",
+    "speakerNotes": "Let the audience read this one. It's designed to be scannable — resist the urge to narrate every row.\n\n- Give them 30 seconds to read the slide. Then ask: 'Which row resonates most with your team right now?'\n- The delay detection row is usually the most painful — finding out 3–5 days late is the one that costs the most money.\n- The document handling row lands with finance and compliance teams — re-keying PDFs is everyone's least favorite task.\n- If they're nodding at multiple rows: 'The good news is FlowForge addresses all of these simultaneously — they're all connected to the same structural problem.'"
+  },
+  {
+    "id": "d0e1f2a3-4567-89bc-def0-123456781001",
+    "position": 10,
+    "filepath": "src/pages/slides/Slide10Competition.tsx",
+    "title": "Competitive Landscape",
+    "description": "Wedge framing: ERPs, Anvyl (closest overlap), Flexport/freight tools, and custom builds. FlowForge as the only option with zero supplier behavior change.",
+    "speakerNotes": "Lead with the framing, not the table: 'We're not claiming no one else exists. The real question is what job each tool is hired for.'\n\n- ERPs: 'They record what happened. We surface what's happening. Different jobs.'\n- Anvyl is the closest overlap — acknowledge it directly. 'The key difference: Anvyl requires your suppliers to log into their portal. We don't ask suppliers to change a single thing.'\n- Freight tools: 'Complementary. They handle the freight leg; we handle the communication leg. Some of our customers use both.'\n- Custom builds: 'This is the real default competitor — everyone's got their Airtable base and their Slack thread. The question is whether it scales to 50+ POs. Usually it doesn't.'\n- Close: 'Our wedge is the only option that requires zero supplier behavior change while giving the buying team structured, AI-assisted coordination.'"
+  },
+  {
+    "id": "e1f2a3b4-5678-9cde-f012-34567890111",
     "position": 11,
-    "filepath": "src/pages/slides/Slide11SocialProof.tsx",
-    "title": "Platform Scale",
-    "description": "Real workload data: 500+ shipments tracked, 40+ suppliers, 11 pipeline stages, payment tier support",
-    "speakerNotes": "This slide grounds the product in real complexity — not a sandbox demo, not a simplified pilot.\n\n- 500+ shipments tracked means the data model and performance have been tested at meaningful scale.\n- 40+ supplier relationships across multiple geographies means the routing and extraction have handled diverse formats.\n- The callout at the bottom is important: this is built on real F21 shipping data, not invented demo scenarios.\n- If they ask about their specific scale: 'Our data set spans 5 years and 8 countries — if you're managing fewer shipments than that, we have headroom to grow with you.'\n- Avoid overselling specific metrics as customer testimonials — position as internal platform validation."
+    "filepath": "src/pages/slides/Slide11Pilot.tsx",
+    "title": "Pilot Structure",
+    "description": "3 months free: two-week setup, live on a contained workflow, monthly feedback calls, measure and decide at month 3",
+    "speakerNotes": "The pilot removes risk from the decision. Present it as disciplined, not desperate.\n\n- 'Three months free' is the headline. 'No commitment, no contract' is the close.\n- The key framing: 'We designed the pilot to be contained and measurable. 5–10 shipments, a defined scope, monthly calls. It's structured so you can run it alongside your existing process — no disruption to how you operate today.'\n- Monthly feedback calls are mutual: 'We want to hear what's working and what's missing. Your input directly shapes what we build next.'\n- Month 3 is the decision point: 'You'll have three months of data. Expand, adjust, or walk away — we've designed it so you can make a fully informed decision.'"
   },
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567812",
+    "id": "f2a3b4c5-6789-0def-1234-567890ab1201",
     "position": 12,
-    "filepath": "src/pages/slides/Slide12Objections.tsx",
-    "title": "Common Questions",
-    "description": "Four objection/response pairs: existing tools, supplier adoption, ERP overlap, time to go live",
-    "speakerNotes": "Use this slide proactively — don't wait for objections, bring them up yourself.\n\n- Email/WhatsApp objection: the answer is always 'additive, not disruptive.' Their channels stay; they just land in one place.\n- Supplier adoption: the clearest competitive advantage. Zero supplier onboarding. This is not true of most competitors.\n- ERP objection: the cleanest frame is 'communication layer, not a transaction system.' ERPs record facts after they happen; FlowForge surfaces and resolves them before they escalate.\n- Time to live: two weeks is the honest answer for a small team with a pre-built supplier list. Enterprise deals with custom integrations take longer — acknowledge that proactively for larger orgs."
+    "filepath": "src/pages/slides/Slide12Proof.tsx",
+    "title": "What Pilot Proof Will Look Like",
+    "description": "Placeholder for proof: what gets measured, anonymized case study format, buyer controls what gets published",
+    "speakerNotes": "Honesty here builds more trust than a fabricated testimonial.\n\n- 'We don't have testimonials yet. We're being deliberate about who we pilot with. What we can show you is exactly how we'll measure and document the results.'\n- Walk through the four metrics — response time, delay detection lag, manual tracking hours, thread fragmentation. These are the ones that show up in every lost-deal debrief.\n- The anonymized format: 'Company type, team size, baseline, monthly snapshots, one-paragraph qualitative. Shared only with your approval.'\n- The quote at the bottom is the close: 'One real before/after from a team like yours is worth more than ten testimonials from teams you can't relate to.' Let that sit.\n- If they push for references: 'I'd rather let you be the first to measure this for your context than refer you to someone in a different business model.'"
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567813",
     "position": 13,
     "filepath": "src/pages/slides/Slide13Pricing.tsx",
     "title": "Pricing",
-    "description": "Three placeholder tiers: Starter, Growth (most popular), Enterprise. Figures confirmed during scoping.",
-    "speakerNotes": "Lead with the caveat — this is a tier guide, not a price sheet.\n\n- Actual figures are confirmed during scoping based on shipment volume, supplier count, and which modules they need.\n- Growth tier is the right starting point for any team managing 30+ active shipments — it includes AI Copilot and Risk Radar, which are the highest-value modules.\n- Enterprise is the right conversation for any team that mentions SSO, custom ERP integrations, or intermediary financing at scale.\n- If they push for a number: 'I'd rather give you a number that's right than one that changes after scoping. Can we do a 30-minute discovery call to size this properly?'"
+    "description": "Founding member pricing: $99/month or $1,000/year. Enterprise and custom integrations scoped separately.",
+    "speakerNotes": "Lead with the founding member framing — it's the correct context for the number.\n\n- '$99/month or $1,000/year — that's the founding member rate. Teams that pilot with us and convert lock this in. It won't be the rate we charge when we have case studies and a full sales motion.'\n- Annual is the better conversation: '2 months free, founding pricing locked, priority access to new features. Most teams find that's the right place to start.'\n- Enterprise: 'If you're thinking about SSO, ERP integration, or custom channel configurations — those are scoped separately. I'd rather give you a number that's right than one that changes after discovery.'\n- Custom integrations note: say it aloud — 'Custom integrations like SAP or Oracle are priced as separate scoped projects. The base subscription doesn't include them, and I want to be clear about that upfront.'\n- If they push for a lower price: 'The pilot is free. The question is what happens at month 4, and that depends on what you've measured.'"
   },
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567814",
+    "id": "b3c4d5e6-f789-0abc-def1-234567891401",
     "position": 14,
-    "filepath": "src/pages/slides/Slide14CTA.tsx",
-    "title": "Next Steps",
-    "description": "Three next steps: request a demo, start a trial, talk to sales. Contact info for closing.",
-    "speakerNotes": "End by giving them a clear choice — not a vague 'let us know.'\n\n- Demo: the strongest close for prospects who are still evaluating. Offer to bring their hardest PO scenario into the demo — it removes the 'but our situation is different' objection.\n- Trial: for prospects who are ready to buy but need internal proof. Two-week setup, real data, no engineering. Low risk.\n- Talk to Sales: for enterprise or complex scenarios that need scoping. Frame it as a conversation, not a pitch.\n- After the slide: ask directly — 'Which of these three makes the most sense as a first step for you?' — and stop talking. Let them answer."
+    "filepath": "src/pages/slides/Slide14Roadmap.tsx",
+    "title": "Roadmap",
+    "description": "Three roadmap chapters: supplier directory, localization (Chinese and Korean), and industry expansion beyond apparel",
+    "speakerNotes": "Keep this brief — the roadmap shows upside without muddying the current story.\n\n- Supplier directory: 'This is the natural next step. Once buyers trust FlowForge for communication, they'll want to use it for discovery too. We'll build the directory around the suppliers already in the system.'\n- Localization: 'Most of our target suppliers communicate in Mandarin or Korean. Removing the translation layer from the drafting step is one of the highest-impact things we can do. This is coming.'\n- Industry expansion: 'Apparel and retail is the wedge. The same communication fragmentation exists in electronics, furniture, and food. We'll move category by category, not all at once.'\n- If they ask about timeline: 'I'd rather not commit to dates and then miss them. These are the next three chapters — in that order.'"
+  },
+  {
+    "id": "c4d5e6f7-890a-bcde-f123-456789011501",
+    "position": 15,
+    "filepath": "src/pages/slides/Slide15CTA.tsx",
+    "title": "Pilot With Us",
+    "description": "Three clear next steps: 3-month free pilot (5-10 shipments, 2-week setup), live walkthrough, or discovery call",
+    "speakerNotes": "End by giving them a clear choice — not a vague 'let us know.'\n\n- The pilot is the strongest first step for anyone in the room who has a live PO problem right now. 'Five shipments, two weeks to live, no engineering. If it works, you'll know by month three.'\n- The live walkthrough is for prospects who are still evaluating. 'Bring your hardest PO scenario — we'll run it through FlowForge live in 30 minutes. That's usually enough to know.'\n- The discovery call is for enterprise scenarios. 'Custom org structure, ERP integration, complex requirements? Let's scope it before you commit to anything.'\n- After presenting: ask directly — 'Which of these three makes the most sense as a first step for you?' — and stop talking. Let them answer.\n- Email is pilot@flowforge.com — signals intent and makes the ask concrete."
   }
 ]

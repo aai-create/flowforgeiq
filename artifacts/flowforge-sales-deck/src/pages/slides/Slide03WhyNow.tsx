@@ -1,4 +1,4 @@
-export default function Slide10WhyNow() {
+export default function Slide03WhyNow() {
   return (
     <div className="w-screen h-screen overflow-hidden relative" style={{ background: "#0B0F1A", fontFamily: "var(--font-display-family)" }}>
       <div
@@ -16,7 +16,7 @@ export default function Slide10WhyNow() {
       />
 
       <div className="relative z-10 flex flex-col justify-center h-full" style={{ padding: "6vh 8vw" }}>
-        <div style={{ fontSize: "1.2vw", color: "#7C3AED", fontFamily: "var(--font-body-family)", fontWeight: 500, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "1.5vh" }}>Market Context</div>
+        <div style={{ fontSize: "1.2vw", color: "#7C3AED", fontFamily: "var(--font-body-family)", fontWeight: 500, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "1.5vh" }}>Why Now</div>
 
         <h2 style={{
           fontSize: "4.5vw",
@@ -42,7 +42,7 @@ export default function Slide10WhyNow() {
           }}>
             <div style={{ fontSize: "4vw", fontWeight: 700, color: "#7C3AED", lineHeight: 1, marginBottom: "1.5vh", letterSpacing: "-0.03em" }}>AI</div>
             <div style={{ fontSize: "1.8vw", fontWeight: 600, color: "#F1F5F9", marginBottom: "1vh", fontFamily: "var(--font-body-family)" }}>Procurement is going AI-first</div>
-            <div style={{ fontSize: "1.5vw", color: "#64748B", lineHeight: 1.45, fontFamily: "var(--font-body-family)" }}>Buyers expect intelligent document extraction and drafted responses as table stakes — not differentiators. Teams that adopt AI tools outpace those that don't on response time and error rate.</div>
+            <div style={{ fontSize: "1.5vw", color: "#64748B", lineHeight: 1.45, fontFamily: "var(--font-body-family)" }}>Teams that adopt AI-assisted procurement now compound an advantage every quarter. The gap between early adopters and laggards is already measurable in response time and error rate.</div>
           </div>
 
           <div style={{
@@ -53,8 +53,8 @@ export default function Slide10WhyNow() {
             border: "1px solid rgba(124,58,237,0.25)",
           }}>
             <div style={{ fontSize: "4vw", fontWeight: 700, color: "#7C3AED", lineHeight: 1, marginBottom: "1.5vh", letterSpacing: "-0.03em" }}>Visibility</div>
-            <div style={{ fontSize: "1.8vw", fontWeight: 600, color: "#F1F5F9", marginBottom: "1vh", fontFamily: "var(--font-body-family)" }}>Supply chain visibility is a board-level priority</div>
-            <div style={{ fontSize: "1.5vw", color: "#64748B", lineHeight: 1.45, fontFamily: "var(--font-body-family)" }}>Post-2020 disruptions pushed real-time shipment tracking from a logistics feature to a C-suite requirement. Brands that can't see their supply chain in real time are operationally exposed.</div>
+            <div style={{ fontSize: "1.8vw", fontWeight: 600, color: "#F1F5F9", marginBottom: "1vh", fontFamily: "var(--font-body-family)" }}>Supply chain visibility is a board-level mandate</div>
+            <div style={{ fontSize: "1.5vw", color: "#64748B", lineHeight: 1.45, fontFamily: "var(--font-body-family)" }}>Post-disruption, every executive team has a slide about supply chain resilience. Brands that can't see their chain in real time are operationally exposed and facing increasing pressure from the top.</div>
           </div>
 
           <div style={{
@@ -64,9 +64,9 @@ export default function Slide10WhyNow() {
             padding: "3vh 2.5vw",
             border: "1px solid rgba(124,58,237,0.25)",
           }}>
-            <div style={{ fontSize: "4vw", fontWeight: 700, color: "#7C3AED", lineHeight: 1, marginBottom: "1.5vh", letterSpacing: "-0.03em" }}>Fragility</div>
-            <div style={{ fontSize: "1.8vw", fontWeight: 600, color: "#F1F5F9", marginBottom: "1vh", fontFamily: "var(--font-body-family)" }}>Legacy processes are showing their limits</div>
-            <div style={{ fontSize: "1.5vw", color: "#64748B", lineHeight: 1.45, fontFamily: "var(--font-body-family)" }}>Email threads and spreadsheets worked at low volume. At 50+ concurrent shipments they become unmanageable. Growth creates urgency to consolidate.</div>
+            <div style={{ fontSize: "4vw", fontWeight: 700, color: "#7C3AED", lineHeight: 1, marginBottom: "1.5vh", letterSpacing: "-0.03em" }}>Scale</div>
+            <div style={{ fontSize: "1.8vw", fontWeight: 600, color: "#F1F5F9", marginBottom: "1vh", fontFamily: "var(--font-body-family)" }}>Current processes break at 50+ POs</div>
+            <div style={{ fontSize: "1.5vw", color: "#64748B", lineHeight: 1.45, fontFamily: "var(--font-body-family)" }}>Email threads and spreadsheets worked at low volume. Teams growing past 50 concurrent shipments hit a wall where the process itself becomes the bottleneck. That wall usually drives a decision.</div>
           </div>
         </div>
       </div>
