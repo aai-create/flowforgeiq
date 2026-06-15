@@ -34,8 +34,10 @@ import {
   useDisconnectGmail, useGetInboundEmailAddress, useIngestChat, useDeleteMessage,
   usePatchShipmentDeal,
   useSaveExtractionCorrection,
+  useGetExtractionCorrections,
   type Message as ApiMessageFull,
   type ChatIngestResult,
+  type ExtractionCorrection,
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
@@ -771,11 +773,22 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
 
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [corrections, setCorrections] = useState<Record<string, { value: string; confidence: number }>>({});
   const editInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const { mutate: saveCorrection, isPending } = useSaveExtractionCorrection();
+
+  const { data: savedCorrections } = useGetExtractionCorrections(ext?.id ?? 0, {
+    query: { enabled: !!ext?.id, queryKey: ["getExtractionCorrections", ext?.id] },
+  });
+
+  const corrections = useMemo(() => {
+    const map: Record<string, ExtractionCorrection> = {};
+    for (const c of savedCorrections ?? []) {
+      map[c.fieldPath] = c;
+    }
+    return map;
+  }, [savedCorrections]);
 
   const FIELD_LABELS: [string, string][] = [
     ["documentType", "Doc Type"], ["poNumber", "PO Number"], ["invoiceNumber", "Invoice #"],
@@ -801,7 +814,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
       return;
     }
     const correctedValue = editValue.trim();
-    const docType = (corrections["documentType"]?.value ?? (fields?.["documentType"] as string | undefined) ?? "unknown");
+    const docType = (corrections["documentType"]?.correctedValue ?? (fields?.["documentType"] as string | undefined) ?? "unknown");
     saveCorrection(
       {
         id: ext.id,
@@ -813,11 +826,16 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
         },
       },
       {
-        onSuccess: () => {
-          setCorrections((prev) => ({ ...prev, [key]: { value: correctedValue, confidence: 1 } }));
+        onSuccess: (newCorrection) => {
+          queryClient.setQueryData<ExtractionCorrection[]>(
+            ["getExtractionCorrections", ext.id],
+            (prev) => {
+              const without = (prev ?? []).filter((c) => c.fieldPath !== key);
+              return [...without, newCorrection];
+            }
+          );
           setEditingKey(null);
           setEditValue("");
-          queryClient.invalidateQueries({ queryKey: ["getExtractionCorrections", ext.id] });
         },
         onError: () => {
           cancelEdit();
@@ -848,9 +866,9 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
               const rawVal = fields[key];
               if (rawVal == null || rawVal === "") return null;
               const correction = corrections[key];
-              const displayVal = correction ? correction.value : String(rawVal);
+              const displayVal = correction ? correction.correctedValue : String(rawVal);
               const prov = provenance?.[key];
-              const displayConfidence = correction ? correction.confidence : prov?.confidence;
+              const displayConfidence = correction ? 1 : prov?.confidence;
               const isEditing = editingKey === key;
               return (
                 <div key={key} className="px-3 py-1.5 group">
