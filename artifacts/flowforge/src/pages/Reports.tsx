@@ -1256,15 +1256,43 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
                       <td colSpan={7} className="px-4 pb-3 pt-1">
                         <div className="space-y-1.5">
                           {/* unit economics row */}
-                          <div className="flex items-center gap-4 text-[10px] text-[#5E687B] pb-1 border-b border-[#E5EAF0]/60">
-                            <span>Buyer unit price: <span className="font-semibold text-[#212833]">${deal.buyerUnitPrice.toFixed(2)}</span></span>
-                            <span>·</span>
-                            <span>Qty: <span className="font-semibold text-[#212833]">{deal.buyerQuantity.toLocaleString()}</span></span>
-                            <span>·</span>
-                            <span>Currency: <span className="font-semibold text-[#212833]">{deal.currency}</span></span>
-                            <span>·</span>
-                            <span>Supplier paid: <span className="font-semibold text-[#212833]">{fmtUsd(deal.supplierPaidUsd)}</span> of {fmtUsd(deal.supplierCostUsd)}</span>
-                          </div>
+                          {(() => {
+                            const paidUnits   = deal.supplierCostUsd > 0
+                              ? Math.round(deal.buyerQuantity * deal.supplierPaidUsd / deal.supplierCostUsd)
+                              : 0;
+                            const unpaidUnits = deal.buyerQuantity - paidUnits;
+                            const paidUnitPct = deal.buyerQuantity > 0 ? (paidUnits / deal.buyerQuantity) * 100 : 0;
+                            return (
+                              <>
+                                <div className="flex items-center gap-4 text-[10px] text-[#5E687B] pb-1 border-b border-[#E5EAF0]/60">
+                                  <span>Buyer unit price: <span className="font-semibold text-[#212833]">${deal.buyerUnitPrice.toFixed(2)}</span></span>
+                                  <span>·</span>
+                                  <span>Qty: <span className="font-semibold text-[#212833]">{deal.buyerQuantity.toLocaleString()}</span></span>
+                                  <span>·</span>
+                                  <span>Currency: <span className="font-semibold text-[#212833]">{deal.currency}</span></span>
+                                  <span>·</span>
+                                  <span>Supplier paid: <span className="font-semibold text-[#212833]">{fmtUsd(deal.supplierPaidUsd)}</span> of {fmtUsd(deal.supplierCostUsd)}</span>
+                                </div>
+
+                                {/* paid units row */}
+                                <div className="flex items-center gap-2 py-1 border-b border-[#E5EAF0]/60">
+                                  <span className="text-[9px] text-[#9E9FAE] w-20 shrink-0">Units paid</span>
+                                  <div className="flex-1 h-2 rounded-full bg-[#E5EAF0] overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full transition-all bg-emerald-500"
+                                      style={{ width: `${Math.min(paidUnitPct, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] text-[#212833] font-semibold whitespace-nowrap">
+                                    {paidUnits.toLocaleString()} / {deal.buyerQuantity.toLocaleString()}
+                                  </span>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${paidUnitPct >= 100 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : unpaidUnits === deal.buyerQuantity ? "bg-[#F5F5F7] text-[#9E9FAE] border-[#E5EAF0]" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                                    {paidUnitPct.toFixed(0)}% paid
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
 
                           {/* spread bar */}
                           <div className="flex items-center gap-2 py-1">
@@ -1361,7 +1389,7 @@ export function Reports() {
   const { data: apiSuppliers, isLoading: loadingSuppliers } = useListSuppliers();
   const { data: apiDeals,     isLoading: loadingDeals     } = useListDeals();
 
-  const [expanded, setExpanded] = useState<string | null>("spread");
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [rangeEnd,   setRangeEnd]   = useState<Date | null>(null);
 
