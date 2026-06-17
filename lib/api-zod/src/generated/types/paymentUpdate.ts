@@ -16,4 +16,10 @@ export interface PaymentUpdate {
   intermediaryRecoveredUsd?: number | null;
   /** Date the recovery was recorded. */
   intermediaryRecoveredAt?: Date | null;
+  /** Supplier invoice number for this payment. */
+  invoiceNumber?: string | null;
+  /** USD amount the Intermediary has actually wired to the Supplier. */
+  intermediarySupplierPaidUsd?: number | null;
+  /** Date the Intermediary wired funds to the Supplier. */
+  intermediarySupplierPaidAt?: Date | null;
 }

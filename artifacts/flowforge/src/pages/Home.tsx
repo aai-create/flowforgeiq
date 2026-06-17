@@ -1836,16 +1836,23 @@ export default function Home() {
   const [supplierEmailOverrides, setSupplierEmailOverrides] = useState<Map<number, string | null>>(new Map());
 
   // Mark-paid inline form
-  interface MarkPaidForm { shipmentId: string; paymentIdx: 0|1; amount: string; date: string; reference: string; method: string; }
+  interface MarkPaidForm {
+    shipmentId: string; paymentIdx: 0|1;
+    amount: string; date: string; reference: string; method: string;
+    invoiceNumber: string;
+    intermediarySupplierPaid: boolean; intermediarySupplierAmount: string; intermediarySupplierDate: string;
+  }
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm | null>(null);
   const openMarkPaid = (shipmentId: string, paymentIdx: 0|1) => {
     const ship = shipments.find(s => s.id === shipmentId);
     if (!ship) return;
-    setMarkPaidForm({ shipmentId, paymentIdx, amount: String(ship.payments[paymentIdx].amountUsd), date: new Date().toISOString().split("T")[0], reference: "", method: "Wire" });
+    const today = new Date().toISOString().split("T")[0];
+    setMarkPaidForm({ shipmentId, paymentIdx, amount: String(ship.payments[paymentIdx].amountUsd), date: today, reference: "", method: "Wire", invoiceNumber: "", intermediarySupplierPaid: false, intermediarySupplierAmount: "", intermediarySupplierDate: today });
   };
   const confirmMarkPaid = () => {
     if (!markPaidForm) return;
-    const { shipmentId, paymentIdx, amount, date, reference, method } = markPaidForm;
+    if (!markPaidForm.invoiceNumber.trim()) return;
+    const { shipmentId, paymentIdx, amount, date, reference, method, invoiceNumber, intermediarySupplierPaid, intermediarySupplierAmount, intermediarySupplierDate } = markPaidForm;
     const ship = shipments.find(s => s.id === shipmentId);
     if (!ship) return;
     const payment = ship.payments[paymentIdx];
@@ -1857,7 +1864,9 @@ export default function Home() {
       const update = { ...payment, paid: true, amountUsd, paidAt: paidAtIso, paidMethod: method };
       return { ...s, payments: paymentIdx === 0 ? [update, bal] : [dep, update] };
     }));
-    updatePayment(payment.paymentId, { paid: true, amountUsd, paidAt: paidAtIso, referenceNumber: reference || undefined, method }).catch(() => {});
+    const intermediarySupplierPaidUsd = intermediarySupplierPaid && intermediarySupplierAmount ? Math.round(Number(intermediarySupplierAmount)) || undefined : undefined;
+    const intermediarySupplierPaidAt = intermediarySupplierPaid && intermediarySupplierDate ? new Date(intermediarySupplierDate).toISOString() : undefined;
+    updatePayment(payment.paymentId, { paid: true, amountUsd, paidAt: paidAtIso, referenceNumber: reference || undefined, method, invoiceNumber: invoiceNumber.trim(), ...(intermediarySupplierPaidUsd ? { intermediarySupplierPaidUsd, intermediarySupplierPaidAt } : {}) }).catch(() => {});
     setToast("Payment marked as paid");
     setTimeout(() => setToast(null), 3000);
     setMarkPaidForm(null);
@@ -3037,12 +3046,22 @@ export default function Home() {
                               <div className="flex items-center gap-1">
                                 {p.paid ? <CheckCircle2 size={9}/> : ov ? <AlertCircle size={9}/> : <CreditCard size={9}/>}
                                 {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : ov ? "OVERDUE" : `due ${p.dueDate}`}
+                                {p.paid && p.invoiceNumber && (
+                                  <span className="text-emerald-700/70 font-normal">· {p.invoiceNumber}</span>
+                                )}
                               </div>
                               {(p.intermediaryAdvanceUsd ?? 0) > 0 && (
                                 <div className="flex items-center gap-1 text-amber-600 font-medium">
                                   <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
                                   Intermediary: ${p.intermediaryAdvanceUsd!.toLocaleString()} fronted
                                   {(p.intermediaryRecoveredUsd ?? 0) > 0 && ` / $${p.intermediaryRecoveredUsd!.toLocaleString()} recovered`}
+                                </div>
+                              )}
+                              {(p.intermediarySupplierPaidUsd ?? 0) > 0 && (
+                                <div className="flex items-center gap-1 text-violet-600 font-medium">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-violet-400 shrink-0" />
+                                  Intermediary paid supplier: ${p.intermediarySupplierPaidUsd!.toLocaleString()}
+                                  {p.intermediarySupplierPaidAt && ` on ${shortDate(p.intermediarySupplierPaidAt)}`}
                                 </div>
                               )}
                             </div>
@@ -3082,12 +3101,20 @@ export default function Home() {
                                     className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
                                 </div>
                                 <div>
+                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">
+                                    Invoice # <span className="text-red-500">*</span>
+                                  </label>
+                                  <input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001"
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, invoiceNumber: e.target.value } : f)}
+                                    className={`w-full px-2 py-1 text-[10px] border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim() ? "border-red-300 focus:border-red-400" : "border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/>
+                                </div>
+                                <div>
                                   <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
                                   <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
                                     onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
                                     className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
                                 </div>
-                                <div>
+                                <div className="col-span-2">
                                   <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label>
                                   <select value={markPaidForm.method}
                                     onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
@@ -3098,8 +3125,33 @@ export default function Home() {
                                   </select>
                                 </div>
                               </div>
-                              <button type="button" onClick={confirmMarkPaid}
-                                className="w-full py-1.5 text-[10px] font-semibold bg-[#9000FF] text-white rounded-md hover:bg-[#7A00D9] transition-colors flex items-center justify-center gap-1.5">
+                              {/* Intermediary payment to supplier */}
+                              <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
+                                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                  <input type="checkbox" checked={markPaidForm.intermediarySupplierPaid}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierPaid: e.target.checked } : f)}
+                                    className="accent-[#9000FF] w-3 h-3"/>
+                                  <span className="text-[9px] font-semibold text-[#5E687B]">Intermediary paid supplier</span>
+                                </label>
+                                {markPaidForm.intermediarySupplierPaid && (
+                                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                                    <div>
+                                      <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                                      <input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0"
+                                        onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierAmount: e.target.value } : f)}
+                                        className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                    </div>
+                                    <div>
+                                      <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Date Paid</label>
+                                      <input type="date" value={markPaidForm.intermediarySupplierDate}
+                                        onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierDate: e.target.value } : f)}
+                                        className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()}
+                                className="w-full py-1.5 text-[10px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]">
                                 <CheckCircle2 size={10}/> Confirm Payment
                               </button>
                             </div>

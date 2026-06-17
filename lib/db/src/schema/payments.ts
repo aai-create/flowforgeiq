@@ -18,6 +18,9 @@ export const paymentsTable = pgTable("payments", {
   intermediaryAdvanceUsd: integer("intermediary_advance_usd"),
   intermediaryRecoveredUsd: integer("intermediary_recovered_usd"),
   intermediaryRecoveredAt: timestamp("intermediary_recovered_at", { withTimezone: true }),
+  invoiceNumber: text("invoice_number"),
+  intermediarySupplierPaidUsd: integer("intermediary_supplier_paid_usd"),
+  intermediarySupplierPaidAt: timestamp("intermediary_supplier_paid_at", { withTimezone: true }),
 });
 
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true });

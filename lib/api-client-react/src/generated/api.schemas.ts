@@ -116,6 +116,12 @@ export interface Payment {
   intermediaryAdvanceUsd?: number | null;
   /** USD amount the Intermediary has already recovered from the Buyer. */
   intermediaryRecoveredUsd?: number | null;
+  /** Supplier invoice number for this payment. */
+  invoiceNumber?: string | null;
+  /** USD amount the Intermediary has actually wired to the Supplier. */
+  intermediarySupplierPaidUsd?: number | null;
+  /** Date the Intermediary wired funds to the Supplier. */
+  intermediarySupplierPaidAt?: string | null;
 }
 
 export interface PaymentUpdate {
@@ -128,6 +134,12 @@ export interface PaymentUpdate {
   intermediaryRecoveredUsd?: number | null;
   /** Date the recovery was recorded. */
   intermediaryRecoveredAt?: string | null;
+  /** Supplier invoice number for this payment. */
+  invoiceNumber?: string | null;
+  /** USD amount the Intermediary has actually wired to the Supplier. */
+  intermediarySupplierPaidUsd?: number | null;
+  /** Date the Intermediary wired funds to the Supplier. */
+  intermediarySupplierPaidAt?: string | null;
 }
 
 export interface FactoryQuote {
