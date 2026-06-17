@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, rfqsTable, rfqQuotesTable, shipmentsTable, suppliersTable, paymentsTable, stagesTable } from "@workspace/db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, isNotNull } from "drizzle-orm";
+import { z } from "zod/v4";
 import {
   CreateRfqBody,
   UpdateRfqBody,
@@ -16,6 +17,34 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+async function sendViaPostmark(opts: {
+  from: string;
+  to: string[];
+  subject: string;
+  textBody: string;
+}): Promise<void> {
+  const token = process.env.POSTMARK_SERVER_TOKEN;
+  if (!token) throw new Error("POSTMARK_SERVER_TOKEN is not set");
+  const res = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": token,
+    },
+    body: JSON.stringify({
+      From: opts.from,
+      To: opts.to.join(","),
+      Subject: opts.subject,
+      TextBody: opts.textBody,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Postmark error ${res.status}: ${detail}`);
+  }
+}
 
 async function loadRfq(id: number) {
   const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, id));
@@ -38,6 +67,38 @@ async function loadRfq(id: number) {
     })),
   };
 }
+
+const SendRfqEmailBodySchema = z.object({
+  to: z.array(z.string().email()).min(1),
+  subject: z.string().min(1),
+  body: z.string().min(1),
+});
+
+router.get("/rfqs/buyers", async (_req, res) => {
+  const rows = await db
+    .selectDistinct({ buyerName: rfqsTable.buyerName })
+    .from(rfqsTable)
+    .where(isNotNull(rfqsTable.buyerName))
+    .orderBy(asc(rfqsTable.buyerName));
+  res.json(rows.map(r => r.buyerName));
+});
+
+router.post("/rfqs/:id/send-email", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, id));
+  if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
+  const body = SendRfqEmailBodySchema.parse(req.body);
+  const from = process.env.INBOUND_EMAIL_ADDRESS ?? "ai@flowforge.com";
+  try {
+    await sendViaPostmark({ from, to: body.to, subject: body.subject, textBody: body.body });
+    req.log.info({ rfqId: id, to: body.to }, "RFQ email sent");
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    req.log.error({ err }, "Failed to send RFQ email");
+    res.status(500).json({ error: (err as Error).message ?? "Failed to send email" });
+  }
+});
 
 router.get("/rfqs", async (_req, res) => {
   const rfqs = await db.select().from(rfqsTable).orderBy(asc(rfqsTable.id));

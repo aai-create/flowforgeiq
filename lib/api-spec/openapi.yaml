@@ -1237,6 +1237,46 @@ paths:
         "404":
           description: Not found or not yet converted
 
+  /rfqs/buyers:
+    get:
+      operationId: listRfqBuyers
+      tags: [rfqs]
+      summary: List distinct buyer names from all RFQs
+      responses:
+        "200":
+          description: Alphabetically sorted distinct buyer names
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+
+  /rfqs/{id}/send-email:
+    post:
+      operationId: sendRfqEmail
+      tags: [rfqs]
+      summary: Send the RFQ details to supplier contacts via email
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendRfqEmailBody" }
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SendRfqEmailResponse" }
+        "404":
+          description: RFQ not found
+        "500":
+          description: Email delivery failed
+
   /team:
     get:
       operationId: getTeam
@@ -2409,3 +2449,19 @@ components:
         supplierName: { type: string }
         supplierCountry: { type: string }
         generatedAt:  { type: string, format: date-time }
+
+    SendRfqEmailBody:
+      type: object
+      required: [to, subject, body]
+      properties:
+        to:
+          type: array
+          items: { type: string }
+        subject: { type: string }
+        body: { type: string }
+
+    SendRfqEmailResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }

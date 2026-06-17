@@ -1774,6 +1774,31 @@ export const GetRfqProformaResponse = zod.object({
 
 
 /**
+ * @summary List distinct buyer names from all RFQs
+ */
+export const ListRfqBuyersResponseItem = zod.string()
+export const ListRfqBuyersResponse = zod.array(ListRfqBuyersResponseItem)
+
+
+/**
+ * @summary Send the RFQ details to supplier contacts via email
+ */
+export const SendRfqEmailParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SendRfqEmailBody = zod.object({
+  "to": zod.array(zod.string()),
+  "subject": zod.string(),
+  "body": zod.string()
+})
+
+export const SendRfqEmailResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary List team members and pending invitations
  */
 export const GetTeamResponse = zod.object({

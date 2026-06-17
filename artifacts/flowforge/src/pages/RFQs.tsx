@@ -13,20 +13,29 @@ import {
   useConvertRfqToPo,
   useListSuppliers,
   useListStages,
+  useListRfqBuyers,
+  useSendRfqEmail,
   getListShipmentsQueryKey,
   getListRfqsQueryKey,
 } from "@workspace/api-client-react";
 import type { RfqWithQuotes, RfqQuote } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, ChevronRight, FileText, CheckCircle2, Clock, AlertCircle,
+  Plus, FileText, CheckCircle2, AlertCircle,
   X, Trash2, Edit2, Check, TrendingDown, TrendingUp, Minus,
-  Download, ArrowRight, RefreshCw,
+  Download, ArrowRight, RefreshCw, Info, Mail, ChevronsUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { shortDate } from "@/lib/adapters";
 
 const statusLabel: Record<string, string> = {
@@ -218,6 +227,7 @@ export function RFQs() {
   const { data: rfqs = [], refetch: refetchRfqs } = useListRfqs();
   const { data: suppliers = [] } = useListSuppliers();
   const { data: stages = [] } = useListStages();
+  const { data: knownBuyers = [] } = useListRfqBuyers();
   const firstStageId = stages.length > 0 ? stages.sort((a, b) => a.sortOrder - b.sortOrder)[0]?.id : "";
 
   const createRfqMutation = useCreateRfq();
@@ -226,6 +236,7 @@ export function RFQs() {
   const updateQuoteMutation = useUpdateRfqQuote();
   const deleteQuoteMutation = useDeleteRfqQuote();
   const convertMutation = useConvertRfqToPo();
+  const sendEmailMutation = useSendRfqEmail();
 
   const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
   const [showNewRfq, setShowNewRfq] = useState(false);
@@ -235,6 +246,13 @@ export function RFQs() {
   const [toast, setToast] = useState<string | null>(null);
   const [convertedPoNumber, setConvertedPoNumber] = useState<string | null>(null);
   const [, navigate] = useLocation();
+
+  const [buyerComboboxOpen, setBuyerComboboxOpen] = useState(false);
+  const [buyerInput, setBuyerInput] = useState("");
+
+  const [showSendEmail, setShowSendEmail] = useState(false);
+  const [sendEmailForm, setSendEmailForm] = useState({ to: "", subject: "", body: "" });
+  const [sendEmailError, setSendEmailError] = useState<string | null>(null);
 
   const [newRfqForm, setNewRfqForm] = useState<NewRfqFormState>({
     product: "", category: "", buyerName: "", targetPriceUsd: "", quantity: "", deadline: "", notes: "",
@@ -288,6 +306,7 @@ export function RFQs() {
       setSelectedRfqId(created.id);
       setShowNewRfq(false);
       setNewRfqForm({ product: "", category: "", buyerName: "", targetPriceUsd: "", quantity: "", deadline: "", notes: "" });
+      setBuyerInput("");
       showToast("RFQ created");
     } catch {
       setNewRfqError("Failed to create RFQ. Please try again.");
@@ -408,6 +427,58 @@ export function RFQs() {
     showToast("RFQ cancelled");
   };
 
+  const openSendEmail = (rfq: RfqWithQuotes) => {
+    const recipientEmails = rfq.quotes
+      .map(q => suppliers.find(s => s.id === q.supplierId)?.contactEmail)
+      .filter((e): e is string => !!e);
+    const unique = [...new Set(recipientEmails)];
+    const deadline = shortDate(rfq.deadline);
+    const body = [
+      `Dear Factory Partner,`,
+      ``,
+      `We are pleased to invite you to submit a quotation for the following product:`,
+      ``,
+      `Product:      ${rfq.product}`,
+      rfq.category ? `Category:     ${rfq.category}` : null,
+      `Target Price: $${rfq.targetPriceUsd.toFixed(2)} / unit`,
+      `Quantity:     ${rfq.quantity.toLocaleString()} units`,
+      `Quote Deadline: ${deadline}`,
+      rfq.notes ? `\nAdditional Notes:\n${rfq.notes}` : null,
+      ``,
+      `Please submit your best unit price, lead time, and MOQ by the deadline above.`,
+      ``,
+      `Best regards,`,
+      `FlowForge Sourcing Team`,
+    ].filter(line => line !== null).join("\n");
+
+    setSendEmailForm({
+      to: unique.join(", "),
+      subject: `RFQ: ${rfq.product}`,
+      body,
+    });
+    setSendEmailError(null);
+    setShowSendEmail(true);
+  };
+
+  const submitSendEmail = async () => {
+    if (!selectedRfqId) return;
+    setSendEmailError(null);
+    const toList = sendEmailForm.to.split(",").map(e => e.trim()).filter(Boolean);
+    if (toList.length === 0) { setSendEmailError("Enter at least one recipient email."); return; }
+    const invalidEmail = toList.find(e => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (invalidEmail) { setSendEmailError(`"${invalidEmail}" is not a valid email address.`); return; }
+    try {
+      await sendEmailMutation.mutateAsync({
+        id: selectedRfqId,
+        data: { to: toList, subject: sendEmailForm.subject, body: sendEmailForm.body },
+      });
+      setShowSendEmail(false);
+      showToast("RFQ email sent");
+    } catch (err: unknown) {
+      setSendEmailError((err as { message?: string })?.message ?? "Failed to send email. Check POSTMARK_SERVER_TOKEN.");
+    }
+  };
+
   return (
     <>
       {toast && (
@@ -514,10 +585,16 @@ export function RFQs() {
                         </Button>
                       )}
                       {selectedRfq.status === "open" && (
-                        <Button size="sm" variant="ghost" onClick={() => cancelRfq(selectedRfq.id)}
-                          className="h-7 px-3 text-xs text-[#5E687B] hover:text-red-600 hover:bg-red-50">
-                          Cancel RFQ
-                        </Button>
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => openSendEmail(selectedRfq)}
+                            className="h-7 px-3 text-xs border-[#E5EAF0] text-[#5E687B] hover:bg-[#F0F2F5]">
+                            <Mail className="w-3 h-3 mr-1.5" /> Send RFQ
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => cancelRfq(selectedRfq.id)}
+                            className="h-7 px-3 text-xs text-[#5E687B] hover:text-red-600 hover:bg-red-50">
+                            Cancel RFQ
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -536,7 +613,18 @@ export function RFQs() {
                       <div className="text-sm font-semibold text-[#212833]">{selectedRfq.quantity.toLocaleString()} units</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Deadline</div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5 cursor-default">
+                              Deadline <Info className="w-3 h-3 text-[#5E687B]/60" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[280px] text-left leading-snug">
+                            The date by which all factories must submit their quoted unit price. Factories contacted via this RFQ are typically expected to respond within 2–4 business days of receiving the request.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <div className="text-sm font-semibold text-[#212833]">{shortDate(selectedRfq.deadline)}</div>
                     </div>
                   </div>
@@ -743,9 +831,63 @@ export function RFQs() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer *</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  placeholder="e.g. Vellum Studio"
-                  value={newRfqForm.buyerName} onChange={e => setNewRfqForm(f => ({ ...f, buyerName: e.target.value }))} />
+                <Popover open={buyerComboboxOpen} onOpenChange={setBuyerComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm text-left focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 bg-white flex items-center justify-between"
+                    >
+                      <span className={newRfqForm.buyerName ? "text-[#212833]" : "text-[#9BA5B3]"}>
+                        {newRfqForm.buyerName || "e.g. Vellum Studio"}
+                      </span>
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-[#9BA5B3] shrink-0" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 w-64" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search or type a buyer…"
+                        value={buyerInput}
+                        onValueChange={val => { setBuyerInput(val); setNewRfqForm(f => ({ ...f, buyerName: val })); }}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {buyerInput.trim() ? (
+                            <button
+                              className="w-full text-left px-3 py-2 text-sm text-[#9000FF] font-semibold hover:bg-[#F9F6FF]"
+                              onClick={() => { setNewRfqForm(f => ({ ...f, buyerName: buyerInput.trim() })); setBuyerComboboxOpen(false); setBuyerInput(""); }}
+                            >
+                              Add "{buyerInput.trim()}"
+                            </button>
+                          ) : "No buyers found."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {knownBuyers
+                            .filter(b => b.toLowerCase().includes(buyerInput.toLowerCase()))
+                            .map(b => (
+                              <CommandItem
+                                key={b}
+                                value={b}
+                                onSelect={() => { setNewRfqForm(f => ({ ...f, buyerName: b })); setBuyerComboboxOpen(false); setBuyerInput(""); }}
+                              >
+                                {b}
+                                {newRfqForm.buyerName === b && <Check className="ml-auto w-3.5 h-3.5" />}
+                              </CommandItem>
+                            ))}
+                          {buyerInput.trim() && !knownBuyers.some(b => b.toLowerCase() === buyerInput.toLowerCase()) && (
+                            <CommandItem
+                              value={`__add__${buyerInput.trim()}`}
+                              onSelect={() => { setNewRfqForm(f => ({ ...f, buyerName: buyerInput.trim() })); setBuyerComboboxOpen(false); setBuyerInput(""); }}
+                              className="text-[#9000FF] font-semibold"
+                            >
+                              Add "{buyerInput.trim()}"
+                            </CommandItem>
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#5E687B] mb-1">Target Price (USD / unit) *</label>
@@ -760,7 +902,18 @@ export function RFQs() {
                   value={newRfqForm.quantity} onChange={e => setNewRfqForm(f => ({ ...f, quantity: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Quote Deadline *</label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <label className="inline-flex items-center gap-1 text-xs font-semibold text-[#5E687B] mb-1 cursor-default">
+                        Quote Deadline * <Info className="w-3 h-3 text-[#5E687B]/60" />
+                      </label>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[280px] text-left leading-snug">
+                      The date by which all factories must submit their quoted unit price. Factories contacted via this RFQ are typically expected to respond within 2–4 business days of receiving the request.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   type="date"
                   value={newRfqForm.deadline} onChange={e => setNewRfqForm(f => ({ ...f, deadline: e.target.value }))} />
@@ -941,6 +1094,58 @@ export function RFQs() {
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitConvert}
               disabled={convertMutation.isPending}>
               {convertMutation.isPending ? "Creating PO…" : "Create PO"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send RFQ Email Modal */}
+      <Dialog open={showSendEmail} onOpenChange={open => { if (!open) { setShowSendEmail(false); setSendEmailError(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-[#9000FF]" /> Send RFQ via Email
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {sendEmailError && (
+              <div className="flex items-center gap-2 p-2.5 bg-red-50 text-red-600 rounded-lg text-xs">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />{sendEmailError}
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Recipients *</label>
+              <input
+                className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                placeholder="factory@example.com, another@example.com"
+                value={sendEmailForm.to}
+                onChange={e => setSendEmailForm(f => ({ ...f, to: e.target.value }))}
+              />
+              <p className="text-[10px] text-[#9BA5B3] mt-1">Separate multiple addresses with commas.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Subject *</label>
+              <input
+                className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                value={sendEmailForm.subject}
+                onChange={e => setSendEmailForm(f => ({ ...f, subject: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Message *</label>
+              <textarea
+                className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 resize-none font-mono"
+                rows={10}
+                value={sendEmailForm.body}
+                onChange={e => setSendEmailForm(f => ({ ...f, body: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => { setShowSendEmail(false); setSendEmailError(null); }}>Cancel</Button>
+            <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitSendEmail}
+              disabled={sendEmailMutation.isPending}>
+              {sendEmailMutation.isPending ? "Sending…" : "Send Email"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1118,6 +1118,16 @@ export interface ProformaInvoice {
   generatedAt: string;
 }
 
+export interface SendRfqEmailBody {
+  to: string[];
+  subject: string;
+  body: string;
+}
+
+export interface SendRfqEmailResponse {
+  ok: boolean;
+}
+
 export type LinkDealToShipmentBody = {
   dealId: number;
 };

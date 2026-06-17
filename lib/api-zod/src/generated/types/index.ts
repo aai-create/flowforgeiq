@@ -97,6 +97,8 @@ export * from './rfqWithQuotesStatus';
 export * from './riskRadarItem';
 export * from './riskRadarResponse';
 export * from './sendReplyInput';
+export * from './sendRfqEmailBody';
+export * from './sendRfqEmailResponse';
 export * from './shipment';
 export * from './shipmentCreate';
 export * from './shipmentPrediction';

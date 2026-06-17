@@ -77,6 +77,8 @@ import type {
   RfqWithQuotes,
   RiskRadarResponse,
   SendReplyInput,
+  SendRfqEmailBody,
+  SendRfqEmailResponse,
   Shipment,
   ShipmentCreate,
   ShipmentPrediction,
@@ -5068,6 +5070,155 @@ export function useGetRfqProforma<TData = Awaited<ReturnType<typeof getRfqProfor
 
 
 
+
+export const getListRfqBuyersUrl = () => {
+
+
+
+
+  return `/api/rfqs/buyers`
+}
+
+/**
+ * @summary List distinct buyer names from all RFQs
+ */
+export const listRfqBuyers = async ( options?: RequestInit): Promise<string[]> => {
+
+  return customFetch<string[]>(getListRfqBuyersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRfqBuyersQueryKey = () => {
+    return [
+    `/api/rfqs/buyers`
+    ] as const;
+    }
+
+
+export const getListRfqBuyersQueryOptions = <TData = Awaited<ReturnType<typeof listRfqBuyers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRfqBuyers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRfqBuyersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRfqBuyers>>> = ({ signal }) => listRfqBuyers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRfqBuyers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRfqBuyersQueryResult = NonNullable<Awaited<ReturnType<typeof listRfqBuyers>>>
+export type ListRfqBuyersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List distinct buyer names from all RFQs
+ */
+
+export function useListRfqBuyers<TData = Awaited<ReturnType<typeof listRfqBuyers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRfqBuyers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRfqBuyersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSendRfqEmailUrl = (id: number,) => {
+
+
+
+
+  return `/api/rfqs/${id}/send-email`
+}
+
+/**
+ * @summary Send the RFQ details to supplier contacts via email
+ */
+export const sendRfqEmail = async (id: number,
+    sendRfqEmailBody: SendRfqEmailBody, options?: RequestInit): Promise<SendRfqEmailResponse> => {
+
+  return customFetch<SendRfqEmailResponse>(getSendRfqEmailUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sendRfqEmailBody,)
+  }
+);}
+
+
+
+
+export const getSendRfqEmailMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendRfqEmail>>, TError,{id: number;data: BodyType<SendRfqEmailBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendRfqEmail>>, TError,{id: number;data: BodyType<SendRfqEmailBody>}, TContext> => {
+
+const mutationKey = ['sendRfqEmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendRfqEmail>>, {id: number;data: BodyType<SendRfqEmailBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendRfqEmail(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendRfqEmailMutationResult = NonNullable<Awaited<ReturnType<typeof sendRfqEmail>>>
+    export type SendRfqEmailMutationBody = BodyType<SendRfqEmailBody>
+    export type SendRfqEmailMutationError = ErrorType<void>
+
+    /**
+ * @summary Send the RFQ details to supplier contacts via email
+ */
+export const useSendRfqEmail = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendRfqEmail>>, TError,{id: number;data: BodyType<SendRfqEmailBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendRfqEmail>>,
+        TError,
+        {id: number;data: BodyType<SendRfqEmailBody>},
+        TContext
+      > => {
+      return useMutation(getSendRfqEmailMutationOptions(options));
+    }
 
 export const getGetTeamUrl = () => {
 
