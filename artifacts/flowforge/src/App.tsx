@@ -156,7 +156,9 @@ const LANDING_PAGE_ROUTES: Record<LandingPagePref, string> = {
 };
 
 function DefaultLandingRedirect() {
+  const { isLoaded } = useUser();
   const [pref] = useUserPref<LandingPagePref>("defaultLandingPage", "inbox");
+  if (!isLoaded) return null;
   return <Redirect to={LANDING_PAGE_ROUTES[pref] ?? "/inbox"} />;
 }
 
