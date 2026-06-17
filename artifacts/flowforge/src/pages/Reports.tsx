@@ -1176,6 +1176,14 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
   const totalSpread   = totalBuyer - totalSupplier;
   const avgSpreadPct  = totalBuyer > 0 ? (totalSpread / totalBuyer) * 100 : 0;
 
+  const totalUnits     = deals.reduce((s, d) => s + d.buyerQuantity, 0);
+  const totalPaidUnits = deals.reduce((s, d) =>
+    s + (d.supplierCostUsd > 0 ? Math.round(d.buyerQuantity * d.supplierPaidUsd / d.supplierCostUsd) : 0), 0);
+  const paidUnitPct    = totalUnits > 0 ? (totalPaidUnits / totalUnits) * 100 : 0;
+  const paidUnitsSub   = totalUnits > 0
+    ? `${totalPaidUnits.toLocaleString()} / ${totalUnits.toLocaleString()} units paid (${Math.round(paidUnitPct)}%)`
+    : null;
+
   return (
     <div className="space-y-4">
       {/* Portfolio summary row */}
@@ -1189,6 +1197,9 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
             <p className="text-[10px] text-[#9E9FAE] font-medium uppercase tracking-wide mb-0.5">{label}</p>
             <p className="text-base font-bold text-[#212833]">{value}</p>
             <p className="text-[10px] text-[#9E9FAE]">{sub}</p>
+            {paidUnitsSub && (
+              <p className="text-[10px] text-[#9E9FAE] mt-0.5">{paidUnitsSub}</p>
+            )}
           </div>
         ))}
       </div>
