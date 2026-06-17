@@ -627,6 +627,8 @@ export const ListMessagesResponseItem = zod.object({
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -694,6 +696,8 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -753,6 +757,8 @@ export const UpdateMessageResponse = zod.object({
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -805,6 +811,8 @@ export const AssignMessageResponse = zod.object({
   "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
   "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),

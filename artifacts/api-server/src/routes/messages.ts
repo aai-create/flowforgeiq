@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable } from "@workspace/db";
+import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import {
   ListMessagesResponseItem,
@@ -27,11 +27,15 @@ router.get("/messages", async (req, res) => {
 
 router.get("/messages/needs-review", async (req, res) => {
   const rows = await db
-    .select()
+    .select({
+      message: messagesTable,
+      routedToUserName: teamUsersTable.name,
+    })
     .from(messagesTable)
+    .leftJoin(teamUsersTable, eq(messagesTable.routedToClerkUserId, teamUsersTable.clerkUserId))
     .where(eq(messagesTable.routingStatus, "needs-review"))
     .orderBy(desc(messagesTable.receivedAt));
-  res.json(rows.map(r => ListMessagesResponseItem.parse(r)));
+  res.json(rows.map(r => ListMessagesResponseItem.parse({ ...r.message, routedToUserName: r.routedToUserName ?? null })));
 });
 
 router.post("/messages", async (req, res) => {

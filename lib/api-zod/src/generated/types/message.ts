@@ -63,6 +63,16 @@ export interface Message {
      */
   rawChatText?: string | null;
   /**
+     * Clerk user ID of the team member whose plus-token received this email
+     * @nullable
+     */
+  routedToClerkUserId?: string | null;
+  /**
+     * Display name of the team member this email was addressed to (resolved from routedToClerkUserId)
+     * @nullable
+     */
+  routedToUserName?: string | null;
+  /**
      * AI's best guess for assignment (when confidence is low)
      * @nullable
      */

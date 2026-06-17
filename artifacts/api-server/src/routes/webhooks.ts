@@ -730,6 +730,7 @@ router.post("/webhooks/email", async (req, res) => {
       rawSenderEmail: From ?? null,
       aiRoutingGuess: null,
       receivedAt: new Date(),
+      routedToClerkUserId: null,
     });
     res.json({ accepted: true, documentIds: [] });
     return;
@@ -760,6 +761,7 @@ router.post("/webhooks/email", async (req, res) => {
       rawSenderEmail: From ?? null,
       aiRoutingGuess: null,
       receivedAt: new Date(),
+      routedToClerkUserId: null,
     });
     res.json({ accepted: true, documentIds: [] });
     return;
@@ -809,6 +811,7 @@ router.post("/webhooks/email", async (req, res) => {
         matchMethod: extracted.matchMethod,
         rawSenderEmail: From ?? null,
         receivedAt: new Date(),
+        routedToClerkUserId: scopedClerkUserId,
       });
 
       req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus, scopedClerkUserId }, "email-webhook: chat forward ingested");
@@ -938,6 +941,7 @@ router.post("/webhooks/email", async (req, res) => {
       rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
       aiRoutingGuess: aiGuess ?? null,
       receivedAt: new Date(),
+      routedToClerkUserId: ctx.scopedClerkUserId,
     })
     .returning();
 

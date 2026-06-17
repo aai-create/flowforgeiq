@@ -26,6 +26,7 @@ export const messagesTable = pgTable("messages", {
   aiRoutingGuess: jsonb("ai_routing_guess"),
   pendingExtractionFields: jsonb("pending_extraction_fields"),
   rawChatText: text("raw_chat_text"),
+  routedToClerkUserId: text("routed_to_clerk_user_id"),
 });
 
 export const insertMessageSchema = createInsertSchema(messagesTable).omit({ id: true });

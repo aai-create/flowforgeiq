@@ -1839,6 +1839,8 @@ components:
         matchMethod:            { type: ["string", "null"], description: "How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable" }
         rawSenderEmail:         { type: ["string", "null"], description: "The original sender email address" }
         rawChatText:            { type: ["string", "null"], description: "Original pasted or forwarded chat text for audit" }
+        routedToClerkUserId:    { type: ["string", "null"], description: "Clerk user ID of the team member whose plus-token received this email" }
+        routedToUserName:       { type: ["string", "null"], description: "Display name of the team member this email was addressed to (resolved from routedToClerkUserId)" }
         aiRoutingGuess:
           type: ["object", "null"]
           description: "AI's best guess for assignment (when confidence is low)"

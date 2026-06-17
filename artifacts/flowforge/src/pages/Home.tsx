@@ -1443,6 +1443,12 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                {msg.routedToUserName && (
+                  <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 flex items-center gap-1 shrink-0">
+                    <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm4 2H4a4 4 0 0 0-4 4v1h16v-1a4 4 0 0 0-4-4z"/></svg>
+                    {msg.routedToUserName}
+                  </span>
+                )}
                 {conf != null && (
                   <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${conf >= 0.65 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-red-50 text-red-600 border-red-100"}`}>
                     {Math.round(conf * 100)}% match
