@@ -1674,9 +1674,33 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
 export default function Home() {
   const search = useSearch();
   const [, navigate] = useLocation();
-  const fromParam     = new URLSearchParams(search).get("from");
-  const fromRiskRadar = fromParam === "risk-radar";
-  const fromReports   = fromParam === "reports";
+  const fromParam = new URLSearchParams(search).get("from");
+
+  const FROM_CARD_LABELS: Record<string, string> = {
+    spread:    "Deals & Spread",
+    finance:   "Finance",
+    pipeline:  "Pipeline",
+    suppliers: "Suppliers",
+    tasks:     "Tasks & Actions",
+  };
+
+  type BreadcrumbSegment = { label: string; href: string } | { label: string; href?: undefined };
+
+  function parseBreadcrumb(param: string | null): BreadcrumbSegment[] {
+    if (!param) return [];
+    if (param === "risk-radar") return [{ label: "Risk Radar", href: "/risk-radar" }];
+    if (param.startsWith("reports")) {
+      const cardId = param.split(":")[1];
+      const segments: BreadcrumbSegment[] = [{ label: "Reports", href: "/reports" }];
+      if (cardId && FROM_CARD_LABELS[cardId]) {
+        segments.push({ label: FROM_CARD_LABELS[cardId] });
+      }
+      return segments;
+    }
+    return [];
+  }
+
+  const breadcrumbSegments = parseBreadcrumb(fromParam);
   useCopilotHint("Draft a reply or ask about shipment status", [
     "Draft a reply to this supplier",
     "Any overdue payments on this PO?",
@@ -2521,23 +2545,29 @@ export default function Home() {
                   : activeView==="buyers"    ? "Buyer Chatbot"
                   : "Doc Intelligence"}
             </span>
-            {fromRiskRadar && (
-              <button
-                onClick={() => navigate("/risk-radar")}
-                className="flex items-center gap-1 text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] bg-[#F5EEFF] hover:bg-[#EDD9FF] border border-[#DDB8FF] rounded-md px-2 py-0.5 transition-colors shrink-0"
-              >
-                <ChevronLeft size={11} />
-                Risk Radar
-              </button>
-            )}
-            {fromReports && (
-              <button
-                onClick={() => navigate("/reports")}
-                className="flex items-center gap-1 text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] bg-[#F5EEFF] hover:bg-[#EDD9FF] border border-[#DDB8FF] rounded-md px-2 py-0.5 transition-colors shrink-0"
-              >
-                <ChevronLeft size={11} />
-                Reports
-              </button>
+            {breadcrumbSegments.length > 0 && (
+              <nav aria-label="breadcrumb" className="flex items-center gap-1 shrink-0">
+                <ChevronLeft size={10} className="text-[#C0C8D4] shrink-0" />
+                {breadcrumbSegments.map((seg, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && (
+                      <span className="text-[#C0C8D4] text-[10px] select-none">/</span>
+                    )}
+                    {seg.href ? (
+                      <button
+                        onClick={() => navigate(seg.href!)}
+                        className="text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
+                      >
+                        {seg.label}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-medium text-[#5E687B]">
+                        {seg.label}
+                      </span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </nav>
             )}
           </div>
 

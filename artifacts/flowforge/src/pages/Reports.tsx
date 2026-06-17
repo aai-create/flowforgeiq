@@ -442,7 +442,7 @@ function FinanceCardContent({
                     <React.Fragment key={row.paymentId}>
                       <tr
                         className="border-b border-amber-50 last:border-0 hover:bg-amber-50/60 cursor-pointer transition-colors group/irow"
-                        onClick={() => navigate(`/?shipment=${row.shipmentId}&from=reports`)}
+                        onClick={() => navigate(`/?shipment=${row.shipmentId}&from=reports:finance`)}
                         title={`Open ${row.shipmentPo} in inbox`}
                       >
                         <td className="px-3 py-2">
@@ -618,7 +618,7 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
                     <tr
                       key={s.id}
                       className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] cursor-pointer transition-colors group"
-                      onClick={() => navigate(`/?shipment=${s.id}&from=reports`)}
+                      onClick={() => navigate(`/?shipment=${s.id}&from=reports:pipeline`)}
                       title={`Open ${s.poNumber} in inbox`}
                     >
                       <td className="py-1.5">
@@ -906,7 +906,7 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
           </button>
           <button
             className="px-2 py-2 opacity-0 group-hover/header:opacity-100 transition-opacity text-[#9000FF] hover:text-[#7A00D9] shrink-0"
-            onClick={() => navigate(`/?shipment=${shipmentId}&from=reports`)}
+            onClick={() => navigate(`/?shipment=${shipmentId}&from=reports:tasks`)}
             title={`Open ${ship?.poNumber ?? `shipment #${shipmentId}`} in inbox`}
           >
             <ArrowRight className="w-3.5 h-3.5" />
@@ -919,7 +919,7 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
               <button
                 key={task.id}
                 className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-[#FAFBFC] transition-colors group/row"
-                onClick={() => navigate(`/?shipment=${shipmentId}&from=reports`)}
+                onClick={() => navigate(`/?shipment=${shipmentId}&from=reports:tasks`)}
                 title={`Open ${ship?.poNumber ?? `shipment #${shipmentId}`} in inbox`}
               >
                 <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
@@ -1226,7 +1226,7 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
                 <React.Fragment key={deal.id}>
                   <tr
                     className={`border-b border-[#F0F4F8] cursor-pointer transition-colors group/deal ${isOpen ? "bg-[#F8F4FF]" : "hover:bg-[#FAFBFC]"}`}
-                    onClick={() => deal.legs.length > 0 && navigate(`/?shipment=${deal.legs[0].id}&from=reports`)}
+                    onClick={() => deal.legs.length > 0 && navigate(`/?shipment=${deal.legs[0].id}&from=reports:spread`)}
                     title={deal.legs.length > 0 ? `Open ${deal.buyerPoNumber} in inbox` : deal.buyerPoNumber}
                   >
                     <td className="px-3 py-2.5">
@@ -1344,7 +1344,7 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
                                       <tr
                                         key={leg.id}
                                         className="border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#F8F4FF] cursor-pointer transition-colors group/leg"
-                                        onClick={() => navigate(`/?shipment=${leg.id}&from=reports`)}
+                                        onClick={() => navigate(`/?shipment=${leg.id}&from=reports:spread`)}
                                         title={`Open ${leg.poNumber} in inbox`}
                                       >
                                         <td className="px-3 py-1.5 font-mono text-[9px] text-[#5E687B]">
