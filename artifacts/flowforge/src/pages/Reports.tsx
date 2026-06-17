@@ -186,6 +186,7 @@ function FinanceCardContent({
           const recoveredUsd = recoveryOverrides[p.id] ?? (p.intermediaryRecoveredUsd ?? 0);
           return {
             paymentId: p.id,
+            shipmentId: s.id,
             shipmentPo: s.poNumber,
             supplierName: s.supplierName,
             label: p.label,
@@ -439,9 +440,16 @@ function FinanceCardContent({
                   const isSaving = savingId === row.paymentId;
                   return (
                     <React.Fragment key={row.paymentId}>
-                      <tr className="border-b border-amber-50 last:border-0 hover:bg-amber-50/40 transition-colors">
+                      <tr
+                        className="border-b border-amber-50 last:border-0 hover:bg-amber-50/60 cursor-pointer transition-colors group/irow"
+                        onClick={() => navigate(`/?shipment=${row.shipmentId}&from=reports`)}
+                        title={`Open ${row.shipmentPo} in inbox`}
+                      >
                         <td className="px-3 py-2">
-                          <div className="font-medium text-[#212833] truncate max-w-[140px]" title={row.supplierName}>{row.supplierName}</div>
+                          <div className="font-medium text-[#212833] truncate max-w-[140px] flex items-center gap-1" title={row.supplierName}>
+                            {row.supplierName}
+                            <ArrowRight className="w-2.5 h-2.5 text-[#9000FF] opacity-0 group-hover/irow:opacity-100 transition-opacity shrink-0" />
+                          </div>
                           <div className="text-[10px] text-[#9E9FAE]">{row.shipmentPo} · {row.label}</div>
                         </td>
                         <td className="px-3 py-2 text-right text-amber-700 font-semibold">{fmtUsd(row.advanceUsd)}</td>
@@ -458,7 +466,7 @@ function FinanceCardContent({
                           <button
                             type="button"
                             disabled={isSaving}
-                            onClick={() => isOpen ? setRecoveryForm(null) : openRecovery(row.paymentId, row.recoveredUsd)}
+                            onClick={e => { e.stopPropagation(); isOpen ? setRecoveryForm(null) : openRecovery(row.paymentId, row.recoveredUsd); }}
                             className={`text-[10px] font-semibold px-2 py-1 rounded border transition-colors ${
                               isOpen
                                 ? "border-amber-300 bg-amber-100 text-amber-800"
@@ -610,7 +618,7 @@ function PipelineCardContent({ shipments, stageOrder }: { shipments: Shipment[];
                     <tr
                       key={s.id}
                       className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] cursor-pointer transition-colors group"
-                      onClick={() => navigate(`/?shipment=${s.id}`)}
+                      onClick={() => navigate(`/?shipment=${s.id}&from=reports`)}
                       title={`Open ${s.poNumber} in inbox`}
                     >
                       <td className="py-1.5">
@@ -898,7 +906,7 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
           </button>
           <button
             className="px-2 py-2 opacity-0 group-hover/header:opacity-100 transition-opacity text-[#9000FF] hover:text-[#7A00D9] shrink-0"
-            onClick={() => navigate(`/?shipment=${shipmentId}`)}
+            onClick={() => navigate(`/?shipment=${shipmentId}&from=reports`)}
             title={`Open ${ship?.poNumber ?? `shipment #${shipmentId}`} in inbox`}
           >
             <ArrowRight className="w-3.5 h-3.5" />
@@ -911,7 +919,7 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
               <button
                 key={task.id}
                 className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-[#FAFBFC] transition-colors group/row"
-                onClick={() => navigate(`/?shipment=${shipmentId}`)}
+                onClick={() => navigate(`/?shipment=${shipmentId}&from=reports`)}
                 title={`Open ${ship?.poNumber ?? `shipment #${shipmentId}`} in inbox`}
               >
                 <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
@@ -1155,6 +1163,7 @@ function spreadColor(pct: number) {
 }
 
 function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
+  const [, navigate] = useLocation();
   const [expanded, setExpanded] = useState<number | null>(null);
 
   const sorted = useMemo(
@@ -1205,11 +1214,15 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
               return (
                 <React.Fragment key={deal.id}>
                   <tr
-                    className={`border-b border-[#F0F4F8] cursor-pointer transition-colors ${isOpen ? "bg-[#F8F4FF]" : "hover:bg-[#FAFBFC]"}`}
-                    onClick={() => setExpanded(isOpen ? null : deal.id)}
+                    className={`border-b border-[#F0F4F8] cursor-pointer transition-colors group/deal ${isOpen ? "bg-[#F8F4FF]" : "hover:bg-[#FAFBFC]"}`}
+                    onClick={() => deal.legs.length > 0 && navigate(`/?shipment=${deal.legs[0].id}&from=reports`)}
+                    title={deal.legs.length > 0 ? `Open ${deal.buyerPoNumber} in inbox` : deal.buyerPoNumber}
                   >
                     <td className="px-3 py-2.5">
-                      <p className="font-semibold text-[#212833]">{deal.buyerPoNumber}</p>
+                      <span className="flex items-center gap-1.5">
+                        <p className="font-semibold text-[#212833]">{deal.buyerPoNumber}</p>
+                        <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover/deal:opacity-100 transition-opacity shrink-0" />
+                      </span>
                       {deal.notes && <p className="text-[9px] text-[#9E9FAE] truncate max-w-[180px]" title={deal.notes}>{deal.notes}</p>}
                     </td>
                     <td className="px-3 py-2.5 text-[#5E687B]">{deal.customerName}</td>
@@ -1225,9 +1238,16 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
                     </td>
                     <td className="px-3 py-2.5 text-center text-[#9E9FAE]">{deal.legs.length}</td>
                     <td className="px-3 py-2.5">
-                      {isOpen
-                        ? <ChevronUp className="w-3 h-3 text-[#9000FF]" />
-                        : <ChevronDown className="w-3 h-3 text-[#C0C8D4]" />}
+                      <button
+                        type="button"
+                        title={isOpen ? "Collapse legs" : "Expand legs"}
+                        className="p-0.5 rounded hover:bg-[#9000FF]/10 transition-colors"
+                        onClick={e => { e.stopPropagation(); setExpanded(isOpen ? null : deal.id); }}
+                      >
+                        {isOpen
+                          ? <ChevronUp className="w-3 h-3 text-[#9000FF]" />
+                          : <ChevronDown className="w-3 h-3 text-[#C0C8D4]" />}
+                      </button>
                     </td>
                   </tr>
 
@@ -1282,8 +1302,18 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
                                       ? "bg-red-50 text-red-700 border-red-200"
                                       : "bg-amber-50 text-amber-700 border-amber-200";
                                     return (
-                                      <tr key={leg.id} className="border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#F8F4FF]/50">
-                                        <td className="px-3 py-1.5 font-mono text-[9px] text-[#5E687B]">{leg.poNumber}</td>
+                                      <tr
+                                        key={leg.id}
+                                        className="border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#F8F4FF] cursor-pointer transition-colors group/leg"
+                                        onClick={() => navigate(`/?shipment=${leg.id}&from=reports`)}
+                                        title={`Open ${leg.poNumber} in inbox`}
+                                      >
+                                        <td className="px-3 py-1.5 font-mono text-[9px] text-[#5E687B]">
+                                          <span className="flex items-center gap-1">
+                                            {leg.poNumber}
+                                            <ArrowRight className="w-2.5 h-2.5 text-[#9000FF] opacity-0 group-hover/leg:opacity-100 transition-opacity shrink-0" />
+                                          </span>
+                                        </td>
                                         <td className="px-3 py-1.5 text-[#212833] max-w-[160px] truncate">{leg.product}</td>
                                         <td className="px-3 py-1.5 text-[#5E687B]">{leg.supplierName}</td>
                                         <td className="px-3 py-1.5 text-right font-semibold text-[#212833]">{fmtUsd(leg.supplierCost)}</td>
