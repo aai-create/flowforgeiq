@@ -3,6 +3,7 @@ import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Co
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
+import { useUserPref } from "@/lib/useUserPref";
 
 type SettingsTab = "general" | "channels" | "team";
 
@@ -333,6 +334,55 @@ function TeamSection() {
   );
 }
 
+type LandingPagePref = "inbox" | "orders" | "risk-radar";
+
+const LANDING_PAGE_OPTIONS: { value: LandingPagePref; label: string; description: string }[] = [
+  { value: "inbox", label: "Inbox", description: "Unified message feed across all suppliers and channels" },
+  { value: "orders", label: "Orders", description: "Shipments grid with PO tracking and spread badges" },
+  { value: "risk-radar", label: "Risk Radar", description: "At-a-glance risk scores across all active shipments" },
+];
+
+function DefaultLandingPageSection() {
+  const [pref, setPref] = useUserPref<LandingPagePref>("defaultLandingPage", "inbox");
+
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+      <h2 className="text-sm font-bold text-[#212833] mb-1">Default landing page</h2>
+      <p className="text-xs text-[#5E687B] mb-4 leading-relaxed">
+        Choose which page opens when you sign in or visit the root URL.
+        The setting takes effect immediately.
+      </p>
+      <div className="space-y-2">
+        {LANDING_PAGE_OPTIONS.map(opt => (
+          <label
+            key={opt.value}
+            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              pref === opt.value
+                ? "border-[#9000FF] bg-[#9000FF]/4"
+                : "border-[#E5EAF0] hover:bg-[#F7F9FA]"
+            }`}
+          >
+            <input
+              type="radio"
+              name="defaultLandingPage"
+              value={opt.value}
+              checked={pref === opt.value}
+              onChange={() => setPref(opt.value)}
+              className="mt-0.5 accent-[#9000FF]"
+            />
+            <div>
+              <div className={`text-xs font-semibold ${pref === opt.value ? "text-[#9000FF]" : "text-[#212833]"}`}>
+                {opt.label}
+              </div>
+              <div className="text-[10px] text-[#9E9FAE] mt-0.5">{opt.description}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Settings() {
   const { data: config, isLoading } = useGetPoNumberingConfig();
   const updateMutation = useUpdatePoNumberingConfig();
@@ -435,6 +485,8 @@ export function Settings() {
           <div className="max-w-xl space-y-8">
 
             {activeTab === "general" && (
+              <>
+              <DefaultLandingPageSection />
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#212833] mb-1">PO Numbering Scheme</h2>
                 <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
@@ -529,6 +581,7 @@ export function Settings() {
                   </div>
                 )}
               </section>
+              </>
             )}
 
             {activeTab === "channels" && (

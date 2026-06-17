@@ -16,6 +16,7 @@ import { Suppliers } from "@/pages/Suppliers";
 import { Help } from "@/pages/Help";
 import { Settings } from "@/pages/Settings";
 import { useProvisionUser } from "@/lib/useCurrentUser";
+import { useUserPref } from "@/lib/useUserPref";
 import { AcceptInvite } from "@/pages/AcceptInvite";
 import { LandingPage } from "@/pages/Landing";
 
@@ -146,6 +147,19 @@ function AppLayout() {
   );
 }
 
+type LandingPagePref = "inbox" | "orders" | "risk-radar";
+
+const LANDING_PAGE_ROUTES: Record<LandingPagePref, string> = {
+  inbox: "/inbox",
+  orders: "/orders",
+  "risk-radar": "/risk-radar",
+};
+
+function DefaultLandingRedirect() {
+  const [pref] = useUserPref<LandingPagePref>("defaultLandingPage", "inbox");
+  return <Redirect to={LANDING_PAGE_ROUTES[pref] ?? "/inbox"} />;
+}
+
 function RiskRadarPage() {
   const [, navigate] = useLocation();
   return <RiskRadar onNavigateToShipment={id => navigate(`/inbox?shipment=${id}&from=risk-radar`)} />;
@@ -169,7 +183,7 @@ function Router() {
     <Switch>
       <Route path="/" component={() => (
         <>
-          <Show when="signed-in"><Atelier /></Show>
+          <Show when="signed-in"><DefaultLandingRedirect /></Show>
           <Show when="signed-out"><LandingPage /></Show>
         </>
       )} />
