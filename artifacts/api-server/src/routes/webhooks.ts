@@ -8,9 +8,10 @@ import {
   extractionCorrectionsTable,
   messagesTable,
   buyerEmailsTable,
+  teamUsersTable,
 } from "@workspace/db";
 import { InboundEmailWebhookBody } from "@workspace/api-zod";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, or, isNull } from "drizzle-orm";
 import { runExtraction, extractFromChatText } from "../lib/extraction";
 import { normaliseChat } from "../lib/chatNormalise";
 import { detectChatForward, CHAT_ROUTING_THRESHOLD } from "../lib/chatDetect";
@@ -371,13 +372,29 @@ interface EmailRoutingContext {
   matchMethod: MatchMethod;
   effectiveSenderEmail: string;
   candidateShipments: ShipmentRecord[];
+  /** The Clerk user ID this email was scoped to via plus-token, carried through for attribution */
+  scopedClerkUserId: string | null;
 }
 
 async function resolveEmailRoutingContext(
   from: string | undefined,
   subject: string | undefined,
   textBody: string | undefined,
+  scopedClerkUserId: string | null = null,
 ): Promise<EmailRoutingContext> {
+  // buyer_emails are scoped to the resolved user when a plus-token is present:
+  // entries with clerkUserId = scopedClerkUserId (personal) OR clerkUserId IS NULL (workspace-global).
+  // When no token was resolved (scopedClerkUserId = null), only workspace-global entries are used.
+  // Shipments and suppliers are workspace-shared by design (no per-user FK in the data model).
+  const buyerEmailsQuery = db
+    .select({ senderEmail: buyerEmailsTable.senderEmail, buyerName: buyerEmailsTable.buyerName, confirmed: buyerEmailsTable.confirmed })
+    .from(buyerEmailsTable)
+    .where(
+      scopedClerkUserId !== null
+        ? or(eq(buyerEmailsTable.clerkUserId, scopedClerkUserId), isNull(buyerEmailsTable.clerkUserId))
+        : isNull(buyerEmailsTable.clerkUserId),
+    );
+
   const [suppliers, allShipments, allBuyerEmails] = await Promise.all([
     db
       .select({ id: suppliersTable.id, name: suppliersTable.name, contactEmail: suppliersTable.contactEmail })
@@ -393,7 +410,7 @@ async function resolveEmailRoutingContext(
         dueDate: shipmentsTable.dueDate,
       })
       .from(shipmentsTable),
-    db.select({ senderEmail: buyerEmailsTable.senderEmail, buyerName: buyerEmailsTable.buyerName, confirmed: buyerEmailsTable.confirmed }).from(buyerEmailsTable),
+    buyerEmailsQuery,
   ]);
 
   let outerSenderType: PartyType = "unknown";
@@ -533,6 +550,7 @@ async function resolveEmailRoutingContext(
     matchMethod,
     effectiveSenderEmail: fromEmail,
     candidateShipments,
+    scopedClerkUserId,
   };
 }
 
@@ -671,7 +689,83 @@ router.post("/webhooks/email", async (req, res) => {
     return;
   }
 
-  const { From, Subject, TextBody, Attachments } = parsed.data;
+  const { From, Subject, TextBody, Attachments, To, OriginalRecipient } = parsed.data;
+
+  // ── Per-user routing via plus-token in the To/OriginalRecipient header ───────
+  const toAddress = OriginalRecipient ?? To ?? "";
+  const plusTokenMatch = toAddress.match(/\+([^@+]+)@/);
+  const plusToken = plusTokenMatch?.[1] ?? null;
+
+  let scopedClerkUserId: string | null = null;
+  if (plusToken) {
+    const [tokenRow] = await db
+      .select({ clerkUserId: teamUsersTable.clerkUserId })
+      .from(teamUsersTable)
+      .where(eq(teamUsersTable.inboundToken, plusToken));
+    scopedClerkUserId = tokenRow?.clerkUserId ?? null;
+  }
+
+  // Emails with no plus-token route to unscoped needs-review immediately
+  if (!plusToken) {
+    req.log.info({ to: toAddress }, "email-webhook: no plus-token, routing to unscoped needs-review");
+    const rawBody = TextBody ?? "";
+    const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
+    await db.insert(messagesTable).values({
+      shipmentId: null,
+      supplierId: null,
+      sender: From ?? "Unknown Sender",
+      channel: "gmail",
+      subject: Subject ?? null,
+      direction: "inbound",
+      snippet: snippet || "(empty email)",
+      fullBody: rawBody,
+      aiDraft: "",
+      aiAction: "",
+      aiTags: [],
+      unread: true,
+      isFlagged: false,
+      routingStatus: "needs-review",
+      routingConfidence: 0,
+      matchMethod: "unresolvable",
+      rawSenderEmail: From ?? null,
+      aiRoutingGuess: null,
+      receivedAt: new Date(),
+    });
+    res.json({ accepted: true, documentIds: [] });
+    return;
+  }
+
+  // If the plus-token was present but doesn't match any user, treat as unscoped needs-review
+  if (!scopedClerkUserId) {
+    req.log.warn({ plusToken, to: toAddress }, "email-webhook: plus-token unresolved, routing to unscoped needs-review");
+    const rawBody = TextBody ?? "";
+    const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
+    await db.insert(messagesTable).values({
+      shipmentId: null,
+      supplierId: null,
+      sender: From ?? "Unknown Sender",
+      channel: "gmail",
+      subject: Subject ?? null,
+      direction: "inbound",
+      snippet: snippet || "(empty email)",
+      fullBody: rawBody,
+      aiDraft: "",
+      aiAction: "",
+      aiTags: [],
+      unread: true,
+      isFlagged: false,
+      routingStatus: "needs-review",
+      routingConfidence: 0,
+      matchMethod: "unresolvable",
+      rawSenderEmail: From ?? null,
+      aiRoutingGuess: null,
+      receivedAt: new Date(),
+    });
+    res.json({ accepted: true, documentIds: [] });
+    return;
+  }
+
+  req.log.info({ plusToken, scopedClerkUserId }, "email-webhook: plus-token resolved to user");
 
   // ── Chat-forward detection: handle before normal email routing ──────────────
   const chatDetection = detectChatForward(Subject, TextBody);
@@ -699,6 +793,7 @@ router.post("/webhooks/email", async (req, res) => {
         shipmentId: routingStatus === "routed" ? (extracted.shipmentId ?? null) : null,
         supplierId: null,
         sender: normalised.primarySender,
+        recipient: toAddress || null,
         channel: chatDetection.channel,
         direction: "inbound",
         snippet: snippet || "(empty chat)",
@@ -716,7 +811,7 @@ router.post("/webhooks/email", async (req, res) => {
         receivedAt: new Date(),
       });
 
-      req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus }, "email-webhook: chat forward ingested");
+      req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus, scopedClerkUserId }, "email-webhook: chat forward ingested");
       res.json({ accepted: true, documentIds: [] });
       return;
     } catch (err) {
@@ -724,7 +819,7 @@ router.post("/webhooks/email", async (req, res) => {
     }
   }
 
-  const ctx = await resolveEmailRoutingContext(From, Subject, TextBody);
+  const ctx = await resolveEmailRoutingContext(From, Subject, TextBody, scopedClerkUserId);
 
   let finalShipmentId = ctx.preMatchedShipmentId;
   let finalConfidence = ctx.confidence;
@@ -812,17 +907,21 @@ router.post("/webhooks/email", async (req, res) => {
       finalMatchMethod,
       routingStatus,
       finalShipmentId,
+      scopedClerkUserId: ctx.scopedClerkUserId,
     },
     "email-webhook: routing resolved",
   );
 
   // Create the message record
+  // recipient stores the plus-addressed delivery address (iq+token@flowforgeiq.com),
+  // preserving which user's inbound token received this email for attribution.
   const [msg] = await db
     .insert(messagesTable)
     .values({
       shipmentId: routingStatus === "routed" ? finalShipmentId : null,
       supplierId: ctx.supplierId,
       sender: senderLabel,
+      recipient: toAddress || null,
       channel: "gmail",
       subject: Subject ?? null,
       direction: "inbound",

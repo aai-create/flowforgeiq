@@ -7,6 +7,6 @@
  */
 
 export interface InboundEmailAddress {
-  /** The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var) */
+  /** The authenticated user's personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound token */
   inboundEmailAddress: string;
 }

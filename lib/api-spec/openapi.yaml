@@ -2222,6 +2222,8 @@ components:
         Subject: { type: string }
         TextBody: { type: string }
         HtmlBody: { type: string }
+        To: { type: string, description: "The address the email was delivered to (may be plus-addressed, e.g. iq+token@flowforgeiq.com)" }
+        OriginalRecipient: { type: string, description: "Postmark's original recipient header, used to extract plus-token for per-user routing" }
         Attachments:
           type: array
           items: { $ref: "#/components/schemas/InboundEmailAttachment" }
@@ -2262,7 +2264,7 @@ components:
       type: object
       required: [inboundEmailAddress]
       properties:
-        inboundEmailAddress: { type: string, description: "The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var)" }
+        inboundEmailAddress: { type: string, description: "The authenticated user's personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound token" }
 
     ChatIngestInput:
       type: object

@@ -89,7 +89,7 @@ router.post("/rfqs/:id/send-email", async (req, res) => {
   const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, id));
   if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
   const body = SendRfqEmailBodySchema.parse(req.body);
-  const from = process.env.INBOUND_EMAIL_ADDRESS ?? "ai@flowforge.com";
+  const from = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
   try {
     await sendViaPostmark({ from, to: body.to, subject: body.subject, textBody: body.body });
     req.log.info({ rfqId: id, to: body.to }, "RFQ email sent");

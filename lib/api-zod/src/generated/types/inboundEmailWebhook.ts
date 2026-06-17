@@ -13,5 +13,9 @@ export interface InboundEmailWebhook {
   Subject?: string;
   TextBody?: string;
   HtmlBody?: string;
+  /** The address the email was delivered to (may be plus-addressed, e.g. iq+token@flowforgeiq.com) */
+  To?: string;
+  /** Postmark's original recipient header, used to extract plus-token for per-user routing */
+  OriginalRecipient?: string;
   Attachments?: InboundEmailAttachment[];
 }

@@ -11,7 +11,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/db run seed` — reseed all tables from seed-data.json (wipes first)
 - Required env: `DATABASE_URL` — Postgres connection string
-- Optional env: `INBOUND_EMAIL_ADDRESS` — inbound email address for Postmark webhook and chat-forward detection (defaults to `ai@flowforge.com`; surfaced via `GET /settings/inbound-email`)
+- Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (defaults to `iq@flowforgeiq.com`); per-user addresses are assembled as `iq+{token}@flowforgeiq.com` and surfaced via `GET /settings/inbound-email` (auth required)
 - Optional env: `CHAT_ROUTING_THRESHOLD` — confidence threshold (0.0–1.0) for auto-routing chat-forward messages; defaults to `0.65`
 
 ## Stack

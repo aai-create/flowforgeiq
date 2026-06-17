@@ -618,11 +618,10 @@ export function Settings() {
                 <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Mail className="w-3 h-3 text-[#9000FF]"/>
-                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Inbound email address</span>
+                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Your personal inbound address</span>
                   </div>
                   <p className="text-[10px] text-[#9E9FAE] mb-2.5">
-                    Forward supplier chat exports to this address to ingest them automatically.
-                    Controlled by the <code className="font-mono bg-white border border-[#E5EAF0] px-1 rounded text-[10px] text-[#212833]">INBOUND_EMAIL_ADDRESS</code> environment variable.
+                    Forward supplier emails or paste chat exports to this address. Each team member gets a unique address so emails route directly to your inbox.
                   </p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">

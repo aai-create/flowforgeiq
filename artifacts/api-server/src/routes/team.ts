@@ -4,6 +4,10 @@ import { eq } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
 import crypto from "node:crypto";
 
+function generateInboundToken(): string {
+  return crypto.randomBytes(8).toString("hex");
+}
+
 const router: IRouter = Router();
 
 router.get("/team", requireAuth, async (req, res) => {
@@ -88,6 +92,7 @@ router.post("/team/accept-invite", requireAuth, async (req, res) => {
       email: clerkEmail,
       name: clerkName,
       role: inv.role,
+      inboundToken: generateInboundToken(),
     });
   }
 
@@ -107,7 +112,21 @@ router.post("/team/provision-self", requireAuth, async (req, res) => {
     .where(eq(teamUsersTable.clerkUserId, req.userId!));
 
   if (existing.length > 0) {
-    res.json({ user: existing[0] });
+    const existingUser = existing[0]!;
+    // Backfill inbound token for users provisioned before this feature
+    if (!existingUser.inboundToken) {
+      await db
+        .update(teamUsersTable)
+        .set({ inboundToken: generateInboundToken() })
+        .where(eq(teamUsersTable.clerkUserId, req.userId!));
+      const [updated] = await db
+        .select()
+        .from(teamUsersTable)
+        .where(eq(teamUsersTable.clerkUserId, req.userId!));
+      res.json({ user: updated });
+      return;
+    }
+    res.json({ user: existingUser });
     return;
   }
 
@@ -122,6 +141,7 @@ router.post("/team/provision-self", requireAuth, async (req, res) => {
       email: email || `user-${req.userId}@flowforge.local`,
       name: name || email?.split("@")[0] || "Team Member",
       role,
+      inboundToken: generateInboundToken(),
     })
     .onConflictDoNothing()
     .returning();

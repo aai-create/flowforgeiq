@@ -7,6 +7,7 @@ export const teamUsersTable = pgTable("team_users", {
   email: text("email").notNull(),
   name: text("name").notNull(),
   role: text("role").notNull().default("member"),
+  inboundToken: text("inbound_token").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

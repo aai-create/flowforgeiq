@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db, poNumberingConfigTable } from "@workspace/db";
+import { db, poNumberingConfigTable, teamUsersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
+import { getAuth } from "@clerk/express";
 
 const router: IRouter = Router();
 
@@ -25,8 +26,29 @@ function makePreview(cfg: { prefix: string; sequenceFormat: string; supplierSuff
   return { buyerPo, supplierPo };
 }
 
-router.get("/settings/inbound-email", (req, res) => {
-  const inboundEmailAddress = process.env.INBOUND_EMAIL_ADDRESS ?? "";
+router.get("/settings/inbound-email", async (req, res) => {
+  const base = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
+
+  // Try to get the authenticated user's token (optional auth — unauthenticated callers get the base address)
+  let inboundEmailAddress = base;
+  try {
+    const auth = getAuth(req);
+    const userId = auth?.userId;
+    if (userId) {
+      const [localPart, domain] = base.split("@");
+      const [teamUser] = await db
+        .select({ inboundToken: teamUsersTable.inboundToken })
+        .from(teamUsersTable)
+        .where(eq(teamUsersTable.clerkUserId, userId));
+      const token = teamUser?.inboundToken;
+      if (token && localPart && domain) {
+        inboundEmailAddress = `${localPart}+${token}@${domain}`;
+      }
+    }
+  } catch {
+    // If auth resolution fails, fall back to the base address
+  }
+
   res.json({ inboundEmailAddress });
 });
 

@@ -7,6 +7,9 @@ export const buyerEmailsTable = pgTable("buyer_emails", {
   senderEmail: text("sender_email").notNull().unique(),
   buyerName: text("buyer_name").notNull(),
   confirmed: boolean("confirmed").notNull().default(false),
+  /** When set, this learned buyer email belongs to a specific team member's routing context.
+   *  NULL means it is a workspace-global entry visible to all users. */
+  clerkUserId: text("clerk_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

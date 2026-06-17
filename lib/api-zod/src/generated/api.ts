@@ -1400,6 +1400,8 @@ export const InboundEmailWebhookBody = zod.object({
   "Subject": zod.string().optional(),
   "TextBody": zod.string().optional(),
   "HtmlBody": zod.string().optional(),
+  "To": zod.string().optional().describe('The address the email was delivered to (may be plus-addressed, e.g. iq+token@flowforgeiq.com)'),
+  "OriginalRecipient": zod.string().optional().describe('Postmark\'s original recipient header, used to extract plus-token for per-user routing'),
   "Attachments": zod.array(zod.object({
   "Name": zod.string(),
   "Content": zod.string().describe('Base64-encoded file content'),
@@ -1459,7 +1461,7 @@ export const SaveExtractionCorrectionResponse = zod.object({
  * @summary Get the configured inbound email address for chat/email forwarding
  */
 export const GetInboundEmailAddressResponse = zod.object({
-  "inboundEmailAddress": zod.string().describe('The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var)')
+  "inboundEmailAddress": zod.string().describe('The authenticated user\'s personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user\'s inbound token')
 })
 
 

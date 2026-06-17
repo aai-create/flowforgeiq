@@ -828,6 +828,10 @@ export interface InboundEmailWebhook {
   Subject?: string;
   TextBody?: string;
   HtmlBody?: string;
+  /** The address the email was delivered to (may be plus-addressed, e.g. iq+token@flowforgeiq.com) */
+  To?: string;
+  /** Postmark's original recipient header, used to extract plus-token for per-user routing */
+  OriginalRecipient?: string;
   Attachments?: InboundEmailAttachment[];
 }
 
@@ -866,7 +870,7 @@ export interface PoNumberingConfigUpdate {
 }
 
 export interface InboundEmailAddress {
-  /** The email address suppliers should forward chat messages to (from INBOUND_EMAIL_ADDRESS env var) */
+  /** The authenticated user's personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound token */
   inboundEmailAddress: string;
 }
 

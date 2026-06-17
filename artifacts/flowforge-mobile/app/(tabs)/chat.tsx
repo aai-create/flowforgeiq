@@ -16,8 +16,9 @@ import {
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useIngestChat } from "@workspace/api-client-react";
+import { useIngestChat, useGetInboundEmailAddress } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import * as Clipboard from "expo-clipboard";
 
 type Channel = "whatsapp" | "wechat" | "imessage" | "sms";
 
@@ -80,7 +81,18 @@ export default function ChatPasteScreen() {
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [rawText, setRawText] = useState("");
   const [senderHint, setSenderHint] = useState("");
+  const [emailCopied, setEmailCopied] = useState(false);
   const textRef = useRef<TextInput>(null);
+
+  const { data: inboundEmailData } = useGetInboundEmailAddress();
+  const inboundEmail = inboundEmailData?.inboundEmailAddress ?? "iq@flowforgeiq.com";
+
+  async function handleCopyEmail() {
+    await Clipboard.setStringAsync(inboundEmail);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setEmailCopied(true);
+    setTimeout(() => setEmailCopied(false), 2000);
+  }
 
   const { mutate: ingestChat, isPending, data: result, error, reset } = useIngestChat();
 
@@ -219,6 +231,28 @@ export default function ChatPasteScreen() {
               )}
             </View>
           </Pressable>
+        </View>
+
+        <View style={[styles.emailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.emailCardHeader}>
+            <Feather name="mail" size={14} color={colors.primary} />
+            <Text style={[styles.emailCardTitle, { color: colors.foreground }]}>Forward to your inbox</Text>
+          </View>
+          <Text style={[styles.emailCardBody, { color: colors.mutedForeground }]}>
+            Or forward supplier emails to your personal address — they land in the right thread automatically.
+          </Text>
+          <View style={[styles.emailRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.emailText, { color: colors.foreground }]} numberOfLines={1} ellipsizeMode="tail">
+              {inboundEmail}
+            </Text>
+            <Pressable
+              onPress={() => void handleCopyEmail()}
+              hitSlop={8}
+              style={({ pressed }) => [styles.copyBtn, { backgroundColor: pressed ? colors.muted : colors.accent }]}
+            >
+              <Feather name={emailCopied ? "check" : "copy"} size={14} color={emailCopied ? "#22c55e" : colors.primary} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -481,4 +515,11 @@ const styles = StyleSheet.create({
   actionText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
   draftDivider: { height: 1, marginVertical: 2 },
   draftText: { fontSize: 14, lineHeight: 21, fontFamily: "Inter_400Regular" },
+  emailCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
+  emailCardHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
+  emailCardTitle: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
+  emailCardBody: { fontSize: 12, lineHeight: 17, fontFamily: "Inter_400Regular" },
+  emailRow: { flexDirection: "row", alignItems: "center", borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
+  emailText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium" },
+  copyBtn: { borderRadius: 6, padding: 6 },
 });
