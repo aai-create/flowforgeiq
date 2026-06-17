@@ -1,7 +1,7 @@
 import React from "react";
-import { Bell } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { AICopilotBar } from "./AICopilotBar";
+import { NotificationsBell } from "./NotificationsPanel";
 
 interface AppHeaderProps {
   pageLabel: string;
@@ -22,10 +22,7 @@ export function AppHeader({ pageLabel }: AppHeaderProps) {
         <AICopilotBar className="w-full" />
       </div>
       <div className="flex items-center gap-2 w-[260px] justify-end">
-        <button className="h-8 w-8 flex items-center justify-center rounded-md text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors relative">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white" />
-        </button>
+        <NotificationsBell />
         <Separator orientation="vertical" className="h-4" />
         <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">
           AX
