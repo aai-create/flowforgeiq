@@ -31,6 +31,7 @@ export const orgContextMiddleware = async (
     const auth = getAuth(req);
     const userId = auth?.userId;
     if (userId) {
+      req.userId = userId;
       const [user] = await db
         .select({
           orgId: teamUsersTable.orgId,
@@ -38,7 +39,6 @@ export const orgContextMiddleware = async (
         })
         .from(teamUsersTable)
         .where(eq(teamUsersTable.clerkUserId, userId));
-      req.userId = userId;
       if (user) {
         req.actorName = user.name;
         req.orgId = user.orgId;
