@@ -52,7 +52,7 @@ export function AcceptInvite() {
       <div className="w-full max-w-sm px-4 text-center">
         <div className="flex items-center gap-2 justify-center mb-8">
           <div className="w-7 h-7 rounded-[5px] overflow-hidden shrink-0">
-            <img src={`${basePath}/flowforge-logo.svg`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
+            <img src={`${basePath}/flowforge-logo.png`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-lg tracking-tight text-[#9000FF]">FlowForgeIQ</span>
         </div>
