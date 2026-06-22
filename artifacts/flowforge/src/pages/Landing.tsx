@@ -12,7 +12,7 @@ export function LandingPage() {
           <div className="w-9 h-9 rounded-[7px] overflow-hidden shrink-0">
             <img src={`${basePath}/flowforge-logo.png`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
           </div>
-          <span className="font-bold text-2xl tracking-tight text-[#9000FF]">FlowForgeIQ</span>
+          <span className="font-bold text-2xl tracking-tight text-[#9000FF]">FlowForge IQ</span>
         </div>
 
         <h1 className="text-2xl font-bold text-[#212833] mb-3 leading-snug">
