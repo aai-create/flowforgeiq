@@ -2529,125 +2529,13 @@ export default function Home() {
           isCalendarActive={activeView === "calendar"}
           counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
         >
-          {/* Inbox sub-navigation */}
-          <div className="px-2 pt-2 pb-1 space-y-0.5 shrink-0">
-            {/* All Inbox */}
-            {(() => {
-              const active = leftPanelMode === "all" && activeView === "inbox" && !flaggedFilter;
-              return (
-                <button
-                  onClick={() => { urlParamsApplied.current = true; setActiveView("inbox"); setLeftPanelMode("all"); setChannelFilter("all"); setSupplierFilter(null); setSelectedShipmentId(null); setFlaggedFilter(false); }}
-                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                  <span className="flex items-center gap-2"><Inbox className="w-3.5 h-3.5 shrink-0" /><span className="text-xs">All Inbox</span></span>
-                  {unreadCount > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? "bg-[#9000FF] text-white" : "bg-[#E5EAF0] text-[#5E687B]"}`}>{unreadCount}</span>}
-                </button>
-              );
-            })()}
-
-            {/* Suppliers */}
-            {(() => {
-              const isMode = leftPanelMode === "suppliers" && activeView === "inbox";
-              const hasFilter = !!supplierFilter;
-              const active = isMode || hasFilter;
-              return (
-                <button
-                  onClick={() => {
-                    setActiveView("inbox");
-                    if (hasFilter) { setSupplierFilter(null); setLeftPanelMode("suppliers"); }
-                    else if (isMode) { setLeftPanelMode("all"); }
-                    else { setLeftPanelMode("suppliers"); }
-                  }}
-                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                  <span className="flex items-center gap-2 min-w-0">
-                    {hasFilter ? <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-[#9000FF]" /> : <Users className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="text-xs truncate">{hasFilter ? supplierFilter : "Suppliers"}</span>
-                  </span>
-                  {!hasFilter && <span className="text-[10px] text-[#9E9FAE] shrink-0">{SUPPLIERS.length}</span>}
-                </button>
-              );
-            })()}
-
-            {/* Purchase Orders */}
-            {(() => {
-              const isMode = leftPanelMode === "pos" && activeView === "inbox";
-              const hasFilter = !!selectedShipmentId;
-              const activePO = hasFilter ? shipments.find(s => s.id === selectedShipmentId) : undefined;
-              const active = isMode || hasFilter;
-              return (
-                <button
-                  onClick={() => {
-                    setActiveView("inbox");
-                    if (hasFilter) { setSelectedShipmentId(null); setLeftPanelMode("pos"); }
-                    else if (isMode) { setLeftPanelMode("all"); }
-                    else { setLeftPanelMode("pos"); }
-                  }}
-                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                  <span className="flex items-center gap-2 min-w-0">
-                    {hasFilter ? <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-[#9000FF]" /> : <Package className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="text-xs truncate">{hasFilter ? (activePO?.po ?? "PO") : "Purchase Orders"}</span>
-                  </span>
-                  {!hasFilter && <span className="text-[10px] text-[#9E9FAE] shrink-0">{shipments.length}</span>}
-                </button>
-              );
-            })()}
-
-            {/* Channels */}
-            {(() => {
-              const isMode = leftPanelMode === "channels" && activeView === "inbox";
-              const hasFilter = channelFilter !== "all";
-              const active = isMode || hasFilter;
-              return (
-                <button
-                  onClick={() => {
-                    setActiveView("inbox");
-                    if (hasFilter) { setChannelFilter("all"); setLeftPanelMode("channels"); }
-                    else if (isMode) { setLeftPanelMode("all"); }
-                    else { setLeftPanelMode("channels"); }
-                  }}
-                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                  <span className="flex items-center gap-2">
-                    {hasFilter ? <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-[#9000FF]" /> : <MessagesSquare className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="text-xs capitalize">{hasFilter ? channelFilter : "Channels"}</span>
-                  </span>
-                </button>
-              );
-            })()}
-
-            {/* Flagged */}
-            {(() => {
-              const flaggedCount = messages.filter(m => m.isFlagged).length;
-              const active = flaggedFilter && activeView === "inbox";
-              return (
-                <button
-                  onClick={() => {
-                    setActiveView("inbox"); setLeftPanelMode("all"); setFlaggedFilter(f => !f);
-                    setChannelFilter("all"); setSelectedShipmentId(null); setSupplierFilter(null);
-                    if (!flaggedFilter) { const fm = messages.find(m => m.isFlagged); if (fm) openMessage(fm.id); }
-                  }}
-                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                  <span className="flex items-center gap-2"><Bookmark className="w-3.5 h-3.5 shrink-0" /><span className="text-xs">Flagged</span></span>
-                  {flaggedCount > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? "bg-[#9000FF] text-white" : "bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>}
-                </button>
-              );
-            })()}
-
-            {/* Needs Review */}
-            <button
-              onClick={() => setActiveView("needs-review")}
-              className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${activeView === "needs-review" ? "bg-amber-50 text-amber-800 font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-              <span className="flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-500" /><span className="text-xs">Needs Review</span></span>
-              {needsReviewCount > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeView === "needs-review" ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>}
-            </button>
-          </div>
-
-          {/* Scrollable Today's Focus */}
+          {/* Today's Focus — action queue, no AI framing */}
           <div className="flex-1 overflow-y-auto">
-
             {tasks.length > 0 && (
-              <div className="px-3 py-2">
-                <div className="flex items-center justify-between px-2 mb-1.5">
-                  <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
-                    <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
+              <div className="px-3 py-3">
+                <div className="flex items-center justify-between px-2 mb-2">
+                  <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">
+                    Today's Focus
                   </div>
                   <span className="text-[9px] text-[#5E687B]">{tasks.filter(t => t.done).length}/{tasks.length} done</span>
                 </div>
@@ -2676,18 +2564,12 @@ export default function Home() {
                 </div>
               </div>
             )}
-
           </div>
 
-          {/* Import Documents + Settings */}
-          <div className="shrink-0 p-2 border-t border-[#E5EAF0] space-y-0.5">
+          {/* Import Documents */}
+          <div className="shrink-0 p-2 border-t border-[#E5EAF0]">
             <button onClick={()=>setActiveView("import")} className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm font-semibold text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors">
               <Upload className="w-4 h-4"/>Import Documents
-            </button>
-            <button onClick={()=>setActiveView("settings")} className={`w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm font-semibold transition-colors ${activeView==="settings"?"text-[#9000FF] bg-[#9000FF]/5":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-              <Settings className="w-4 h-4"/><span>Settings</span>
-              {gmailStatus?.connected && <span className="ml-auto w-2 h-2 rounded-full bg-emerald-400 shrink-0"/>}
-              {!gmailStatus?.connected && gmailStatus?.clientConfigured && <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0"/>}
             </button>
           </div>
         </NavSidebar>
@@ -2959,6 +2841,94 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ── INBOX FILTER ROW ── */}
+          {(activeView==="inbox"||activeView==="needs-review")&&(
+            <div className="shrink-0 bg-white border-b border-[#E5EAF0] flex items-center gap-1 px-3 overflow-x-auto" style={{height:38}}>
+              {/* All */}
+              {(()=>{
+                const active = activeView==="inbox" && leftPanelMode==="all" && !flaggedFilter;
+                return (
+                  <button
+                    onClick={()=>{ urlParamsApplied.current=true; setActiveView("inbox"); setLeftPanelMode("all"); setChannelFilter("all"); setSupplierFilter(null); setSelectedShipmentId(null); setFlaggedFilter(false); }}
+                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#9000FF] text-white":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
+                    All
+                    {unreadCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-white/30 text-white":"bg-[#9000FF]/10 text-[#9000FF]"}`}>{unreadCount}</span>}
+                  </button>
+                );
+              })()}
+
+              {/* Suppliers */}
+              {(()=>{
+                const isMode = leftPanelMode==="suppliers" && activeView==="inbox";
+                const hasFilter = !!supplierFilter;
+                const active = isMode||hasFilter;
+                return (
+                  <button
+                    onClick={()=>{ setActiveView("inbox"); if(hasFilter){setSupplierFilter(null);setLeftPanelMode("suppliers");}else if(isMode){setLeftPanelMode("all");}else{setLeftPanelMode("suppliers");} }}
+                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
+                    {hasFilter?<><ChevronLeft className="w-2.5 h-2.5"/><span className="max-w-[80px] truncate">{supplierFilter}</span></>:<><Users className="w-2.5 h-2.5"/>Suppliers</>}
+                  </button>
+                );
+              })()}
+
+              {/* Purchase Orders */}
+              {(()=>{
+                const isMode = leftPanelMode==="pos" && activeView==="inbox";
+                const hasFilter = !!selectedShipmentId;
+                const activePO = hasFilter ? shipments.find(s=>s.id===selectedShipmentId) : undefined;
+                const active = isMode||hasFilter;
+                return (
+                  <button
+                    onClick={()=>{ setActiveView("inbox"); if(hasFilter){setSelectedShipmentId(null);setLeftPanelMode("pos");}else if(isMode){setLeftPanelMode("all");}else{setLeftPanelMode("pos");} }}
+                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
+                    {hasFilter?<><ChevronLeft className="w-2.5 h-2.5"/><span className="max-w-[80px] truncate">{activePO?.po??"PO"}</span></>:<><Package className="w-2.5 h-2.5"/>POs</>}
+                  </button>
+                );
+              })()}
+
+              {/* Channels */}
+              {(()=>{
+                const isMode = leftPanelMode==="channels" && activeView==="inbox";
+                const hasFilter = channelFilter!=="all";
+                const active = isMode||hasFilter;
+                return (
+                  <button
+                    onClick={()=>{ setActiveView("inbox"); if(hasFilter){setChannelFilter("all");setLeftPanelMode("channels");}else if(isMode){setLeftPanelMode("all");}else{setLeftPanelMode("channels");} }}
+                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
+                    {hasFilter?<><ChevronLeft className="w-2.5 h-2.5"/><span className="capitalize">{channelFilter}</span></>:<><MessagesSquare className="w-2.5 h-2.5"/>Channels</>}
+                  </button>
+                );
+              })()}
+
+              {/* Flagged */}
+              {(()=>{
+                const flaggedCount = messages.filter(m=>m.isFlagged).length;
+                const active = flaggedFilter && activeView==="inbox";
+                return (
+                  <button
+                    onClick={()=>{ setActiveView("inbox"); setLeftPanelMode("all"); setFlaggedFilter(f=>!f); setChannelFilter("all"); setSelectedShipmentId(null); setSupplierFilter(null); if(!flaggedFilter){const fm=messages.find(m=>m.isFlagged);if(fm)openMessage(fm.id);} }}
+                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
+                    <Bookmark className="w-2.5 h-2.5"/>Flagged
+                    {flaggedCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>}
+                  </button>
+                );
+              })()}
+
+              {/* Needs Review */}
+              {(()=>{
+                const active = activeView==="needs-review";
+                return (
+                  <button
+                    onClick={()=>setActiveView("needs-review")}
+                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-amber-100 text-amber-800 font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-amber-50 hover:text-amber-700"}`}>
+                    <AlertCircle className="w-2.5 h-2.5 text-amber-500"/>Needs Review
+                    {needsReviewCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-amber-500 text-white":"bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>}
+                  </button>
+                );
+              })()}
             </div>
           )}
 
