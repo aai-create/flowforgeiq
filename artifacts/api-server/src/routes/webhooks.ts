@@ -11,7 +11,7 @@ import {
   teamUsersTable,
 } from "@workspace/db";
 import { InboundEmailWebhookBody } from "@workspace/api-zod";
-import { asc, eq, or, isNull } from "drizzle-orm";
+import { and, asc, eq, or, isNull } from "drizzle-orm";
 import { runExtraction, extractFromChatText } from "../lib/extraction";
 import { normaliseChat } from "../lib/chatNormalise";
 import { detectChatForward, CHAT_ROUTING_THRESHOLD } from "../lib/chatDetect";
@@ -381,24 +381,29 @@ async function resolveEmailRoutingContext(
   subject: string | undefined,
   textBody: string | undefined,
   scopedClerkUserId: string | null = null,
+  orgId: number = 1,
 ): Promise<EmailRoutingContext> {
   // buyer_emails are scoped to the resolved user when a plus-token is present:
   // entries with clerkUserId = scopedClerkUserId (personal) OR clerkUserId IS NULL (workspace-global).
   // When no token was resolved (scopedClerkUserId = null), only workspace-global entries are used.
-  // Shipments and suppliers are workspace-shared by design (no per-user FK in the data model).
+  // Shipments and suppliers are all scoped to the resolved orgId.
   const buyerEmailsQuery = db
     .select({ senderEmail: buyerEmailsTable.senderEmail, buyerName: buyerEmailsTable.buyerName, confirmed: buyerEmailsTable.confirmed })
     .from(buyerEmailsTable)
     .where(
-      scopedClerkUserId !== null
-        ? or(eq(buyerEmailsTable.clerkUserId, scopedClerkUserId), isNull(buyerEmailsTable.clerkUserId))
-        : isNull(buyerEmailsTable.clerkUserId),
+      and(
+        eq(buyerEmailsTable.orgId, orgId),
+        scopedClerkUserId !== null
+          ? or(eq(buyerEmailsTable.clerkUserId, scopedClerkUserId), isNull(buyerEmailsTable.clerkUserId))
+          : isNull(buyerEmailsTable.clerkUserId),
+      ),
     );
 
   const [suppliers, allShipments, allBuyerEmails] = await Promise.all([
     db
       .select({ id: suppliersTable.id, name: suppliersTable.name, contactEmail: suppliersTable.contactEmail })
-      .from(suppliersTable),
+      .from(suppliersTable)
+      .where(eq(suppliersTable.orgId, orgId)),
     db
       .select({
         id: shipmentsTable.id,
@@ -409,7 +414,8 @@ async function resolveEmailRoutingContext(
         exFactoryDate: shipmentsTable.exFactoryDate,
         dueDate: shipmentsTable.dueDate,
       })
-      .from(shipmentsTable),
+      .from(shipmentsTable)
+      .where(eq(shipmentsTable.orgId, orgId)),
     buyerEmailsQuery,
   ]);
 
@@ -564,6 +570,7 @@ async function ingestDocumentFromBase64({
   supplierId,
   preMatchedShipmentId,
   routingShipmentIds,
+  orgId = 1,
 }: {
   fileName: string;
   mimeType: string;
@@ -572,6 +579,7 @@ async function ingestDocumentFromBase64({
   supplierId?: number | null;
   preMatchedShipmentId?: number | null;
   routingShipmentIds?: number[] | null;
+  orgId?: number;
 }): Promise<number> {
   const fileBuffer = Buffer.from(base64Content, "base64");
   const fileType = getMimeFileType(mimeType);
@@ -587,6 +595,7 @@ async function ingestDocumentFromBase64({
       storageData: base64Content,
       sourceChannel,
       status: "processing",
+      orgId,
     })
     .returning();
 
@@ -600,6 +609,7 @@ async function ingestDocumentFromBase64({
       lineItems: [],
       reconciliationFindings: [],
       confidence: 0,
+      orgId,
     })
     .returning();
 
@@ -610,10 +620,12 @@ async function ingestDocumentFromBase64({
           .select({ shipment: shipmentsTable, supplierName: suppliersTable.name })
           .from(shipmentsTable)
           .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+          .where(eq(shipmentsTable.orgId, orgId))
           .orderBy(asc(shipmentsTable.id)),
         db
           .select()
           .from(extractionCorrectionsTable)
+          .where(eq(extractionCorrectionsTable.orgId, orgId))
           .orderBy(asc(extractionCorrectionsTable.createdAt)),
       ]);
 
@@ -697,12 +709,14 @@ router.post("/webhooks/email", async (req, res) => {
   const plusToken = plusTokenMatch?.[1] ?? null;
 
   let scopedClerkUserId: string | null = null;
+  let scopedOrgId = 1;
   if (plusToken) {
     const [tokenRow] = await db
-      .select({ clerkUserId: teamUsersTable.clerkUserId })
+      .select({ clerkUserId: teamUsersTable.clerkUserId, orgId: teamUsersTable.orgId })
       .from(teamUsersTable)
       .where(eq(teamUsersTable.inboundToken, plusToken));
     scopedClerkUserId = tokenRow?.clerkUserId ?? null;
+    scopedOrgId = tokenRow?.orgId ?? 1;
   }
 
   // Emails with no plus-token route to unscoped needs-review immediately
@@ -731,6 +745,7 @@ router.post("/webhooks/email", async (req, res) => {
       aiRoutingGuess: null,
       receivedAt: new Date(),
       routedToClerkUserId: null,
+      orgId: scopedOrgId,
     });
     res.json({ accepted: true, documentIds: [] });
     return;
@@ -762,6 +777,7 @@ router.post("/webhooks/email", async (req, res) => {
       aiRoutingGuess: null,
       receivedAt: new Date(),
       routedToClerkUserId: null,
+      orgId: scopedOrgId,
     });
     res.json({ accepted: true, documentIds: [] });
     return;
@@ -785,7 +801,8 @@ router.post("/webhooks/email", async (req, res) => {
           currentStageId: shipmentsTable.currentStageId,
         })
         .from(shipmentsTable)
-        .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id));
+        .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+        .where(eq(shipmentsTable.orgId, scopedOrgId));
 
       const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
       const routingStatus = extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
@@ -812,6 +829,7 @@ router.post("/webhooks/email", async (req, res) => {
         rawSenderEmail: From ?? null,
         receivedAt: new Date(),
         routedToClerkUserId: scopedClerkUserId,
+        orgId: scopedOrgId,
       });
 
       req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus, scopedClerkUserId }, "email-webhook: chat forward ingested");
@@ -822,7 +840,7 @@ router.post("/webhooks/email", async (req, res) => {
     }
   }
 
-  const ctx = await resolveEmailRoutingContext(From, Subject, TextBody, scopedClerkUserId);
+  const ctx = await resolveEmailRoutingContext(From, Subject, TextBody, scopedClerkUserId, scopedOrgId);
 
   let finalShipmentId = ctx.preMatchedShipmentId;
   let finalConfidence = ctx.confidence;
@@ -870,7 +888,8 @@ router.post("/webhooks/email", async (req, res) => {
           exFactoryDate: shipmentsTable.exFactoryDate,
           dueDate: shipmentsTable.dueDate,
         })
-        .from(shipmentsTable);
+        .from(shipmentsTable)
+        .where(eq(shipmentsTable.orgId, scopedOrgId));
       const guess = await inferShipmentWithAI(
         Subject ?? "",
         TextBody ?? "",
@@ -942,6 +961,7 @@ router.post("/webhooks/email", async (req, res) => {
       aiRoutingGuess: aiGuess ?? null,
       receivedAt: new Date(),
       routedToClerkUserId: ctx.scopedClerkUserId,
+      orgId: scopedOrgId,
     })
     .returning();
 
@@ -991,6 +1011,7 @@ router.post("/webhooks/email", async (req, res) => {
         supplierId: ctx.supplierId,
         preMatchedShipmentId: finalShipmentId,
         routingShipmentIds: ctx.routingShipmentIds,
+        orgId: scopedOrgId,
       });
       documentIds.push(docId);
     }

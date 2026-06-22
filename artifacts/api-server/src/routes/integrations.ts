@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, gmailCredentialsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { resolveOrgId } from "../middlewares/requireAuth";
 import { z } from "zod/v4";
 import { randomBytes, createHmac } from "crypto";
 
@@ -23,7 +24,8 @@ function getCallbackUrl(req: Parameters<typeof router.get>[1] extends (req: infe
 }
 
 router.get("/integrations/gmail/status", async (req, res) => {
-  const [cred] = await db.select().from(gmailCredentialsTable).limit(1);
+  const orgId = await resolveOrgId(req);
+  const [cred] = await db.select().from(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, orgId)).limit(1);
   if (!cred) {
     const clientConfigured = !!(getGoogleClientId() && getGoogleClientSecret());
     res.json({ connected: false, clientConfigured });
@@ -48,7 +50,8 @@ router.get("/integrations/gmail/connect", async (req, res) => {
     return;
   }
   const callbackUrl = getCallbackUrl(req as never);
-  const stateToken = randomBytes(16).toString("hex");
+  const orgId = await resolveOrgId(req);
+  const stateToken = `${orgId}:${randomBytes(16).toString("hex")}`;
   const stateHmac = signState(stateToken, clientSecret);
   const state = `${stateToken}.${stateHmac}`;
   const params = new URLSearchParams({
@@ -103,6 +106,12 @@ router.get("/integrations/gmail/callback", async (req, res) => {
 
   const callbackUrl = getCallbackUrl(req as never);
 
+  // Extract the orgId that was embedded in the state token during the connect flow.
+  // State format: "${orgId}:${randomHex}.${hmac}" — the colon separator is safe because
+  // orgId is always a decimal integer and the random part is hex (no colons).
+  const colonIdx = stateToken.indexOf(":");
+  const callbackOrgId = colonIdx !== -1 ? (parseInt(stateToken.slice(0, colonIdx), 10) || 1) : 1;
+
   try {
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -139,7 +148,7 @@ router.get("/integrations/gmail/callback", async (req, res) => {
       ? new Date(Date.now() + tokenData.expires_in * 1000)
       : null;
 
-    const [existing] = await db.select().from(gmailCredentialsTable).limit(1);
+    const [existing] = await db.select().from(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, callbackOrgId)).limit(1);
     if (existing) {
       await db.update(gmailCredentialsTable).set({
         gmailAddress,
@@ -147,13 +156,14 @@ router.get("/integrations/gmail/callback", async (req, res) => {
         refreshToken: tokenData.refresh_token ?? existing.refreshToken,
         tokenExpiry: tokenExpiry ?? undefined,
         updatedAt: new Date(),
-      }).where(eq(gmailCredentialsTable.id, existing.id));
+      }).where(and(eq(gmailCredentialsTable.id, existing.id), eq(gmailCredentialsTable.orgId, callbackOrgId)));
     } else {
       await db.insert(gmailCredentialsTable).values({
         gmailAddress,
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token ?? "",
         tokenExpiry: tokenExpiry ?? undefined,
+        orgId: callbackOrgId,
       });
     }
 
@@ -168,7 +178,8 @@ router.get("/integrations/gmail/callback", async (req, res) => {
 });
 
 router.post("/integrations/gmail/disconnect", async (req, res) => {
-  const rows = await db.delete(gmailCredentialsTable).returning();
+  const orgId = await resolveOrgId(req);
+  const rows = await db.delete(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, orgId)).returning();
   req.log.info({ deleted: rows.length }, "gmail-oauth: disconnected");
   res.json({ disconnected: true });
 });
@@ -180,8 +191,9 @@ const TestEmailBody = z.object({
 router.post("/integrations/gmail/test", async (req, res) => {
   const body = TestEmailBody.safeParse(req.body);
   const to = (body.success ? body.data.to : undefined) ?? "test@example.com";
+  const orgId = await resolveOrgId(req);
 
-  const [cred] = await db.select().from(gmailCredentialsTable).limit(1);
+  const [cred] = await db.select().from(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, orgId)).limit(1);
   if (!cred) {
     res.status(400).json({ error: "Gmail not connected. Connect your account first." });
     return;

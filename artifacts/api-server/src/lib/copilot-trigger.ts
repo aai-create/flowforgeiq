@@ -30,30 +30,24 @@ function daysUntil(d: Date): number {
 }
 
 /**
- * Fetch past user edits for a specific supplier + action type combination.
- * Returns up to 3 most-recent edits that have both an original draft and a
- * user-edited version, sorted by significance (highest edit distance first so
- * the most instructive examples appear first).
- *
- * Retrieval strategy (strict supplier-scoping):
- * 1. Primary: proposals for EXACTLY this supplier AND this action type.
- * 2. Fallback (only when primary is empty): proposals for any supplier but
- *    the same action type — gives the copilot some style signal even when
- *    the supplier is new.
+ * Fetch past user edits for a specific supplier + action type combination,
+ * scoped to the given org.
  */
 async function getFewShotEdits(
   supplierName: string,
-  actionType: string
+  actionType: string,
+  orgId: number,
 ): Promise<FewShotEdit[]> {
   const editedProposals = await db
     .select()
     .from(copilotProposalsTable)
     .where(
       and(
+        eq(copilotProposalsTable.orgId, orgId),
         isNotNull(copilotProposalsTable.userEditedContent),
         isNotNull(copilotProposalsTable.editDistance),
-        eq(copilotProposalsTable.actionType, actionType)
-      )
+        eq(copilotProposalsTable.actionType, actionType),
+      ),
     )
     .orderBy(desc(copilotProposalsTable.updatedAt))
     .limit(40);
@@ -69,11 +63,10 @@ async function getFewShotEdits(
         userEdit: p.userEditedContent as string,
         editDistance: p.editDistance as number,
       }))
-      .sort((a, b) => b.editDistance - a.editDistance) // most-changed first = most instructive
+      .sort((a, b) => b.editDistance - a.editDistance)
       .slice(0, 3);
   }
 
-  // Primary: strict match on supplier name stored in payload
   const sameSupplierRows = editedProposals.filter(p => {
     const pl = p.payload as Record<string, unknown>;
     return pl.supplierName === supplierName;
@@ -82,24 +75,19 @@ async function getFewShotEdits(
   const primary = toFewShot(sameSupplierRows);
   if (primary.length > 0) return primary;
 
-  // Fallback: any supplier for the same action type (cross-supplier style signal)
   return toFewShot(editedProposals);
 }
 
-/**
- * Build a `previousEdits` annotation to inject into a proposal payload so
- * that downstream consumers (AI chat, auto-execute, etc.) can use past edits
- * as few-shot guidance.  Only included when there are relevant past edits.
- */
 async function buildFewShotAnnotation(
   supplierName: string,
-  actionType: string
+  actionType: string,
+  orgId: number,
 ): Promise<FewShotEdit[] | null> {
-  const edits = await getFewShotEdits(supplierName, actionType);
+  const edits = await getFewShotEdits(supplierName, actionType, orgId);
   return edits.length > 0 ? edits : null;
 }
 
-export async function generateProposals(): Promise<ProposalCandidate[]> {
+export async function generateProposals(orgId: number): Promise<ProposalCandidate[]> {
   const shipments = await db
     .select({
       id: shipmentsTable.id,
@@ -115,17 +103,22 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     .from(shipmentsTable)
     .leftJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .where(
-      inArray(shipmentsTable.status, ["on-track", "at-risk", "delayed"])
+      and(
+        eq(shipmentsTable.orgId, orgId),
+        inArray(shipmentsTable.status, ["on-track", "at-risk", "delayed"]),
+      ),
     );
 
   const allMessages = await db
     .select()
     .from(messagesTable)
+    .where(eq(messagesTable.orgId, orgId))
     .orderBy(desc(messagesTable.receivedAt));
 
   const allPayments = await db
     .select()
-    .from(paymentsTable);
+    .from(paymentsTable)
+    .where(eq(paymentsTable.orgId, orgId));
 
   const candidates: ProposalCandidate[] = [];
 
@@ -136,7 +129,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
 
     // 1. Unread messages that have an AI draft ready
     for (const msg of shipMessages.filter(m => m.unread && m.aiDraft)) {
-      const fewShot = await buildFewShotAnnotation(supplierName, "reply");
+      const fewShot = await buildFewShotAnnotation(supplierName, "reply", orgId);
       candidates.push({
         shipmentId: s.id,
         poNumber: s.poNumber,
@@ -163,7 +156,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     for (const pmt of shipPayments.filter(p => !p.paid)) {
       const due = daysUntil(new Date(pmt.dueDate));
       if (due <= 0) {
-        const fewShot = await buildFewShotAnnotation(supplierName, "payment_reminder");
+        const fewShot = await buildFewShotAnnotation(supplierName, "payment_reminder", orgId);
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -184,7 +177,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
           confidence: 0.95,
         });
       } else if (due <= 3) {
-        const fewShot = await buildFewShotAnnotation(supplierName, "payment_reminder");
+        const fewShot = await buildFewShotAnnotation(supplierName, "payment_reminder", orgId);
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -213,7 +206,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
       const daysSinceLastMsg = daysSince(new Date(lastMsg.receivedAt));
       if (daysSinceLastMsg >= 3 && s.status !== "delivered") {
         const stageLabel = s.currentStageId.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-        const fewShot = await buildFewShotAnnotation(supplierName, "nudge");
+        const fewShot = await buildFewShotAnnotation(supplierName, "nudge", orgId);
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -240,7 +233,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     if (s.status === "delayed") {
       const daysToExFactory = daysUntil(new Date(s.exFactoryDate));
       if (daysToExFactory <= 7) {
-        const fewShot = await buildFewShotAnnotation(supplierName, "escalation");
+        const fewShot = await buildFewShotAnnotation(supplierName, "escalation", orgId);
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -266,7 +259,7 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
     if (s.currentStageId === "qc" || s.currentStageId === "production") {
       const daysToExFactory = daysUntil(new Date(s.exFactoryDate));
       if (daysToExFactory <= 5 && daysToExFactory > 0) {
-        const fewShot = await buildFewShotAnnotation(supplierName, "doc_request");
+        const fewShot = await buildFewShotAnnotation(supplierName, "doc_request", orgId);
         candidates.push({
           shipmentId: s.id,
           poNumber: s.poNumber,
@@ -295,58 +288,55 @@ export async function generateProposals(): Promise<ProposalCandidate[]> {
 
 export async function getPolicy(
   supplierName: string,
-  actionType: string
+  actionType: string,
+  orgId: number,
 ): Promise<string> {
   const policies = await db
     .select()
     .from(autonomyPoliciesTable)
+    .where(eq(autonomyPoliciesTable.orgId, orgId))
     .orderBy(desc(autonomyPoliciesTable.id));
 
-  // Most specific match first: supplier + action type
-  const specific = policies.find(
-    p => p.supplierName === supplierName && p.actionType === actionType
-  );
+  const specific = policies.find(p => p.supplierName === supplierName && p.actionType === actionType);
   if (specific) return specific.policy;
 
-  // Supplier-level match
-  const supplierLevel = policies.find(
-    p => p.supplierName === supplierName && !p.actionType
-  );
+  const supplierLevel = policies.find(p => p.supplierName === supplierName && !p.actionType);
   if (supplierLevel) return supplierLevel.policy;
 
-  // Action-type level match
-  const actionLevel = policies.find(
-    p => !p.supplierName && p.actionType === actionType
-  );
+  const actionLevel = policies.find(p => !p.supplierName && p.actionType === actionType);
   if (actionLevel) return actionLevel.policy;
 
-  // Global default
   const global = policies.find(p => !p.supplierName && !p.actionType);
   if (global) return global.policy;
 
   return "always_ask";
 }
 
-export async function runTriggerEngine(): Promise<{
+export async function runTriggerEngine(orgId: number): Promise<{
   scanned: number;
   created: number;
   autoExecuted: number;
   proposals: (typeof copilotProposalsTable.$inferSelect)[];
 }> {
-  const allShipments = await db.select().from(shipmentsTable);
-  const candidates = await generateProposals();
+  const allShipments = await db
+    .select()
+    .from(shipmentsTable)
+    .where(eq(shipmentsTable.orgId, orgId));
 
-  // De-duplicate: don't create a new proposal if one already exists pending for
-  // the same shipment + triggerRef combination
+  const candidates = await generateProposals(orgId);
+
   const existingPending = await db
     .select()
     .from(copilotProposalsTable)
     .where(
-      inArray(copilotProposalsTable.status, ["pending", "snoozed"])
+      and(
+        eq(copilotProposalsTable.orgId, orgId),
+        inArray(copilotProposalsTable.status, ["pending", "snoozed"]),
+      ),
     );
 
   const existingKeys = new Set(
-    existingPending.map(p => `${p.shipmentId}:${p.triggerRef ?? p.actionType}`)
+    existingPending.map(p => `${p.shipmentId}:${p.triggerRef ?? p.actionType}`),
   );
 
   const toInsert = candidates.filter(c => {
@@ -367,7 +357,7 @@ export async function runTriggerEngine(): Promise<{
   let autoExecuted = 0;
 
   for (const candidate of toInsert) {
-    const policy = await getPolicy(candidate.supplierName, candidate.actionType);
+    const policy = await getPolicy(candidate.supplierName, candidate.actionType, orgId);
     const isAutoExec = policy === "full_auto" ||
       (policy === "auto_ack" && candidate.actionType === "reply" && candidate.confidence >= 0.9);
 
@@ -392,6 +382,7 @@ export async function runTriggerEngine(): Promise<{
         confidence: candidate.confidence,
         status,
         auditTrail: [auditEntry],
+        orgId,
       })
       .returning();
 

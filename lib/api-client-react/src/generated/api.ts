@@ -57,6 +57,7 @@ import type {
   MessageInput,
   MessageUpdate,
   NextPoNumbers,
+  OrgResponse,
   PatchShipmentDealBody,
   Payment,
   PaymentUpdate,
@@ -5219,6 +5220,83 @@ export const useSendRfqEmail = <TError = ErrorType<void>,
       > => {
       return useMutation(getSendRfqEmailMutationOptions(options));
     }
+
+export const getGetOrgUrl = () => {
+
+
+
+
+  return `/api/org`
+}
+
+/**
+ * @summary Get the current user's organization
+ */
+export const getOrg = async ( options?: RequestInit): Promise<OrgResponse> => {
+
+  return customFetch<OrgResponse>(getGetOrgUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrgQueryKey = () => {
+    return [
+    `/api/org`
+    ] as const;
+    }
+
+
+export const getGetOrgQueryOptions = <TData = Awaited<ReturnType<typeof getOrg>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrg>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrgQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrg>>> = ({ signal }) => getOrg({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrg>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOrgQueryResult = NonNullable<Awaited<ReturnType<typeof getOrg>>>
+export type GetOrgQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the current user's organization
+ */
+
+export function useGetOrg<TData = Awaited<ReturnType<typeof getOrg>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrg>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOrgQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetTeamUrl = () => {
 

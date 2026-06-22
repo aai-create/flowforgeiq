@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { resolveOrgId } from "../middlewares/requireAuth";
 import {
   ListMessagesResponseItem,
   CreateMessageBody,
@@ -16,8 +17,9 @@ import { extractFromChatText } from "../lib/extraction";
 const router: IRouter = Router();
 
 router.get("/messages", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const flaggedParam = req.query["isFlagged"];
-  let rows = await db.select().from(messagesTable).orderBy(desc(messagesTable.receivedAt));
+  let rows = await db.select().from(messagesTable).where(eq(messagesTable.orgId, orgId)).orderBy(desc(messagesTable.receivedAt));
   if (flaggedParam === "true") {
     rows = rows.filter(r => r.isFlagged);
   }
@@ -26,6 +28,7 @@ router.get("/messages", async (req, res) => {
 });
 
 router.get("/messages/needs-review", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const rows = await db
     .select({
       message: messagesTable,
@@ -33,13 +36,14 @@ router.get("/messages/needs-review", async (req, res) => {
     })
     .from(messagesTable)
     .leftJoin(teamUsersTable, eq(messagesTable.routedToClerkUserId, teamUsersTable.clerkUserId))
-    .where(eq(messagesTable.routingStatus, "needs-review"))
+    .where(and(eq(messagesTable.routingStatus, "needs-review"), eq(messagesTable.orgId, orgId)))
     .orderBy(desc(messagesTable.receivedAt));
   res.json(rows.map(r => ListMessagesResponseItem.parse({ ...r.message, routedToUserName: r.routedToUserName ?? null })));
 });
 
 router.post("/messages", async (req, res) => {
   const input = CreateMessageBody.parse(req.body);
+  const orgId = await resolveOrgId(req);
   const [inserted] = await db
     .insert(messagesTable)
     .values({
@@ -62,6 +66,7 @@ router.post("/messages", async (req, res) => {
       matchMethod: input.matchMethod ?? null,
       rawChatText: input.rawChatText ?? null,
       receivedAt: new Date(),
+      orgId,
     })
     .returning();
 
@@ -77,6 +82,7 @@ router.post("/messages", async (req, res) => {
         mimeType: input.attachmentMimeType!,
         base64Content: input.attachmentBase64!,
         sourceChannel: "whatsapp",
+        orgId,
       });
     });
   }
@@ -86,7 +92,8 @@ router.post("/messages", async (req, res) => {
 
 router.delete("/messages/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const [deleted] = await db.delete(messagesTable).where(eq(messagesTable.id, id)).returning();
+  const orgId = await resolveOrgId(req);
+  const [deleted] = await db.delete(messagesTable).where(and(eq(messagesTable.id, id), eq(messagesTable.orgId, orgId))).returning();
   if (!deleted) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -96,8 +103,9 @@ router.delete("/messages/:id", async (req, res) => {
 
 router.patch("/messages/:id", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const input = UpdateMessageBody.parse(req.body);
-  const [updated] = await db.update(messagesTable).set(input).where(eq(messagesTable.id, id)).returning();
+  const [updated] = await db.update(messagesTable).set(input).where(and(eq(messagesTable.id, id), eq(messagesTable.orgId, orgId))).returning();
   if (!updated) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -112,9 +120,10 @@ const AssignBody = z.object({
 
 router.patch("/messages/:id/assign", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const input = AssignBody.parse(req.body);
 
-  const [msg] = await db.select().from(messagesTable).where(eq(messagesTable.id, id));
+  const [msg] = await db.select().from(messagesTable).where(and(eq(messagesTable.id, id), eq(messagesTable.orgId, orgId)));
   if (!msg) {
     res.status(404).json({ error: "Message not found" });
     return;
@@ -126,7 +135,7 @@ router.patch("/messages/:id/assign", async (req, res) => {
       shipmentId: input.shipmentId,
       routingStatus: "routed",
     })
-    .where(eq(messagesTable.id, id))
+    .where(and(eq(messagesTable.id, id), eq(messagesTable.orgId, orgId)))
     .returning();
 
   if (msg.rawSenderEmail) {
@@ -136,9 +145,10 @@ router.patch("/messages/:id/assign", async (req, res) => {
         senderEmail: msg.rawSenderEmail.toLowerCase(),
         buyerName: input.buyerName,
         confirmed: true,
+        orgId,
       })
       .onConflictDoUpdate({
-        target: buyerEmailsTable.senderEmail,
+        target: [buyerEmailsTable.orgId, buyerEmailsTable.senderEmail],
         set: {
           buyerName: input.buyerName,
           confirmed: true,
@@ -162,15 +172,16 @@ const SendReplyBody = z.object({
 
 router.post("/messages/:id/send-reply", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const input = SendReplyBody.parse(req.body);
 
-  const [msg] = await db.select().from(messagesTable).where(eq(messagesTable.id, id));
+  const [msg] = await db.select().from(messagesTable).where(and(eq(messagesTable.id, id), eq(messagesTable.orgId, orgId)));
   if (!msg) {
     res.status(404).json({ error: "Message not found" });
     return;
   }
 
-  const [cred] = await db.select().from(gmailCredentialsTable).limit(1);
+  const [cred] = await db.select().from(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, orgId)).limit(1);
   if (!cred) {
     res.status(400).json({ error: "Gmail not connected. Connect your Gmail account in Settings first." });
     return;
@@ -227,6 +238,7 @@ router.post("/messages/:id/send-reply", async (req, res) => {
       isFlagged: false,
       routingStatus: "routed",
       receivedAt: new Date(),
+      orgId,
     })
     .returning();
 
@@ -251,6 +263,7 @@ router.post("/messages/ingest-chat", async (req, res) => {
 
   const normalised = normaliseChat(input.rawText, input.channel, input.senderHint);
 
+  const orgId = await resolveOrgId(req);
   const shipmentRows = await db
     .select({
       id: shipmentsTable.id,
@@ -262,7 +275,8 @@ router.post("/messages/ingest-chat", async (req, res) => {
       currentStageId: shipmentsTable.currentStageId,
     })
     .from(shipmentsTable)
-    .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id));
+    .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+    .where(eq(shipmentsTable.orgId, orgId));
 
   const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
 

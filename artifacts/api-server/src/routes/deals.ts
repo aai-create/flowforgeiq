@@ -1,23 +1,23 @@
 import { Router, type IRouter } from "express";
 import { db, dealsTable, shipmentsTable, paymentsTable, suppliersTable, dealShipmentsTable } from "@workspace/db";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   CreateDealBody,
   UpdateDealBody,
   ListDealsResponseItem,
   GetDealResponse,
 } from "@workspace/api-zod";
+import { resolveOrgId } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-async function buildDealWithSpread(dealId: number) {
-  const [deal] = await db.select().from(dealsTable).where(eq(dealsTable.id, dealId));
+async function buildDealWithSpread(dealId: number, orgId: number) {
+  const [deal] = await db.select().from(dealsTable).where(and(eq(dealsTable.id, dealId), eq(dealsTable.orgId, orgId)));
   if (!deal) return null;
 
-  // Collect linked shipment IDs from both the M2M join table and the legacy FK
   const [joinRows, fkRows] = await Promise.all([
-    db.select({ id: dealShipmentsTable.shipmentId }).from(dealShipmentsTable).where(eq(dealShipmentsTable.dealId, dealId)),
-    db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.dealId, dealId)),
+    db.select({ id: dealShipmentsTable.shipmentId }).from(dealShipmentsTable).where(and(eq(dealShipmentsTable.dealId, dealId), eq(dealShipmentsTable.orgId, orgId))),
+    db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(and(eq(shipmentsTable.dealId, dealId), eq(shipmentsTable.orgId, orgId))),
   ]);
   const linkedIds = [...new Set([...joinRows.map(r => r.id), ...fkRows.map(r => r.id)])];
 
@@ -32,7 +32,10 @@ async function buildDealWithSpread(dealId: number) {
       supplierId: shipmentsTable.supplierId,
     })
     .from(shipmentsTable)
-    .where(linkedIds.length === 1 ? eq(shipmentsTable.id, linkedIds[0]) : inArray(shipmentsTable.id, linkedIds));
+    .where(and(
+      linkedIds.length === 1 ? eq(shipmentsTable.id, linkedIds[0]) : inArray(shipmentsTable.id, linkedIds),
+      eq(shipmentsTable.orgId, orgId),
+    ));
 
   if (!shipments.length) {
     return GetDealResponse.parse({
@@ -51,16 +54,18 @@ async function buildDealWithSpread(dealId: number) {
   const supplierIds = [...new Set(shipments.map(s => s.supplierId))];
 
   const [allPayments, allSuppliers] = await Promise.all([
-    db.select().from(paymentsTable).where(
+    db.select().from(paymentsTable).where(and(
       shipmentIds.length === 1
         ? eq(paymentsTable.shipmentId, shipmentIds[0])
-        : inArray(paymentsTable.shipmentId, shipmentIds)
-    ),
-    db.select().from(suppliersTable).where(
+        : inArray(paymentsTable.shipmentId, shipmentIds),
+      eq(paymentsTable.orgId, orgId),
+    )),
+    db.select().from(suppliersTable).where(and(
       supplierIds.length === 1
         ? eq(suppliersTable.id, supplierIds[0])
-        : inArray(suppliersTable.id, supplierIds)
-    ),
+        : inArray(suppliersTable.id, supplierIds),
+      eq(suppliersTable.orgId, orgId),
+    )),
   ]);
 
   const supplierNameById = new Map(allSuppliers.map(s => [s.id, s.name]));
@@ -106,20 +111,23 @@ async function buildDealWithSpread(dealId: number) {
 }
 
 router.get("/deals", async (req, res) => {
-  const deals = await db.select().from(dealsTable).orderBy(dealsTable.id);
-  const results = await Promise.all(deals.map(d => buildDealWithSpread(d.id)));
+  const orgId = await resolveOrgId(req);
+  const deals = await db.select().from(dealsTable).where(eq(dealsTable.orgId, orgId)).orderBy(dealsTable.id);
+  const results = await Promise.all(deals.map(d => buildDealWithSpread(d.id, orgId)));
   res.json(results.filter(Boolean).map(r => ListDealsResponseItem.parse(r)));
 });
 
 router.get("/deals/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const result = await buildDealWithSpread(id);
+  const orgId = await resolveOrgId(req);
+  const result = await buildDealWithSpread(id, orgId);
   if (!result) { res.status(404).json({ error: "Not found" }); return; }
   res.json(result);
 });
 
 router.post("/deals", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const body = CreateDealBody.parse(req.body);
   const [deal] = await db.insert(dealsTable).values({
     buyerPoNumber: body.buyerPoNumber,
@@ -129,14 +137,16 @@ router.post("/deals", async (req, res) => {
     buyerQuantity: body.buyerQuantity,
     currency: body.currency ?? "USD",
     notes: body.notes,
+    orgId,
   }).returning();
-  const result = await buildDealWithSpread(deal.id);
+  const result = await buildDealWithSpread(deal.id, orgId);
   res.status(201).json(result);
 });
 
 router.patch("/deals/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const orgId = await resolveOrgId(req);
   const body = UpdateDealBody.parse(req.body);
   const update: Record<string, unknown> = {};
   if (body.buyerPoNumber !== undefined) update.buyerPoNumber = body.buyerPoNumber;
@@ -147,9 +157,9 @@ router.patch("/deals/:id", async (req, res) => {
   if (body.currency      !== undefined) update.currency      = body.currency;
   if (body.notes         !== undefined) update.notes         = body.notes;
   if (Object.keys(update).length) {
-    await db.update(dealsTable).set(update).where(eq(dealsTable.id, id));
+    await db.update(dealsTable).set(update).where(and(eq(dealsTable.id, id), eq(dealsTable.orgId, orgId)));
   }
-  const result = await buildDealWithSpread(id);
+  const result = await buildDealWithSpread(id, orgId);
   if (!result) { res.status(404).json({ error: "Not found" }); return; }
   res.json(result);
 });

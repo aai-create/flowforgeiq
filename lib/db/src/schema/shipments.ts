@@ -1,7 +1,8 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { dealsTable } from "./deals";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const shipmentsTable = pgTable("shipments", {
   id: serial("id").primaryKey(),
@@ -21,9 +22,10 @@ export const shipmentsTable = pgTable("shipments", {
   quantity: integer("quantity"),
   unitCostUsd: integer("unit_cost_usd"),
   assigneeId: text("assignee_id"),
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [index("shipments_org_id_idx").on(t.orgId)]);
 
 export const insertShipmentSchema = createInsertSchema(shipmentsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertShipment = z.infer<typeof insertShipmentSchema>;

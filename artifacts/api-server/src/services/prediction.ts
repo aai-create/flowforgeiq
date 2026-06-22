@@ -6,7 +6,7 @@ import {
   messagesTable,
   shipmentPredictionsTable,
 } from "@workspace/db";
-import { desc, eq, asc } from "drizzle-orm";
+import { and, desc, eq, asc } from "drizzle-orm";
 
 const TODAY = new Date("2026-05-18T00:00:00Z");
 
@@ -308,13 +308,19 @@ export async function computePrediction(shipmentId: number): Promise<PredictionR
   };
 }
 
-export async function computeAndStorePrediction(shipmentId: number) {
+export async function computeAndStorePrediction(shipmentId: number, orgId?: number) {
+  let resolvedOrgId = orgId;
+  if (resolvedOrgId === undefined) {
+    const [row] = await db.select({ orgId: shipmentsTable.orgId }).from(shipmentsTable).where(eq(shipmentsTable.id, shipmentId));
+    resolvedOrgId = row?.orgId ?? 1;
+  }
   const result = await computePrediction(shipmentId);
 
   const [stored] = await db
     .insert(shipmentPredictionsTable)
     .values({
       shipmentId,
+      orgId: resolvedOrgId,
       riskScore: result.riskScore,
       predictedEtaMin: result.predictedEtaMin,
       predictedEtaMax: result.predictedEtaMax,
@@ -328,20 +334,26 @@ export async function computeAndStorePrediction(shipmentId: number) {
   return stored;
 }
 
-export async function getLatestPrediction(shipmentId: number) {
+export async function getLatestPrediction(shipmentId: number, orgId?: number) {
+  const cond = orgId !== undefined
+    ? and(eq(shipmentPredictionsTable.shipmentId, shipmentId), eq(shipmentPredictionsTable.orgId, orgId))
+    : eq(shipmentPredictionsTable.shipmentId, shipmentId);
   const [row] = await db
     .select()
     .from(shipmentPredictionsTable)
-    .where(eq(shipmentPredictionsTable.shipmentId, shipmentId))
+    .where(cond)
     .orderBy(desc(shipmentPredictionsTable.computedAt))
     .limit(1);
   return row ?? null;
 }
 
-export async function getAllPredictions(shipmentId: number) {
+export async function getAllPredictions(shipmentId: number, orgId?: number) {
+  const cond = orgId !== undefined
+    ? and(eq(shipmentPredictionsTable.shipmentId, shipmentId), eq(shipmentPredictionsTable.orgId, orgId))
+    : eq(shipmentPredictionsTable.shipmentId, shipmentId);
   return db
     .select()
     .from(shipmentPredictionsTable)
-    .where(eq(shipmentPredictionsTable.shipmentId, shipmentId))
+    .where(cond)
     .orderBy(desc(shipmentPredictionsTable.computedAt));
 }

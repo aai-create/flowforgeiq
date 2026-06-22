@@ -8,7 +8,8 @@ import {
   shipmentsTable,
   suppliersTable,
 } from "@workspace/db";
-import { desc, eq, asc, inArray } from "drizzle-orm";
+import { and, desc, eq, asc, inArray } from "drizzle-orm";
+import { resolveOrgId } from "../middlewares/requireAuth";
 import {
   ListDocumentsQueryParams,
   ListDocumentsResponseItem,
@@ -39,10 +40,11 @@ async function loadDocumentWithExtraction(id: number) {
 }
 
 router.get("/documents", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const params = ListDocumentsQueryParams.parse(req.query);
   const docs = params.shipmentId != null
-    ? await db.select().from(documentsTable).where(eq(documentsTable.shipmentId, params.shipmentId)).orderBy(desc(documentsTable.createdAt))
-    : await db.select().from(documentsTable).orderBy(desc(documentsTable.createdAt));
+    ? await db.select().from(documentsTable).where(and(eq(documentsTable.shipmentId, params.shipmentId), eq(documentsTable.orgId, orgId))).orderBy(desc(documentsTable.createdAt))
+    : await db.select().from(documentsTable).where(eq(documentsTable.orgId, orgId)).orderBy(desc(documentsTable.createdAt));
 
   if (!docs.length) { res.json([]); return; }
 
@@ -69,6 +71,14 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     res.status(400).json({ error: "Invalid shipmentId" }); return;
   }
   const shipmentId = parsedShipmentId;
+  const orgId = await resolveOrgId(req);
+
+  // Validate that the provided shipmentId belongs to this org
+  if (shipmentId !== null) {
+    const [shipCheck] = await db.select({ id: shipmentsTable.id }).from(shipmentsTable)
+      .where(and(eq(shipmentsTable.id, shipmentId), eq(shipmentsTable.orgId, orgId))).limit(1);
+    if (!shipCheck) { res.status(400).json({ error: "Shipment not found" }); return; }
+  }
   const sourceChannel = (req.body.sourceChannel as string | undefined) ?? "upload";
   const fileType = getFileType(file.mimetype, file.originalname);
 
@@ -81,6 +91,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     storageData: file.buffer.toString("base64"),
     sourceChannel,
     status: "processing",
+    orgId,
   }).returning();
 
   const [extraction] = await db.insert(extractionsTable).values({
@@ -91,6 +102,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     lineItems: [],
     reconciliationFindings: [],
     confidence: 0,
+    orgId,
   }).returning();
 
   res.status(201).json(ListDocumentsResponseItem.parse({ ...doc, extraction }));
@@ -100,7 +112,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
       // Resolve supplierId from pre-linked shipment for supplier-scoped corrections
       let supplierId: number | undefined;
       if (shipmentId) {
-        const [linkedShipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, shipmentId)).limit(1);
+        const [linkedShipment] = await db.select().from(shipmentsTable).where(and(eq(shipmentsTable.id, shipmentId), eq(shipmentsTable.orgId, orgId))).limit(1);
         if (linkedShipment) supplierId = linkedShipment.supplierId;
       }
 
@@ -108,8 +120,11 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         db.select({ shipment: shipmentsTable, supplierName: suppliersTable.name })
           .from(shipmentsTable)
           .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+          .where(eq(shipmentsTable.orgId, orgId))
           .orderBy(asc(shipmentsTable.id)),
-        db.select().from(extractionCorrectionsTable).orderBy(asc(extractionCorrectionsTable.createdAt)),
+        db.select().from(extractionCorrectionsTable)
+          .where(eq(extractionCorrectionsTable.orgId, orgId))
+          .orderBy(asc(extractionCorrectionsTable.createdAt)),
         // Load line items from previously extracted *purchase_order* documents, grouped by shipmentId
         db.select({
           shipmentId: documentsTable.shipmentId,
@@ -118,7 +133,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         })
           .from(documentsTable)
           .innerJoin(extractionsTable, eq(extractionsTable.documentId, documentsTable.id))
-          .where(eq(extractionsTable.status, "extracted")),
+          .where(and(eq(documentsTable.orgId, orgId), eq(extractionsTable.status, "extracted"))),
       ]);
 
       // Build PO line-items map: shipmentId → LineItem[] — restricted to purchase_order docs only
@@ -146,7 +161,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
 
       // If supplierId wasn't known pre-extraction, derive it from matched shipment
       if (!supplierId && result.matchedShipmentId) {
-        const [matched] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, result.matchedShipmentId)).limit(1);
+        const [matched] = await db.select().from(shipmentsTable).where(and(eq(shipmentsTable.id, result.matchedShipmentId), eq(shipmentsTable.orgId, orgId))).limit(1);
         if (matched) supplierId = matched.supplierId;
       }
 
@@ -177,7 +192,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         const qcResult = extractedFields.qcResult as string;
         const newStatus = qcResult === "fail" ? "at-risk" : undefined;
         if (newStatus) {
-          await db.update(shipmentsTable).set({ status: newStatus }).where(eq(shipmentsTable.id, resolvedShipmentId));
+          await db.update(shipmentsTable).set({ status: newStatus }).where(and(eq(shipmentsTable.id, resolvedShipmentId), eq(shipmentsTable.orgId, orgId)));
         }
       }
     } catch (err) {
@@ -190,19 +205,21 @@ router.post("/documents", upload.single("file"), async (req, res) => {
 
 router.get("/documents/:id", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const doc = await loadDocumentWithExtraction(id);
-  if (!doc) { res.status(404).json({ error: "Not found" }); return; }
+  if (!doc || doc.orgId !== orgId) { res.status(404).json({ error: "Not found" }); return; }
   res.json(ListDocumentsResponseItem.parse(doc));
 });
 
 router.patch("/documents/:id", async (req, res) => {
   const { id } = UpdateDocumentParams.parse(req.params);
+  const orgId = await resolveOrgId(req);
   const input = UpdateDocumentBody.parse(req.body);
   const newShipmentId = input.shipmentId ?? null;
 
   // Normalize status: linked docs are "extracted" (or keep "failed"/"processing");
   // unlinked docs become "unmatched" unless they were never extracted.
-  const [existing] = await db.select().from(documentsTable).where(eq(documentsTable.id, id)).limit(1);
+  const [existing] = await db.select().from(documentsTable).where(and(eq(documentsTable.id, id), eq(documentsTable.orgId, orgId))).limit(1);
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
 
   let newStatus = existing.status;
@@ -211,7 +228,7 @@ router.patch("/documents/:id", async (req, res) => {
 
   await db.update(documentsTable)
     .set({ shipmentId: newShipmentId, status: newStatus })
-    .where(eq(documentsTable.id, id));
+    .where(and(eq(documentsTable.id, id), eq(documentsTable.orgId, orgId)));
 
   // Sync the latest extraction's shipmentMatchId to match the new link
   const [latestExt] = await db.select().from(extractionsTable)
@@ -229,9 +246,10 @@ router.patch("/documents/:id", async (req, res) => {
 
 router.get("/extractions/:id/corrections", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const corrections = await db.select()
     .from(extractionCorrectionsTable)
-    .where(eq(extractionCorrectionsTable.extractionId, id))
+    .where(and(eq(extractionCorrectionsTable.extractionId, id), eq(extractionCorrectionsTable.orgId, orgId)))
     .orderBy(asc(extractionCorrectionsTable.createdAt));
   res.json(corrections);
 });
@@ -256,6 +274,7 @@ router.post("/extractions/:id/corrections", async (req, res) => {
     }
   }
 
+  const orgId = await resolveOrgId(req);
   const [correction] = await db.insert(extractionCorrectionsTable).values({
     extractionId: id,
     supplierId,
@@ -263,6 +282,7 @@ router.post("/extractions/:id/corrections", async (req, res) => {
     fieldPath: input.fieldPath,
     originalValue: input.originalValue ?? null,
     correctedValue: input.correctedValue,
+    orgId,
   }).returning();
   res.json(SaveExtractionCorrectionResponse.parse(correction));
 });

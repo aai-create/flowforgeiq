@@ -1,8 +1,9 @@
-import { pgTable, text, serial, integer, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, doublePrecision, index } from "drizzle-orm/pg-core";
 import { rfqsTable } from "./rfqs";
 import { suppliersTable } from "./suppliers";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const rfqQuotesTable = pgTable("rfq_quotes", {
   id: serial("id").primaryKey(),
@@ -16,7 +17,8 @@ export const rfqQuotesTable = pgTable("rfq_quotes", {
   notes: text("notes"),
   status: text("status").notNull().default("received"),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
+}, (t) => [index("rfq_quotes_org_id_idx").on(t.orgId)]);
 
 export const insertRfqQuoteSchema = createInsertSchema(rfqQuotesTable).omit({ id: true });
 export type InsertRfqQuote = z.infer<typeof insertRfqQuoteSchema>;

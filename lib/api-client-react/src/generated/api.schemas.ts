@@ -5,6 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface OrgResponse {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
 
 

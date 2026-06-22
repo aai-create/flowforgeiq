@@ -1824,6 +1824,16 @@ export const SendRfqEmailResponse = zod.object({
 
 
 /**
+ * @summary Get the current user's organization
+ */
+export const GetOrgResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string()
+})
+
+
+/**
  * @summary List team members and pending invitations
  */
 export const GetTeamResponse = zod.object({

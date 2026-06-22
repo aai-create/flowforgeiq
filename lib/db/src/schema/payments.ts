@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const paymentsTable = pgTable("payments", {
   id: serial("id").primaryKey(),
@@ -21,7 +22,8 @@ export const paymentsTable = pgTable("payments", {
   invoiceNumber: text("invoice_number"),
   intermediarySupplierPaidUsd: integer("intermediary_supplier_paid_usd"),
   intermediarySupplierPaidAt: timestamp("intermediary_supplier_paid_at", { withTimezone: true }),
-});
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
+}, (t) => [index("payments_org_id_idx").on(t.orgId)]);
 
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ id: true });
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;

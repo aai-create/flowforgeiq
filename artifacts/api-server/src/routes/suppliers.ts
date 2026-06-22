@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db, suppliersTable, messagesTable } from "@workspace/db";
-import { sql, asc, eq } from "drizzle-orm";
+import { and, sql, asc, eq } from "drizzle-orm";
 import { ListSuppliersResponseItem, UpdateSupplierBody, CreateSupplierBody } from "@workspace/api-zod";
+import { resolveOrgId } from "../middlewares/requireAuth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -20,11 +21,13 @@ function supplierSelect() {
   };
 }
 
-router.get("/suppliers", async (_req, res) => {
+router.get("/suppliers", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const rows = await db
     .select(supplierSelect())
     .from(suppliersTable)
     .leftJoin(messagesTable, sql`${messagesTable.supplierId} = ${suppliersTable.id}`)
+    .where(eq(suppliersTable.orgId, orgId))
     .groupBy(suppliersTable.id)
     .orderBy(asc(suppliersTable.name));
   res.json(rows.map(r => ListSuppliersResponseItem.parse(r)));
@@ -44,7 +47,8 @@ router.post("/suppliers", async (req, res) => {
   if (input.contactEmail != null) {
     input.contactEmail = input.contactEmail.toLowerCase().trim();
   }
-  const [row] = await db.insert(suppliersTable).values(input).returning();
+  const orgId = await resolveOrgId(req);
+  const [row] = await db.insert(suppliersTable).values({ ...input, orgId }).returning();
   const result = ListSuppliersResponseItem.parse({ ...row, threadCount: 0 });
   res.status(201).json(result);
 });
@@ -80,10 +84,11 @@ router.patch("/suppliers/:id", async (req, res) => {
     fields.contactEmail = fields.contactEmail.toLowerCase().trim();
   }
 
+  const orgId = await resolveOrgId(req);
   const updated = await db
     .update(suppliersTable)
     .set(fields)
-    .where(eq(suppliersTable.id, id))
+    .where(and(eq(suppliersTable.id, id), eq(suppliersTable.orgId, orgId)))
     .returning();
 
   if (updated.length === 0) {
@@ -96,7 +101,7 @@ router.patch("/suppliers/:id", async (req, res) => {
     .select(supplierSelect())
     .from(suppliersTable)
     .leftJoin(messagesTable, sql`${messagesTable.supplierId} = ${suppliersTable.id}`)
-    .where(eq(suppliersTable.id, supplier.id))
+    .where(and(eq(suppliersTable.id, supplier.id), eq(suppliersTable.orgId, orgId)))
     .groupBy(suppliersTable.id);
 
   res.json(ListSuppliersResponseItem.parse(withThreadCount));

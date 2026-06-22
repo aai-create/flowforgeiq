@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, teamUsersTable, teamInvitationsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
+import { db, teamUsersTable, teamInvitationsTable, organizationsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { requireAuth, requireAdmin, requireClerkAuth } from "../middlewares/requireAuth";
 import crypto from "node:crypto";
 
 function generateInboundToken(): string {
@@ -10,11 +10,24 @@ function generateInboundToken(): string {
 
 const router: IRouter = Router();
 
+router.get("/org", requireAuth, async (req, res) => {
+  const [org] = await db
+    .select({ id: organizationsTable.id, name: organizationsTable.name, slug: organizationsTable.slug })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.id, req.orgId));
+  if (!org) {
+    res.status(404).json({ error: "Organization not found" });
+    return;
+  }
+  res.json(org);
+});
+
 router.get("/team", requireAuth, async (req, res) => {
-  const members = await db.select().from(teamUsersTable);
+  const members = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, req.orgId));
   const pending = await db
     .select()
     .from(teamInvitationsTable)
+    .where(eq(teamInvitationsTable.orgId, req.orgId))
     .then(rows => rows.filter(r => !r.acceptedAt));
   res.json({ members, pendingInvitations: pending });
 });
@@ -29,7 +42,7 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
   const token = crypto.randomBytes(24).toString("hex");
   const [inv] = await db
     .insert(teamInvitationsTable)
-    .values({ email, role: validRole, token, invitedBy: req.userId! })
+    .values({ email, role: validRole, token, invitedBy: req.userId!, orgId: req.orgId })
     .returning();
   const baseUrl = process.env.REPLIT_DEV_DOMAIN
     ? `https://${process.env.REPLIT_DEV_DOMAIN}`
@@ -44,17 +57,17 @@ router.delete("/team/:userId", requireAdmin, async (req, res) => {
     res.status(400).json({ error: "Cannot remove yourself" });
     return;
   }
-  await db.delete(teamUsersTable).where(eq(teamUsersTable.clerkUserId, targetId));
+  await db.delete(teamUsersTable).where(and(eq(teamUsersTable.clerkUserId, targetId), eq(teamUsersTable.orgId, req.orgId)));
   res.status(204).send();
 });
 
 router.delete("/team/invitations/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  await db.delete(teamInvitationsTable).where(eq(teamInvitationsTable.id, id));
+  await db.delete(teamInvitationsTable).where(and(eq(teamInvitationsTable.id, id), eq(teamInvitationsTable.orgId, req.orgId)));
   res.status(204).send();
 });
 
-router.post("/team/accept-invite", requireAuth, async (req, res) => {
+router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
   const { token } = req.body as { token?: string };
   if (!token) {
     res.status(400).json({ error: "Token required" });
@@ -93,6 +106,7 @@ router.post("/team/accept-invite", requireAuth, async (req, res) => {
       name: clerkName,
       role: inv.role,
       inboundToken: generateInboundToken(),
+      orgId: inv.orgId,
     });
   }
 
@@ -104,7 +118,7 @@ router.post("/team/accept-invite", requireAuth, async (req, res) => {
   res.json({ user });
 });
 
-router.post("/team/provision-self", requireAuth, async (req, res) => {
+router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
   const { name, email } = req.body as { name?: string; email?: string };
   const existing = await db
     .select()
@@ -113,7 +127,6 @@ router.post("/team/provision-self", requireAuth, async (req, res) => {
 
   if (existing.length > 0) {
     const existingUser = existing[0]!;
-    // Backfill inbound token for users provisioned before this feature
     if (!existingUser.inboundToken) {
       await db
         .update(teamUsersTable)
@@ -130,7 +143,7 @@ router.post("/team/provision-self", requireAuth, async (req, res) => {
     return;
   }
 
-  const allMembers = await db.select().from(teamUsersTable);
+  const allMembers = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, 1));
   const isFirstUser = allMembers.length === 0;
   const role = isFirstUser ? "admin" : "member";
 
@@ -142,6 +155,7 @@ router.post("/team/provision-self", requireAuth, async (req, res) => {
       name: name || email?.split("@")[0] || "Team Member",
       role,
       inboundToken: generateInboundToken(),
+      orgId: 1,
     })
     .onConflictDoNothing()
     .returning();

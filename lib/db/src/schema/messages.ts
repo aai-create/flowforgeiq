@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
@@ -27,7 +28,8 @@ export const messagesTable = pgTable("messages", {
   pendingExtractionFields: jsonb("pending_extraction_fields"),
   rawChatText: text("raw_chat_text"),
   routedToClerkUserId: text("routed_to_clerk_user_id"),
-});
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
+}, (t) => [index("messages_org_id_idx").on(t.orgId)]);
 
 export const insertMessageSchema = createInsertSchema(messagesTable).omit({ id: true });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;

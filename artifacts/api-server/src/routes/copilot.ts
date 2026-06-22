@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, copilotProposalsTable, autonomyPoliciesTable, shipmentsTable, messagesTable, suppliersTable, paymentsTable } from "@workspace/db";
-import { asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { resolveOrgId } from "../middlewares/requireAuth";
 import {
   CreateCopilotProposalBody,
   UpdateCopilotProposalBody,
@@ -56,21 +57,25 @@ function actionLabel(t: string) {
 
 // ─── List proposals ──────────────────────────────────────────────────────────
 router.get("/copilot/proposals", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const query = ListCopilotProposalsQueryParams.parse(req.query);
 
-  let rows = await db
+  const conditions: Parameters<typeof and>[0][] = [eq(copilotProposalsTable.orgId, orgId)];
+  if (query.status) conditions.push(eq(copilotProposalsTable.status, query.status));
+  if (query.shipmentId) conditions.push(eq(copilotProposalsTable.shipmentId, query.shipmentId));
+
+  const rows = await db
     .select()
     .from(copilotProposalsTable)
+    .where(and(...conditions))
     .orderBy(desc(copilotProposalsTable.createdAt));
-
-  if (query.status) rows = rows.filter(r => r.status === query.status);
-  if (query.shipmentId) rows = rows.filter(r => r.shipmentId === query.shipmentId);
 
   res.json(rows);
 });
 
 // ─── Create proposal (manual) ─────────────────────────────────────────────────
 router.post("/copilot/proposals", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const input = CreateCopilotProposalBody.parse(req.body);
   const [inserted] = await db
     .insert(copilotProposalsTable)
@@ -84,6 +89,7 @@ router.post("/copilot/proposals", async (req, res) => {
       confidence: input.confidence ?? 0.8,
       status: "pending",
       auditTrail: [{ at: new Date().toISOString(), actor: "user", action: "created" }],
+      orgId,
     })
     .returning();
   res.status(201).json(inserted);
@@ -92,12 +98,13 @@ router.post("/copilot/proposals", async (req, res) => {
 // ─── Update proposal (approve / reject / snooze / edit) ──────────────────────
 router.patch("/copilot/proposals/:id", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const input = UpdateCopilotProposalBody.parse(req.body);
 
   const [existing] = await db
     .select()
     .from(copilotProposalsTable)
-    .where(eq(copilotProposalsTable.id, id));
+    .where(and(eq(copilotProposalsTable.id, id), eq(copilotProposalsTable.orgId, orgId)));
 
   if (!existing) {
     res.status(404).json({ error: "Not found" });
@@ -149,16 +156,19 @@ router.patch("/copilot/proposals/:id", async (req, res) => {
 });
 
 // ─── Trigger engine ───────────────────────────────────────────────────────────
-router.post("/copilot/trigger", async (_req, res) => {
-  const result = await runTriggerEngine();
+router.post("/copilot/trigger", async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const result = await runTriggerEngine(orgId);
   res.json(result);
 });
 
 // ─── Daily summary ────────────────────────────────────────────────────────────
-router.get("/copilot/summary", async (_req, res) => {
+router.get("/copilot/summary", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const allProposals = await db
     .select()
     .from(copilotProposalsTable)
+    .where(eq(copilotProposalsTable.orgId, orgId))
     .orderBy(desc(copilotProposalsTable.createdAt));
 
   const pending      = allProposals.filter(p => p.status === "pending").length;
@@ -207,18 +217,21 @@ router.get("/copilot/summary", async (_req, res) => {
 });
 
 // ─── Autonomy policies ────────────────────────────────────────────────────────
-router.get("/copilot/policies", async (_req, res) => {
+router.get("/copilot/policies", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const rows = await db
     .select()
     .from(autonomyPoliciesTable)
+    .where(eq(autonomyPoliciesTable.orgId, orgId))
     .orderBy(asc(autonomyPoliciesTable.id));
   res.json(rows);
 });
 
 router.put("/copilot/policies", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const input = UpsertAutonomyPolicyBody.parse(req.body);
 
-  const all = await db.select().from(autonomyPoliciesTable);
+  const all = await db.select().from(autonomyPoliciesTable).where(eq(autonomyPoliciesTable.orgId, orgId));
   const existing = all.find(p =>
     (p.supplierName ?? null) === (input.supplierName ?? null) &&
     (p.actionType ?? null) === (input.actionType ?? null)
@@ -228,7 +241,7 @@ router.put("/copilot/policies", async (req, res) => {
     const [updated] = await db
       .update(autonomyPoliciesTable)
       .set({ policy: input.policy })
-      .where(eq(autonomyPoliciesTable.id, existing.id))
+      .where(and(eq(autonomyPoliciesTable.id, existing.id), eq(autonomyPoliciesTable.orgId, orgId)))
       .returning();
     res.json(updated);
   } else {
@@ -238,6 +251,7 @@ router.put("/copilot/policies", async (req, res) => {
         supplierName: input.supplierName ?? null,
         actionType: input.actionType ?? null,
         policy: input.policy,
+        orgId,
       })
       .returning();
     res.json(inserted);
@@ -252,9 +266,10 @@ const CopilotChatBody = z.object({
 });
 
 router.post("/copilot/chat", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const input = CopilotChatBody.parse(req.body);
 
-  // Pull live context: active shipments + recent messages + payments
+  // Pull live context: active shipments + recent messages + payments (all org-scoped)
   const shipments = await db
     .select({
       id: shipmentsTable.id,
@@ -268,18 +283,19 @@ router.post("/copilot/chat", async (req, res) => {
     })
     .from(shipmentsTable)
     .leftJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
-    .where(inArray(shipmentsTable.status, ["on-track", "at-risk", "delayed"]));
+    .where(and(eq(shipmentsTable.orgId, orgId), inArray(shipmentsTable.status, ["on-track", "at-risk", "delayed"])));
 
   const recentMessages = await db
     .select()
     .from(messagesTable)
+    .where(eq(messagesTable.orgId, orgId))
     .orderBy(desc(messagesTable.receivedAt))
     .limit(20);
 
   const payments = await db
     .select()
     .from(paymentsTable)
-    .where(eq(paymentsTable.paid, false));
+    .where(and(eq(paymentsTable.orgId, orgId), eq(paymentsTable.paid, false)));
 
   const TODAY = "2026-05-18";
 

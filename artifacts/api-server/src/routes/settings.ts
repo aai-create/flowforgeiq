@@ -3,15 +3,16 @@ import { db, poNumberingConfigTable, teamUsersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
+import { resolveOrgId } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-async function getConfig() {
-  const [cfg] = await db.select().from(poNumberingConfigTable).limit(1);
+async function getConfig(orgId = 1) {
+  const [cfg] = await db.select().from(poNumberingConfigTable).where(eq(poNumberingConfigTable.orgId, orgId)).limit(1);
   if (cfg) return cfg;
   const [inserted] = await db
     .insert(poNumberingConfigTable)
-    .values({ prefix: "PO-", sequenceFormat: "{seq}", supplierSuffix: "S", nextSeq: 1 })
+    .values({ prefix: "PO-", sequenceFormat: "{seq}", supplierSuffix: "S", nextSeq: 1, orgId })
     .returning();
   return inserted!;
 }
@@ -53,7 +54,8 @@ router.get("/settings/inbound-email", async (req, res) => {
 });
 
 router.get("/settings/po-numbering", async (req, res) => {
-  const cfg = await getConfig();
+  const orgId = await resolveOrgId(req);
+  const cfg = await getConfig(orgId);
   res.json({ ...cfg, preview: makePreview(cfg) });
 });
 
@@ -65,25 +67,28 @@ const UpdateBody = z.object({
 });
 
 router.put("/settings/po-numbering", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const body = UpdateBody.parse(req.body);
-  const cfg = await getConfig();
+  const cfg = await getConfig(orgId);
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (body.prefix         !== undefined) patch.prefix         = body.prefix;
   if (body.sequenceFormat !== undefined) patch.sequenceFormat = body.sequenceFormat;
   if (body.supplierSuffix !== undefined) patch.supplierSuffix = body.supplierSuffix;
   if (body.resetSeq       !== undefined) patch.nextSeq        = body.resetSeq;
   await db.update(poNumberingConfigTable).set(patch).where(eq(poNumberingConfigTable.id, cfg.id));
-  const updated = await getConfig();
+  const updated = await getConfig(orgId);
   res.json({ ...updated, preview: makePreview(updated) });
 });
 
 router.get("/settings/po-numbering/next", async (req, res) => {
-  const cfg = await getConfig();
+  const orgId = await resolveOrgId(req);
+  const cfg = await getConfig(orgId);
   res.json(makePreview(cfg));
 });
 
 router.post("/settings/po-numbering/next", async (req, res) => {
-  const cfg = await getConfig();
+  const orgId = await resolveOrgId(req);
+  const cfg = await getConfig(orgId);
   const [updated] = await db
     .update(poNumberingConfigTable)
     .set({ nextSeq: sql`${poNumberingConfigTable.nextSeq} + 1`, updatedAt: new Date() })

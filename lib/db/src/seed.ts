@@ -1,5 +1,7 @@
 import { db, pool } from "./index";
+import { sql } from "drizzle-orm";
 import {
+  organizationsTable,
   stagesTable,
   suppliersTable,
   dealsTable,
@@ -16,6 +18,8 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const DEFAULT_ORG_ID = 1;
 
 interface SeedShipment {
   id: string;
@@ -90,18 +94,25 @@ async function main() {
   const data: SeedData = JSON.parse(fs.readFileSync(seedPath, "utf-8"));
 
   console.log("Clearing existing data...");
-  await db.delete(tasksTable);
-  await db.delete(messagesTable);
-  await db.delete(factoryQuotesTable);
-  await db.delete(paymentsTable);
-  await db.delete(dealShipmentsTable);
-  await db.delete(shipmentsTable);
-  await db.delete(dealsTable);
-  await db.delete(suppliersTable);
-  await db.delete(stagesTable);
+  await db.execute(sql`
+    TRUNCATE TABLE
+      tasks, messages, factory_quotes, payments, deal_shipments, shipments,
+      deals, suppliers, stages, rfqs, rfq_quotes, copilot_proposals,
+      autonomy_policies, shipment_predictions, stage_events, buyer_emails,
+      gmail_credentials, po_numbering_config, extraction_corrections, extractions,
+      documents, team_invitations, team_users, organizations
+    RESTART IDENTITY CASCADE
+  `);
+
+  console.log("Inserting default organization...");
+  await db.insert(organizationsTable).values({
+    id: DEFAULT_ORG_ID,
+    name: "FlowForge Demo",
+    slug: "flowforge-demo",
+  });
 
   console.log("Inserting stages...");
-  await db.insert(stagesTable).values(data.stages);
+  await db.insert(stagesTable).values(data.stages.map(s => ({ ...s, orgId: DEFAULT_ORG_ID })));
 
   console.log("Inserting suppliers...");
   const supplierNames = Array.from(new Set(data.shipments.map(s => s.supplierName)));
@@ -110,6 +121,7 @@ async function main() {
     .values(supplierNames.map(name => ({
       name,
       country: data.shipments.find(s => s.supplierName === name)?.supplierCountry ?? "CN",
+      orgId: DEFAULT_ORG_ID,
     })))
     .returning();
   const supplierByName = new Map(insertedSuppliers.map(s => [s.name, s.id]));
@@ -125,6 +137,7 @@ async function main() {
       buyerQuantity: d.buyerQuantity,
       currency: d.currency,
       notes: d.notes,
+      orgId: DEFAULT_ORG_ID,
     }).returning();
     dealIdMap.set(d.id, inserted.id);
   }
@@ -155,6 +168,7 @@ async function main() {
       exFactoryDate: new Date(s.exFactoryDate),
       destination: s.destination,
       via: s.via,
+      orgId: DEFAULT_ORG_ID,
     }).returning();
     shipmentIdMap.set(s.id, inserted.id);
 
@@ -170,6 +184,7 @@ async function main() {
       buyerSharePct: p.buyerSharePct ?? null,
       intermediaryAdvanceUsd: p.intermediaryAdvanceUsd ?? null,
       intermediaryRecoveredUsd: p.intermediaryRecoveredUsd ?? null,
+      orgId: DEFAULT_ORG_ID,
     })));
 
     // Quotes
@@ -183,6 +198,7 @@ async function main() {
         moq: q.moq,
         selected: q.selected,
         sortOrder: i,
+        orgId: DEFAULT_ORG_ID,
       })));
     }
   }
@@ -194,7 +210,7 @@ async function main() {
     for (const sid of d.shipmentIds) {
       const dbShipmentId = shipmentIdMap.get(sid);
       if (!dbShipmentId) continue;
-      await db.insert(dealShipmentsTable).values({ dealId: dbDealId, shipmentId: dbShipmentId }).catch(() => {});
+      await db.insert(dealShipmentsTable).values({ dealId: dbDealId, shipmentId: dbShipmentId, orgId: DEFAULT_ORG_ID }).catch(() => {});
     }
   }
 
@@ -215,6 +231,7 @@ async function main() {
       aiTags: m.aiTags,
       unread: m.unread,
       receivedAt: new Date(m.receivedAt),
+      orgId: DEFAULT_ORG_ID,
     }).returning();
     messageIdMap.set(m.id, inserted.id);
   }
@@ -232,6 +249,7 @@ async function main() {
       urgency: t.urgency,
       action: t.action,
       done: t.done,
+      orgId: DEFAULT_ORG_ID,
     });
   }
 

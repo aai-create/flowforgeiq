@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, rfqsTable, rfqQuotesTable, shipmentsTable, suppliersTable, paymentsTable, stagesTable } from "@workspace/db";
-import { eq, asc, isNotNull } from "drizzle-orm";
+import { and, eq, asc, isNotNull } from "drizzle-orm";
+import { resolveOrgId } from "../middlewares/requireAuth";
 import { z } from "zod/v4";
 import {
   CreateRfqBody,
@@ -46,13 +47,19 @@ async function sendViaPostmark(opts: {
   }
 }
 
-async function loadRfq(id: number) {
-  const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, id));
+async function loadRfq(id: number, orgId?: number) {
+  const cond = orgId !== undefined
+    ? and(eq(rfqsTable.id, id), eq(rfqsTable.orgId, orgId))
+    : eq(rfqsTable.id, id);
+  const [rfq] = await db.select().from(rfqsTable).where(cond);
   if (!rfq) return null;
+  const quoteCond = orgId !== undefined
+    ? and(eq(rfqQuotesTable.rfqId, id), eq(rfqQuotesTable.orgId, orgId))
+    : eq(rfqQuotesTable.rfqId, id);
   const quotes = await db
     .select()
     .from(rfqQuotesTable)
-    .where(eq(rfqQuotesTable.rfqId, id))
+    .where(quoteCond)
     .orderBy(asc(rfqQuotesTable.sortOrder));
   return {
     ...rfq,
@@ -74,11 +81,12 @@ const SendRfqEmailBodySchema = z.object({
   body: z.string().min(1),
 });
 
-router.get("/rfqs/buyers", async (_req, res) => {
+router.get("/rfqs/buyers", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const rows = await db
     .selectDistinct({ buyerName: rfqsTable.buyerName })
     .from(rfqsTable)
-    .where(isNotNull(rfqsTable.buyerName))
+    .where(and(isNotNull(rfqsTable.buyerName), eq(rfqsTable.orgId, orgId)))
     .orderBy(asc(rfqsTable.buyerName));
   res.json(rows.map(r => r.buyerName));
 });
@@ -86,7 +94,8 @@ router.get("/rfqs/buyers", async (_req, res) => {
 router.post("/rfqs/:id/send-email", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, id));
+  const orgId = await resolveOrgId(req);
+  const [rfq] = await db.select().from(rfqsTable).where(and(eq(rfqsTable.id, id), eq(rfqsTable.orgId, orgId)));
   if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
   const body = SendRfqEmailBodySchema.parse(req.body);
   const from = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
@@ -100,9 +109,10 @@ router.post("/rfqs/:id/send-email", async (req, res) => {
   }
 });
 
-router.get("/rfqs", async (_req, res) => {
-  const rfqs = await db.select().from(rfqsTable).orderBy(asc(rfqsTable.id));
-  const allQuotes = await db.select().from(rfqQuotesTable).orderBy(asc(rfqQuotesTable.sortOrder));
+router.get("/rfqs", async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const rfqs = await db.select().from(rfqsTable).where(eq(rfqsTable.orgId, orgId)).orderBy(asc(rfqsTable.id));
+  const allQuotes = await db.select().from(rfqQuotesTable).where(eq(rfqQuotesTable.orgId, orgId)).orderBy(asc(rfqQuotesTable.sortOrder));
   const quotesByRfq = new Map<number, typeof allQuotes>();
   for (const q of allQuotes) {
     const arr = quotesByRfq.get(q.rfqId) ?? [];
@@ -129,12 +139,14 @@ router.get("/rfqs", async (_req, res) => {
 router.get("/rfqs/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const result = await loadRfq(id);
+  const orgId = await resolveOrgId(req);
+  const result = await loadRfq(id, orgId);
   if (!result) { res.status(404).json({ error: "Not found" }); return; }
   res.json(UpdateRfqResponse.parse(result));
 });
 
 router.post("/rfqs", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const body = CreateRfqBody.parse(req.body);
   const [rfq] = await db.insert(rfqsTable).values({
     product: body.product,
@@ -145,14 +157,16 @@ router.post("/rfqs", async (req, res) => {
     deadline: new Date(body.deadline),
     notes: body.notes ?? null,
     status: "open",
+    orgId,
   }).returning();
-  const result = await loadRfq(rfq.id);
+  const result = await loadRfq(rfq.id, orgId);
   res.status(201).json(GetRfqResponse.parse(result));
 });
 
 router.patch("/rfqs/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const orgId = await resolveOrgId(req);
   const body = UpdateRfqBody.parse(req.body);
   const update: Record<string, unknown> = {};
   if (body.product        !== undefined) update.product        = body.product;
@@ -164,17 +178,18 @@ router.patch("/rfqs/:id", async (req, res) => {
   if (body.notes          !== undefined) update.notes          = body.notes;
   if (body.status         !== undefined) update.status         = body.status;
   if (Object.keys(update).length) {
-    await db.update(rfqsTable).set(update).where(eq(rfqsTable.id, id));
+    await db.update(rfqsTable).set(update).where(and(eq(rfqsTable.id, id), eq(rfqsTable.orgId, orgId)));
   }
-  const result = await loadRfq(id);
+  const result = await loadRfq(id, orgId);
   if (!result) { res.status(404).json({ error: "Not found" }); return; }
   res.json(GetRfqResponse.parse(result));
 });
 
 router.post("/rfqs/:id/quotes", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const rfqId = Number(req.params.id);
   if (!Number.isFinite(rfqId)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [rfq] = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.id, rfqId));
+  const [rfq] = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(and(eq(rfqsTable.id, rfqId), eq(rfqsTable.orgId, orgId)));
   if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
   const body = AddRfqQuoteBody.parse(req.body);
   const existingQuotes = await db.select({ sortOrder: rfqQuotesTable.sortOrder }).from(rfqQuotesTable).where(eq(rfqQuotesTable.rfqId, rfqId));
@@ -190,6 +205,7 @@ router.post("/rfqs/:id/quotes", async (req, res) => {
     notes: body.notes ?? null,
     status: (body.status as string) ?? "received",
     sortOrder: nextSort,
+    orgId,
   }).returning();
   res.status(201).json(UpdateRfqQuoteResponse.parse({ ...quote, supplierId: quote.supplierId ?? null, notes: quote.notes ?? null }));
 });
@@ -200,6 +216,9 @@ router.patch("/rfqs/:id/quotes/:quoteId", async (req, res) => {
   if (!Number.isFinite(rfqId) || !Number.isFinite(quoteId)) {
     res.status(400).json({ error: "Invalid id" }); return;
   }
+  const orgId = await resolveOrgId(req);
+  const [rfq] = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(and(eq(rfqsTable.id, rfqId), eq(rfqsTable.orgId, orgId)));
+  if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
   const body = UpdateRfqQuoteBody.parse(req.body);
   const update: Record<string, unknown> = {};
   if (body.factoryName  !== undefined) update.factoryName  = body.factoryName;
@@ -210,24 +229,29 @@ router.patch("/rfqs/:id/quotes/:quoteId", async (req, res) => {
   if (body.notes        !== undefined) update.notes        = body.notes;
   if (body.status       !== undefined) update.status       = body.status;
   if (Object.keys(update).length) {
-    await db.update(rfqQuotesTable).set(update).where(eq(rfqQuotesTable.id, quoteId));
+    await db.update(rfqQuotesTable).set(update).where(and(eq(rfqQuotesTable.id, quoteId), eq(rfqQuotesTable.rfqId, rfqId), eq(rfqQuotesTable.orgId, orgId)));
   }
-  const [quote] = await db.select().from(rfqQuotesTable).where(eq(rfqQuotesTable.id, quoteId));
+  const [quote] = await db.select().from(rfqQuotesTable).where(and(eq(rfqQuotesTable.id, quoteId), eq(rfqQuotesTable.rfqId, rfqId), eq(rfqQuotesTable.orgId, orgId)));
   if (!quote) { res.status(404).json({ error: "Quote not found" }); return; }
   res.json(UpdateRfqQuoteResponse.parse({ ...quote, supplierId: quote.supplierId ?? null, notes: quote.notes ?? null }));
 });
 
 router.delete("/rfqs/:id/quotes/:quoteId", async (req, res) => {
+  const rfqId = Number(req.params.id);
   const quoteId = Number(req.params.quoteId);
-  if (!Number.isFinite(quoteId)) { res.status(400).json({ error: "Invalid id" }); return; }
-  await db.delete(rfqQuotesTable).where(eq(rfqQuotesTable.id, quoteId));
+  if (!Number.isFinite(rfqId) || !Number.isFinite(quoteId)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const orgId = await resolveOrgId(req);
+  const [rfq] = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(and(eq(rfqsTable.id, rfqId), eq(rfqsTable.orgId, orgId)));
+  if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
+  await db.delete(rfqQuotesTable).where(and(eq(rfqQuotesTable.id, quoteId), eq(rfqQuotesTable.rfqId, rfqId), eq(rfqQuotesTable.orgId, orgId)));
   res.status(204).end();
 });
 
 router.post("/rfqs/:id/convert", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const rfqId = Number(req.params.id);
   if (!Number.isFinite(rfqId)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, rfqId));
+  const [rfq] = await db.select().from(rfqsTable).where(and(eq(rfqsTable.id, rfqId), eq(rfqsTable.orgId, orgId)));
   if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
   if (rfq.status === "accepted") {
     res.status(400).json({ error: "RFQ has already been converted to a PO" }); return;
@@ -236,14 +260,14 @@ router.post("/rfqs/:id/convert", async (req, res) => {
   const [acceptedQuote] = await db
     .select()
     .from(rfqQuotesTable)
-    .where(eq(rfqQuotesTable.id, body.acceptedQuoteId));
+    .where(and(eq(rfqQuotesTable.id, body.acceptedQuoteId), eq(rfqQuotesTable.orgId, orgId)));
   if (!acceptedQuote || acceptedQuote.rfqId !== rfqId) {
     res.status(400).json({ error: "Quote not found or does not belong to this RFQ" }); return;
   }
-  const [supplier] = await db.select().from(suppliersTable).where(eq(suppliersTable.id, body.supplierId));
+  const [supplier] = await db.select().from(suppliersTable).where(and(eq(suppliersTable.id, body.supplierId), eq(suppliersTable.orgId, orgId)));
   if (!supplier) { res.status(400).json({ error: "Supplier not found" }); return; }
 
-  const [firstStage] = await db.select().from(stagesTable).orderBy(asc(stagesTable.sortOrder)).limit(1);
+  const [firstStage] = await db.select().from(stagesTable).where(eq(stagesTable.orgId, orgId)).orderBy(asc(stagesTable.sortOrder)).limit(1);
   const stageId = firstStage?.id ?? "stage-spec-sheet";
 
   const depositPct = body.depositPct ?? 30;
@@ -266,6 +290,7 @@ router.post("/rfqs/:id/convert", async (req, res) => {
     notes: body.notes ?? rfq.notes ?? null,
     quantity: rfq.quantity,
     unitCostUsd: Math.round(acceptedQuote.unitPriceUsd),
+    orgId,
   }).returning();
 
   const dueDate = new Date(body.dueDate);
@@ -279,6 +304,7 @@ router.post("/rfqs/:id/convert", async (req, res) => {
       paid: false,
       dueDate: depositDate,
       sortOrder: 0,
+      orgId,
     },
     {
       shipmentId: shipment.id,
@@ -288,19 +314,20 @@ router.post("/rfqs/:id/convert", async (req, res) => {
       paid: false,
       dueDate: dueDate,
       sortOrder: 1,
+      orgId,
     },
   ]);
 
   await db.update(rfqQuotesTable)
     .set({ status: "accepted" })
-    .where(eq(rfqQuotesTable.id, body.acceptedQuoteId));
+    .where(and(eq(rfqQuotesTable.id, body.acceptedQuoteId), eq(rfqQuotesTable.orgId, orgId)));
 
   await db.update(rfqsTable)
     .set({ status: "accepted", convertedShipmentId: shipment.id })
     .where(eq(rfqsTable.id, rfqId));
 
-  const [supplierRow] = await db.select({ name: suppliersTable.name }).from(suppliersTable).where(eq(suppliersTable.id, body.supplierId));
-  const payments = await db.select().from(paymentsTable).where(eq(paymentsTable.shipmentId, shipment.id)).orderBy(asc(paymentsTable.sortOrder));
+  const [supplierRow] = await db.select({ name: suppliersTable.name }).from(suppliersTable).where(and(eq(suppliersTable.id, body.supplierId), eq(suppliersTable.orgId, orgId)));
+  const payments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.shipmentId, shipment.id), eq(paymentsTable.orgId, orgId))).orderBy(asc(paymentsTable.sortOrder));
 
   res.status(201).json(ListShipmentsResponseItem.parse({
     ...shipment,
@@ -328,14 +355,15 @@ router.post("/rfqs/:id/convert", async (req, res) => {
 router.get("/rfqs/:id/proforma", async (req, res) => {
   const rfqId = Number(req.params.id);
   if (!Number.isFinite(rfqId)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [rfq] = await db.select().from(rfqsTable).where(eq(rfqsTable.id, rfqId));
+  const orgId = await resolveOrgId(req);
+  const [rfq] = await db.select().from(rfqsTable).where(and(eq(rfqsTable.id, rfqId), eq(rfqsTable.orgId, orgId)));
   if (!rfq || !rfq.convertedShipmentId) {
     res.status(404).json({ error: "RFQ not found or not yet converted to a PO" }); return;
   }
-  const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, rfq.convertedShipmentId));
+  const [shipment] = await db.select().from(shipmentsTable).where(and(eq(shipmentsTable.id, rfq.convertedShipmentId), eq(shipmentsTable.orgId, orgId)));
   if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
-  const [supplier] = await db.select().from(suppliersTable).where(eq(suppliersTable.id, shipment.supplierId));
-  const payments = await db.select().from(paymentsTable).where(eq(paymentsTable.shipmentId, shipment.id)).orderBy(asc(paymentsTable.sortOrder));
+  const [supplier] = await db.select().from(suppliersTable).where(and(eq(suppliersTable.id, shipment.supplierId), eq(suppliersTable.orgId, orgId)));
+  const payments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.shipmentId, shipment.id), eq(paymentsTable.orgId, orgId))).orderBy(asc(paymentsTable.sortOrder));
   const deposit = payments.find(p => p.sortOrder === 0);
   const balance = payments.find(p => p.sortOrder === 1);
   const depositPct = deposit?.percent ?? 30;

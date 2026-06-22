@@ -6,7 +6,8 @@ import {
   paymentsTable,
   shipmentPredictionsTable,
 } from "@workspace/db";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
+import { resolveOrgId } from "../middlewares/requireAuth";
 import {
   computeAndStorePrediction,
   getLatestPrediction,
@@ -15,11 +16,23 @@ import {
 
 const router: IRouter = Router();
 
+async function loadShipmentForOrg(id: number, orgId: number) {
+  const [row] = await db.select({ id: shipmentsTable.id })
+    .from(shipmentsTable)
+    .where(and(eq(shipmentsTable.id, id), eq(shipmentsTable.orgId, orgId)));
+  return row ?? null;
+}
+
 router.get("/shipments/:id/prediction", async (req, res) => {
   const id = Number(req.params.id);
-  const prediction = await getLatestPrediction(id);
+  const orgId = await resolveOrgId(req);
+  if (!(await loadShipmentForOrg(id, orgId))) {
+    res.status(404).json({ error: "Shipment not found" });
+    return;
+  }
+  const prediction = await getLatestPrediction(id, orgId);
   if (!prediction) {
-    const fresh = await computeAndStorePrediction(id).catch(() => null);
+    const fresh = await computeAndStorePrediction(id, orgId).catch(() => null);
     if (!fresh) {
       res.status(404).json({ error: "No prediction available" });
       return;
@@ -32,30 +45,43 @@ router.get("/shipments/:id/prediction", async (req, res) => {
 
 router.post("/shipments/:id/prediction", async (req, res) => {
   const id = Number(req.params.id);
-  const prediction = await computeAndStorePrediction(id);
+  const orgId = await resolveOrgId(req);
+  if (!(await loadShipmentForOrg(id, orgId))) {
+    res.status(404).json({ error: "Shipment not found" });
+    return;
+  }
+  const prediction = await computeAndStorePrediction(id, orgId);
   res.json(prediction);
 });
 
 router.get("/shipments/:id/prediction/history", async (req, res) => {
   const id = Number(req.params.id);
-  const history = await getAllPredictions(id);
+  const orgId = await resolveOrgId(req);
+  if (!(await loadShipmentForOrg(id, orgId))) {
+    res.status(404).json({ error: "Shipment not found" });
+    return;
+  }
+  const history = await getAllPredictions(id, orgId);
   res.json(history);
 });
 
-router.get("/risk-radar", async (_req, res) => {
+router.get("/risk-radar", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const shipments = await db
     .select({ shipment: shipmentsTable, supplierName: suppliersTable.name })
     .from(shipmentsTable)
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
+    .where(eq(shipmentsTable.orgId, orgId))
     .orderBy(asc(shipmentsTable.id));
 
   const allPayments = shipments.length
-    ? await db.select().from(paymentsTable).orderBy(asc(paymentsTable.sortOrder))
+    ? await db.select().from(paymentsTable).where(eq(paymentsTable.orgId, orgId)).orderBy(asc(paymentsTable.sortOrder))
     : [];
 
   const allPredictions = await db
     .select()
     .from(shipmentPredictionsTable)
+    .where(eq(shipmentPredictionsTable.orgId, orgId))
     .orderBy(desc(shipmentPredictionsTable.computedAt));
 
   const latestByShipment = new Map<number, typeof allPredictions[number]>();
@@ -70,7 +96,7 @@ router.get("/risk-radar", async (_req, res) => {
       let pred = latestByShipment.get(shipment.id);
       if (!pred) {
         try {
-          pred = await computeAndStorePrediction(shipment.id);
+          pred = await computeAndStorePrediction(shipment.id, orgId);
         } catch {
           return null;
         }
@@ -118,16 +144,18 @@ router.get("/risk-radar", async (_req, res) => {
   });
 });
 
-router.get("/predictions/accuracy", async (_req, res) => {
+router.get("/predictions/accuracy", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const allPredictions = await db
     .select()
     .from(shipmentPredictionsTable)
+    .where(eq(shipmentPredictionsTable.orgId, orgId))
     .orderBy(desc(shipmentPredictionsTable.computedAt));
 
   const resolvedShipments = await db
     .select()
     .from(shipmentsTable)
-    .where(eq(shipmentsTable.status, "delivered"));
+    .where(and(eq(shipmentsTable.status, "delivered"), eq(shipmentsTable.orgId, orgId)));
 
   const resolvedIds = new Set(resolvedShipments.map(s => s.id));
 

@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const copilotProposalsTable = pgTable("copilot_proposals", {
   id: serial("id").primaryKey(),
@@ -17,18 +18,20 @@ export const copilotProposalsTable = pgTable("copilot_proposals", {
   userEditedContent: text("user_edited_content"), // extracted edited draftBody text for learning
   editDistance: real("edit_distance"), // normalized 0–1; 0 = identical to AI draft, 1 = completely rewritten
   auditTrail: jsonb("audit_trail").notNull().default([]), // array of { at, actor, action, note }
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [index("copilot_proposals_org_id_idx").on(t.orgId)]);
 
 export const autonomyPoliciesTable = pgTable("autonomy_policies", {
   id: serial("id").primaryKey(),
   supplierName: text("supplier_name"), // null = global
   actionType: text("action_type"), // null = all types
   policy: text("policy").notNull().default("always_ask"), // always_ask | auto_ack | full_auto
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [index("autonomy_policies_org_id_idx").on(t.orgId)]);
 
 export const insertCopilotProposalSchema = createInsertSchema(copilotProposalsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCopilotProposal = z.infer<typeof insertCopilotProposalSchema>;

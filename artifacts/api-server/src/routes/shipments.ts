@@ -27,10 +27,13 @@ import {
   ListShipmentQuotesResponseItem,
 } from "@workspace/api-zod";
 import { insertFactoryQuoteSchema } from "@workspace/db";
+import { resolveOrgId } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-async function loadShipment(id: number) {
+async function loadShipment(id: number, orgId?: number) {
+  const conditions = [eq(shipmentsTable.id, id)];
+  if (orgId !== undefined) conditions.push(eq(shipmentsTable.orgId, orgId));
   const [row] = await db
     .select({
       shipment: shipmentsTable,
@@ -42,19 +45,32 @@ async function loadShipment(id: number) {
       assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
-    .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
-    .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
+    .innerJoin(suppliersTable, orgId !== undefined
+      ? and(eq(shipmentsTable.supplierId, suppliersTable.id), eq(suppliersTable.orgId, orgId))
+      : eq(shipmentsTable.supplierId, suppliersTable.id))
+    .leftJoin(dealsTable, orgId !== undefined
+      ? and(eq(shipmentsTable.dealId, dealsTable.id), eq(dealsTable.orgId, orgId))
+      : eq(shipmentsTable.dealId, dealsTable.id))
     .leftJoin(teamUsersTable, eq(shipmentsTable.assigneeId, teamUsersTable.clerkUserId))
-    .where(eq(shipmentsTable.id, id));
+    .where(and(...conditions));
   if (!row) return null;
+  const dealJoinCond = orgId !== undefined
+    ? and(eq(dealShipmentsTable.shipmentId, id), eq(dealShipmentsTable.orgId, orgId))
+    : eq(dealShipmentsTable.shipmentId, id);
   const linkedDeals = await db
     .select({ buyerPoNumber: dealsTable.buyerPoNumber })
     .from(dealShipmentsTable)
     .innerJoin(dealsTable, eq(dealShipmentsTable.dealId, dealsTable.id))
-    .where(eq(dealShipmentsTable.shipmentId, id));
+    .where(dealJoinCond);
   const buyerPoNumbers = linkedDeals.map(d => d.buyerPoNumber);
-  const payments = await db.select().from(paymentsTable).where(eq(paymentsTable.shipmentId, id)).orderBy(asc(paymentsTable.sortOrder));
-  const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, id)).orderBy(asc(factoryQuotesTable.sortOrder));
+  const paymentCond = orgId !== undefined
+    ? and(eq(paymentsTable.shipmentId, id), eq(paymentsTable.orgId, orgId))
+    : eq(paymentsTable.shipmentId, id);
+  const quoteCond = orgId !== undefined
+    ? and(eq(factoryQuotesTable.shipmentId, id), eq(factoryQuotesTable.orgId, orgId))
+    : eq(factoryQuotesTable.shipmentId, id);
+  const payments = await db.select().from(paymentsTable).where(paymentCond).orderBy(asc(paymentsTable.sortOrder));
+  const quotes = await db.select().from(factoryQuotesTable).where(quoteCond).orderBy(asc(factoryQuotesTable.sortOrder));
 
   const buyerTotalUsd = row.buyerTotalUsd ?? null;
   let spreadUsd: number | null = null;
@@ -68,7 +84,8 @@ async function loadShipment(id: number) {
   return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerUnitPrice: row.buyerUnitPrice ?? null, buyerQuantity: row.buyerQuantity ?? null, assigneeName: row.assigneeName ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
 }
 
-router.get("/shipments", async (_req, res) => {
+router.get("/shipments", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const shipments = await db
     .select({
       shipment: shipmentsTable,
@@ -80,22 +97,24 @@ router.get("/shipments", async (_req, res) => {
       assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
-    .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
-    .leftJoin(dealsTable, eq(shipmentsTable.dealId, dealsTable.id))
+    .innerJoin(suppliersTable, and(eq(shipmentsTable.supplierId, suppliersTable.id), eq(suppliersTable.orgId, orgId)))
+    .leftJoin(dealsTable, and(eq(shipmentsTable.dealId, dealsTable.id), eq(dealsTable.orgId, orgId)))
     .leftJoin(teamUsersTable, eq(shipmentsTable.assigneeId, teamUsersTable.clerkUserId))
+    .where(eq(shipmentsTable.orgId, orgId))
     .orderBy(asc(shipmentsTable.id));
   const [allPayments, allQuotes, allDealShipments] = await Promise.all([
     shipments.length
-      ? db.select().from(paymentsTable).orderBy(asc(paymentsTable.sortOrder))
+      ? db.select().from(paymentsTable).where(eq(paymentsTable.orgId, orgId)).orderBy(asc(paymentsTable.sortOrder))
       : Promise.resolve([] as (typeof paymentsTable.$inferSelect)[]),
     shipments.length
-      ? db.select().from(factoryQuotesTable).orderBy(asc(factoryQuotesTable.sortOrder))
+      ? db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.orgId, orgId)).orderBy(asc(factoryQuotesTable.sortOrder))
       : Promise.resolve([] as (typeof factoryQuotesTable.$inferSelect)[]),
     shipments.length
       ? db
           .select({ shipmentId: dealShipmentsTable.shipmentId, buyerPoNumber: dealsTable.buyerPoNumber })
           .from(dealShipmentsTable)
           .innerJoin(dealsTable, eq(dealShipmentsTable.dealId, dealsTable.id))
+          .where(eq(dealShipmentsTable.orgId, orgId))
       : Promise.resolve([] as { shipmentId: number; buyerPoNumber: string }[]),
   ]);
   const buyerPoByShipment: Record<number, string[]> = {};
@@ -132,10 +151,11 @@ router.get("/shipments", async (_req, res) => {
 async function getOrCreateDeal(
   buyerPoNumber: string,
   customerName: string,
+  orgId: number,
   buyerUnitPrice?: number,
   buyerQuantity?: number,
 ): Promise<number> {
-  const [existing] = await db.select({ id: dealsTable.id }).from(dealsTable).where(eq(dealsTable.buyerPoNumber, buyerPoNumber));
+  const [existing] = await db.select({ id: dealsTable.id }).from(dealsTable).where(and(eq(dealsTable.buyerPoNumber, buyerPoNumber), eq(dealsTable.orgId, orgId)));
   if (existing) {
     const update: Record<string, unknown> = {};
     if (buyerUnitPrice !== undefined) update.buyerUnitPrice = buyerUnitPrice;
@@ -157,25 +177,34 @@ async function getOrCreateDeal(
     buyerUnitPrice: resolvedUnitPrice,
     buyerQuantity: resolvedQuantity,
     currency: "USD",
+    orgId,
   }).returning({ id: dealsTable.id });
   return created!.id;
 }
 
-async function consumeNextSeq(): Promise<number> {
-  const [cfg] = await db.select().from(poNumberingConfigTable).limit(1);
+async function consumeNextSeq(orgId: number): Promise<number> {
+  const [cfg] = await db.select().from(poNumberingConfigTable).where(eq(poNumberingConfigTable.orgId, orgId)).limit(1);
   if (!cfg) return 1;
   await db.update(poNumberingConfigTable).set({ nextSeq: cfg.nextSeq + 1 }).where(eq(poNumberingConfigTable.id, cfg.id));
   return cfg.nextSeq;
 }
 
 router.post("/shipments", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const parsed = CreateShipmentBody.parse(req.body);
   const { payments: paymentMilestones, buyerPoNumber, ...shipmentFields } = parsed as typeof parsed & { buyerPoNumber?: string };
+
+  // Validate supplierId belongs to this org
+  const [supplierCheck] = await db.select({ id: suppliersTable.id }).from(suppliersTable)
+    .where(and(eq(suppliersTable.id, shipmentFields.supplierId), eq(suppliersTable.orgId, orgId))).limit(1);
+  if (!supplierCheck) { res.status(400).json({ error: "Supplier not found" }); return; }
+
   const input = {
     ...shipmentFields,
     status: shipmentFields.status ?? "on-track",
     currentStageId: shipmentFields.currentStageId ?? "stage-spec-sheet",
     via: shipmentFields.via ?? "OCEAN",
+    orgId,
   };
   let row: typeof shipmentsTable.$inferSelect;
   try {
@@ -202,10 +231,10 @@ router.post("/shipments", async (req, res) => {
     try {
       const bup = (parsed as typeof parsed & { buyerUnitPrice?: number }).buyerUnitPrice;
       const bqty = (parsed as typeof parsed & { buyerQuantity?: number }).buyerQuantity;
-      const dealId = await getOrCreateDeal(buyerPoNumber.trim(), shipmentFields.customerName, bup, bqty);
+      const dealId = await getOrCreateDeal(buyerPoNumber.trim(), shipmentFields.customerName, orgId, bup, bqty);
       await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, row.id));
       row = { ...row, dealId };
-      await db.insert(dealShipmentsTable).values({ dealId, shipmentId: row.id }).catch(() => {});
+      await db.insert(dealShipmentsTable).values({ dealId, shipmentId: row.id, orgId }).catch(() => {});
     } catch {
       req.log.warn("Failed to link buyerPoNumber to deal — continuing without deal link");
     }
@@ -225,10 +254,11 @@ router.post("/shipments", async (req, res) => {
         paid: false,
         dueDate: new Date(m.dueDate),
         sortOrder: i,
+        orgId,
       })),
     );
   }
-  const out = await loadShipment(row.id);
+  const out = await loadShipment(row.id, orgId);
   if (!out) {
     res.status(500).json({ error: "Failed to load created shipment" });
     return;
@@ -238,9 +268,18 @@ router.post("/shipments", async (req, res) => {
 
 router.patch("/shipments/:id", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const input = UpdateShipmentBody.parse(req.body);
-  await db.update(shipmentsTable).set(input).where(eq(shipmentsTable.id, id));
-  const out = await loadShipment(id);
+
+  // If supplierId is being changed, validate it belongs to this org
+  if (input.supplierId !== undefined) {
+    const [supplierCheck] = await db.select({ id: suppliersTable.id }).from(suppliersTable)
+      .where(and(eq(suppliersTable.id, input.supplierId), eq(suppliersTable.orgId, orgId))).limit(1);
+    if (!supplierCheck) { res.status(400).json({ error: "Supplier not found" }); return; }
+  }
+
+  await db.update(shipmentsTable).set(input).where(and(eq(shipmentsTable.id, id), eq(shipmentsTable.orgId, orgId)));
+  const out = await loadShipment(id, orgId);
   if (!out) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -250,8 +289,9 @@ router.patch("/shipments/:id", async (req, res) => {
 
 router.patch("/payments/:id", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   const input = UpdatePaymentBody.parse(req.body);
-  const [updated] = await db.update(paymentsTable).set(input).where(eq(paymentsTable.id, id)).returning();
+  const [updated] = await db.update(paymentsTable).set(input).where(and(eq(paymentsTable.id, id), eq(paymentsTable.orgId, orgId))).returning();
   if (!updated) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -261,12 +301,18 @@ router.patch("/payments/:id", async (req, res) => {
 
 router.get("/shipments/:id/quotes", async (req, res) => {
   const shipmentId = Number(req.params.id);
-  const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, shipmentId)).orderBy(asc(factoryQuotesTable.sortOrder));
+  const orgId = await resolveOrgId(req);
+  const shipment = await loadShipment(shipmentId, orgId);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
+  const quotes = await db.select().from(factoryQuotesTable).where(and(eq(factoryQuotesTable.shipmentId, shipmentId), eq(factoryQuotesTable.orgId, orgId))).orderBy(asc(factoryQuotesTable.sortOrder));
   res.json(quotes.map(q => ListShipmentQuotesResponseItem.parse(q)));
 });
 
 router.post("/shipments/:id/quotes", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const shipmentId = Number(req.params.id);
+  const ownership = await loadShipment(shipmentId, orgId);
+  if (!ownership) { res.status(404).json({ error: "Shipment not found" }); return; }
   const input = CreateFactoryQuoteBody.parse(req.body);
   const maxOrder = await db.select({ sortOrder: factoryQuotesTable.sortOrder })
     .from(factoryQuotesTable)
@@ -284,6 +330,7 @@ router.post("/shipments/:id/quotes", async (req, res) => {
     sortOrder: nextOrder,
     validityDate: input.validityDate ?? null,
     notes: input.notes ?? null,
+    orgId,
   });
   const [created] = await db.insert(factoryQuotesTable).values(parsed).returning();
   res.status(201).json(ListShipmentQuotesResponseItem.parse(created));
@@ -291,40 +338,47 @@ router.post("/shipments/:id/quotes", async (req, res) => {
 
 router.post("/shipments/:id/select-quote", async (req, res) => {
   const shipmentId = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
+  const parentShipment = await loadShipment(shipmentId, orgId);
+  if (!parentShipment) { res.status(404).json({ error: "Shipment not found" }); return; }
   const input = SelectFactoryQuoteBody.parse(req.body);
   const [target] = await db
     .select()
     .from(factoryQuotesTable)
-    .where(and(eq(factoryQuotesTable.id, input.quoteId), eq(factoryQuotesTable.shipmentId, shipmentId)));
+    .where(and(eq(factoryQuotesTable.id, input.quoteId), eq(factoryQuotesTable.shipmentId, shipmentId), eq(factoryQuotesTable.orgId, orgId)));
   if (!target) {
     res.status(404).json({ error: "Quote not found for this shipment" });
     return;
   }
   await db.transaction(async (tx) => {
-    await tx.update(factoryQuotesTable).set({ selected: false }).where(eq(factoryQuotesTable.shipmentId, shipmentId));
+    await tx.update(factoryQuotesTable).set({ selected: false }).where(and(eq(factoryQuotesTable.shipmentId, shipmentId), eq(factoryQuotesTable.orgId, orgId)));
     await tx.update(factoryQuotesTable).set({ selected: true }).where(
-      and(eq(factoryQuotesTable.id, input.quoteId), eq(factoryQuotesTable.shipmentId, shipmentId)),
+      and(eq(factoryQuotesTable.id, input.quoteId), eq(factoryQuotesTable.shipmentId, shipmentId), eq(factoryQuotesTable.orgId, orgId)),
     );
   });
-  const quotes = await db.select().from(factoryQuotesTable).where(eq(factoryQuotesTable.shipmentId, shipmentId)).orderBy(asc(factoryQuotesTable.sortOrder));
+  const quotes = await db.select().from(factoryQuotesTable).where(and(eq(factoryQuotesTable.shipmentId, shipmentId), eq(factoryQuotesTable.orgId, orgId))).orderBy(asc(factoryQuotesTable.sortOrder));
   res.json(quotes.map(q => SelectFactoryQuoteResponseItem.parse(q)));
 });
 
 router.get("/shipments/:id/stage-events", async (req, res) => {
   const shipmentId = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
+  const shipment = await loadShipment(shipmentId, orgId);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
   const events = await db
     .select()
     .from(stageEventsTable)
-    .where(eq(stageEventsTable.shipmentId, shipmentId))
+    .where(and(eq(stageEventsTable.shipmentId, shipmentId), eq(stageEventsTable.orgId, orgId)))
     .orderBy(desc(stageEventsTable.createdAt));
   res.json(events.map(e => ListShipmentStageEventsResponseItem.parse(e)));
 });
 
 router.post("/shipments/:id/stage-events", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const shipmentId = Number(req.params.id);
   const input = CreateShipmentStageEventBody.parse(req.body);
 
-  const shipment = await loadShipment(shipmentId);
+  const shipment = await loadShipment(shipmentId, orgId);
   if (!shipment) {
     res.status(404).json({ error: "Shipment not found" });
     return;
@@ -344,6 +398,7 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
         toStageId: input.toStageId,
         note: input.note ?? null,
         createdBy,
+        orgId,
       })
       .returning();
   });
@@ -354,6 +409,7 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
 // PATCH /shipments/:id/deal — set or update buyerUnitPrice / buyerQuantity on the linked deal
 router.patch("/shipments/:id/deal", async (req, res) => {
   const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const rawBody = req.body as Record<string, unknown>;
   const buyerUnitPrice = rawBody.buyerUnitPrice !== undefined ? Number(rawBody.buyerUnitPrice) : undefined;
@@ -365,7 +421,7 @@ router.patch("/shipments/:id/deal", async (req, res) => {
     res.status(400).json({ error: "buyerQuantity must be a positive integer" }); return;
   }
 
-  const shipment = await loadShipment(id);
+  const shipment = await loadShipment(id, orgId);
   if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
 
   let dealId: number | null = shipment.dealId ?? null;
@@ -373,10 +429,9 @@ router.patch("/shipments/:id/deal", async (req, res) => {
   if (!dealId) {
     const [dealLink] = await db.select({ dealId: dealShipmentsTable.dealId })
       .from(dealShipmentsTable)
-      .where(eq(dealShipmentsTable.shipmentId, id));
+      .where(and(eq(dealShipmentsTable.shipmentId, id), eq(dealShipmentsTable.orgId, orgId)));
     if (dealLink) {
       dealId = dealLink.dealId;
-      // Promote the join-table link to the canonical FK so loadShipment can find it
       await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, id));
     }
   }
@@ -391,12 +446,13 @@ router.patch("/shipments/:id/deal", async (req, res) => {
       buyerUnitPrice: resolvedUnitPrice,
       buyerQuantity: resolvedQuantity,
       buyerTotalUsd: resolvedUnitPrice * resolvedQuantity,
+      orgId,
     }).returning({ id: dealsTable.id });
     dealId = created.id;
     await db.update(shipmentsTable).set({ dealId }).where(eq(shipmentsTable.id, id));
-    await db.insert(dealShipmentsTable).values({ dealId, shipmentId: id }).catch(() => {});
+    await db.insert(dealShipmentsTable).values({ dealId, shipmentId: id, orgId }).catch(() => {});
   } else {
-    const [existingDeal] = await db.select().from(dealsTable).where(eq(dealsTable.id, dealId));
+    const [existingDeal] = await db.select().from(dealsTable).where(and(eq(dealsTable.id, dealId), eq(dealsTable.orgId, orgId)));
     if (existingDeal) {
       const up = buyerUnitPrice !== undefined ? buyerUnitPrice : (existingDeal.buyerUnitPrice ?? 0);
       const qty = buyerQuantity !== undefined ? buyerQuantity : (existingDeal.buyerQuantity ?? 0);
@@ -407,25 +463,26 @@ router.patch("/shipments/:id/deal", async (req, res) => {
     }
   }
 
-  const out = await loadShipment(id);
+  const out = await loadShipment(id, orgId);
   if (!out) { res.status(500).json({ error: "Failed to reload shipment" }); return; }
   res.json(ListShipmentsResponseItem.parse(out));
 });
 
 // POST /shipments/:id/deals — link an existing deal (by dealId) to this shipment
 router.post("/shipments/:id/deals", async (req, res) => {
+  const orgId = await resolveOrgId(req);
   const shipmentId = Number(req.params.id);
   const { dealId } = req.body as { dealId?: number };
   if (!dealId || !Number.isFinite(dealId)) {
     res.status(400).json({ error: "dealId required" });
     return;
   }
-  const shipment = await loadShipment(shipmentId);
+  const shipment = await loadShipment(shipmentId, orgId);
   if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
-  const [deal] = await db.select({ id: dealsTable.id }).from(dealsTable).where(eq(dealsTable.id, dealId));
+  const [deal] = await db.select({ id: dealsTable.id }).from(dealsTable).where(and(eq(dealsTable.id, dealId), eq(dealsTable.orgId, orgId)));
   if (!deal) { res.status(404).json({ error: "Deal not found" }); return; }
   try {
-    await db.insert(dealShipmentsTable).values({ dealId, shipmentId });
+    await db.insert(dealShipmentsTable).values({ dealId, shipmentId, orgId });
   } catch (err: unknown) {
     const code = (err as Record<string, unknown>)?.["code"];
     if (code === "23505") {
@@ -434,7 +491,7 @@ router.post("/shipments/:id/deals", async (req, res) => {
     }
     throw err;
   }
-  const updated = await loadShipment(shipmentId);
+  const updated = await loadShipment(shipmentId, orgId);
   res.status(201).json(updated);
 });
 
@@ -446,8 +503,11 @@ router.delete("/shipments/:id/deals/:dealId", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
+  const orgId = await resolveOrgId(req);
+  const shipment = await loadShipment(shipmentId, orgId);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
   await db.delete(dealShipmentsTable)
-    .where(and(eq(dealShipmentsTable.shipmentId, shipmentId), eq(dealShipmentsTable.dealId, dealId)));
+    .where(and(eq(dealShipmentsTable.shipmentId, shipmentId), eq(dealShipmentsTable.dealId, dealId), eq(dealShipmentsTable.orgId, orgId)));
   res.status(204).send();
 });
 

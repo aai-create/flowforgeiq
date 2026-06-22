@@ -1,6 +1,7 @@
-import { pgTable, text, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const suppliersTable = pgTable("suppliers", {
   id: serial("id").primaryKey(),
@@ -10,7 +11,8 @@ export const suppliersTable = pgTable("suppliers", {
   contactName: text("contact_name"),
   whatsAppNumber: text("whats_app_number"),
   paymentTerms: text("payment_terms"),
-});
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
+}, (t) => [index("suppliers_org_id_idx").on(t.orgId)]);
 
 export const insertSupplierSchema = createInsertSchema(suppliersTable).omit({ id: true });
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>;

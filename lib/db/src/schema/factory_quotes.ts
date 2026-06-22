@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { organizationsTable } from "./organizations";
 
 export const factoryQuotesTable = pgTable("factory_quotes", {
   id: serial("id").primaryKey(),
@@ -14,7 +15,8 @@ export const factoryQuotesTable = pgTable("factory_quotes", {
   sortOrder: integer("sort_order").notNull().default(0),
   validityDate: text("validity_date"),
   notes: text("notes"),
-});
+  orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
+}, (t) => [index("factory_quotes_org_id_idx").on(t.orgId)]);
 
 export const insertFactoryQuoteSchema = createInsertSchema(factoryQuotesTable).omit({ id: true });
 export type InsertFactoryQuote = z.infer<typeof insertFactoryQuoteSchema>;
