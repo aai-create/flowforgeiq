@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 
@@ -48,16 +48,12 @@ export function NavSidebar({
     return location === to;
   }
 
-  function handleClick(label: string, to: string) {
-    if (label === "Calendar" && onCalendarClick) {
-      onCalendarClick();
-    } else if (label === "Inbox" && onInboxClick) {
-      onInboxClick();
-      navigate(to);
-    } else {
-      navigate(to);
-    }
-  }
+  const itemClassName = (active: boolean) =>
+    `w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${
+      active
+        ? "bg-[#E5EAF0] text-[#212833] font-semibold"
+        : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"
+    }`;
 
   const displayName = user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const initials = displayName.charAt(0).toUpperCase() || "?";
@@ -67,7 +63,13 @@ export function NavSidebar({
       {showBrand && (
         <div className="px-3 py-3 border-b border-[#E5EAF0] flex items-center gap-2 shrink-0">
           <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-            <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
+            <img
+              src="/flowforge-logo.png"
+              alt="FlowForgeIQ"
+              width={20}
+              height={20}
+              className="w-full h-full object-contain"
+            />
           </div>
           <span className="font-bold text-sm tracking-tight text-[#9000FF]">FlowForgeIQ</span>
         </div>
@@ -75,13 +77,31 @@ export function NavSidebar({
       <div className={`p-2 flex flex-col gap-0.5 shrink-0 ${!showBrand ? "mt-1" : ""}`}>
         {navItems.map(({ icon: Icon, label, to, count }) => {
           const active = isActive(label, to);
+
+          if (label === "Calendar") {
+            return (
+              <button
+                key={label}
+                onClick={() => { if (onCalendarClick) { onCalendarClick(); } else { navigate(to); } }}
+                aria-pressed={isCalendarActive}
+                className={itemClassName(active)}
+              >
+                <span className="flex items-center gap-2">
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#9000FF]" : ""}`} />
+                  {label}
+                </span>
+              </button>
+            );
+          }
+
           return (
-            <button key={label} onClick={() => handleClick(label, to)}
-              className={`w-full flex items-center justify-between px-2 h-8 rounded-md text-sm transition-colors ${
-                active
-                  ? "bg-[#E5EAF0] text-[#212833] font-semibold"
-                  : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"
-              }`}>
+            <Link
+              key={label}
+              href={to}
+              onClick={label === "Inbox" ? onInboxClick : undefined}
+              aria-current={active ? "page" : undefined}
+              className={itemClassName(active)}
+            >
               <span className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#9000FF]" : label === "Risk Radar" ? "text-[#9000FF]" : ""}`} />
                 {label}
@@ -93,7 +113,7 @@ export function NavSidebar({
                   {count}
                 </span>
               )}
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -116,6 +136,7 @@ export function NavSidebar({
             <button
               onClick={() => void signOut()}
               title="Sign out"
+              aria-label="Sign out"
               className="p-1 text-[#9E9FAE] hover:text-[#212833] hover:bg-[#E5EAF0] rounded transition-colors shrink-0"
             >
               <LogOut className="w-3 h-3" />
