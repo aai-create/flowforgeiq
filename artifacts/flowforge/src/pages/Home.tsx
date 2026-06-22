@@ -40,7 +40,7 @@ import {
   type ExtractionCorrection,
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
-import type { DocumentWithExtraction, ReconciliationFinding } from "@workspace/api-client-react";
+import type { DocumentWithExtraction, ReconciliationFinding, SupplierSummary } from "@workspace/api-client-react";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate, relativeAge,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
@@ -1716,6 +1716,155 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Inbox entity list components (rendered in the center panel)
+// ─────────────────────────────────────────────────────────────────────────────
+
+type SupplierRow = { id: string; label: string; count: number; unread: number };
+
+function SupplierEntityList({ suppliers, apiSuppliers, messages, onSelect }: {
+  suppliers: SupplierRow[];
+  apiSuppliers: SupplierSummary[];
+  messages: UiMessage[];
+  onSelect: (supplierId: string) => void;
+}) {
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
+        <Users size={13} className="text-[#5E687B]" />
+        <span className="text-xs font-bold text-[#212833]">Suppliers</span>
+        <span className="text-[10px] text-[#9E9FAE]">— {suppliers.length} supplier{suppliers.length !== 1 ? "s" : ""}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-2 max-w-2xl mx-auto">
+          {suppliers.map(s => {
+            const apiSup = apiSuppliers.find(a => a.name === s.label);
+            const lastMsg = messages.filter(m => m.supplierId === s.id || m.sender === s.label).at(0);
+            return (
+              <button key={s.id} onClick={() => onSelect(s.id)}
+                className="w-full text-left flex items-center gap-3 p-3 bg-white border border-[#E5EAF0] rounded-xl hover:border-[#9000FF]/30 hover:shadow-sm transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#9000FF]/10 to-[#9000FF]/20 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-[#9000FF]">{s.label.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold text-[#212833] truncate">{s.label}</span>
+                    {apiSup?.country && <span className="text-[9px] text-[#9E9FAE] shrink-0 bg-[#F0F4F8] px-1.5 rounded">{apiSup.country}</span>}
+                  </div>
+                  {lastMsg && <div className="text-[10px] text-[#9E9FAE] truncate">{lastMsg.snippet}</div>}
+                  {!lastMsg && <div className="text-[10px] text-[#C0C8D4]">{s.count} message{s.count !== 1 ? "s" : ""}</div>}
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {s.unread > 0 && <span className="text-[9px] font-bold bg-[#9000FF] text-white px-1.5 py-0.5 rounded-full">{s.unread}</span>}
+                  <ChevronRight size={12} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function POEntityList({ shipments, stages, messages, onSelect }: {
+  shipments: UiShipment[];
+  stages: UiStage[];
+  messages: UiMessage[];
+  onSelect: (shipmentId: string) => void;
+}) {
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
+        <Package size={13} className="text-[#5E687B]" />
+        <span className="text-xs font-bold text-[#212833]">Purchase Orders</span>
+        <span className="text-[10px] text-[#9E9FAE]">— {shipments.length} PO{shipments.length !== 1 ? "s" : ""}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-2 max-w-2xl mx-auto">
+          {shipments.map(s => {
+            const stageIdx = stages.findIndex(st => st.id === s.currentStageId);
+            const pct = stages.length > 1 ? Math.round((stageIdx / (stages.length - 1)) * 100) : 0;
+            const curStage = stages.find(st => st.id === s.currentStageId);
+            const unread = messages.filter(m => m.shipmentId === s.id && m.unread).length;
+            const dotCls = s.status === "delayed" ? "bg-red-500" : s.status === "at-risk" ? "bg-amber-400" : "bg-emerald-400";
+            const barCls = s.status === "delayed" ? "bg-red-400" : s.status === "at-risk" ? "bg-amber-400" : "bg-[#9000FF]";
+            return (
+              <button key={s.id} onClick={() => onSelect(s.id)}
+                className="w-full text-left flex items-center gap-3 p-3 bg-white border border-[#E5EAF0] rounded-xl hover:border-[#9000FF]/30 hover:shadow-sm transition-all group">
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotCls}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-xs font-bold text-[#212833]">{s.po}</span>
+                    {unread > 0 && <span className="text-[9px] font-bold bg-[#9000FF] text-white px-1.5 py-0.5 rounded-full">{unread}</span>}
+                    <span className="text-[9px] text-[#9E9FAE] bg-[#F0F4F8] px-1.5 rounded shrink-0">{s.customer}</span>
+                  </div>
+                  <div className="text-[11px] text-[#5E687B] truncate mb-1.5">{s.product}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1 bg-[#F0F4F8] rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barCls} transition-all`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[9px] text-[#9E9FAE] shrink-0 truncate max-w-[100px]">{curStage?.label ?? "—"}</span>
+                  </div>
+                </div>
+                <ChevronRight size={12} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ChannelId = "all" | "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
+
+function ChannelPickerView({ messages, onSelect }: {
+  messages: UiMessage[];
+  onSelect: (ch: ChannelId) => void;
+}) {
+  const channels: Array<{ id: ChannelId; label: string; color: string; icon: React.ReactNode }> = [
+    { id: "all",       label: "All Channels", color: "text-[#9000FF]", icon: <Inbox className="w-5 h-5 text-[#9000FF]" /> },
+    { id: "gmail",     label: "Gmail",        color: "text-red-500",   icon: <Mail className="w-5 h-5 text-red-500" /> },
+    { id: "whatsapp",  label: "WhatsApp",     color: "text-green-600", icon: <MessageCircle className="w-5 h-5 text-green-600" /> },
+    { id: "wechat",    label: "WeChat",       color: "text-teal-500",  icon: <MessageSquare className="w-5 h-5 text-teal-500" /> },
+    { id: "imessage",  label: "iMessage",     color: "text-blue-400",  icon: <MessageCircle className="w-5 h-5 text-blue-400" /> },
+    { id: "sms",       label: "SMS",          color: "text-slate-400", icon: <MessagesSquare className="w-5 h-5 text-slate-400" /> },
+    { id: "sheets",    label: "Sheets",       color: "text-green-700", icon: <FileSpreadsheet className="w-5 h-5 text-green-700" /> },
+    { id: "pdf",       label: "PDFs",         color: "text-red-400",   icon: <FileText className="w-5 h-5 text-red-400" /> },
+  ];
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
+        <MessagesSquare size={13} className="text-[#5E687B]" />
+        <span className="text-xs font-bold text-[#212833]">Channels</span>
+        <span className="text-[10px] text-[#9E9FAE]">— select a channel to filter messages</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-5">
+        <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
+          {channels.map(ch => {
+            const count = ch.id === "all" ? messages.length : messages.filter(m => m.channel === ch.id).length;
+            if (count === 0 && ch.id !== "all") return null;
+            return (
+              <button key={ch.id} onClick={() => onSelect(ch.id)}
+                className="flex items-center gap-3 p-4 bg-white border border-[#E5EAF0] rounded-xl hover:border-[#9000FF]/30 hover:shadow-sm transition-all group text-left">
+                <div className="w-10 h-10 rounded-xl bg-[#F7F9FA] border border-[#E5EAF0] flex items-center justify-center shrink-0">
+                  {ch.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-[#212833]">{ch.label}</div>
+                  <div className="text-[10px] text-[#9E9FAE]">{count} message{count !== 1 ? "s" : ""}</div>
+                </div>
+                <ChevronRight size={12} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
@@ -1818,6 +1967,7 @@ export default function Home() {
     return sessionStorage.getItem("flowforge:supplierFilter");
   });
   const [flaggedFilter, setFlaggedFilter] = useState(false);
+  const [leftPanelMode, setLeftPanelMode] = useState<"all" | "suppliers" | "pos" | "channels">("all");
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
   const [sectionOpen, setSectionOpen] = useState<Record<string,boolean>>(() => {
@@ -2378,180 +2528,152 @@ export default function Home() {
           isCalendarActive={activeView === "calendar"}
           counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
         >
-          {/* Search */}
-          <div className="px-3 pt-2 pb-1.5 shrink-0">
-            <div className="flex items-center gap-2 bg-white border border-[#E5EAF0] rounded-lg px-2.5 py-1.5">
-              <Search size={13} className="text-[#9E9FAE] shrink-0"/>
-              <input placeholder="Search…" className="flex-1 text-xs bg-transparent outline-none text-[#212833] placeholder:text-[#C0C8D4] min-w-0"/>
-            </div>
-          </div>
-
-          {/* Scrollable filter sections */}
-          <div className="flex-1 overflow-y-auto">
-
-            {/* Messages */}
-            <div className="px-3 pt-1.5 pb-2">
-              <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase px-2 mb-1.5">Messages</div>
-              <div className="space-y-0.5">
-                {([
-                  {id:"all"      as Channel|"all", label:"All Inbox", icon:<Inbox className="w-3 h-3"/>,         count:messages.length},
-                  {id:"gmail"    as Channel,        label:"Gmail",    icon:<Mail className="w-3 h-3"/>,           count:messages.filter(m=>m.channel==="gmail").length},
-                  {id:"whatsapp" as Channel,        label:"WhatsApp", icon:<MessageCircle className="w-3 h-3"/>,  count:messages.filter(m=>m.channel==="whatsapp").length},
-                  {id:"wechat"   as Channel,        label:"WeChat",   icon:<MessageSquare className="w-3 h-3 text-teal-500"/>, count:messages.filter(m=>m.channel==="wechat").length},
-                  {id:"imessage" as Channel,        label:"iMessage", icon:<MessageCircle className="w-3 h-3 text-blue-400"/>, count:messages.filter(m=>m.channel==="imessage").length},
-                  {id:"sms"      as Channel,        label:"SMS",      icon:<MessageCircle className="w-3 h-3 text-slate-400"/>, count:messages.filter(m=>m.channel==="sms").length},
-                  {id:"sheets"   as Channel,        label:"Sheets",   icon:<svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>, count:messages.filter(m=>m.channel==="sheets").length},
-                  {id:"pdf"      as Channel,        label:"PDFs",     icon:<FileText className="w-3 h-3"/>,       count:messages.filter(m=>m.channel==="pdf").length},
-                ]).map(f=>{
-                  const active=channelFilter===f.id&&!selectedShipmentId&&!supplierFilter&&!flaggedFilter&&activeView==="inbox";
-                  const unread=f.id==="all"?messages.filter(m=>m.unread).length:messages.filter(m=>m.channel===f.id&&m.unread).length;
-                  return (
-                    <button key={String(f.id)} onClick={()=>{setActiveView("inbox");toggleChannel(f.id);}}
-                      className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                      <span className="flex items-center gap-1.5">{f.icon}<span className="text-xs">{f.label}</span></span>
-                      {unread>0
-                        ? <span className={`text-xs px-1.5 rounded-full font-bold ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{unread}</span>
-                        : <span className="text-xs text-[#9E9FAE]">{f.count}</span>}
-                    </button>
-                  );
-                })}
-                {/* Flagged filter */}
-                {(() => {
-                  const flaggedCount = messages.filter(m => m.isFlagged).length;
-                  return (
-                    <button onClick={()=>{setActiveView("inbox");setFlaggedFilter(f=>!f);setChannelFilter("all");setSelectedShipmentId(null);setSupplierFilter(null);const fm=messages.find(m=>m.isFlagged);if(fm&&!flaggedFilter)openMessage(fm.id);}}
-                      className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${flaggedFilter&&activeView==="inbox"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                      <span className="flex items-center gap-1.5"><Bookmark className="w-3 h-3"/><span className="text-xs">Flagged</span></span>
-                      {flaggedCount>0
-                        ? <span className={`text-xs px-1.5 rounded-full font-bold ${flaggedFilter&&activeView==="inbox"?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>
-                        : <span className="text-xs text-[#9E9FAE]">0</span>}
-                    </button>
-                  );
-                })()}
-                {/* Needs Review */}
-                <button onClick={()=>setActiveView("needs-review")}
-                  className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${activeView==="needs-review"?"bg-amber-50 text-amber-800 font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                  <span className="flex items-center gap-1.5"><AlertCircle className="w-3 h-3 text-amber-500"/><span className="text-xs">Needs Review</span></span>
-                  {needsReviewCount>0
-                    ? <span className={`text-xs px-1.5 rounded-full font-bold ${activeView==="needs-review"?"bg-amber-500 text-white":"bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>
-                    : <span className="text-xs text-[#9E9FAE]">0</span>}
+          {/* Inbox sub-navigation */}
+          <div className="px-2 pt-2 pb-1 space-y-0.5 shrink-0">
+            {/* All Inbox */}
+            {(() => {
+              const active = leftPanelMode === "all" && activeView === "inbox" && !flaggedFilter;
+              return (
+                <button
+                  onClick={() => { urlParamsApplied.current = true; setActiveView("inbox"); setLeftPanelMode("all"); setChannelFilter("all"); setSupplierFilter(null); setSelectedShipmentId(null); setFlaggedFilter(false); }}
+                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                  <span className="flex items-center gap-2"><Inbox className="w-3.5 h-3.5 shrink-0" /><span className="text-xs">All Inbox</span></span>
+                  {unreadCount > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? "bg-[#9000FF] text-white" : "bg-[#E5EAF0] text-[#5E687B]"}`}>{unreadCount}</span>}
                 </button>
-              </div>
-            </div>
-
-            <div className="mx-3 h-px bg-[#E5EAF0]"/>
-
-            {/* Purchase Orders */}
-            <div className="px-3 py-2 flex flex-col" style={{maxHeight:"33vh", overflowY:"auto"}}>
-              <div className="flex items-center justify-between px-2 mb-1.5 shrink-0">
-                <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase">Purchase Orders</div>
-                {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-xs flex items-center gap-0.5"><X size={9}/>Clear</button>}
-              </div>
-              <div className="space-y-0.5">
-                {shipments.map(s=>{
-                  const isSelected=selectedShipmentId===s.id;
-                  const stageIdx=stages.findIndex(st=>st.id===s.currentStageId);
-                  const pct=stages.length>1?Math.round((stageIdx/(stages.length-1))*100):0;
-                  const cur=stages.find(st=>st.id===s.currentStageId);
-                  const dotCls=s.status==="delayed"?"bg-red-500":s.status==="at-risk"?"bg-amber-400":"bg-emerald-400";
-                  return (
-                    <button key={s.id} onClick={()=>{setActiveView("inbox");selectShipment(s.id);}}
-                      className={`w-full text-left px-2 py-2 rounded-md border-l-2 transition-all ${isSelected?"bg-white border-l-[#9000FF] shadow-sm":"border-l-transparent hover:bg-[#E5EAF0]"}`}>
-                      <div className="flex items-center gap-1 flex-wrap mb-0.5">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotCls}${s.status==="delayed"?" animate-pulse":""}`}/>
-                        <span className={`text-xs font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
-                        {s.buyerPoNumbers && s.buyerPoNumbers.length > 0 ? (
-                          <>
-                            <span className="text-[11px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumbers[0]}</span>
-                            {s.buyerPoNumbers.length > 1 && (
-                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0" title={s.buyerPoNumbers.join(", ")}>+{s.buyerPoNumbers.length - 1}</span>
-                            )}
-                          </>
-                        ) : s.buyerPoNumber ? (
-                          <span className="text-[11px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumber}</span>
-                        ) : null}
-                      </div>
-                      <div className="text-xs text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
-                      <div className="pl-3">
-                        <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
-                        </div>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-xs text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
-                          <span className="text-xs text-[#9E9FAE] shrink-0">{pct}%</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mx-3 h-px bg-[#E5EAF0]"/>
+              );
+            })()}
 
             {/* Suppliers */}
-            <div className="px-3 py-2">
-              <div className="flex items-center justify-between px-2 mb-1.5">
-                <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase">Suppliers</div>
-                {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-xs flex items-center gap-0.5"><X size={9}/>Clear</button>}
-              </div>
-              <div className="space-y-0.5">
-                {SUPPLIERS.map(s=>(
-                  <button key={s.id} onClick={()=>{setActiveView("inbox");toggleSupplier(s.id);}}
-                    className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${supplierFilter===s.id?"bg-[#E5EAF0] text-[#9000FF] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                    <span className="flex items-center gap-1.5 truncate min-w-0">
-                      <Hash className="w-3 h-3 opacity-50 shrink-0"/>
-                      <span className="truncate text-xs">{s.label}</span>
-                    </span>
-                    {s.unread>0
-                      ? <span className={`text-xs px-1.5 rounded-full font-bold shrink-0 ml-1 ${supplierFilter===s.id?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{s.unread}</span>
-                      : <span className="text-xs text-[#9E9FAE] shrink-0 ml-1">{s.count}</span>}
-                  </button>
-                ))}
-              </div>
-              {(selectedShipmentId||supplierFilter||channelFilter!=="all"||flaggedFilter)&&activeView==="inbox"&&(
-                <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");setFlaggedFilter(false);}}
-                  className="mt-3 w-full text-xs text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
-                  <X size={9}/>Clear all filters
+            {(() => {
+              const isMode = leftPanelMode === "suppliers" && activeView === "inbox";
+              const hasFilter = !!supplierFilter;
+              const active = isMode || hasFilter;
+              return (
+                <button
+                  onClick={() => {
+                    setActiveView("inbox");
+                    if (hasFilter) { setSupplierFilter(null); setLeftPanelMode("suppliers"); }
+                    else if (isMode) { setLeftPanelMode("all"); }
+                    else { setLeftPanelMode("suppliers"); }
+                  }}
+                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                  <span className="flex items-center gap-2 min-w-0">
+                    {hasFilter ? <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-[#9000FF]" /> : <Users className="w-3.5 h-3.5 shrink-0" />}
+                    <span className="text-xs truncate">{hasFilter ? supplierFilter : "Suppliers"}</span>
+                  </span>
+                  {!hasFilter && <span className="text-[10px] text-[#9E9FAE] shrink-0">{SUPPLIERS.length}</span>}
                 </button>
-              )}
-            </div>
+              );
+            })()}
+
+            {/* Purchase Orders */}
+            {(() => {
+              const isMode = leftPanelMode === "pos" && activeView === "inbox";
+              const hasFilter = !!selectedShipmentId;
+              const activePO = hasFilter ? shipments.find(s => s.id === selectedShipmentId) : undefined;
+              const active = isMode || hasFilter;
+              return (
+                <button
+                  onClick={() => {
+                    setActiveView("inbox");
+                    if (hasFilter) { setSelectedShipmentId(null); setLeftPanelMode("pos"); }
+                    else if (isMode) { setLeftPanelMode("all"); }
+                    else { setLeftPanelMode("pos"); }
+                  }}
+                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                  <span className="flex items-center gap-2 min-w-0">
+                    {hasFilter ? <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-[#9000FF]" /> : <Package className="w-3.5 h-3.5 shrink-0" />}
+                    <span className="text-xs truncate">{hasFilter ? (activePO?.po ?? "PO") : "Purchase Orders"}</span>
+                  </span>
+                  {!hasFilter && <span className="text-[10px] text-[#9E9FAE] shrink-0">{shipments.length}</span>}
+                </button>
+              );
+            })()}
+
+            {/* Channels */}
+            {(() => {
+              const isMode = leftPanelMode === "channels" && activeView === "inbox";
+              const hasFilter = channelFilter !== "all";
+              const active = isMode || hasFilter;
+              return (
+                <button
+                  onClick={() => {
+                    setActiveView("inbox");
+                    if (hasFilter) { setChannelFilter("all"); setLeftPanelMode("channels"); }
+                    else if (isMode) { setLeftPanelMode("all"); }
+                    else { setLeftPanelMode("channels"); }
+                  }}
+                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                  <span className="flex items-center gap-2">
+                    {hasFilter ? <ChevronLeft className="w-3.5 h-3.5 shrink-0 text-[#9000FF]" /> : <MessagesSquare className="w-3.5 h-3.5 shrink-0" />}
+                    <span className="text-xs capitalize">{hasFilter ? channelFilter : "Channels"}</span>
+                  </span>
+                </button>
+              );
+            })()}
+
+            {/* Flagged */}
+            {(() => {
+              const flaggedCount = messages.filter(m => m.isFlagged).length;
+              const active = flaggedFilter && activeView === "inbox";
+              return (
+                <button
+                  onClick={() => {
+                    setActiveView("inbox"); setLeftPanelMode("all"); setFlaggedFilter(f => !f);
+                    setChannelFilter("all"); setSelectedShipmentId(null); setSupplierFilter(null);
+                    if (!flaggedFilter) { const fm = messages.find(m => m.isFlagged); if (fm) openMessage(fm.id); }
+                  }}
+                  className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${active ? "bg-[#E5EAF0] text-[#212833] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                  <span className="flex items-center gap-2"><Bookmark className="w-3.5 h-3.5 shrink-0" /><span className="text-xs">Flagged</span></span>
+                  {flaggedCount > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? "bg-[#9000FF] text-white" : "bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>}
+                </button>
+              );
+            })()}
+
+            {/* Needs Review */}
+            <button
+              onClick={() => setActiveView("needs-review")}
+              className={`w-full flex items-center justify-between px-2 h-8 rounded-md transition-colors ${activeView === "needs-review" ? "bg-amber-50 text-amber-800 font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+              <span className="flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-500" /><span className="text-xs">Needs Review</span></span>
+              {needsReviewCount > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeView === "needs-review" ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>}
+            </button>
+          </div>
+
+          {/* Scrollable Today's Focus */}
+          <div className="flex-1 overflow-y-auto">
 
             {tasks.length > 0 && (
-              <>
-                <div className="mx-3 h-px bg-[#E5EAF0]"/>
-                <div className="px-3 py-2">
-                  <div className="flex items-center justify-between px-2 mb-1.5">
-                    <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
-                      <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
-                    </div>
-                    <span className="text-[11px] text-[#5E687B]">{tasks.filter(t => t.done).length}/{tasks.length} done</span>
+              <div className="px-3 py-2">
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                    <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
                   </div>
-                  <div className="space-y-1">
-                    {tasks.slice(0, 5).map(task => (
-                      <div key={task.id}
-                        className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white hover:shadow-sm border border-transparent hover:border-[#9000FF]/20 cursor-pointer transition-all ${task.done ? "opacity-50" : ""}`}>
-                        <button onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
-                          className={`mt-0.5 shrink-0 transition-colors ${task.done ? "text-[#9000FF]" : "text-[#D6E3EB] hover:text-[#9000FF]"}`}>
-                          {task.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
-                            <p className={`text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 ${task.done ? "line-through text-[#5E687B]" : ""}`}>{task.title}</p>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-[#5E687B] pl-3">
-                            <CalendarClock className="w-2.5 h-2.5" />
-                            <span className="truncate">{task.source}</span>
-                            <span className="opacity-40">·</span>
-                            <span className={`shrink-0 ${task.urgency === "high" && !task.done ? "text-red-500 font-semibold" : ""}`}>{task.sourceAge}</span>
-                          </div>
+                  <span className="text-[9px] text-[#5E687B]">{tasks.filter(t => t.done).length}/{tasks.length} done</span>
+                </div>
+                <div className="space-y-1">
+                  {tasks.slice(0, 5).map(task => (
+                    <div key={task.id}
+                      className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white hover:shadow-sm border border-transparent hover:border-[#9000FF]/20 cursor-pointer transition-all ${task.done ? "opacity-50" : ""}`}>
+                      <button onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
+                        className={`mt-0.5 shrink-0 transition-colors ${task.done ? "text-[#9000FF]" : "text-[#D6E3EB] hover:text-[#9000FF]"}`}>
+                        {task.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
+                          <p className={`text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 ${task.done ? "line-through text-[#5E687B]" : ""}`}>{task.title}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-[#5E687B] pl-3">
+                          <CalendarClock className="w-2.5 h-2.5" />
+                          <span className="truncate">{task.source}</span>
+                          <span className="opacity-40">·</span>
+                          <span className={`shrink-0 ${task.urgency === "high" && !task.done ? "text-red-500 font-semibold" : ""}`}>{task.sourceAge}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              </>
+              </div>
             )}
 
           </div>
@@ -2882,8 +3004,59 @@ export default function Home() {
               <GmailSettingsPanel status={gmailStatus} onGmailStatusChange={() => { void refetchGmailStatus(); }}/>
             </div>
           )}
+          {/* ── INBOX ENTITY LISTS (suppliers / POs / channels) ── */}
+          {activeView==="inbox"&&leftPanelMode==="suppliers"&&(
+            <SupplierEntityList
+              suppliers={SUPPLIERS}
+              apiSuppliers={apiSuppliers}
+              messages={messages}
+              onSelect={(supplierId) => {
+                urlParamsApplied.current = true;
+                setSupplierFilter(supplierId);
+                setSelectedShipmentId(null);
+                setChannelFilter("all");
+                setFlaggedFilter(false);
+                setLeftPanelMode("all");
+                const first = messages.find(m => m.supplierId === supplierId || m.sender === supplierId);
+                if (first) openMessage(first.id);
+              }}
+            />
+          )}
+          {activeView==="inbox"&&leftPanelMode==="pos"&&(
+            <POEntityList
+              shipments={shipments}
+              stages={stages}
+              messages={messages}
+              onSelect={(shipmentId) => {
+                urlParamsApplied.current = true;
+                setSelectedShipmentId(shipmentId);
+                setSupplierFilter(null);
+                setChannelFilter("all");
+                setFlaggedFilter(false);
+                setLeftPanelMode("all");
+                const first = messages.find(m => m.shipmentId === shipmentId);
+                if (first) openMessage(first.id);
+              }}
+            />
+          )}
+          {activeView==="inbox"&&leftPanelMode==="channels"&&(
+            <ChannelPickerView
+              messages={messages}
+              onSelect={(ch) => {
+                urlParamsApplied.current = true;
+                setChannelFilter(ch);
+                setSupplierFilter(null);
+                setSelectedShipmentId(null);
+                setFlaggedFilter(false);
+                setLeftPanelMode("all");
+                const first = ch === "all" ? messages[0] : messages.find(m => m.channel === ch);
+                if (first) openMessage(first.id);
+              }}
+            />
+          )}
+
           {/* ── INBOX VIEW: thread list + detail ── */}
-          {activeView==="inbox"&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
+          {activeView==="inbox"&&leftPanelMode==="all"&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
 
             {/* Col A — Thread list */}
             <ResizablePanel defaultSize={38} minSize={22} className="bg-white flex flex-col min-w-0">
