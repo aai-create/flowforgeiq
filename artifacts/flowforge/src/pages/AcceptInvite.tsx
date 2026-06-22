@@ -33,7 +33,7 @@ export function AcceptInvite() {
       .then(async res => {
         if (res.ok) {
           setStatus("success");
-          setMessage("You've joined the team! Redirecting to FlowForge…");
+          setMessage("You've joined the team! Redirecting to FlowForgeIQ…");
           setTimeout(() => navigate("/"), 2000);
         } else {
           const data = await res.json() as { error?: string };
@@ -52,9 +52,9 @@ export function AcceptInvite() {
       <div className="w-full max-w-sm px-4 text-center">
         <div className="flex items-center gap-2 justify-center mb-8">
           <div className="w-7 h-7 rounded-[5px] overflow-hidden shrink-0">
-            <img src={`${basePath}/flowforge-logo.png`} alt="FlowForge" className="w-full h-full object-contain" />
+            <img src={`${basePath}/flowforge-logo.png`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
           </div>
-          <span className="font-bold text-lg tracking-tight text-[#9000FF]">flowforge</span>
+          <span className="font-bold text-lg tracking-tight text-[#9000FF]">FlowForgeIQ</span>
         </div>
 
         <div className="bg-white border border-[#E5EAF0] rounded-xl p-8 shadow-sm">
@@ -81,7 +81,7 @@ export function AcceptInvite() {
                 onClick={() => navigate("/")}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
               >
-                Go to FlowForge
+                Go to FlowForgeIQ
               </button>
             </>
           )}

@@ -549,7 +549,7 @@ function BuyersView() {
             <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0"><Bot size={14} className="text-[#9000FF]"/></div>
             <div className="max-w-[80%]">
               <div className="bg-white border border-[#E5EAF0] shadow-sm text-[#212833] px-4 py-3 rounded-2xl rounded-tl-sm text-xs leading-relaxed">{activeChat.botAnswer}</div>
-              <div className="text-[9px] text-[#9E9FAE] mt-1 ml-1">FlowForge Bot · {activeChat.time}</div>
+              <div className="text-[9px] text-[#9E9FAE] mt-1 ml-1">FlowForgeIQ Bot · {activeChat.time}</div>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {["Track shipment","Payment status","Contact supplier"].map(a=>(
                   <button key={a} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold transition-colors">{a}</button>
@@ -1569,7 +1569,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
     <div className="flex-1 overflow-y-auto p-6 max-w-xl mx-auto w-full">
       <div className="mb-6">
         <h2 className="text-sm font-bold text-[#212833] mb-1">Email Integrations</h2>
-        <p className="text-[11px] text-[#5E687B]">Connect Gmail to send replies directly from FlowForge. Inbound emails and forwarded chats are received at{" "}
+        <p className="text-[11px] text-[#5E687B]">Connect Gmail to send replies directly from FlowForgeIQ. Inbound emails and forwarded chats are received at{" "}
           <button onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});}} className="inline-flex items-center gap-1 text-[#212833] hover:text-[#9000FF] transition-colors group" title="Copy to clipboard">
             <span className="font-mono font-semibold">{inboundEmail}</span>
             {copied ? <Check size={9} className="text-emerald-500"/> : <Copy size={9} className="opacity-0 group-hover:opacity-60"/>}
@@ -2324,10 +2324,10 @@ export default function Home() {
         {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
         <div className="flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
-            <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain p-1.5" />
+            <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
           </div>
           <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
-            {isLoading ? "Loading FlowForge…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
+            {isLoading ? "Loading FlowForgeIQ…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
           </p>
         </div>
       </div>
@@ -2547,9 +2547,9 @@ export default function Home() {
         <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 relative">
           <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
             <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-              <img src="/flowforge-logo.png" alt="FlowForge" className="w-full h-full object-contain" />
+              <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[#9000FF] tracking-tight">flowforge</span>
+            <span className="text-[#9000FF] tracking-tight">FlowForgeIQ</span>
             <span className="text-[#E5EAF0]">/</span>
             <span className="text-[#5E687B] font-medium text-xs">
               {activeView==="inbox"
@@ -3489,7 +3489,7 @@ export default function Home() {
                     {/* Quote AI hint */}
                     {isQuotesStage&&(
                       <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed">
-                        <div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForge AI — Quote Analysis</span></div>
+                        <div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>
                         Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead. Recommend Foshan if margin is priority.
                       </div>
                     )}
@@ -3497,7 +3497,7 @@ export default function Home() {
                 )}
 
                 {/* Quote scroll area */}
-                {isQuotesStage&&<div className="flex-1 overflow-y-auto px-4 pb-4"><div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed"><div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForge AI — Quote Analysis</span></div>Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead time. Recommend Foshan if margin is priority; Guangzhou if relationship and speed matter more.</div></div>}
+                {isQuotesStage&&<div className="flex-1 overflow-y-auto px-4 pb-4"><div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed"><div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead time. Recommend Foshan if margin is priority; Guangzhou if relationship and speed matter more.</div></div>}
 
                 {/* Compose + Template Picker  (P1) */}
                 <div className="p-3 border-t border-[#E5EAF0] bg-white shrink-0">

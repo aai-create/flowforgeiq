@@ -1334,7 +1334,7 @@ export function Atelier() {
                                     </PopoverTrigger>
                                     <PopoverContent className="w-64 p-3 text-[12px]" align="end">
                                       <p className="font-semibold text-[#212833] mb-1">Factory Quotes</p>
-                                      <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForge tracks the margin automatically.</p>
+                                      <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForgeIQ tracks the margin automatically.</p>
                                     </PopoverContent>
                                   </Popover>
                                 </div>
@@ -1362,12 +1362,12 @@ export function Atelier() {
           </ScrollArea>
         </div>
 
-        {/* RIGHT PANE — FlowForge AI */}
+        {/* RIGHT PANE — FlowForgeIQ AI */}
         <div className="w-[340px] bg-white border-l border-[#E5EAF0] flex flex-col shrink-0">
           <div className="h-12 border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 bg-[#FAFBFC]">
             <div className="flex items-center gap-2 text-[#9000FF]">
               <Sparkles className="w-4 h-4" />
-              <span className="font-semibold text-sm">FlowForge AI</span>
+              <span className="font-semibold text-sm">FlowForgeIQ AI</span>
             </div>
             <button className="h-7 w-7 flex items-center justify-center rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors">
               <MoreHorizontal className="w-4 h-4" />

@@ -10,7 +10,7 @@ export function LandingPage() {
       <div className="w-full max-w-md text-center">
         <div className="flex items-center gap-2 justify-center mb-10">
           <div className="w-9 h-9 rounded-[7px] overflow-hidden shrink-0">
-            <img src={`${basePath}/flowforge-logo.png`} alt="FlowForge" className="w-full h-full object-contain" />
+            <img src={`${basePath}/flowforge-logo.png`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-2xl tracking-tight text-[#9000FF]">FlowForgeIQ</span>
         </div>
@@ -41,7 +41,7 @@ export function LandingPage() {
           onClick={() => navigate("/sign-in")}
           className="inline-flex items-center gap-2 px-6 py-3 bg-[#9000FF] hover:bg-[#7A00D9] text-white text-sm font-semibold rounded-xl transition-colors"
         >
-          Sign in to FlowForge
+          Sign in to FlowForgeIQ
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

@@ -16,10 +16,10 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "create-po",
     title: "Creating a Purchase Order",
     summary:
-      "A PO is the starting point for every shipment. Create one manually or convert a winning factory quote directly from an RFQ — FlowForge pre-fills the fields automatically.",
+      "A PO is the starting point for every shipment. Create one manually or convert a winning factory quote directly from an RFQ — FlowForgeIQ pre-fills the fields automatically.",
     steps: [
       { text: 'Open My Orders and click "+ New PO" in the top-right corner.' },
-      { text: "Optionally drop a PO document (PDF, Excel, or Word) into the upload zone — FlowForge reads it in the background and attaches it to the shipment." },
+      { text: "Optionally drop a PO document (PDF, Excel, or Word) into the upload zone — FlowForgeIQ reads it in the background and attaches it to the shipment." },
       { text: "Enter a unique PO number, product description, and category. Add the Buyer Unit Price and Quantity if you want spread/margin tracking from day one." },
       { text: "Type a buyer name — existing buyers appear as suggestions; a new name creates a new buyer automatically on save." },
       { text: 'Start typing in the Supplier field to search your directory. If the supplier doesn\'t exist yet, a "Create…" option appears to add them in-place.' },
@@ -34,14 +34,14 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "rfq-quotes",
     title: "RFQs & Factory Quote Comparison",
     summary:
-      "The RFQ flow lets you solicit quotes from multiple factories, compare their prices against your target, and convert the winner to a PO — all without leaving FlowForge.",
+      "The RFQ flow lets you solicit quotes from multiple factories, compare their prices against your target, and convert the winner to a PO — all without leaving FlowForgeIQ.",
     steps: [
       { text: 'Open RFQs from the left sidebar and click "+ New RFQ".' },
       { text: "Set the product, buyer, target price per unit, quantity, and deadline for quote submissions." },
       { text: 'Click "Add Quote" to enter each factory\'s quote: unit price, lead time, MOQ, and which supplier in your directory they correspond to.' },
       { text: "The quote comparison table shows spread (target price − quoted price) per unit and for the full order. The lowest-price quote is badged LOWEST." },
       { text: 'Click "Use this quote" on the winner. A Convert-to-PO dialog appears — confirm the PO number, supplier, factory dates, and deposit percentage.' },
-      { text: "FlowForge creates the shipment and pre-creates the Deposit and Balance payments based on your deposit percentage." },
+      { text: "FlowForgeIQ creates the shipment and pre-creates the Deposit and Balance payments based on your deposit percentage." },
       { text: 'After conversion, download the Proforma Invoice as a PDF or click "View PO" to jump straight to the new shipment.' },
     ],
     screenshot: "rfq-quotes.png",
@@ -51,7 +51,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "spread-margin",
     title: "Tracking Spread & Margin",
     summary:
-      "FlowForge computes your gross spread (buyer total minus supplier payments) on every shipment and surfaces it as a colour-coded badge in My Orders and a detailed panel in the Inbox.",
+      "FlowForgeIQ computes your gross spread (buyer total minus supplier payments) on every shipment and surfaces it as a colour-coded badge in My Orders and a detailed panel in the Inbox.",
     steps: [
       { text: "Spread is calculated automatically: Buyer Unit Price × Quantity minus the sum of all recorded supplier payments." },
       { text: "In My Orders, every shipment card shows a colour-coded spread badge: green ≥ 25%, amber 10–25%, red < 10%." },
@@ -66,14 +66,14 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "chat-ingest",
     title: "Ingesting Chat Messages (WhatsApp / WeChat / iMessage)",
     summary:
-      "Suppliers often share updates over WhatsApp or WeChat. FlowForge can read those chats, extract the shipment fields, and log them against the right PO — either by pasting the text or by forwarding the email to your FlowForge inbox address.",
+      "Suppliers often share updates over WhatsApp or WeChat. FlowForgeIQ can read those chats, extract the shipment fields, and log them against the right PO — either by pasting the text or by forwarding the email to your FlowForgeIQ inbox address.",
     steps: [
       { text: 'In the Inbox, click the clipboard icon in the toolbar (or press the "Paste Chat" button) to open the chat ingest panel.' },
       { text: "Select the channel (WhatsApp, WeChat, iMessage, or SMS) and optionally add a sender hint so the AI can match the right supplier." },
-      { text: "Paste the exported chat text into the box and click Process. FlowForge's AI extracts the ETA, production percentage, QC notes, and any quoted prices." },
+      { text: "Paste the exported chat text into the box and click Process. FlowForgeIQ's AI extracts the ETA, production percentage, QC notes, and any quoted prices." },
       { text: "Review the extracted fields and the AI-drafted reply in the preview. If the shipment match looks wrong, you can correct it before confirming." },
-      { text: 'Click Confirm to save the message to FlowForge. It appears in the matched shipment\'s thread tagged with a "Forwarded chat" badge.' },
-      { text: "Alternatively, email a chat export directly to your inbound address (visible in Settings → Chat Channels). Postmark forwards it to FlowForge automatically — no manual paste needed." },
+      { text: 'Click Confirm to save the message to FlowForgeIQ. It appears in the matched shipment\'s thread tagged with a "Forwarded chat" badge.' },
+      { text: "Alternatively, email a chat export directly to your inbound address (visible in Settings → Chat Channels). Postmark forwards it to FlowForgeIQ automatically — no manual paste needed." },
       { text: "Messages with a low routing confidence score land in the Needs Review queue for manual assignment instead of being auto-attached to a shipment." },
     ],
     screenshot: "chat-ingest.png",
@@ -83,7 +83,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "track-shipment",
     title: "Tracking a Shipment",
     summary:
-      "Every shipment moves through 11 stages from Spec Sheet to Delivered. FlowForge shows exactly where each order is, lets you advance it with a logged note, and keeps a full audit trail of every stage change.",
+      "Every shipment moves through 11 stages from Spec Sheet to Delivered. FlowForgeIQ shows exactly where each order is, lets you advance it with a logged note, and keeps a full audit trail of every stage change.",
     steps: [
       { text: "On My Orders, click any shipment card to expand its detail view. In the Inbox, the shipment context panel is visible on the right whenever a message is selected." },
       { text: "The stage tracker shows all 11 milestones. The purple dot marks the current stage; completed stages are highlighted." },
@@ -100,7 +100,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "inbox",
     title: "Using the Inbox",
     summary:
-      "The Inbox is FlowForge's command centre — every inbound message from suppliers is routed here, linked to its shipment, and given an AI-drafted reply. It is the default screen when you open the app.",
+      "The Inbox is FlowForgeIQ's command centre — every inbound message from suppliers is routed here, linked to its shipment, and given an AI-drafted reply. It is the default screen when you open the app.",
     steps: [
       { text: "Messages are listed on the left, grouped by recency. Click any message to open it in the reading pane." },
       { text: "The right panel shows the matched shipment's stage tracker, payments, spread, and supplier contact details." },
@@ -151,10 +151,10 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "team-access",
     title: "Inviting Your Team",
     summary:
-      "FlowForge supports multi-user access via Clerk. Admins can invite colleagues — including China-side staff and freight forwarders — and control who has admin privileges.",
+      "FlowForgeIQ supports multi-user access via Clerk. Admins can invite colleagues — including China-side staff and freight forwarders — and control who has admin privileges.",
     steps: [
       { text: "Open Settings → Team tab. You must be an Admin to invite or remove members." },
-      { text: 'Click "Invite colleague" and enter their email address. They will receive a link to join your FlowForge workspace.' },
+      { text: 'Click "Invite colleague" and enter their email address. They will receive a link to join your FlowForgeIQ workspace.' },
       { text: "Alternatively, click Copy Invite Link to share the invite URL directly (e.g. via WhatsApp or email)." },
       { text: "Once accepted, the new member appears in the Members list. You can remove any member except yourself." },
       { text: "Each team member signs in with their own Clerk account. Stage advancements and notes are attributed to the person who made them." },
@@ -184,7 +184,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "intermediary-financing",
     title: "Intermediary Advance Financing",
     summary:
-      "FlowForge supports a three-party financing model where an Intermediary fronts a portion of a payment to the Supplier so production can start immediately, then recovers that advance from the Buyer once delivery milestones are met.",
+      "FlowForgeIQ supports a three-party financing model where an Intermediary fronts a portion of a payment to the Supplier so production can start immediately, then recovers that advance from the Buyer once delivery milestones are met.",
     steps: [
       { text: "The Buyer commits to a share of the payment (typically 40%). The Intermediary covers the remaining 60% directly to the Supplier so production is not held up." },
       { text: 'The Finance report\'s "Unpaid by Supplier" table shows an "Intermediary Advance" column whenever advance financing is in play.' },

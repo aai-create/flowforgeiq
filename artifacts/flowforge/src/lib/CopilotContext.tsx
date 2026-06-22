@@ -15,7 +15,7 @@ interface CopilotContextValue {
 }
 
 const CopilotContext = createContext<CopilotContextValue>({
-  contextHint: "Ask FlowForge anything",
+  contextHint: "Ask FlowForgeIQ anything",
   setContextHint: () => {},
   suggestions: [],
   setSuggestions: () => {},
@@ -27,7 +27,7 @@ const CopilotContext = createContext<CopilotContextValue>({
 });
 
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
-  const [contextHint, setContextHint] = useState("Ask FlowForge anything");
+  const [contextHint, setContextHint] = useState("Ask FlowForgeIQ anything");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);

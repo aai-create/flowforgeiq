@@ -112,7 +112,7 @@ function OverviewDiagram() {
       <div className="flex items-start gap-2.5 mb-6">
         <div className="w-1 h-6 bg-[#9000FF] rounded-full mt-0.5 shrink-0" />
         <div>
-          <h2 className="text-lg font-bold text-[#212833]">How FlowForge works</h2>
+          <h2 className="text-lg font-bold text-[#212833]">How FlowForgeIQ works</h2>
           <p className="text-[12px] text-[#5E687B] mt-0.5 leading-relaxed">
             Four core workflows — everything you need to run global sourcing operations from a single hub.
           </p>
@@ -226,7 +226,7 @@ export function Help() {
     );
   }
 
-  useCopilotHint("Find help on any FlowForge workflow or feature", [
+  useCopilotHint("Find help on any FlowForgeIQ workflow or feature", [
     "How do I advance a shipment to the next stage?",
     "What does the risk score mean?",
     "How do I ingest a WhatsApp chat?",

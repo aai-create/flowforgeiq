@@ -66,7 +66,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          contextHint: contextHint !== "Ask FlowForge anything" ? contextHint : undefined,
+          contextHint: contextHint !== "Ask FlowForgeIQ anything" ? contextHint : undefined,
           history: conversationHistory,
         }),
       });

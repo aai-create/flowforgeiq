@@ -305,7 +305,7 @@ function TeamSection() {
             <div className="mt-4 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
               <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Invite link created</div>
               <p className="text-[11px] text-[#5E687B] mb-2">
-                Share this link with your colleague. It grants them access to FlowForge as a <strong>{inviteRole}</strong>.
+                Share this link with your colleague. It grants them access to FlowForgeIQ as a <strong>{inviteRole}</strong>.
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-[10px] font-mono text-[#212833] bg-white border border-[#E5EAF0] rounded px-2 py-1.5 truncate">
@@ -588,7 +588,7 @@ export function Settings() {
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#212833] mb-1">Chat Channels</h2>
                 <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
-                  Ingest WhatsApp, WeChat, iMessage, and SMS messages into FlowForge. Use the
+                  Ingest WhatsApp, WeChat, iMessage, and SMS messages into FlowForgeIQ. Use the
                   paste-to-process button (<span className="font-mono text-[11px] bg-[#F0F4F8] px-1 rounded">clipboard icon</span>) in the inbox toolbar,
                   or forward chat exports directly to the inbound email address below.
                 </p>
@@ -642,7 +642,7 @@ export function Settings() {
                 <div className="mb-4">
                   <h2 className="text-sm font-bold text-[#212833] mb-1">Team access</h2>
                   <p className="text-xs text-[#5E687B] leading-relaxed">
-                    Invite colleagues to collaborate on FlowForge. Admins can manage team members and settings.
+                    Invite colleagues to collaborate on FlowForgeIQ. Admins can manage team members and settings.
                     Members can view and act on all shipments.
                   </p>
                 </div>
