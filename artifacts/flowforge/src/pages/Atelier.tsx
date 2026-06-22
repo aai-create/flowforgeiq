@@ -619,7 +619,7 @@ export function Atelier() {
 
               {/* Customers */}
               <div className="mb-1.5 px-2 flex items-center justify-between group">
-                <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">Buyers</span>
+                <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase">Buyers</span>
                 <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-[#E5EAF0] rounded">
                   <Plus className="w-3 h-3 text-[#5E687B]" />
                 </button>
@@ -632,12 +632,12 @@ export function Atelier() {
                       <Hash className="w-3 h-3 opacity-50 shrink-0" />
                       <span className="truncate text-xs">{c.name}</span>
                     </span>
-                    <span className="text-[10px] bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{c.count}</span>
+                    <span className="text-xs bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{c.count}</span>
                   </button>
                 ))}
                 {customerFilter && (
                   <button onClick={() => setCustomerFilter(null)}
-                    className="w-full text-[10px] text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
+                    className="w-full text-xs text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
                     <X className="w-3 h-3" /> Clear filter
                   </button>
                 )}
@@ -647,10 +647,10 @@ export function Atelier() {
 
               {/* Task list */}
               <div className="px-2 mb-2 flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
                   <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
                 </span>
-                <span className="text-[9px] text-[#5E687B]">{doneCount}/{tasks.length} done</span>
+                <span className="text-[11px] text-[#5E687B]">{doneCount}/{tasks.length} done</span>
               </div>
 
               <div className="space-y-1">
@@ -667,7 +667,7 @@ export function Atelier() {
                         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${urgencyDot(task.urgency)}`} />
                         <p className={`text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 ${task.done ? "line-through text-[#5E687B]" : ""}`}>{task.title}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-[#5E687B] pl-3">
+                      <div className="flex items-center gap-1 text-xs text-[#5E687B] pl-3">
                         <CalendarClock className="w-2.5 h-2.5" />
                         <span>{task.source}</span>
                         <span className="opacity-40">·</span>
@@ -690,7 +690,7 @@ export function Atelier() {
           <div className="h-12 border-b border-[#E5EAF0] flex items-center gap-3 px-5 shrink-0">
             <div className="flex items-center gap-2 shrink-0">
               <h1 className="text-sm font-bold text-[#212833]">My Orders</h1>
-              <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
+              <span className="text-xs text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
                 {visibleShipments.length} of {shipments.length} POs
               </span>
             </div>
@@ -702,7 +702,7 @@ export function Atelier() {
                 value={poSearch}
                 onChange={e => setPoSearch(e.target.value)}
                 placeholder="Supplier or buyer PO…"
-                className="w-full pl-7 pr-2 py-1.5 text-[11px] bg-[#F0F4F8] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4] transition-all"
+                className="w-full pl-7 pr-2 py-1.5 text-xs bg-[#F0F4F8] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4] transition-all"
               />
               {poSearch && (
                 <button onClick={() => setPoSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE] hover:text-[#5E687B]">
@@ -714,7 +714,7 @@ export function Atelier() {
               {/* Status filter chips */}
               {(["all", "on-track", "at-risk", "delayed"] as const).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
-                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all ${statusFilter === s
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-all ${statusFilter === s
                     ? s === "all" ? "bg-[#212833] text-white border-[#212833]"
                       : s === "on-track" ? "bg-emerald-500 text-white border-emerald-500"
                       : s === "at-risk"  ? "bg-amber-500 text-white border-amber-500"
@@ -750,18 +750,18 @@ export function Atelier() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
                             <button
                               type="button"
                               onClick={e => copyPo(shipment.po, e)}
                               title="Copy supplier PO"
-                              className={`group/po flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20 hover:bg-[#9000FF]/15" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"}`}>
+                              className={`group/po flex items-center gap-1 font-mono text-xs font-bold px-1.5 py-0.5 rounded border transition-colors ${isActive ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20 hover:bg-[#9000FF]/15" : "bg-[#FAFBFC] text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"}`}>
                               {highlightMatch(shipment.po, poSearch)}
                               {copiedPo === shipment.po
                                 ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                 : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
                             </button>
-                            <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer PO</span>
+                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer PO</span>
                             {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
                               <>
                                 {shipment.buyerPoNumbers.map((bpo) => (
@@ -770,7 +770,7 @@ export function Atelier() {
                                     type="button"
                                     onClick={e => copyPo(bpo, e)}
                                     title="Copy buyer PO"
-                                    className="group/bpo flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
+                                    className="group/bpo flex items-center gap-1 font-mono text-xs font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
                                     {highlightMatch(bpo, poSearch)}
                                     {copiedPo === bpo
                                       ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
@@ -783,7 +783,7 @@ export function Atelier() {
                                 type="button"
                                 onClick={e => copyPo(shipment.buyerPoNumber!, e)}
                                 title="Copy buyer PO"
-                                className="group/bpo flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
+                                className="group/bpo flex items-center gap-1 font-mono text-xs font-bold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">
                                 {highlightMatch(shipment.buyerPoNumber!, poSearch)}
                                 {copiedPo === shipment.buyerPoNumber
                                   ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
@@ -791,16 +791,16 @@ export function Atelier() {
                               </button>
                             ) : (
                               <>
-                                <span className="font-mono text-[10px] text-[#C0C8D4] px-1.5 py-0.5 rounded border border-dashed border-[#E5EAF0]">—</span>
+                                <span className="font-mono text-xs text-[#C0C8D4] px-1.5 py-0.5 rounded border border-dashed border-[#E5EAF0]">—</span>
                                 <button
                                   type="button"
                                   onClick={e => { e.stopPropagation(); setActiveShipmentId(shipment.id); setLinkPanelShipmentId(shipment.shipmentId); }}
-                                  className="text-[9px] font-semibold text-[#9000FF] hover:underline flex items-center gap-0.5 transition-colors">
+                                  className="text-[11px] font-semibold text-[#9000FF] hover:underline flex items-center gap-0.5 transition-colors">
                                   <Link2 className="w-2.5 h-2.5" />Link deal
                                 </button>
                               </>
                             )}
-                            <span className="text-[10px] bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] px-1.5 py-0.5 rounded font-medium">
+                            <span className="text-xs bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] px-1.5 py-0.5 rounded font-medium">
                               {shipment.customer}
                             </span>
                           </div>
@@ -811,7 +811,7 @@ export function Atelier() {
                       <div className="flex items-center gap-2 shrink-0 ml-3">
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5 text-[11px] text-[#5E687B]">
-                            <div className="w-4 h-4 rounded bg-[#F0F4F8] flex items-center justify-center text-[9px] font-bold text-[#5E687B]">
+                            <div className="w-4 h-4 rounded bg-[#F0F4F8] flex items-center justify-center text-[11px] font-bold text-[#5E687B]">
                               {shipment.supplier.charAt(0)}
                             </div>
                             {shipment.supplier}
@@ -819,15 +819,15 @@ export function Atelier() {
                           {(() => {
                             const sup = apiSuppliers.find(s => s.name === shipment.supplier);
                             return sup?.contactEmail
-                              ? <span className="text-[9px] text-[#9E9FAE] truncate max-w-[140px]">{sup.contactEmail}</span>
+                              ? <span className="text-[11px] text-[#9E9FAE] truncate max-w-[140px]">{sup.contactEmail}</span>
                               : null;
                           })()}
                         </div>
                         <span className="text-[#D6E3EB]">·</span>
-                        <div className="flex items-center gap-1 text-[10px] text-[#5E687B]">
+                        <div className="flex items-center gap-1 text-xs text-[#5E687B]">
                           <Clock className="w-3 h-3" />{shipment.dueDate}
                         </div>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusCls(shipment.status)}`}>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(shipment.status)}`}>
                           {shipment.status === "at-risk" ? "At Risk" : shipment.status === "delayed" ? "Delayed" : "On Track"}
                         </span>
                         {shipment.spreadPct !== null ? (() => {
@@ -838,20 +838,20 @@ export function Atelier() {
                             ? "bg-amber-50 text-amber-700 border-amber-200"
                             : "bg-red-50 text-red-700 border-red-200";
                           return (
-                            <span className={`flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${cls}`} title="Your spread (buyer price − supplier cost)">
+                            <span className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded border ${cls}`} title="Your spread (buyer price − supplier cost)">
                               <DollarSign className="w-2.5 h-2.5" />
                               {pct.toFixed(1)}%{shipment.spreadUsd !== null ? ` · $${Math.round(shipment.spreadUsd!).toLocaleString()}` : ""}
                             </span>
                           );
                         })() : (
-                          <span className="flex items-center gap-0.5 text-[9px] text-[#C0C8D4] px-1.5 py-0.5 rounded border border-[#E5EAF0]" title="No deal linked — add a buyer PO to see spread">
+                          <span className="flex items-center gap-0.5 text-[11px] text-[#C0C8D4] px-1.5 py-0.5 rounded border border-[#E5EAF0]" title="No deal linked — add a buyer PO to see spread">
                             <DollarSign className="w-2.5 h-2.5" />—
                           </span>
                         )}
                         {riskByShipmentId.has(shipment.shipmentId) && (() => {
                           const score = riskByShipmentId.get(shipment.shipmentId)!;
                           return (
-                            <span className={`flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border ${score >= 70 ? "bg-red-50 text-red-600 border-red-100" : score >= 45 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}>
+                            <span className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded border ${score >= 70 ? "bg-red-50 text-red-600 border-red-100" : score >= 45 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}>
                               <ShieldAlert className="w-2.5 h-2.5" />{score}
                             </span>
                           );
@@ -861,7 +861,7 @@ export function Atelier() {
 
                     {/* Stage tracker header */}
                     <div className="flex items-center justify-between mb-1 mt-1">
-                      <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Stage Tracker</span>
+                      <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Stage Tracker</span>
                       <Popover>
                         <PopoverTrigger asChild>
                           <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -910,7 +910,7 @@ export function Atelier() {
                                     : "border-[#D6E3EB]"}`}
                               />
                               {isCurrent && (
-                                <span className={`absolute top-6 text-[8px] font-bold whitespace-nowrap -translate-x-1/2 left-1/2 ${
+                                <span className={`absolute top-6 text-[11px] font-bold whitespace-nowrap -translate-x-1/2 left-1/2 ${
                                   shipment.status === "delayed" ? "text-red-500"
                                   : shipment.status === "at-risk" ? "text-amber-600"
                                   : "text-[#9000FF]"}`}>
@@ -924,7 +924,7 @@ export function Atelier() {
                     </div>
 
                     {/* Stage labels — compact, only boundaries */}
-                    <div className="flex justify-between text-[8px] text-[#9E9FAE] mb-3 px-0.5">
+                    <div className="flex justify-between text-[11px] text-[#9E9FAE] mb-3 px-0.5">
                       <span>{STAGES[0]}</span>
                       <span>{STAGES[Math.floor(STAGES.length / 2)]}</span>
                       <span>{STAGES[STAGES.length - 1]}</span>
@@ -936,20 +936,33 @@ export function Atelier() {
                         const overdue = !p.paid && new Date(`${p.dueDate} 2026`) < new Date();
                         return (
                           <div key={i} className="flex items-center gap-1.5">
-                            <div className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full border ${
+                            <div className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full border ${
                               p.paid   ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                               : overdue ? "bg-red-50 text-red-600 border-red-100 animate-pulse"
                               : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
                               {p.paid ? <CheckCircle2 className="w-2.5 h-2.5" /> : overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
                               {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : overdue ? "OVERDUE" : `due ${p.dueDate}`}
                             </div>
+
+                            {isActive && !p.paid && markPaidForm?.shipmentId !== shipment.id && (
+                              <button type="button" onClick={e => { e.stopPropagation(); openMarkPaid(shipment.id, i); }}
+                                className="text-[11px] font-semibold px-1.5 py-0.5 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
+                                Mark Paid
+                              </button>
+                            )}
+                            {isActive && p.paid && (
+                              <button type="button" onClick={e => { e.stopPropagation(); undoPaymentPaid(shipment.id, i); }}
+                                className="text-[11px] font-medium px-1.5 py-0.5 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
+                                Undo
+                              </button>
+                            )}
                           </div>
                         );
                       })}
 
                       {/* Next stage hint */}
                       {stageIdx < STAGES.length - 1 && (
-                        <div className="ml-auto flex items-center gap-1 text-[9px] text-[#9E9FAE]">
+                        <div className="ml-auto flex items-center gap-1 text-[11px] text-[#9E9FAE]">
                           <span>Next:</span>
                           <ChevronRight className="w-3 h-3" />
                           <span className="font-medium text-[#5E687B]">{STAGES[stageIdx + 1]}</span>
@@ -958,6 +971,406 @@ export function Atelier() {
                     </div>
 
 
+                    {/* History section */}
+                    {historyShipmentId === shipment.id && (
+                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Clock className="w-3 h-3 text-[#9000FF]" />
+                          <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">Stage History</span>
+                        </div>
+                        <StageHistory
+                          shipmentId={shipment.shipmentId}
+                          stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
+                        />
+                      </div>
+                    )}
+
+                    {/* Buyer PO Links (many-to-many management) — visible when card is active */}
+                    {isActive && (
+                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1"><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
+                          <button type="button"
+                            onClick={() => setLinkPanelShipmentId(linkPanelShipmentId === shipment.shipmentId ? null : shipment.shipmentId)}
+                            className="text-[11px] font-semibold text-[#9000FF] hover:underline">
+                            {linkPanelShipmentId === shipment.shipmentId ? "Close" : "Manage"}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                          {shipment.buyerPoNumbers.length === 0 && !shipment.buyerPoNumber && (
+                            <span className="text-[11px] text-[#C0C8D4] italic">No buyer PO linked</span>
+                          )}
+                          {(shipment.buyerPoNumbers.length > 0 ? shipment.buyerPoNumbers : (shipment.buyerPoNumber ? [shipment.buyerPoNumber] : [])).map(bpo => {
+                            const deal = existingDeals?.find(d => d.buyerPoNumber === bpo);
+                            return (
+                              <span key={bpo} className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                {bpo}
+                                {deal && linkPanelShipmentId === shipment.shipmentId && (
+                                  <button type="button" title="Unlink" onClick={() => unlinkDeal({ id: shipment.shipmentId, dealId: deal.id })}
+                                    className="text-red-400 hover:text-red-600 ml-0.5">×</button>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {linkPanelShipmentId === shipment.shipmentId && existingDeals && (
+                          <div className="border border-[#E5EAF0] rounded-md overflow-hidden max-h-[120px] overflow-y-auto">
+                            {existingDeals
+                              .filter(d => !shipment.buyerPoNumbers.includes(d.buyerPoNumber) && d.buyerPoNumber !== shipment.buyerPoNumber)
+                              .map(d => (
+                                <button key={d.id} type="button"
+                                  onClick={() => linkDeal({ id: shipment.shipmentId, data: { dealId: d.id } })}
+                                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 border-b border-[#F0F4F8] last:border-b-0 transition-colors">
+                                  <span className="text-xs font-mono font-semibold text-emerald-700">{d.buyerPoNumber}</span>
+                                  <span className="text-[11px] text-[#5E687B] truncate">{d.customerName}</span>
+                                  <span className="ml-auto text-[11px] text-[#9000FF] font-semibold shrink-0">+ Link</span>
+                                </button>
+                              ))}
+                            {existingDeals.filter(d => !shipment.buyerPoNumbers.includes(d.buyerPoNumber) && d.buyerPoNumber !== shipment.buyerPoNumber).length === 0 && (
+                              <p className="text-xs text-[#C0C8D4] italic px-3 py-2">All available deals are already linked</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Buyer Price — edit buyer unit price & quantity for spread tracking */}
+                    {isActive && (
+                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
+                            <DollarSign className="w-2.5 h-2.5"/>Buyer Price
+                          </span>
+                          <button type="button"
+                            onClick={() => {
+                              if (buyerPriceFormId === shipment.id) {
+                                setBuyerPriceFormId(null);
+                              } else {
+                                setBuyerPriceFormId(shipment.id);
+                                setBuyerPriceDraft({
+                                  unitPrice: shipment.buyerUnitPrice != null ? String(shipment.buyerUnitPrice) : "",
+                                  quantity: shipment.buyerQuantity != null ? String(shipment.buyerQuantity) : "",
+                                });
+                              }
+                            }}
+                            className="text-[11px] font-semibold text-[#9000FF] hover:underline">
+                            {buyerPriceFormId === shipment.id ? "Cancel" : shipment.spreadPct !== null ? "Edit" : "Add"}
+                          </button>
+                        </div>
+                        {shipment.spreadPct !== null && buyerPriceFormId !== shipment.id && (
+                          <div className="text-xs text-[#5E687B]">
+                            ${shipment.buyerUnitPrice?.toFixed(2) ?? "—"} × {shipment.buyerQuantity?.toLocaleString() ?? "—"} &nbsp;·&nbsp;
+                            <span className={`font-semibold ${shipment.spreadPct >= 25 ? "text-emerald-700" : shipment.spreadPct >= 10 ? "text-amber-700" : "text-red-700"}`}>
+                              {shipment.spreadPct.toFixed(1)}% spread
+                            </span>
+                          </div>
+                        )}
+                        {shipment.spreadPct === null && buyerPriceFormId !== shipment.id && (
+                          <span className="text-[11px] text-[#C0C8D4] italic">No buyer price set — spread unavailable</span>
+                        )}
+                        {buyerPriceFormId === shipment.id && (
+                          <>
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1">
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
+                                <input type="number" min="0" step="0.01"
+                                  value={buyerPriceDraft.unitPrice}
+                                  onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                              </div>
+                              <div className="flex-1">
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Quantity</label>
+                                <input type="number" min="1" step="1"
+                                  value={buyerPriceDraft.quantity}
+                                  onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                              </div>
+                              <button type="button"
+                                disabled={!buyerPriceDraft.unitPrice || !buyerPriceDraft.quantity || patchDealPending}
+                                onClick={() => {
+                                  const up = Number(buyerPriceDraft.unitPrice);
+                                  const qty = Number(buyerPriceDraft.quantity);
+                                  if (!up || !qty) return;
+                                  patchDealForShipment({ id: shipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
+                                }}
+                                className="text-[11px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
+                                {patchDealPending ? "…" : "Save"}
+                              </button>
+                            </div>
+                            {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
+                              const buyerTotal = Number(buyerPriceDraft.unitPrice) * Number(buyerPriceDraft.quantity);
+                              const supplierTotal = shipment.payments.reduce((s, p) => s + p.amountUsd, 0);
+                              const spread = buyerTotal - supplierTotal;
+                              const pct = buyerTotal > 0 ? (spread / buyerTotal) * 100 : 0;
+                              const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                              return (
+                                <div className={`mt-1 text-[11px] font-semibold ${cls}`}>
+                                  Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Mark-paid inline form */}
+                    {isActive && markPaidForm?.shipmentId === shipment.id && (
+                      <div className="mt-2 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">Record Payment — {shipment.payments[markPaidForm.paymentIdx].label}</p>
+                          <button type="button" onClick={() => setMarkPaidForm(null)} className="text-[#9E9FAE] hover:text-[#212833]"><X className="w-3 h-3"/></button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                            <input type="number" min="0" value={markPaidForm.amount}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, amount: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <div>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
+                            <input type="date" value={markPaidForm.date}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <div>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">
+                              Invoice # <span className="text-red-500">*</span>
+                            </label>
+                            <input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001"
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, invoiceNumber: e.target.value } : f)}
+                              className={`w-full px-2 py-1 text-xs border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim() ? "border-red-300 focus:border-red-400" : "border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/>
+                          </div>
+                          <div>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
+                            <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Method</label>
+                            <select value={markPaidForm.method}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
+                              className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
+                              <option>Wire</option>
+                              <option>Credit</option>
+                              <option>Other</option>
+                            </select>
+                          </div>
+                        </div>
+                        {/* Intermediary payment to supplier */}
+                        <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
+                          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                            <input type="checkbox" checked={markPaidForm.intermediarySupplierPaid}
+                              onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierPaid: e.target.checked } : f)}
+                              className="accent-[#9000FF] w-3 h-3"/>
+                            <span className="text-[11px] font-semibold text-[#5E687B]">Intermediary paid supplier</span>
+                          </label>
+                          {markPaidForm.intermediarySupplierPaid && (
+                            <div className="grid grid-cols-2 gap-2 pt-0.5">
+                              <div>
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                                <input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0"
+                                  onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierAmount: e.target.value } : f)}
+                                  className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                              </div>
+                              <div>
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Date Paid</label>
+                                <input type="date" value={markPaidForm.intermediarySupplierDate}
+                                  onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierDate: e.target.value } : f)}
+                                  className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()}
+                          className="w-full py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]">
+                          <CheckCircle2 className="w-3 h-3"/> Confirm Payment
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Expanded detail row */}
+                    {isActive && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Open Threads tab */}
+                            <button
+                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "threads" ? null : "threads"); }}
+                              className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${activeDetailTab === "threads" ? "bg-[#9000FF] text-white hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                              <MessageCircle className="w-3 h-3" /> Open Threads
+                            </button>
+                            {/* View Docs tab */}
+                            <button
+                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "docs" ? null : "docs"); }}
+                              className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "docs" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                              <FileText className="w-3 h-3" /> View Docs
+                            </button>
+                            {/* Factory Quotes tab */}
+                            <button
+                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "quotes" ? null : "quotes"); }}
+                              className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "quotes" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                              <DollarSign className="w-3 h-3" /> Factory Quotes
+                            </button>
+                            {/* Advance Stage — unchanged */}
+                            <button
+                              onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
+                              className="text-xs bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
+                              <MapPin className="w-3 h-3" /> Advance Stage
+                            </button>
+                            {/* History */}
+                            <button
+                              onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
+                              className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
+                              <Clock className="w-3 h-3" /> History
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <button
+                              onClick={e => { e.stopPropagation(); setMoreMenuId(moreMenuId === shipment.id ? null : shipment.id); }}
+                              className="text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] p-1 rounded transition-colors">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                            {moreMenuId === shipment.id && (
+                              <div
+                                onClick={e => e.stopPropagation()}
+                                className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
+                                {[
+                                  { label: "Edit PO", action: () => { openEditPO(shipment); setMoreMenuId(null); } },
+                                  { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
+                                  { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
+                                  { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
+                                  { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); } },
+                                ].map(({ label, action }) => (
+                                  <button key={label} onClick={action}
+                                    className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#212833] transition-colors">
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Inline detail panel — shown when a tab is active */}
+                        {activeDetailTab !== null && (
+                          <div className="mt-3 border border-[#E5EAF0] rounded-xl bg-white overflow-hidden">
+                            {/* Threads panel */}
+                            {activeDetailTab === "threads" && (() => {
+                              const msgs: Message[] = allMessages
+                                .filter((m: Message) => m.shipmentId === shipment.shipmentId)
+                                .sort((a: Message, b: Message) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+                                .slice(0, 5);
+                              return (
+                                <div>
+                                  <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
+                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Recent Threads</span>
+                                    <span className="text-[11px] text-[#C0C8D4]">{msgs.length} of {allMessages.filter((m: Message) => m.shipmentId === shipment.shipmentId).length}</span>
+                                  </div>
+                                  {msgs.length === 0 ? (
+                                    <p className="text-xs text-[#C0C8D4] italic px-4 py-4 text-center">No messages for this shipment</p>
+                                  ) : (
+                                    <ul>
+                                      {msgs.map((msg: Message) => (
+                                        <li key={msg.id} className="flex items-start gap-3 px-4 py-3 border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#FAFBFC] transition-colors">
+                                          <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 text-[#9000FF] flex items-center justify-center shrink-0 text-[11px] font-bold mt-0.5">
+                                            {msg.sender.charAt(0).toUpperCase()}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <span className="text-[11px] font-semibold text-[#212833] truncate">{msg.sender}</span>
+                                              <span className="text-[11px] text-[#C0C8D4] shrink-0">{new Date(msg.receivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                            </div>
+                                            {msg.subject && <p className="text-xs text-[#5E687B] font-medium truncate mt-0.5">{msg.subject}</p>}
+                                            <p className="text-xs text-[#9E9FAE] truncate mt-0.5">{msg.snippet}</p>
+                                          </div>
+                                          {msg.unread && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0 mt-2" />}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Docs panel */}
+                            {activeDetailTab === "docs" && (() => {
+                              const docs: DocumentWithExtraction[] = allDocuments
+                                .filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId)
+                                .sort((a: DocumentWithExtraction, b: DocumentWithExtraction) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .slice(0, 5);
+                              return (
+                                <div>
+                                  <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
+                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Attached Documents</span>
+                                    <span className="text-[11px] text-[#C0C8D4]">{docs.length} of {allDocuments.filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId).length}</span>
+                                  </div>
+                                  {docs.length === 0 ? (
+                                    <p className="text-xs text-[#C0C8D4] italic px-4 py-4 text-center">No documents attached to this shipment</p>
+                                  ) : (
+                                    <ul>
+                                      {docs.map((doc: DocumentWithExtraction) => (
+                                        <li key={doc.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#FAFBFC] transition-colors">
+                                          <FileText className="w-4 h-4 text-[#9000FF] shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-[#212833] truncate">{doc.fileName}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                              <span className="text-[11px] text-[#9E9FAE] uppercase">{doc.fileType}</span>
+                                              <span className="text-[11px] text-[#C0C8D4]">·</span>
+                                              <span className="text-[11px] text-[#9E9FAE]">{doc.sourceChannel}</span>
+                                              <span className="text-[11px] text-[#C0C8D4]">·</span>
+                                              <span className="text-[11px] text-[#9E9FAE]">{new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                            </div>
+                                          </div>
+                                          <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${doc.status === "extracted" ? "bg-emerald-50 text-emerald-700" : "bg-[#F0F4F8] text-[#9E9FAE]"}`}>
+                                            {doc.status}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Factory Quotes panel */}
+                            {activeDetailTab === "quotes" && (
+                              <div>
+                                <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
+                                  <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Factory Quotes</span>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
+                                        <HelpCircle className="w-3.5 h-3.5" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-3 text-[12px]" align="end">
+                                      <p className="font-semibold text-[#212833] mb-1">Factory Quotes</p>
+                                      <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForgeIQ tracks the margin automatically.</p>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                                <div className="p-3">
+                                  <QuotesTab
+                                    shipmentId={shipment.shipmentId}
+                                    quotes={shipmentQuotesMap.get(shipment.shipmentId) ?? []}
+                                    currentStage={shipment.currentStage}
+                                    supplierNames={apiSuppliers.map(s => s.name)}
+                                    onQuotesChange={(updated) =>
+                                      setShipmentQuotesMap(prev => new Map(prev).set(shipment.shipmentId, updated))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -985,7 +1398,7 @@ export function Atelier() {
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#9000FF] rounded-l-xl" />
                 <div className="flex items-center gap-2 mb-2">
                   <Wand2 className="w-3.5 h-3.5 text-[#9000FF]" />
-                  <span className="text-[10px] font-bold text-[#212833] uppercase tracking-wider">Daily Briefing — May 15</span>
+                  <span className="text-xs font-bold text-[#212833] uppercase tracking-wider">Daily Briefing — May 15</span>
                 </div>
                 <p className="text-[12px] text-[#5E687B] leading-relaxed">
                   <span className="font-semibold text-red-500">2 overdue items</span> across 5 active POs.{" "}
@@ -993,10 +1406,10 @@ export function Atelier() {
                   <span className="font-medium text-[#212833]">PO-0160</span> QC has passed — balance wire of $21,700 needed to release the container.
                 </p>
                 <div className="mt-2.5 flex gap-2">
-                  <button onClick={() => handleChipClick("Draft all replies for overdue POs")} className="text-[9px] bg-[#9000FF] text-white px-2.5 py-1 rounded-full font-semibold hover:bg-[#7A00D9] transition-colors">
+                  <button onClick={() => handleChipClick("Draft all replies for overdue POs")} className="text-[11px] bg-[#9000FF] text-white px-2.5 py-1 rounded-full font-semibold hover:bg-[#7A00D9] transition-colors">
                     Draft all replies
                   </button>
-                  <button onClick={() => handleChipClick("Show payment plan for all active POs")} className="text-[9px] bg-[#F0F4F8] text-[#5E687B] px-2.5 py-1 rounded-full font-medium hover:bg-[#E5EAF0] transition-colors">
+                  <button onClick={() => handleChipClick("Show payment plan for all active POs")} className="text-[11px] bg-[#F0F4F8] text-[#5E687B] px-2.5 py-1 rounded-full font-medium hover:bg-[#E5EAF0] transition-colors">
                     Show payment plan
                   </button>
                 </div>
@@ -1056,7 +1469,7 @@ export function Atelier() {
               {!aiLoading && (
                 <div className="flex flex-wrap gap-2 ml-8">
                   {["Draft reply to Guangzhou", "Approve Tianjin delay", "Initiate wire $21,700", "Show PO-0168 quotes"].map(c => (
-                    <button key={c} onClick={() => handleChipClick(c)} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
+                    <button key={c} onClick={() => handleChipClick(c)} className="text-[11px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
                       {c}
                     </button>
                   ))}
@@ -1084,7 +1497,7 @@ export function Atelier() {
               </button>
             </div>
             <div className="mt-1.5 text-center">
-              <span className="text-[9px] text-[#A0ABB8]">
+              <span className="text-[11px] text-[#A0ABB8]">
                 Press <kbd className="font-mono bg-[#F0F4F8] px-1 rounded border border-[#E5EAF0]">⌘</kbd> + <kbd className="font-mono bg-[#F0F4F8] px-1 rounded border border-[#E5EAF0]">K</kbd> to open command bar
               </span>
             </div>
@@ -1144,12 +1557,12 @@ export function Atelier() {
               </p>
               <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                  <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
                   <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceTarget.currentStageId}</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-[#9000FF] shrink-0" />
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
+                  <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
                   <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
                 </div>
               </div>
@@ -1203,7 +1616,7 @@ export function Atelier() {
                 <FileText className="w-4 h-4 text-[#9000FF] shrink-0"/>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-[#212833] truncate">{newPOFile.name}</div>
-                  <div className="text-[10px] text-[#9E9FAE]">{(newPOFile.size / 1024).toFixed(0)} KB</div>
+                  <div className="text-xs text-[#9E9FAE]">{(newPOFile.size / 1024).toFixed(0)} KB</div>
                 </div>
                 <button onClick={() => setNewPOFile(null)} className="text-[#9E9FAE] hover:text-[#5E687B] transition-colors">
                   <X className="w-3.5 h-3.5"/>
@@ -1230,15 +1643,15 @@ export function Atelier() {
           {/* PO Numbers — create mode: full form; edit mode: read-only display */}
           {editingShipmentId !== null ? (
           <div className="space-y-2 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers (read-only)</span>
+            <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers (read-only)</span>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div>
-                <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Buyer PO</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer PO</label>
                 <input readOnly value={newPOForm.buyerPoNumber || "—"}
                   className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Supplier PO</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier PO</label>
                 <input readOnly value={newPOForm.poNumber}
                   className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
               </div>
@@ -1247,9 +1660,9 @@ export function Atelier() {
           ) : (
           <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers</span>
+              <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers</span>
               {/* Mode toggle */}
-              <div className="flex items-center border border-[#E5EAF0] rounded-md overflow-hidden text-[10px] font-semibold">
+              <div className="flex items-center border border-[#E5EAF0] rounded-md overflow-hidden text-xs font-semibold">
                 <button type="button"
                   onClick={() => setBuyerPoMode("auto")}
                   className={`px-2.5 py-1 transition-colors ${buyerPoMode === "auto" ? "bg-[#9000FF] text-white" : "bg-white text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
@@ -1265,7 +1678,7 @@ export function Atelier() {
 
             {buyerPoMode === "auto" ? (
               <div className="space-y-2">
-                <p className="text-[10px] text-[#9E9FAE]">
+                <p className="text-xs text-[#9E9FAE]">
                   Click to auto-generate the next buyer + supplier PO pair from your numbering scheme. The counter advances on each use.
                 </p>
                 <button
@@ -1284,19 +1697,19 @@ export function Atelier() {
                 {newPOForm.buyerPoNumber ? (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Buyer PO <span className="text-[#9E9FAE] font-normal">(generated)</span></label>
+                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer PO <span className="text-[#9E9FAE] font-normal">(generated)</span></label>
                       <input readOnly value={newPOForm.buyerPoNumber}
                         className="w-full border border-emerald-200 bg-emerald-50 rounded-md px-2 py-1.5 text-[11px] text-emerald-700 font-mono outline-none cursor-default"/>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-[#5E687B] mb-1">Supplier PO <span className="text-[#9E9FAE] font-normal">(override allowed)</span></label>
+                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier PO <span className="text-[#9E9FAE] font-normal">(override allowed)</span></label>
                       <input value={newPOForm.poNumber}
                         onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
                         className={`w-full border rounded-md px-2 py-1.5 text-[11px] font-mono outline-none focus:ring-1 transition-colors ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[10px] text-amber-600 text-center">Click above to generate PO numbers before submitting.</p>
+                  <p className="text-xs text-amber-600 text-center">Click above to generate PO numbers before submitting.</p>
                 )}
               </div>
             ) : (
@@ -1321,10 +1734,10 @@ export function Atelier() {
                             }));
                           }}
                           className={`w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 transition-colors ${newPOForm.buyerPoNumber === deal.buyerPoNumber ? "bg-emerald-50" : "bg-white"}`}>
-                          <span className="text-[10px] font-mono font-semibold text-emerald-700">{deal.buyerPoNumber}</span>
-                          <span className="text-[10px] text-[#5E687B] truncate">{deal.customerName}</span>
+                          <span className="text-xs font-mono font-semibold text-emerald-700">{deal.buyerPoNumber}</span>
+                          <span className="text-xs text-[#5E687B] truncate">{deal.customerName}</span>
                           {newPOForm.buyerPoNumber === deal.buyerPoNumber && (
-                            <span className="ml-auto text-[9px] font-bold text-emerald-600">selected</span>
+                            <span className="ml-auto text-[11px] font-bold text-emerald-600">selected</span>
                           )}
                         </button>
                       ))}
@@ -1356,7 +1769,7 @@ export function Atelier() {
               </div>
             )}
             {poNumberError && (
-              <p className="text-[11px] text-red-600">{poNumberError}</p>
+              <p className="text-xs text-red-600">{poNumberError}</p>
             )}
           </div>
           )}
@@ -1423,7 +1836,7 @@ export function Atelier() {
                 disabled={createSupplierMutation.isPending}
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors disabled:opacity-60"/>
               {newPOForm.supplierId && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#9000FF] font-medium pointer-events-none">✓</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#9000FF] font-medium pointer-events-none">✓</span>
               )}
               {supplierOpen && (
                 <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-[#E5EAF0] rounded-md shadow-lg max-h-44 overflow-y-auto">
@@ -1443,7 +1856,7 @@ export function Atelier() {
                             setSupplierOpen(false);
                           }} className="w-full text-left px-3 py-2 text-sm text-[#212833] hover:bg-[#F7F9FA] flex items-center gap-2">
                             {s.name}
-                            <span className="text-[10px] text-[#9E9FAE] ml-auto">{s.country}</span>
+                            <span className="text-xs text-[#9E9FAE] ml-auto">{s.country}</span>
                           </button>
                         ))}
                         {supplierQuery.trim() && !exactMatch && (
@@ -1467,7 +1880,7 @@ export function Atelier() {
               )}
             </div>
             {createSupplierMutation.isPending && (
-              <p className="text-[10px] text-[#9000FF] mt-1 flex items-center gap-1">
+              <p className="text-xs text-[#9000FF] mt-1 flex items-center gap-1">
                 <span className="w-2.5 h-2.5 border border-[#9000FF]/40 border-t-[#9000FF] rounded-full animate-spin"/>
                 Creating supplier…
               </p>
@@ -1525,14 +1938,14 @@ export function Atelier() {
             </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-[#5E687B] mb-1">Buyer Unit Price (USD)</label>
+                <label className="block text-xs text-[#5E687B] mb-1">Buyer Unit Price (USD)</label>
                 <input type="number" min="0" step="0.01" value={newPOForm.buyerUnitPrice}
                   onChange={e => setNewPOForm(p => ({ ...p, buyerUnitPrice: e.target.value }))}
                   placeholder="e.g. 6.50"
                   className="w-full border border-[#E5EAF0] rounded-md px-2 py-1.5 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors"/>
               </div>
               <div>
-                <label className="block text-[10px] text-[#5E687B] mb-1">Buyer Quantity</label>
+                <label className="block text-xs text-[#5E687B] mb-1">Buyer Quantity</label>
                 <input type="number" min="1" value={newPOForm.buyerQuantity}
                   onChange={e => setNewPOForm(p => ({ ...p, buyerQuantity: e.target.value }))}
                   placeholder="e.g. 5000"
@@ -1563,7 +1976,7 @@ export function Atelier() {
               {milestones.length < 3 && (
                 <button type="button"
                   onClick={() => setMilestones(prev => [...prev, { label: "Milestone", percent: "0", dueDate: "" }])}
-                  className="text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] flex items-center gap-0.5 transition-colors">
+                  className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] flex items-center gap-0.5 transition-colors">
                   <Plus className="w-3 h-3"/>Add row
                 </button>
               )}
@@ -1584,7 +1997,7 @@ export function Atelier() {
                         <input type="number" min="0" max="100" value={m.percent}
                           onChange={e => setMilestones(prev => prev.map((x, j) => j === i ? { ...x, percent: e.target.value } : x))}
                           className="w-full border border-[#E5EAF0] rounded-md pl-2 pr-5 py-1.5 text-xs text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#9E9FAE] pointer-events-none">%</span>
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#9E9FAE] pointer-events-none">%</span>
                       </div>
                       <button type="button" onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
                         disabled={milestones.length <= 1}
@@ -1595,7 +2008,7 @@ export function Atelier() {
                     <div className="grid grid-cols-[1fr_auto] gap-1.5 items-center pl-0">
                       <input type="date" value={m.dueDate} onChange={e => setMilestones(prev => prev.map((x, j) => j === i ? { ...x, dueDate: e.target.value } : x))}
                         className="border border-[#E5EAF0] rounded-md px-2 py-1 text-xs text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
-                      <span className="text-[10px] text-[#5E687B] font-medium whitespace-nowrap">{amountStr}</span>
+                      <span className="text-xs text-[#5E687B] font-medium whitespace-nowrap">{amountStr}</span>
                     </div>
                   </div>
                 );
@@ -1604,13 +2017,13 @@ export function Atelier() {
             {(() => {
               const total = milestones.reduce((s, m) => s + (Number(m.percent) || 0), 0);
               return total !== 100 ? (
-                <p className="text-[11px] text-amber-600 mt-1.5">Percentages sum to {total}% — must equal 100% to save.</p>
+                <p className="text-xs text-amber-600 mt-1.5">Percentages sum to {total}% — must equal 100% to save.</p>
               ) : (
-                <p className="text-[11px] text-emerald-600 mt-1.5">✓ Percentages sum to 100%</p>
+                <p className="text-xs text-emerald-600 mt-1.5">✓ Percentages sum to 100%</p>
               );
             })()}
             {milestonesError && (
-              <p className="text-[11px] text-red-600 mt-1">{milestonesError}</p>
+              <p className="text-xs text-red-600 mt-1">{milestonesError}</p>
             )}
           </div>
           )}

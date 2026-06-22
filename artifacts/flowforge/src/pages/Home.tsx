@@ -328,14 +328,14 @@ function StageConfigModal({ stages, onSave, onClose }: { stages: Stage[]; onSave
     <div className="fixed inset-0 z-50 bg-[#212833]/20 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[85vh]">
         <div className="px-5 py-4 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-          <div><h2 className="text-sm font-bold text-[#212833]">Workflow Stages</h2><p className="text-[11px] text-[#5E687B] mt-0.5">Customize your supply chain milestones.</p></div>
+          <div><h2 className="text-sm font-bold text-[#212833]">Workflow Stages</h2><p className="text-xs text-[#5E687B] mt-0.5">Customize your supply chain milestones.</p></div>
           <button onClick={onClose} className="p-1.5 hover:bg-[#E5EAF0] rounded-md text-[#5E687B]"><X size={16}/></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">
           <div className="space-y-2">
             {local.map((st, i) => (
               <div key={st.id} className="flex items-center gap-3 bg-white border border-[#E5EAF0] p-2.5 rounded-lg shadow-sm hover:border-[#D6E3EB] transition-colors group">
-                <div className="w-5 h-5 rounded-full bg-[#F0F4F8] text-[#5E687B] flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</div>
+                <div className="w-5 h-5 rounded-full bg-[#F0F4F8] text-[#5E687B] flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</div>
                 <input type="text" value={st.label} onChange={e => update(st.id, e.target.value)} className="flex-1 text-sm font-medium text-[#212833] outline-none border border-transparent focus:border-[#9000FF]/30 px-2 py-1 rounded" />
                 <button onClick={() => remove(st.id)} className="text-[#9E9FAE] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash2 size={14}/></button>
                 <div className="text-[#C0C8D4] cursor-grab active:cursor-grabbing p-1"><GripVertical size={14}/></div>
@@ -362,8 +362,8 @@ function PaymentStatus({ payments }: { payments: Payment[] }) {
   const overdue = bal != null && !bal.paid && new Date(`${bal.dueDate} 2026`) < new Date();
   return (
     <div className="flex items-center gap-1.5 mt-1.5">
-      <div className={`flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded border ${dep.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><DollarSign size={8}/>{dep.percent}% {dep.paid?"paid":"due "+dep.dueDate}</div>
-      {bal != null && <div className={`flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded border ${bal.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":overdue?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><CreditCard size={8}/>{bal.percent}% {bal.paid?"paid":overdue?"OVERDUE":"due "+bal.dueDate}</div>}
+      <div className={`flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded border ${dep.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><DollarSign size={8}/>{dep.percent}% {dep.paid?"paid":"due "+dep.dueDate}</div>
+      {bal != null && <div className={`flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded border ${bal.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":overdue?"bg-red-50 text-red-600 border-red-100 animate-pulse":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}><CreditCard size={8}/>{bal.percent}% {bal.paid?"paid":overdue?"OVERDUE":"due "+bal.dueDate}</div>}
     </div>
   );
 }
@@ -374,15 +374,15 @@ function PaymentStatus({ payments }: { payments: Payment[] }) {
 function QuotePanel({ quotes, shipmentId, onSelect }: { quotes: FactoryQuote[]; shipmentId: string; onSelect: (sid: string, idx: number) => void }) {
   return (
     <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3.5 mb-4">
-      <div className="flex items-center gap-2 mb-3"><Sparkles size={12} className="text-[#9000FF]"/><span className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider">Factory Quotes</span><span className="text-[9px] text-[#5E687B] ml-auto">Click to select</span></div>
+      <div className="flex items-center gap-2 mb-3"><Sparkles size={12} className="text-[#9000FF]"/><span className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">Factory Quotes</span><span className="text-[11px] text-[#5E687B] ml-auto">Click to select</span></div>
       <div className="flex flex-col gap-2">
         {quotes.map((q,idx) => (
           <button key={q.factory} onClick={() => onSelect(shipmentId,idx)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${q.selected?"border-[#9000FF]/40 bg-white shadow-sm":"border-[#E5EAF0] bg-white hover:border-[#9000FF]/20"}`}>
             <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${q.selected?"border-[#9000FF] bg-[#9000FF]":"border-[#D6E3EB]"}`}>{q.selected&&<Check size={9} className="text-white"/>}</div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-[#212833] flex items-center gap-1.5">{q.factory}<span className="text-[9px] bg-[#F0F4F8] text-[#5E687B] px-1 rounded border border-[#E5EAF0] font-normal">{q.country}</span>{q.selected&&<span className="text-[9px] bg-[#9000FF]/10 text-[#9000FF] px-1.5 rounded font-semibold">Selected</span>}</div>
-              <div className="flex gap-3 mt-0.5 text-[9px] text-[#5E687B]"><span>MOQ {q.moq.toLocaleString()}</span><span>{q.leadDays}d lead</span></div>
+              <div className="text-xs font-semibold text-[#212833] flex items-center gap-1.5">{q.factory}<span className="text-[11px] bg-[#F0F4F8] text-[#5E687B] px-1 rounded border border-[#E5EAF0] font-normal">{q.country}</span>{q.selected&&<span className="text-[11px] bg-[#9000FF]/10 text-[#9000FF] px-1.5 rounded font-semibold">Selected</span>}</div>
+              <div className="flex gap-3 mt-0.5 text-[11px] text-[#5E687B]"><span>MOQ {q.moq.toLocaleString()}</span><span>{q.leadDays}d lead</span></div>
             </div>
             <div className={`text-sm font-bold shrink-0 ${q.selected?"text-[#9000FF]":"text-[#212833]"}`}>${q.unitPrice.toFixed(2)}</div>
           </button>
@@ -398,25 +398,25 @@ function QuotePanel({ quotes, shipmentId, onSelect }: { quotes: FactoryQuote[]; 
 function TaskList({ tasks, onOpenMessage, onDismiss, onClose }: { tasks: Task[]; onOpenMessage: (id: string) => void; onDismiss: (id: string) => void; onClose: () => void }) {
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
-      <div className="px-3 pt-3 pb-1"><div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-2 flex items-center gap-1"><Zap size={9} className="text-[#9000FF]"/>AI-generated from email analysis</div></div>
+      <div className="px-3 pt-3 pb-1"><div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-2 flex items-center gap-1"><Zap size={9} className="text-[#9000FF]"/>AI-generated from email analysis</div></div>
       {tasks.length===0 ? (
         <div className="flex flex-col items-center justify-center py-6 gap-2 text-[#5E687B]"><CheckCircle2 size={22} className="text-emerald-400"/><p className="text-xs font-medium">All clear — inbox is clean</p></div>
       ) : tasks.map((task,i) => (
         <div key={task.id} className="mx-3 mb-2 bg-white border border-[#E5EAF0] rounded-lg p-2.5 shadow-sm">
           <div className="flex items-start gap-2">
-            <div className="flex items-center gap-1.5 mt-0.5 shrink-0"><span className="text-[9px] text-[#9E9FAE] font-medium w-3">{i+1}</span><span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${urgencyCls(task.urgency)}`}>{task.urgency}</span></div>
+            <div className="flex items-center gap-1.5 mt-0.5 shrink-0"><span className="text-[11px] text-[#9E9FAE] font-medium w-3">{i+1}</span><span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${urgencyCls(task.urgency)}`}>{task.urgency}</span></div>
             <div className="flex-1 min-w-0">
               <div className="text-[11px] font-semibold text-[#212833] leading-tight mb-1">{task.title}</div>
-              <div className="text-[9px] text-[#5E687B] flex items-center gap-1 mb-2"><CalendarClock size={8}/>{task.source} · {task.sourceAge}</div>
+              <div className="text-[11px] text-[#5E687B] flex items-center gap-1 mb-2"><CalendarClock size={8}/>{task.source} · {task.sourceAge}</div>
               <div className="flex gap-1.5 flex-wrap">
-                {task.messageId&&<button onClick={()=>{onOpenMessage(task.messageId!);onClose();}} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded font-semibold hover:bg-[#7A00D9] flex items-center gap-1"><ArrowRight size={8}/>{task.action}</button>}
-                <button onClick={()=>onDismiss(task.id)} className="text-[9px] bg-[#F0F4F8] text-[#5E687B] px-2 py-1 rounded font-medium hover:bg-[#E5EAF0]">Dismiss</button>
+                {task.messageId&&<button onClick={()=>{onOpenMessage(task.messageId!);onClose();}} className="text-[11px] bg-[#9000FF] text-white px-2 py-1 rounded font-semibold hover:bg-[#7A00D9] flex items-center gap-1"><ArrowRight size={8}/>{task.action}</button>}
+                <button onClick={()=>onDismiss(task.id)} className="text-[11px] bg-[#F0F4F8] text-[#5E687B] px-2 py-1 rounded font-medium hover:bg-[#E5EAF0]">Dismiss</button>
               </div>
             </div>
           </div>
         </div>
       ))}
-      <div className="px-3 pt-1 pb-3"><button className="text-[10px] text-[#9000FF] font-semibold hover:underline flex items-center gap-1">View all 12 tasks<ArrowRight size={9}/></button></div>
+      <div className="px-3 pt-1 pb-3"><button className="text-xs text-[#9000FF] font-semibold hover:underline flex items-center gap-1">View all 12 tasks<ArrowRight size={9}/></button></div>
     </div>
   );
 }
@@ -451,7 +451,7 @@ function CalendarView({ shipments }: { shipments: Shipment[] }) {
             <h2 className="font-bold text-base text-[#212833]">{monthName}</h2>
             <button onClick={()=>setViewMonth(m=>Math.min(5,m+1))} className="p-1.5 hover:bg-[#F0F4F8] rounded-md text-[#5E687B] transition-colors"><ChevronRight size={16}/></button>
           </div>
-          <div className="flex items-center gap-3 text-[10px] font-semibold">
+          <div className="flex items-center gap-3 text-xs font-semibold">
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#9000FF] inline-block"/>Ex-Factory</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"/>Payment</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"/>Overdue / Delayed</span>
@@ -460,7 +460,7 @@ function CalendarView({ shipments }: { shipments: Shipment[] }) {
 
         {/* Day headers */}
         <div className="grid grid-cols-7 mb-2">
-          {DAYS.map(d=><div key={d} className="text-[10px] font-bold text-[#5E687B] text-center uppercase tracking-wider pb-2">{d}</div>)}
+          {DAYS.map(d=><div key={d} className="text-xs font-bold text-[#5E687B] text-center uppercase tracking-wider pb-2">{d}</div>)}
         </div>
 
         {/* Cells */}
@@ -479,9 +479,9 @@ function CalendarView({ shipments }: { shipments: Shipment[] }) {
                     <div className={`text-xs font-bold mb-1.5 w-6 h-6 flex items-center justify-center rounded-full ${isToday?"bg-[#9000FF] text-white":isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{day}</div>
                     <div className="flex flex-col gap-0.5">
                       {evts.slice(0,2).map((e,ei)=>(
-                        <div key={ei} className={`text-[8px] font-semibold px-1 py-0.5 rounded border truncate flex items-center gap-1 ${eventColor(e)}`}>{e.po} {e.type==="payment"?<CreditCard size={8}/>:<MapPin size={8}/>}</div>
+                        <div key={ei} className={`text-[11px] font-semibold px-1 py-0.5 rounded border truncate flex items-center gap-1 ${eventColor(e)}`}>{e.po} {e.type==="payment"?<CreditCard size={8}/>:<MapPin size={8}/>}</div>
                       ))}
-                      {evts.length>2&&<div className="text-[8px] text-[#5E687B] font-medium pl-0.5">+{evts.length-2} more</div>}
+                      {evts.length>2&&<div className="text-[11px] text-[#5E687B] font-medium pl-0.5">+{evts.length-2} more</div>}
                     </div>
                   </>
                 )}
@@ -495,17 +495,17 @@ function CalendarView({ shipments }: { shipments: Shipment[] }) {
       <div className="w-[280px] border-l border-[#E5EAF0] bg-[#FAFBFC] flex flex-col shrink-0">
         <div className="p-4 border-b border-[#E5EAF0]">
           <div className="text-xs font-bold text-[#212833]">{selectedDay ? `${monthName.split(" ")[0]} ${selectedDay}` : "Key Dates"}</div>
-          <div className="text-[10px] text-[#5E687B] mt-0.5">{selectedDay ? `${selectedEvents.length} event${selectedEvents.length!==1?"s":""}` : "Click a date to see details"}</div>
+          <div className="text-xs text-[#5E687B] mt-0.5">{selectedDay ? `${selectedEvents.length} event${selectedEvents.length!==1?"s":""}` : "Click a date to see details"}</div>
         </div>
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
           {(selectedDay ? selectedEvents : eventsThisMonth).map((e,i)=>(
             <div key={i} className="bg-white border border-[#E5EAF0] rounded-lg p-3 shadow-sm">
-              <div className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border inline-flex items-center gap-1 mb-2 ${eventColor(e)}`}>
+              <div className={`text-[11px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border inline-flex items-center gap-1 mb-2 ${eventColor(e)}`}>
                 {e.type==="payment"?<CreditCard size={8}/>:<MapPin size={8}/>}
                 {e.type.replace("exfactory","Ex-Factory").replace("payment","Payment")}
               </div>
               <div className="text-xs font-semibold text-[#212833] mb-0.5">{e.label}</div>
-              <div className="text-[10px] text-[#5E687B] flex items-center gap-1"><span className="font-mono bg-[#F0F4F8] px-1 rounded text-[8px]">{e.po}</span>{!selectedDay&&<span>· {monthName.split(" ")[0]} {e.day}</span>}</div>
+              <div className="text-xs text-[#5E687B] flex items-center gap-1"><span className="font-mono bg-[#F0F4F8] px-1 rounded text-[11px]">{e.po}</span>{!selectedDay&&<span>· {monthName.split(" ")[0]} {e.day}</span>}</div>
             </div>
           ))}
           {selectedDay && selectedEvents.length===0&&(
@@ -514,12 +514,12 @@ function CalendarView({ shipments }: { shipments: Shipment[] }) {
         </div>
         {/* Summary stats */}
         <div className="p-3 border-t border-[#E5EAF0]">
-          <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">This Month</div>
+          <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">This Month</div>
           <div className="grid grid-cols-2 gap-2">
             {[{label:"Payments due", value: eventsThisMonth.filter(e=>e.type==="payment").length, cls:"text-amber-600"},{label:"Ex-factory", value:eventsThisMonth.filter(e=>e.type==="exfactory").length, cls:"text-[#9000FF]"}].map(s=>(
               <div key={s.label} className="bg-white rounded-lg border border-[#E5EAF0] p-2 text-center shadow-sm">
                 <div className={`text-lg font-bold ${s.cls}`}>{s.value}</div>
-                <div className="text-[9px] text-[#5E687B]">{s.label}</div>
+                <div className="text-[11px] text-[#5E687B]">{s.label}</div>
               </div>
             ))}
           </div>
@@ -547,7 +547,7 @@ function BuyersView() {
       <div className="w-[240px] border-r border-[#E5EAF0] bg-[#FAFBFC] flex flex-col shrink-0">
         <div className="p-4 border-b border-[#E5EAF0]">
           <div className="text-xs font-bold text-[#212833] mb-0.5 flex items-center gap-2"><Bot size={14} className="text-[#9000FF]"/>Buyer Chatbot</div>
-          <div className="text-[10px] text-[#5E687B]">Auto-answers buyer shipment queries</div>
+          <div className="text-xs text-[#5E687B]">Auto-answers buyer shipment queries</div>
         </div>
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
           {BUYER_CHATS.map(c=>(
@@ -557,14 +557,14 @@ function BuyersView() {
                 <span className="text-[11px] font-semibold text-[#212833] truncate">{c.buyer}</span>
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ml-1 ${c.resolved?"bg-emerald-400":"bg-amber-400"}`}/>
               </div>
-              <div className="text-[10px] text-[#5E687B] truncate">{c.question}</div>
-              <div className="text-[9px] text-[#9E9FAE] mt-0.5">{c.time} · {c.po}</div>
+              <div className="text-xs text-[#5E687B] truncate">{c.question}</div>
+              <div className="text-[11px] text-[#9E9FAE] mt-0.5">{c.time} · {c.po}</div>
             </button>
           ))}
         </div>
         <div className="p-3 border-t border-[#E5EAF0]">
-          <div className="text-[9px] text-[#5E687B] text-center">Widget embeds on buyer's website</div>
-          <button className="mt-1.5 w-full text-[10px] text-[#9000FF] font-semibold flex items-center justify-center gap-1 hover:underline"><Link2 size={10}/>Get embed code</button>
+          <div className="text-[11px] text-[#5E687B] text-center">Widget embeds on buyer's website</div>
+          <button className="mt-1.5 w-full text-xs text-[#9000FF] font-semibold flex items-center justify-center gap-1 hover:underline"><Link2 size={10}/>Get embed code</button>
         </div>
       </div>
 
@@ -572,11 +572,11 @@ function BuyersView() {
       <div className="flex-1 flex flex-col min-w-0 bg-white">
         <div className="border-b border-[#E5EAF0] px-5 py-3 flex items-center justify-between shrink-0">
           <div>
-            <div className="text-sm font-bold text-[#212833] flex items-center gap-2">{activeChat.buyer}<span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${activeChat.resolved?"bg-emerald-50 text-emerald-600 border border-emerald-100":"bg-amber-50 text-amber-600 border border-amber-100"}`}>{activeChat.resolved?"Resolved":"Pending"}</span></div>
-            <div className="text-[10px] text-[#5E687B]">{activeChat.po} · {activeChat.time}</div>
+            <div className="text-sm font-bold text-[#212833] flex items-center gap-2">{activeChat.buyer}<span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${activeChat.resolved?"bg-emerald-50 text-emerald-600 border border-emerald-100":"bg-amber-50 text-amber-600 border border-amber-100"}`}>{activeChat.resolved?"Resolved":"Pending"}</span></div>
+            <div className="text-xs text-[#5E687B]">{activeChat.po} · {activeChat.time}</div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="text-[10px] text-[#5E687B] border border-[#E5EAF0] px-2.5 py-1 rounded-md hover:bg-[#F0F4F8] font-medium transition-colors flex items-center gap-1"><ArrowUpRight size={11}/>Open PO</button>
+            <button className="text-xs text-[#5E687B] border border-[#E5EAF0] px-2.5 py-1 rounded-md hover:bg-[#F0F4F8] font-medium transition-colors flex items-center gap-1"><ArrowUpRight size={11}/>Open PO</button>
           </div>
         </div>
 
@@ -590,10 +590,10 @@ function BuyersView() {
             <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0"><Bot size={14} className="text-[#9000FF]"/></div>
             <div className="max-w-[80%]">
               <div className="bg-white border border-[#E5EAF0] shadow-sm text-[#212833] px-4 py-3 rounded-2xl rounded-tl-sm text-xs leading-relaxed">{activeChat.botAnswer}</div>
-              <div className="text-[9px] text-[#9E9FAE] mt-1 ml-1">FlowForgeIQ Bot · {activeChat.time}</div>
+              <div className="text-[11px] text-[#9E9FAE] mt-1 ml-1">FlowForgeIQ Bot · {activeChat.time}</div>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {["Track shipment","Payment status","Contact supplier"].map(a=>(
-                  <button key={a} className="text-[9px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold transition-colors">{a}</button>
+                  <button key={a} className="text-[11px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold transition-colors">{a}</button>
                 ))}
               </div>
             </div>
@@ -611,7 +611,7 @@ function BuyersView() {
         </div>
 
         <div className="p-4 border-t border-[#E5EAF0] bg-white shrink-0">
-          <div className="text-[9px] text-[#5E687B] mb-2 flex items-center gap-1"><Eye size={9}/>Preview as buyer</div>
+          <div className="text-[11px] text-[#5E687B] mb-2 flex items-center gap-1"><Eye size={9}/>Preview as buyer</div>
           <div className="flex gap-2">
             <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Type a buyer question to test..." className="flex-1 px-3 py-2 text-xs border border-[#E5EAF0] rounded-lg outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10"/>
             <button onClick={send} className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${input.trim()?"bg-[#9000FF] text-white hover:bg-[#7A00D9]":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}><Send size={11}/>Send</button>
@@ -621,16 +621,16 @@ function BuyersView() {
 
       {/* Right: analytics */}
       <div className="w-[240px] border-l border-[#E5EAF0] bg-[#FAFBFC] flex flex-col shrink-0 p-4">
-        <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-3">Bot Performance</div>
+        <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-3">Bot Performance</div>
         {[{ label:"Queries this week", value:"14", sub:"↑ 3 vs last week", pos:true },{ label:"Auto-resolved", value:"11", sub:"78.5% resolution rate", pos:true },{ label:"Escalated to you", value:"3", sub:"Port delay + payment q.", pos:false },{ label:"Avg response time", value:"<1s", sub:"vs 4h manual", pos:true }].map(s=>(
           <div key={s.label} className="bg-white border border-[#E5EAF0] rounded-lg p-3 mb-2 shadow-sm">
-            <div className="text-[9px] text-[#5E687B] mb-1">{s.label}</div>
+            <div className="text-[11px] text-[#5E687B] mb-1">{s.label}</div>
             <div className="text-lg font-bold text-[#212833]">{s.value}</div>
-            <div className={`text-[9px] font-semibold ${s.pos?"text-emerald-600":"text-amber-500"}`}>{s.sub}</div>
+            <div className={`text-[11px] font-semibold ${s.pos?"text-emerald-600":"text-amber-500"}`}>{s.sub}</div>
           </div>
         ))}
         <div className="mt-auto">
-          <button className="w-full text-[10px] bg-[#9000FF] text-white py-2 rounded-lg font-semibold hover:bg-[#7A00D9] transition-colors flex items-center justify-center gap-1.5"><ArrowUpRight size={11}/>Chatbot Settings</button>
+          <button className="w-full text-xs bg-[#9000FF] text-white py-2 rounded-lg font-semibold hover:bg-[#7A00D9] transition-colors flex items-center justify-center gap-1.5"><ArrowUpRight size={11}/>Chatbot Settings</button>
         </div>
       </div>
     </div>
@@ -687,17 +687,17 @@ function ImportView({ onDone }: { onDone: () => void }) {
                 <FileSpreadsheet size={32} className="text-green-600"/>
                 <div className="text-center"><div className="text-sm font-semibold text-[#212833]">Excel / CSV</div><div className="text-[11px] text-[#5E687B]">Upload .xlsx or .csv file</div></div>
                 <div onDragOver={e=>{e.preventDefault();setDragging(true)}} onDragLeave={()=>setDragging(false)} onDrop={()=>{setDragging(false);setStep(1)}}
-                  className={`w-full border border-dashed rounded-lg py-3 text-[10px] text-center transition-all ${dragging?"border-[#9000FF] bg-[#9000FF]/5 text-[#9000FF]":"border-[#E5EAF0] text-[#9E9FAE] group-hover:border-[#9000FF]/30"}`}>
+                  className={`w-full border border-dashed rounded-lg py-3 text-xs text-center transition-all ${dragging?"border-[#9000FF] bg-[#9000FF]/5 text-[#9000FF]":"border-[#E5EAF0] text-[#9E9FAE] group-hover:border-[#9000FF]/30"}`}>
                   {dragging?"Drop to import":"Drag & drop here"}
                 </div>
               </button>
               <button onClick={()=>setStep(1)} className="border-2 border-dashed border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#FAFBFF] rounded-xl p-6 flex flex-col items-center gap-3 transition-all">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
                 <div className="text-center"><div className="text-sm font-semibold text-[#212833]">Google Sheets</div><div className="text-[11px] text-[#5E687B]">Connect via Google</div></div>
-                <button className="w-full border border-[#E5EAF0] rounded-lg py-2 text-[10px] text-[#5E687B] hover:bg-[#F0F4F8] transition-colors">Sign in with Google</button>
+                <button className="w-full border border-[#E5EAF0] rounded-lg py-2 text-xs text-[#5E687B] hover:bg-[#F0F4F8] transition-colors">Sign in with Google</button>
               </button>
             </div>
-            <p className="text-[10px] text-[#9E9FAE] text-center">Your data is encrypted and never shared. Supported: .xlsx, .csv, Google Sheets</p>
+            <p className="text-xs text-[#9E9FAE] text-center">Your data is encrypted and never shared. Supported: .xlsx, .csv, Google Sheets</p>
           </div>
         )}
 
@@ -706,16 +706,16 @@ function ImportView({ onDone }: { onDone: () => void }) {
           <div>
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#212833] mb-1">Map your columns</h2><p className="text-sm text-[#5E687B]">We detected your spreadsheet. Confirm the column mapping below.</p></div>
             <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="grid grid-cols-3 bg-[#F0F4F8] px-4 py-2.5 text-[9px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0]">
+              <div className="grid grid-cols-3 bg-[#F0F4F8] px-4 py-2.5 text-[11px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0]">
                 <span>Your Column</span><span>Maps to</span><span>Confidence</span>
               </div>
               {IMPORT_COLUMNS.map(col=>(
                 <div key={col.sheet} className="grid grid-cols-3 px-4 py-2.5 border-b border-[#E5EAF0] last:border-b-0 items-center hover:bg-[#FAFBFC] transition-colors">
                   <span className="text-xs font-medium text-[#212833]">{col.sheet}</span>
-                  <span className="flex items-center gap-2 text-xs text-[#5E687B]"><ArrowRight size={12} className="text-[#9000FF]"/><span className="font-mono text-[10px] bg-[#F0F4F8] px-1.5 py-0.5 rounded">{col.mapped}</span></span>
+                  <span className="flex items-center gap-2 text-xs text-[#5E687B]"><ArrowRight size={12} className="text-[#9000FF]"/><span className="font-mono text-xs bg-[#F0F4F8] px-1.5 py-0.5 rounded">{col.mapped}</span></span>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-[#F0F4F8] rounded-full overflow-hidden"><div className={`h-full rounded-full ${col.confidence>=90?"bg-emerald-400":col.confidence>=75?"bg-amber-400":"bg-red-400"}`} style={{width:`${col.confidence}%`}}/></div>
-                    <span className={`text-[9px] font-bold w-7 ${col.confidence>=90?"text-emerald-600":col.confidence>=75?"text-amber-500":"text-red-500"}`}>{col.confidence}%</span>
+                    <span className={`text-[11px] font-bold w-7 ${col.confidence>=90?"text-emerald-600":col.confidence>=75?"text-amber-500":"text-red-500"}`}>{col.confidence}%</span>
                   </div>
                 </div>
               ))}
@@ -733,13 +733,13 @@ function ImportView({ onDone }: { onDone: () => void }) {
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#212833] mb-1">Preview import</h2><p className="text-sm text-[#5E687B]">5 POs detected from your spreadsheet. Review before importing.</p></div>
             <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm mb-6 overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-[#F0F4F8]"><tr>{["PO","Product","Supplier","Cost","Margin","Ex-Factory","Status"].map(h=><th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0] whitespace-nowrap">{h}</th>)}</tr></thead>
+                <thead className="bg-[#F0F4F8]"><tr>{["PO","Product","Supplier","Cost","Margin","Ex-Factory","Status"].map(h=><th key={h} className="px-3 py-2.5 text-left text-[11px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0] whitespace-nowrap">{h}</th>)}</tr></thead>
                 <tbody>
                   {[["PO-0142","Stainless Fork","Guangzhou Metalworks","$0.88","28%","May 17","At Risk"],["PO-0157","LED Cabinet Light","Shenzhen LEDPro","$4.20","31%","May 18","Delayed"],["PO-0160","Oak Flooring","Hangzhou Timber","$18.50","34%","May 22","On Track"],["PO-0165","Chrome Hanger","Tianjin Wire Works","$2.70","25%","Jun 02","At Risk"],["PO-0168","Grid Panel","Guangzhou Metalworks","$6.10","34%","Jun 10","On Track"]].map((row,i)=>(
                     <tr key={i} className="border-b border-[#E5EAF0] last:border-b-0 hover:bg-[#FAFBFC]">
                       {row.map((cell,j)=>(
                         <td key={j} className="px-3 py-2.5 text-[#212833]">
-                          {j===6?<span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${cell==="On Track"?"bg-emerald-50 text-emerald-600 border-emerald-100":cell==="Delayed"?"bg-red-50 text-red-600 border-red-100":"bg-amber-50 text-amber-600 border-amber-100"}`}>{cell}</span>:<span className={j===0?"font-mono text-[10px] text-[#5E687B]":""}>{cell}</span>}
+                          {j===6?<span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${cell==="On Track"?"bg-emerald-50 text-emerald-600 border-emerald-100":cell==="Delayed"?"bg-red-50 text-red-600 border-red-100":"bg-amber-50 text-amber-600 border-amber-100"}`}>{cell}</span>:<span className={j===0?"font-mono text-xs text-[#5E687B]":""}>{cell}</span>}
                         </td>
                       ))}
                     </tr>
@@ -761,7 +761,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
             <div className="text-center"><h2 className="text-xl font-bold text-[#212833] mb-2">Import complete!</h2><p className="text-sm text-[#5E687B]">5 POs successfully imported from your Excel tracker.</p></div>
             <div className="grid grid-cols-3 gap-3 w-full max-w-[400px]">
               {[{v:"5",l:"POs imported"},{v:"10",l:"Milestones mapped"},{v:"2",l:"Alerts triggered"}].map(s=>(
-                <div key={s.l} className="bg-white border border-[#E5EAF0] rounded-xl p-3 text-center shadow-sm"><div className="text-2xl font-bold text-[#9000FF]">{s.v}</div><div className="text-[10px] text-[#5E687B]">{s.l}</div></div>
+                <div key={s.l} className="bg-white border border-[#E5EAF0] rounded-xl p-3 text-center shadow-sm"><div className="text-2xl font-bold text-[#9000FF]">{s.v}</div><div className="text-xs text-[#5E687B]">{s.l}</div></div>
               ))}
             </div>
             <button onClick={onDone} className="px-6 py-2.5 bg-[#9000FF] text-white text-sm font-semibold rounded-lg hover:bg-[#7A00D9] transition-colors shadow-sm">Open Conversation Hub</button>
@@ -783,7 +783,7 @@ function DocStatusBadge({ status }: { status: string }) {
     failed:     "bg-red-50 text-red-600 border-red-200",
   };
   return (
-    <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${map[status] ?? "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+    <span className={`text-[11px] font-bold uppercase px-1.5 py-0.5 rounded border ${map[status] ?? "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
       {status}
     </span>
   );
@@ -887,7 +887,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1 text-[10px] text-[#5E687B] hover:text-[#212833] mb-3">
+      <button onClick={onBack} className="flex items-center gap-1 text-xs text-[#5E687B] hover:text-[#212833] mb-3">
         <ChevronLeft size={12}/>All documents
       </button>
       <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm bg-white">
@@ -898,7 +898,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
           <p className="text-xs font-semibold text-[#212833] truncate">{doc.fileName}</p>
           <div className="flex items-center gap-2 mt-1">
             <DocStatusBadge status={doc.status} />
-            {ext && <span className="text-[9px] text-[#5E687B]">{Math.round(ext.confidence * 100)}% confidence</span>}
+            {ext && <span className="text-[11px] text-[#5E687B]">{Math.round(ext.confidence * 100)}% confidence</span>}
           </div>
         </div>
         {ext && fields && Object.keys(fields).length > 0 && (
@@ -914,7 +914,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
               return (
                 <div key={key} className="px-3 py-1.5 group">
                   <div className="flex items-start gap-2">
-                    <span className="text-[10px] text-[#5E687B] font-medium w-[100px] shrink-0 pt-0.5">{label}</span>
+                    <span className="text-xs text-[#5E687B] font-medium w-[100px] shrink-0 pt-0.5">{label}</span>
                     <div className="flex-1 min-w-0">
                       {isEditing ? (
                         <div className="flex items-center gap-1">
@@ -958,16 +958,16 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
                         </button>
                       )}
                       {!isEditing && prov?.snippet && !correction && (
-                        <p className="text-[9px] text-[#5E687B] italic mt-0.5 truncate" title={prov.snippet}>
+                        <p className="text-xs text-[#5E687B] italic mt-0.5 truncate" title={prov.snippet}>
                           "{prov.snippet}"
                         </p>
                       )}
                       {correction && !isEditing && (
-                        <p className="text-[9px] text-green-600 mt-0.5">corrected</p>
+                        <p className="text-xs text-green-600 mt-0.5">corrected</p>
                       )}
                     </div>
                     {displayConfidence != null && !isEditing && (
-                      <span className={`text-[8px] font-bold shrink-0 pt-0.5 ${correction ? "text-green-600" : "text-[#9E9FAE]"}`}>
+                      <span className={`text-[11px] font-bold shrink-0 pt-0.5 ${correction ? "text-green-600" : "text-[#9E9FAE]"}`}>
                         {Math.round(displayConfidence * 100)}%
                       </span>
                     )}
@@ -979,13 +979,13 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
         )}
         {findings.length > 0 && (
           <div className="p-3 border-t border-[#F0F4F8]">
-            <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mb-1.5">
+            <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1.5">
               {findings.length} reconciliation issue{findings.length > 1 ? "s" : ""}
             </p>
             {findings.map((f, i) => {
               const finding = f as Record<string, unknown>;
               return (
-                <div key={i} className="text-[10px] text-[#5E687B] flex gap-1.5 mb-0.5">
+                <div key={i} className="text-xs text-[#5E687B] flex gap-1.5 mb-0.5">
                   <AlertCircle size={10} className="text-amber-500 shrink-0 mt-0.5" />
                   <span>{String(finding.type ?? "")}: expected {String(finding.expected ?? "?")} got {String(finding.actual ?? "?")}</span>
                 </div>
@@ -995,8 +995,8 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
         )}
         {ext?.transcriptText && (
           <div className="p-3 border-t border-[#F0F4F8]">
-            <p className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1">Transcript</p>
-            <p className="text-[10px] text-[#212833] leading-relaxed line-clamp-6">{ext.transcriptText}</p>
+            <p className="text-xs font-bold text-[#5E687B] uppercase tracking-wider mb-1">Transcript</p>
+            <p className="text-xs text-[#212833] leading-relaxed line-clamp-6">{ext.transcriptText}</p>
           </div>
         )}
       </div>
@@ -1041,13 +1041,13 @@ function DocsPanel({ shipmentId }: { shipmentId: string }) {
       ) : (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">
+            <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">
               {isLoading ? "Loading…" : `${docs.length} document${docs.length !== 1 ? "s" : ""}`}
             </span>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="text-[10px] text-[#9000FF] font-semibold flex items-center gap-1 hover:underline disabled:opacity-50"
+              className="text-xs text-[#9000FF] font-semibold flex items-center gap-1 hover:underline disabled:opacity-50"
             >
               <FilePlus size={10}/>{uploading ? "Uploading…" : "Add file"}
             </button>
@@ -1058,7 +1058,7 @@ function DocsPanel({ shipmentId }: { shipmentId: string }) {
               <p className="text-xs">No documents attached</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[10px] text-[#9000FF] font-semibold hover:underline mt-1"
+                className="text-xs text-[#9000FF] font-semibold hover:underline mt-1"
               >
                 Upload a file for this PO
               </button>
@@ -1089,16 +1089,16 @@ function DocsPanel({ shipmentId }: { shipmentId: string }) {
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="text-xs font-medium text-[#212833] truncate">{doc.fileName}</span>
                       {docType && (
-                        <span className="shrink-0 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#F0F0FF] text-[#9000FF] border border-[#9000FF]/15">{docType}</span>
+                        <span className="shrink-0 text-[11px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#F0F0FF] text-[#9000FF] border border-[#9000FF]/15">{docType}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-[9px] text-[#5E687B]">
+                    <div className="flex items-center gap-2 text-[11px] text-[#5E687B]">
                       <DocStatusBadge status={doc.status} />
                       {keyLabel && (
                         <span className="font-medium text-[#212833] truncate max-w-[80px]">{keyLabel}</span>
                       )}
                       {confidence != null && (
-                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${confidenceCls}`}>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${confidenceCls}`}>
                           {Math.round(confidence * 100)}%
                         </span>
                       )}
@@ -1153,7 +1153,7 @@ function ReconciliationChips({ shipmentId }: { shipmentId: string }) {
           ? `expected ${f.expected}, got ${f.actual}`
           : f.field ?? "";
         return (
-          <span key={i} className={`inline-flex items-start gap-1 text-[9px] font-semibold px-2 py-1 rounded-full border ${chipCls}`}
+          <span key={i} className={`inline-flex items-start gap-1 text-[11px] font-semibold px-2 py-1 rounded-full border ${chipCls}`}
             title={`${docName}: ${label}${detail ? " — " + detail : ""}`}>
             {icon}
             <span>{label}{detail ? `: ${detail}` : ""}</span>
@@ -1174,13 +1174,13 @@ function TemplatePicker({ stageId, onPick }: { stageId: string; onPick: (body: s
     <div className="mb-2 border border-[#9000FF]/20 rounded-lg overflow-hidden bg-[#FAFBFF]">
       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#9000FF]/10 bg-[#9000FF]/5">
         <Wand2 size={10} className="text-[#9000FF]"/>
-        <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Templates for this stage</span>
+        <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">Templates for this stage</span>
       </div>
       <div className="flex flex-col divide-y divide-[#E5EAF0]">
         {templates.map(t=>(
           <button key={t.label} onClick={()=>onPick(t.body)}
             className="flex items-center gap-2 px-3 py-2 text-left hover:bg-white transition-colors group">
-            <span className="text-[10px] font-medium text-[#212833] flex-1">{t.label}</span>
+            <span className="text-xs font-medium text-[#212833] flex-1">{t.label}</span>
             <ArrowRight size={10} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0"/>
           </button>
         ))}
@@ -1237,22 +1237,22 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {/* To */}
         <div className="flex items-start gap-2">
-          <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider w-14 pt-2 shrink-0">To</span>
+          <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider w-14 pt-2 shrink-0">To</span>
           <div className="flex-1 flex items-center gap-2 bg-[#F0F4F8] border border-[#E5EAF0] rounded-lg px-2.5 py-1.5">
             <span className="text-[11px] text-[#212833] font-medium truncate">{recipient}</span>
-            <span className="ml-auto text-[9px] text-[#9E9FAE] shrink-0">{shipment.supplier}</span>
+            <span className="ml-auto text-[11px] text-[#9E9FAE] shrink-0">{shipment.supplier}</span>
           </div>
         </div>
 
         {/* Channel */}
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Via</span>
+          <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Via</span>
           <div className="flex gap-1.5">
             {(["gmail", "whatsapp"] as ComposeChannel[]).map(ch => (
               <button
                 key={ch}
                 onClick={() => setChannel(ch)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                   channel === ch
                     ? "bg-[#9000FF] text-white border-[#9000FF] shadow-sm"
                     : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#9000FF]/30 hover:text-[#212833]"
@@ -1268,7 +1268,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
         {/* Subject (only for email) */}
         {channel === "gmail" && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Subject</span>
+            <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Subject</span>
             <input
               value={subject}
               onChange={e => setSubject(e.target.value)}
@@ -1286,7 +1286,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
               className="w-full flex items-center gap-1.5 px-3 py-1.5 text-left hover:bg-[#9000FF]/5 transition-colors"
             >
               <Wand2 size={10} className="text-[#9000FF]"/>
-              <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider flex-1">Stage templates — {shipment.currentStage}</span>
+              <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider flex-1">Stage templates — {shipment.currentStage}</span>
               {templateOpen ? <ChevronUp size={10} className="text-[#9000FF]"/> : <ChevronDown size={10} className="text-[#9000FF]"/>}
             </button>
             {templateOpen && (
@@ -1297,7 +1297,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
                     onClick={() => { setBody(t.body); setTemplateOpen(false); }}
                     className="flex items-center gap-2 px-3 py-2 text-left hover:bg-white transition-colors group"
                   >
-                    <span className="text-[10px] font-medium text-[#212833] flex-1">{t.label}</span>
+                    <span className="text-xs font-medium text-[#212833] flex-1">{t.label}</span>
                     <ArrowRight size={10} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0"/>
                   </button>
                 ))}
@@ -1309,9 +1309,9 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
         {/* Body */}
         <div className="flex-1 flex flex-col min-h-[140px]">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Message</span>
+            <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">Message</span>
             {body !== defaultBody && defaultBody && (
-              <button onClick={() => setBody(defaultBody)} className="text-[9px] text-[#9000FF] hover:underline flex items-center gap-0.5">
+              <button onClick={() => setBody(defaultBody)} className="text-[11px] text-[#9000FF] hover:underline flex items-center gap-0.5">
                 <Sparkles size={8}/>Reset draft
               </button>
             )}
@@ -1328,18 +1328,18 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
 
       {/* Footer */}
       <div className="shrink-0 p-3 border-t border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[10px] text-[#9E9FAE]">
+        <div className="flex items-center gap-1.5 text-xs text-[#9E9FAE]">
           {channel === "gmail" ? <Mail size={10}/> : <MessageCircle size={10}/>}
           <span>Sending via {channel === "gmail" ? "Email" : "WhatsApp"} to {shipment.supplier}</span>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button onClick={onCancel} className="px-3 py-1.5 text-[10px] font-semibold text-[#5E687B] border border-[#E5EAF0] rounded-md hover:bg-[#F0F4F8] transition-colors">
+          <button onClick={onCancel} className="px-3 py-1.5 text-xs font-semibold text-[#5E687B] border border-[#E5EAF0] rounded-md hover:bg-[#F0F4F8] transition-colors">
             Cancel
           </button>
           <button
             onClick={handleSend}
             disabled={!body.trim() || sending}
-            className={`px-3 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+            className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
               body.trim() && !sending
                 ? "bg-[#9000FF] text-white hover:bg-[#7A00D9]"
                 : "bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"
@@ -1382,8 +1382,8 @@ function SearchResults({ query, messages, shipments, onOpen }: { query: string; 
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5EAF0] rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] z-50 mx-6 overflow-hidden max-h-[280px] overflow-y-auto">
       <div className="px-3 py-2 border-b border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between">
-        <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">{matched.length} result{matched.length!==1?"s":""} for "{query}"</span>
-        <span className="text-[9px] text-[#9E9FAE]">messages</span>
+        <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">{matched.length} result{matched.length!==1?"s":""} for "{query}"</span>
+        <span className="text-[11px] text-[#9E9FAE]">messages</span>
       </div>
       {matched.length===0 ? (
         <div className="py-6 text-center text-xs text-[#9E9FAE]">No messages match "{query}"</div>
@@ -1395,13 +1395,13 @@ function SearchResults({ query, messages, shipments, onOpen }: { query: string; 
               <span className="text-xs font-semibold text-[#212833] truncate">{m.sender}</span>
               {chIcon(m.channel)}
               {poMatch && (
-                <span className="shrink-0 text-[9px] font-semibold bg-[#9000FF]/10 text-[#9000FF] px-1.5 py-0.5 rounded-full leading-none">
+                <span className="shrink-0 text-[11px] font-semibold bg-[#9000FF]/10 text-[#9000FF] px-1.5 py-0.5 rounded-full leading-none">
                   PO {poMatch}
                 </span>
               )}
-              <span className="text-[9px] text-[#9E9FAE] ml-auto shrink-0">{m.timestamp}</span>
+              <span className="text-[11px] text-[#9E9FAE] ml-auto shrink-0">{m.timestamp}</span>
             </div>
-            <div className="text-[10px] text-[#5E687B] line-clamp-1">{m.snippet}</div>
+            <div className="text-xs text-[#5E687B] line-clamp-1">{m.snippet}</div>
           </button>
         );
       })}
@@ -1451,7 +1451,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
       <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-[#9E9FAE]">
         <CheckCircle2 size={32} className="text-emerald-400 mb-3 opacity-60"/>
         <p className="text-sm font-semibold text-[#212833]">All clear — no messages need review</p>
-        <p className="text-[11px] mt-1 max-w-xs">Inbound emails with high confidence are automatically routed. Low-confidence matches land here for manual assignment.</p>
+        <p className="text-xs mt-1 max-w-xs">Inbound emails with high confidence are automatically routed. Low-confidence matches land here for manual assignment.</p>
       </div>
     );
   }
@@ -1461,10 +1461,10 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2 shrink-0">
         <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
         <div>
-          <p className="text-[11px] font-semibold text-amber-800">
+          <p className="text-xs font-semibold text-amber-800">
             {messages.length} email{messages.length !== 1 ? "s" : ""} couldn't be automatically routed
           </p>
-          <p className="text-[10px] text-amber-700 mt-0.5">Assign each message to the correct shipment. Future emails from the same sender will be auto-routed.</p>
+          <p className="text-xs text-amber-700 mt-0.5">Assign each message to the correct shipment. Future emails from the same sender will be auto-routed.</p>
         </div>
       </div>
       {messages.map(msg => {
@@ -1480,33 +1480,33 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
                 <div className="w-7 h-7 rounded-full bg-[#F0F4F8] flex items-center justify-center text-xs font-bold text-[#5E687B] shrink-0">{msg.sender.charAt(0)}</div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-[#212833] truncate">{msg.sender}</div>
-                  <div className="text-[9px] text-[#5E687B] truncate">{msg.rawSenderEmail ?? ""}</div>
+                  <div className="text-[11px] text-[#5E687B] truncate">{msg.rawSenderEmail ?? ""}</div>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {msg.routedToUserName && (
-                  <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 flex items-center gap-1 shrink-0">
+                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 flex items-center gap-1 shrink-0">
                     <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm4 2H4a4 4 0 0 0-4 4v1h16v-1a4 4 0 0 0-4-4z"/></svg>
                     {msg.routedToUserName}
                   </span>
                 )}
                 {conf != null && (
-                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${conf >= 0.65 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-red-50 text-red-600 border-red-100"}`}>
+                  <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${conf >= 0.65 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-red-50 text-red-600 border-red-100"}`}>
                     {Math.round(conf * 100)}% match
                   </span>
                 )}
-                <span className="text-[9px] text-[#9E9FAE]">{relativeAge(msg.receivedAt)}</span>
+                <span className="text-[11px] text-[#9E9FAE]">{relativeAge(msg.receivedAt)}</span>
               </div>
             </div>
-            <div className="text-[10px] text-[#5E687B] bg-[#FAFBFC] rounded-lg p-2 mb-2.5 line-clamp-2 leading-relaxed border border-[#E5EAF0]">
+            <div className="text-xs text-[#5E687B] bg-[#FAFBFC] rounded-lg p-2 mb-2.5 line-clamp-2 leading-relaxed border border-[#E5EAF0]">
               {msg.snippet}
             </div>
             {guessShip && (
-              <div className="flex items-center gap-1.5 mb-2.5 text-[9px] text-[#5E687B] bg-[#9000FF]/4 rounded-md px-2 py-1.5 border border-[#9000FF]/15">
+              <div className="flex items-center gap-1.5 mb-2.5 text-[11px] text-[#5E687B] bg-[#9000FF]/4 rounded-md px-2 py-1.5 border border-[#9000FF]/15">
                 <Sparkles size={9} className="text-[#9000FF] shrink-0"/>
                 <span>AI suggests: <span className="font-semibold text-[#9000FF]">{guessShip.po}</span> · {guessShip.supplier}</span>
                 {!selectedShipId && (
-                  <button onClick={() => setAssignments(p => ({ ...p, [msg.id]: guessShip.shipmentId }))} className="ml-auto text-[8px] font-bold text-[#9000FF] hover:underline shrink-0">Use suggestion</button>
+                  <button onClick={() => setAssignments(p => ({ ...p, [msg.id]: guessShip.shipmentId }))} className="ml-auto text-[11px] font-bold text-[#9000FF] hover:underline shrink-0">Use suggestion</button>
                 )}
               </div>
             )}
@@ -1514,7 +1514,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
               <select
                 value={selectedShipId ?? ""}
                 onChange={e => { const v = Number(e.target.value); if (v > 0) setAssignments(p => ({ ...p, [msg.id]: v })); else setAssignments(p => { const next = { ...p }; delete next[msg.id]; return next; }); }}
-                className="flex-1 text-[10px] border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#212833] outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/15"
+                className="flex-1 text-xs border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#212833] outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/15"
               >
                 <option value="">— Assign to shipment —</option>
                 {shipments.map(s => (
@@ -1524,7 +1524,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
               <button
                 disabled={!selectedShipId || assigning[msg.id]}
                 onClick={() => selectedShipId && doAssign(msg.id, selectedShipId, selectedShip?.customer ?? msg.sender)}
-                className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
+                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
               >
                 {assigning[msg.id] ? "Saving…" : <><Check size={10}/>Assign</>}
               </button>
@@ -1610,7 +1610,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
     <div className="flex-1 overflow-y-auto p-6 max-w-xl mx-auto w-full">
       <div className="mb-6">
         <h2 className="text-sm font-bold text-[#212833] mb-1">Email Integrations</h2>
-        <p className="text-[11px] text-[#5E687B]">Connect Gmail to send replies directly from FlowForgeIQ. Inbound emails and forwarded chats are received at{" "}
+        <p className="text-xs text-[#5E687B]">Connect Gmail to send replies directly from FlowForgeIQ. Inbound emails and forwarded chats are received at{" "}
           <button onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});}} className="inline-flex items-center gap-1 text-[#212833] hover:text-[#9000FF] transition-colors group" title="Copy to clipboard">
             <span className="font-mono font-semibold">{inboundEmail}</span>
             {copied ? <Check size={9} className="text-emerald-500"/> : <Copy size={9} className="opacity-0 group-hover:opacity-60"/>}
@@ -1627,32 +1627,32 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
             </div>
             <div>
               <div className="text-xs font-bold text-[#212833]">Gmail (Send-as)</div>
-              <div className="text-[10px] text-[#5E687B]">Reply to inbound emails via your Gmail account</div>
+              <div className="text-xs text-[#5E687B]">Reply to inbound emails via your Gmail account</div>
             </div>
           </div>
           {status?.connected ? (
-            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
               <Wifi size={9}/>Connected
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[9px] font-bold text-[#9E9FAE] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1 text-[11px] font-bold text-[#9E9FAE] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-1 rounded-full">
               <WifiOff size={9}/>Not connected
             </span>
           )}
         </div>
         {status?.connected && status.gmailAddress && (
-          <div className="text-[10px] text-[#5E687B] bg-[#FAFBFC] rounded-md px-2.5 py-1.5 border border-[#E5EAF0] mb-3 font-mono">
+          <div className="text-xs text-[#5E687B] bg-[#FAFBFC] rounded-md px-2.5 py-1.5 border border-[#E5EAF0] mb-3 font-mono">
             {status.gmailAddress}
           </div>
         )}
         {!status?.clientConfigured && (
-          <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-3 flex items-start gap-1.5">
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-3 flex items-start gap-1.5">
             <AlertCircle size={10} className="text-amber-500 mt-0.5 shrink-0"/>
             <span><span className="font-semibold">GOOGLE_CLIENT_ID</span> and <span className="font-semibold">GOOGLE_CLIENT_SECRET</span> env vars are not configured. Set them to enable Gmail OAuth.</span>
           </div>
         )}
         {testResult && (
-          <div className={`text-[10px] rounded-md px-2.5 py-1.5 mb-3 border flex items-center gap-1.5 ${testResult.ok ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+          <div className={`text-xs rounded-md px-2.5 py-1.5 mb-3 border flex items-center gap-1.5 ${testResult.ok ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
             {testResult.ok ? <CheckCircle2 size={10} className="shrink-0"/> : <AlertCircle size={10} className="shrink-0"/>}
             {testResult.msg}
           </div>
@@ -1663,14 +1663,14 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
               <button
                 onClick={handleTest}
                 disabled={testing}
-                className="text-[10px] font-semibold px-3 py-1.5 rounded-md border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors disabled:opacity-40"
+                className="text-xs font-semibold px-3 py-1.5 rounded-md border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors disabled:opacity-40"
               >
                 {testing ? "Sending…" : "Send test email"}
               </button>
               <button
                 onClick={handleDisconnect}
                 disabled={disconnectMutation.isPending}
-                className="text-[10px] text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-md border border-red-100 hover:bg-red-50 transition-colors disabled:opacity-40"
+                className="text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-md border border-red-100 hover:bg-red-50 transition-colors disabled:opacity-40"
               >
                 {disconnectMutation.isPending ? "Disconnecting…" : "Disconnect"}
               </button>
@@ -1679,7 +1679,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
             <button
               onClick={handleConnect}
               disabled={!status?.clientConfigured}
-              className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-md bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-md bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ExternalLink size={10}/>Connect Gmail via OAuth
             </button>
@@ -1695,10 +1695,10 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
           </div>
           <div>
             <div className="text-xs font-bold text-[#212833]">Inbound Email Routing</div>
-            <div className="text-[10px] text-[#5E687B]">Emails sent to your ingest address are parsed, matched to shipments, and appear in your inbox.</div>
+            <div className="text-xs text-[#5E687B]">Emails sent to your ingest address are parsed, matched to shipments, and appear in your inbox.</div>
           </div>
         </div>
-        <div className="space-y-1.5 text-[10px] text-[#5E687B]">
+        <div className="space-y-1.5 text-xs text-[#5E687B]">
           {[
             { label: "Ingest endpoint", value: "POST /api/webhooks/email" },
             { label: "Confidence threshold", value: "65% — below this goes to Needs Review" },
@@ -2391,7 +2391,7 @@ export default function Home() {
 
             {/* Messages */}
             <div className="px-3 pt-1.5 pb-2">
-              <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase px-2 mb-1.5">Messages</div>
+              <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase px-2 mb-1.5">Messages</div>
               <div className="space-y-0.5">
                 {([
                   {id:"all"      as Channel|"all", label:"All Inbox", icon:<Inbox className="w-3 h-3"/>,         count:messages.length},
@@ -2410,8 +2410,8 @@ export default function Home() {
                       className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
                       <span className="flex items-center gap-1.5">{f.icon}<span className="text-xs">{f.label}</span></span>
                       {unread>0
-                        ? <span className={`text-[10px] px-1.5 rounded-full font-bold ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{unread}</span>
-                        : <span className="text-[10px] text-[#9E9FAE]">{f.count}</span>}
+                        ? <span className={`text-xs px-1.5 rounded-full font-bold ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{unread}</span>
+                        : <span className="text-xs text-[#9E9FAE]">{f.count}</span>}
                     </button>
                   );
                 })}
@@ -2423,8 +2423,8 @@ export default function Home() {
                       className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${flaggedFilter&&activeView==="inbox"?"bg-[#E5EAF0] text-[#212833] font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
                       <span className="flex items-center gap-1.5"><Bookmark className="w-3 h-3"/><span className="text-xs">Flagged</span></span>
                       {flaggedCount>0
-                        ? <span className={`text-[10px] px-1.5 rounded-full font-bold ${flaggedFilter&&activeView==="inbox"?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>
-                        : <span className="text-[10px] text-[#9E9FAE]">0</span>}
+                        ? <span className={`text-xs px-1.5 rounded-full font-bold ${flaggedFilter&&activeView==="inbox"?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>
+                        : <span className="text-xs text-[#9E9FAE]">0</span>}
                     </button>
                   );
                 })()}
@@ -2433,8 +2433,8 @@ export default function Home() {
                   className={`w-full flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${activeView==="needs-review"?"bg-amber-50 text-amber-800 font-semibold":"text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
                   <span className="flex items-center gap-1.5"><AlertCircle className="w-3 h-3 text-amber-500"/><span className="text-xs">Needs Review</span></span>
                   {needsReviewCount>0
-                    ? <span className={`text-[10px] px-1.5 rounded-full font-bold ${activeView==="needs-review"?"bg-amber-500 text-white":"bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>
-                    : <span className="text-[10px] text-[#9E9FAE]">0</span>}
+                    ? <span className={`text-xs px-1.5 rounded-full font-bold ${activeView==="needs-review"?"bg-amber-500 text-white":"bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>
+                    : <span className="text-xs text-[#9E9FAE]">0</span>}
                 </button>
               </div>
             </div>
@@ -2444,8 +2444,8 @@ export default function Home() {
             {/* Purchase Orders */}
             <div className="px-3 py-2 flex flex-col" style={{maxHeight:"33vh", overflowY:"auto"}}>
               <div className="flex items-center justify-between px-2 mb-1.5 shrink-0">
-                <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">Purchase Orders</div>
-                {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-[10px] flex items-center gap-0.5"><X size={9}/>Clear</button>}
+                <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase">Purchase Orders</div>
+                {selectedShipmentId&&<button onClick={()=>setSelectedShipmentId(null)} className="text-[#9000FF] text-xs flex items-center gap-0.5"><X size={9}/>Clear</button>}
               </div>
               <div className="space-y-0.5">
                 {shipments.map(s=>{
@@ -2462,23 +2462,23 @@ export default function Home() {
                         <span className={`text-xs font-bold leading-none truncate ${isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{s.po}</span>
                         {s.buyerPoNumbers && s.buyerPoNumbers.length > 0 ? (
                           <>
-                            <span className="text-[8px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumbers[0]}</span>
+                            <span className="text-[11px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumbers[0]}</span>
                             {s.buyerPoNumbers.length > 1 && (
-                              <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0" title={s.buyerPoNumbers.join(", ")}>+{s.buyerPoNumbers.length - 1}</span>
+                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0" title={s.buyerPoNumbers.join(", ")}>+{s.buyerPoNumbers.length - 1}</span>
                             )}
                           </>
                         ) : s.buyerPoNumber ? (
-                          <span className="text-[8px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumber}</span>
+                          <span className="text-[11px] font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded leading-none shrink-0">{s.buyerPoNumber}</span>
                         ) : null}
                       </div>
-                      <div className="text-[10px] text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
+                      <div className="text-xs text-[#5E687B] truncate pl-3 mb-1 leading-tight">{s.product}</div>
                       <div className="pl-3">
                         <div className="h-[3px] bg-[#F0F4F8] rounded-full overflow-hidden">
                           <div className={`h-full rounded-full ${s.status==="delayed"?"bg-red-400":s.status==="at-risk"?"bg-amber-400":"bg-[#9000FF]"}`} style={{width:`${pct}%`}}/>
                         </div>
                         <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[10px] text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
-                          <span className="text-[10px] text-[#9E9FAE] shrink-0">{pct}%</span>
+                          <span className="text-xs text-[#9E9FAE] truncate">{cur?.label??"—"}</span>
+                          <span className="text-xs text-[#9E9FAE] shrink-0">{pct}%</span>
                         </div>
                       </div>
                     </button>
@@ -2492,8 +2492,8 @@ export default function Home() {
             {/* Suppliers */}
             <div className="px-3 py-2">
               <div className="flex items-center justify-between px-2 mb-1.5">
-                <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">Suppliers</div>
-                {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-[10px] flex items-center gap-0.5"><X size={9}/>Clear</button>}
+                <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase">Suppliers</div>
+                {supplierFilter&&<button onClick={()=>setSupplierFilter(null)} className="text-[#9000FF] text-xs flex items-center gap-0.5"><X size={9}/>Clear</button>}
               </div>
               <div className="space-y-0.5">
                 {SUPPLIERS.map(s=>(
@@ -2504,14 +2504,14 @@ export default function Home() {
                       <span className="truncate text-xs">{s.label}</span>
                     </span>
                     {s.unread>0
-                      ? <span className={`text-[10px] px-1.5 rounded-full font-bold shrink-0 ml-1 ${supplierFilter===s.id?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{s.unread}</span>
-                      : <span className="text-[10px] text-[#9E9FAE] shrink-0 ml-1">{s.count}</span>}
+                      ? <span className={`text-xs px-1.5 rounded-full font-bold shrink-0 ml-1 ${supplierFilter===s.id?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{s.unread}</span>
+                      : <span className="text-xs text-[#9E9FAE] shrink-0 ml-1">{s.count}</span>}
                   </button>
                 ))}
               </div>
               {(selectedShipmentId||supplierFilter||channelFilter!=="all"||flaggedFilter)&&activeView==="inbox"&&(
                 <button onClick={()=>{setSelectedShipmentId(null);setSupplierFilter(null);setChannelFilter("all");setFlaggedFilter(false);}}
-                  className="mt-3 w-full text-[10px] text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
+                  className="mt-3 w-full text-xs text-[#5E687B] hover:text-[#212833] flex items-center justify-center gap-1 py-1.5 border border-dashed border-[#E5EAF0] rounded-md">
                   <X size={9}/>Clear all filters
                 </button>
               )}
@@ -2522,10 +2522,10 @@ export default function Home() {
                 <div className="mx-3 h-px bg-[#E5EAF0]"/>
                 <div className="px-3 py-2">
                   <div className="flex items-center justify-between px-2 mb-1.5">
-                    <div className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                    <div className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
                       <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
                     </div>
-                    <span className="text-[9px] text-[#5E687B]">{tasks.filter(t => t.done).length}/{tasks.length} done</span>
+                    <span className="text-[11px] text-[#5E687B]">{tasks.filter(t => t.done).length}/{tasks.length} done</span>
                   </div>
                   <div className="space-y-1">
                     {tasks.slice(0, 5).map(task => (
@@ -2540,7 +2540,7 @@ export default function Home() {
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.urgency === "high" ? "bg-red-500" : task.urgency === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]"}`} />
                             <p className={`text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 ${task.done ? "line-through text-[#5E687B]" : ""}`}>{task.title}</p>
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-[#5E687B] pl-3">
+                          <div className="flex items-center gap-1 text-xs text-[#5E687B] pl-3">
                             <CalendarClock className="w-2.5 h-2.5" />
                             <span className="truncate">{task.source}</span>
                             <span className="opacity-40">·</span>
@@ -2595,17 +2595,17 @@ export default function Home() {
                 {breadcrumbSegments.map((seg, i) => (
                   <React.Fragment key={i}>
                     {i > 0 && (
-                      <span className="text-[#C0C8D4] text-[10px] select-none">/</span>
+                      <span className="text-[#C0C8D4] text-xs select-none">/</span>
                     )}
                     {seg.href ? (
                       <button
                         onClick={() => navigate(seg.href!)}
-                        className="text-[10px] font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
+                        className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
                       >
                         {seg.label}
                       </button>
                     ) : (
-                      <span className="text-[10px] font-medium text-[#5E687B]">
+                      <span className="text-xs font-medium text-[#5E687B]">
                         {seg.label}
                       </span>
                     )}
@@ -2666,7 +2666,7 @@ export default function Home() {
                       <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF] shrink-0"><ListTodo size={14}/></div>
                       <div>
                         <div className="text-[11px] font-bold text-[#212833]">Today's Tasks</div>
-                        <div className="text-[9px] text-[#5E687B]">{highCount>0?<span className="text-red-500 font-semibold">{highCount} urgent</span>:null}{highCount>0&&tasks.length>highCount?" · ":null}{tasks.length>highCount?`${tasks.length-highCount} more`:null}{tasks.length===0?"All clear!":null}</div>
+                        <div className="text-[11px] text-[#5E687B]">{highCount>0?<span className="text-red-500 font-semibold">{highCount} urgent</span>:null}{highCount>0&&tasks.length>highCount?" · ":null}{tasks.length>highCount?`${tasks.length-highCount} more`:null}{tasks.length===0?"All clear!":null}</div>
                       </div>
                     </div>
                     <button onClick={()=>setShowTaskPanel(false)} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={13}/></button>
@@ -2678,7 +2678,7 @@ export default function Home() {
             {activeView==="inbox"&&<button onClick={()=>setShowPasteChat(true)} className="hover:text-[#212833] p-1" title="Paste chat message (WhatsApp / WeChat / iMessage)"><Clipboard size={15}/></button>}
             <button className="hover:text-[#212833] p-1 relative"><Bell size={15}/>{unreadCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}</button>
             <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
-            <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">AX</div>
+            <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-xs font-bold cursor-pointer">AX</div>
           </div>
         </div>
 
@@ -2693,7 +2693,7 @@ export default function Home() {
                     <div className="w-8 h-8 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF]"><Clipboard size={15}/></div>
                     <div>
                       <div className="text-sm font-bold text-[#212833]">Paste Chat Message</div>
-                      <div className="text-[10px] text-[#5E687B]">Paste a WhatsApp, WeChat, or iMessage export — AI will extract supply-chain data</div>
+                      <div className="text-xs text-[#5E687B]">Paste a WhatsApp, WeChat, or iMessage export — AI will extract supply-chain data</div>
                     </div>
                   </div>
                   <button onClick={closePasteChat} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={16}/></button>
@@ -2703,7 +2703,7 @@ export default function Home() {
                   <div className="p-5 space-y-4">
                     {/* Channel selector */}
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Source platform</div>
+                      <div className="text-xs font-bold text-[#5E687B] uppercase tracking-wider mb-2">Source platform</div>
                       <div className="flex gap-2">
                         {(["whatsapp","wechat","imessage","sms"] as const).map(ch=>(
                           <button key={ch} onClick={()=>setPasteChatChannel(ch)} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${pasteChatChannel===ch?"bg-[#9000FF]/5 border-[#9000FF]/30 text-[#9000FF]":"border-[#E5EAF0] text-[#5E687B] hover:border-[#C0C8D4]"}`}>
@@ -2716,17 +2716,17 @@ export default function Home() {
 
                     {/* Sender hint */}
                     <div>
-                      <label className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 block">Supplier / sender name <span className="font-normal normal-case opacity-70">(optional, helps matching)</span></label>
+                      <label className="text-xs font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 block">Supplier / sender name <span className="font-normal normal-case opacity-70">(optional, helps matching)</span></label>
                       <input value={pasteChatSenderHint} onChange={e=>setPasteChatSenderHint(e.target.value)} placeholder="e.g. Guangzhou Metalworks" className="w-full text-xs border border-[#E5EAF0] rounded-lg px-3 py-2 outline-none focus:border-[#9000FF]/40 focus:ring-2 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4]"/>
                     </div>
 
                     {/* Chat text */}
                     <div>
-                      <label className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 block">Paste chat text</label>
-                      <textarea value={pasteChatText} onChange={e=>setPasteChatText(e.target.value)} placeholder={"[23/05/2026, 14:32] Supplier: Hi, quick update on PO-2026-0142...\n[23/05/2026, 14:33] Me: Thanks, noted!"} rows={7} className="w-full text-[11px] font-mono border border-[#E5EAF0] rounded-lg px-3 py-2.5 outline-none focus:border-[#9000FF]/40 focus:ring-2 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4] resize-none"/>
+                      <label className="text-xs font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 block">Paste chat text</label>
+                      <textarea value={pasteChatText} onChange={e=>setPasteChatText(e.target.value)} placeholder={"[23/05/2026, 14:32] Supplier: Hi, quick update on PO-2026-0142...\n[23/05/2026, 14:33] Me: Thanks, noted!"} rows={7} className="w-full text-xs font-mono border border-[#E5EAF0] rounded-lg px-3 py-2.5 outline-none focus:border-[#9000FF]/40 focus:ring-2 focus:ring-[#9000FF]/10 placeholder:text-[#C0C8D4] resize-none"/>
                     </div>
 
-                    {pasteChatError&&<div className="text-[10px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex items-center gap-1.5"><AlertCircle size={11} className="shrink-0"/>{pasteChatError}</div>}
+                    {pasteChatError&&<div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex items-center gap-1.5"><AlertCircle size={11} className="shrink-0"/>{pasteChatError}</div>}
 
                     <div className="flex justify-end gap-2 pt-1">
                       <button onClick={closePasteChat} className="text-xs px-3 py-1.5 border border-[#E5EAF0] rounded-lg text-[#5E687B] hover:bg-[#F0F4F8] font-medium">Cancel</button>
@@ -2752,9 +2752,9 @@ export default function Home() {
                     {/* Routing badge */}
                     <div className="flex items-center gap-2">
                       {pasteChatResult.routingStatus==="routed"
-                        ? <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full"><CheckCircle2 size={10}/>Matched to shipment</span>
-                        : <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full"><AlertCircle size={10}/>Needs review — no shipment matched</span>}
-                      <span className="text-[9px] text-[#9E9FAE]">confidence {Math.round(pasteChatResult.confidence*100)}%</span>
+                        ? <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full"><CheckCircle2 size={10}/>Matched to shipment</span>
+                        : <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full"><AlertCircle size={10}/>Needs review — no shipment matched</span>}
+                      <span className="text-[11px] text-[#9E9FAE]">confidence {Math.round(pasteChatResult.confidence*100)}%</span>
                     </div>
 
                     {/* Sender + shipment */}
@@ -2767,7 +2767,7 @@ export default function Home() {
                     {/* Extracted fields */}
                     {pasteChatResult.extractedFields&&Object.values(pasteChatResult.extractedFields).some(v=>v!=null)&&(
                       <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3">
-                        <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Extracted fields</div>
+                        <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Extracted fields</div>
                         <div className="space-y-1 text-[11px]">
                           {pasteChatResult.extractedFields.eta&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">ETA:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.eta}</span></div>}
                           {pasteChatResult.extractedFields.quotePrice!=null&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">Quote:</span><span className="text-[#212833]">${pasteChatResult.extractedFields.quotePrice}</span></div>}
@@ -2781,8 +2781,8 @@ export default function Home() {
                     {/* AI draft */}
                     {pasteChatResult.aiDraft&&(
                       <div className="bg-[#9000FF]/[0.03] border border-[#9000FF]/10 rounded-xl p-3">
-                        <div className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Sparkles size={9}/>AI draft reply</div>
-                        <p className="text-[11px] text-[#212833] leading-relaxed">{pasteChatResult.aiDraft}</p>
+                        <div className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Sparkles size={9}/>AI draft reply</div>
+                        <p className="text-xs text-[#212833] leading-relaxed">{pasteChatResult.aiDraft}</p>
                       </div>
                     )}
 
@@ -2849,8 +2849,8 @@ export default function Home() {
               <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
                 <AlertCircle size={13} className="text-amber-500"/>
                 <span className="text-xs font-bold text-[#212833]">Needs Review</span>
-                {needsReviewCount>0&&<span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full">{needsReviewCount}</span>}
-                <span className="text-[10px] text-[#9E9FAE] ml-1">— Assign unmatched inbound emails to the correct shipment</span>
+                {needsReviewCount>0&&<span className="text-[11px] font-bold bg-amber-100 text-amber-700 px-1.5 rounded-full">{needsReviewCount}</span>}
+                <span className="text-xs text-[#9E9FAE] ml-1">— Assign unmatched inbound emails to the correct shipment</span>
               </div>
               <NeedsReviewPanel
                 messages={needsReviewMessages}
@@ -2895,7 +2895,7 @@ export default function Home() {
                     <button
                       onClick={() => { setShowComposePanel(true); }}
                       title={`Compose new message for ${activeShipment.po}`}
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold text-[#9000FF] hover:bg-[#9000FF]/8 border border-[#9000FF]/20 transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-[#9000FF] hover:bg-[#9000FF]/8 border border-[#9000FF]/20 transition-colors"
                     >
                       <Plus size={11}/>Compose
                     </button>
@@ -2915,13 +2915,13 @@ export default function Home() {
                           <span className={`font-semibold text-[11px] truncate ${msg.unread&&!replied?"text-[#212833]":"text-[#5E687B]"}`}>{msg.sender}</span>
                           {chIcon(msg.channel)}
                           {msg.rawChatText && (
-                            <span className="text-[8px] font-bold px-1 py-0.5 rounded border bg-indigo-50 text-indigo-600 border-indigo-100 shrink-0 flex items-center gap-0.5">
+                            <span className="text-[11px] font-bold px-1 py-0.5 rounded border bg-indigo-50 text-indigo-600 border-indigo-100 shrink-0 flex items-center gap-0.5">
                               <MessageSquare size={7}/>Fwd chat
                             </span>
                           )}
-                          {replied&&<span className="text-[8px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 rounded-full font-semibold flex items-center gap-0.5"><Check size={7}/>Replied</span>}
+                          {replied&&<span className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 rounded-full font-semibold flex items-center gap-0.5"><Check size={7}/>Replied</span>}
                           {msg.routingConfidence != null && msg.routingConfidence < 0.85 && (
-                            <span title={`Routing confidence: ${Math.round(msg.routingConfidence*100)}% (${msg.matchMethod ?? ""})`} className={`text-[8px] font-bold px-1 py-0.5 rounded border shrink-0 ${msg.routingConfidence>=0.65?"bg-amber-50 text-amber-600 border-amber-100":"bg-red-50 text-red-600 border-red-100"}`}>
+                            <span title={`Routing confidence: ${Math.round(msg.routingConfidence*100)}% (${msg.matchMethod ?? ""})`} className={`text-[11px] font-bold px-1 py-0.5 rounded border shrink-0 ${msg.routingConfidence>=0.65?"bg-amber-50 text-amber-600 border-amber-100":"bg-red-50 text-red-600 border-red-100"}`}>
                               {Math.round(msg.routingConfidence*100)}%
                             </span>
                           )}
@@ -2939,13 +2939,13 @@ export default function Home() {
                             className="p-0.5 rounded text-[#9E9FAE] opacity-0 group-hover/row:opacity-100 hover:text-red-500 hover:scale-110 transition-all">
                             <Trash2 size={11}/>
                           </button>
-                          <span className={`text-[9px] ${msg.unread&&!replied?"text-[#9000FF] font-semibold":"text-[#5E687B]"}`}>{msg.timestamp}</span>
+                          <span className={`text-[11px] ${msg.unread&&!replied?"text-[#9000FF] font-semibold":"text-[#5E687B]"}`}>{msg.timestamp}</span>
                         </div>
                       </div>
                       <div className={`text-[11px] pl-3 mb-1.5 line-clamp-2 leading-relaxed ${msg.unread&&!replied?"text-[#212833]":"text-[#9E9FAE]"}`}>{msg.snippet}</div>
                       <div className="flex flex-wrap gap-1 pl-3">
                         {msg.aiTags.map(tag=>(
-                          <span key={tag} className="text-[8px] font-medium px-1.5 py-0.5 rounded bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] flex items-center gap-0.5">
+                          <span key={tag} className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] flex items-center gap-0.5">
                             {tag.startsWith("risk")||tag.startsWith("delay")||tag.startsWith("payment")?<AlertCircle size={7} className="text-red-500"/>:<Sparkles size={7} className="text-[#9000FF]"/>}{tag}
                           </span>
                         ))}
@@ -2967,7 +2967,7 @@ export default function Home() {
                 <div className="flex-1 flex flex-col items-center justify-center text-center text-[#9E9FAE]">
                   <Trash2 size={28} className="mb-3 opacity-30"/>
                   <p className="text-sm font-semibold text-[#5E687B]">Message deleted</p>
-                  <p className="text-[11px] mt-1">Select another message from the list</p>
+                  <p className="text-xs mt-1">Select another message from the list</p>
                 </div>
               )}
               {/* Compose panel (replaces normal detail when open) */}
@@ -2985,7 +2985,7 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                        <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
                         <button
                           type="button"
                           onClick={e => copyPo(activeShipment.po, e)}
@@ -2996,7 +2996,7 @@ export default function Home() {
                             ? <Check size={9} className="text-emerald-500 shrink-0" />
                             : <Copy size={9} className="opacity-0 group-hover/spo:opacity-50 shrink-0 transition-opacity" />}
                         </button>
-                        <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer PO</span>
+                        <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer PO</span>
                         {activeShipment.buyerPoNumbers && activeShipment.buyerPoNumbers.length > 0 ? (
                           <>
                             {activeShipment.buyerPoNumbers.map(bpo => (
@@ -3027,213 +3027,483 @@ export default function Home() {
                         ) : (
                           <span className="font-mono text-xs text-[#C0C8D4]">—</span>
                         )}
-                        <span className="text-[9px] bg-[#E5EAF0] text-[#5E687B] px-1.5 rounded font-medium">{activeShipment.customer}</span>
-                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${statusCls(activeShipment.status)}`}>{activeShipment.status==="on-track"?<Check size={8}/>:<AlertCircle size={8}/>}{activeShipment.status}</span>
+                        <span className="text-[11px] bg-[#E5EAF0] text-[#5E687B] px-1.5 rounded font-medium">{activeShipment.customer}</span>
+                        <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${statusCls(activeShipment.status)}`}>{activeShipment.status==="on-track"?<Check size={8}/>:<AlertCircle size={8}/>}{activeShipment.status}</span>
                       </div>
                       <div className="text-[11px] text-[#5E687B]">{activeShipment.product}</div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div>
-                      <div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div>
+                    <div className="flex items-start gap-1.5 shrink-0">
+                      <div className="text-right"><div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
+                      <button onClick={()=>setShipmentContextExpanded(v=>!v)} className="p-1 rounded hover:bg-[#E5EAF0] text-[#5E687B] transition-colors mt-0.5" title={shipmentContextExpanded?"Collapse details":"Expand details"}>
+                        {shipmentContextExpanded?<ChevronUp size={11}/>:<ChevronDown size={11}/>}
+                      </button>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Progressive-disclosure sections — hidden when compose panel open or message cleared */}
-              {!showComposePanel && activeMessageId !== "__cleared__" && activeMessage && <>
-                <div className="flex-1 overflow-y-auto">
-                  {/* Quote panel — quotes stage only */}
-                  {isQuotesStage && activeShipment?.quotes && (
-                    <div className="px-4 pt-4 shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
-                  )}
-
-                  {/* Message body — always visible primary content */}
-                  {!isQuotesStage && (
-                    <div className="p-4">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
-                          <div className="text-[9px] text-[#5E687B] flex items-center gap-1 flex-wrap">
-                            {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
-                            {activeMessage.rawChatText && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[8px] uppercase tracking-wide">
-                                <MessageSquare size={8}/>Forwarded chat
-                              </span>
+                  {shipmentContextExpanded&&<>
+                  {/* Stage bar */}
+                  <div className="bg-white rounded-lg border border-[#E5EAF0] p-2.5 mb-2.5">
+                    <div className="flex items-center justify-between text-[11px] mb-1.5">
+                      <span className="font-bold text-[#212833] flex items-center gap-1"><MapPin size={9} className="text-[#9000FF]"/>{activeStage?.label??"—"}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#5E687B]">Stage {activeStageIdx+1} of {stages.length}</span>
+                        <button
+                          onClick={() => activeShipment && openAdvanceDialog(activeShipment)}
+                          className="text-[11px] font-semibold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-2 py-0.5 rounded-full hover:bg-[#9000FF]/15 transition-colors flex items-center gap-1">
+                          <ChevronRight size={8}/>Advance
+                        </button>
+                        <button
+                          onClick={() => setShowHistory(h => !h)}
+                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showHistory?"bg-[#9000FF]/10 border-[#9000FF]/20 text-[#9000FF]":"text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}>
+                          <Clock size={8}/>History
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex gap-px h-1.5 mb-2">{stages.map((_,idx)=><div key={idx} className={`flex-1 rounded-full transition-all duration-500 ${idx<activeStageIdx?"bg-[#9000FF]":idx===activeStageIdx?"bg-[#9000FF] opacity-50":"bg-[#E5EAF0]"}`}/>)}</div>
+                    <div className="flex items-center gap-1 overflow-x-auto">{stages.slice(activeStageIdx,activeStageIdx+5).map((st,i)=><div key={st.id} className={`flex items-center gap-1 shrink-0 text-[11px] ${i===0?"text-[#9000FF] font-bold":"text-[#9E9FAE]"}`}>{i>0&&<ChevronRight size={8} className="text-[#D6E3EB]"/>}{st.label}</div>)}</div>
+                    {showHistory&&activeShipment&&(
+                      <div className="mt-2.5 pt-2.5 border-t border-[#F0F4F8]">
+                        <StageHistory
+                          shipmentId={activeShipment.shipmentId}
+                          stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {/* Payment inline */}
+                  <div className="space-y-1.5">
+                    {activeShipment.payments.map((p, i) => {
+                      const ov = !p.paid && new Date(`${p.dueDate} 2026`) < new Date();
+                      const isFormOpen = markPaidForm?.shipmentId === activeShipment.id && markPaidForm?.paymentIdx === i;
+                      return (
+                        <div key={i}>
+                          <div className="flex items-center gap-2">
+                            <div className={`flex flex-col gap-0.5 text-[11px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ov ? "bg-red-50 text-red-600 border-red-100" : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+                              <div className="flex items-center gap-1">
+                                {p.paid ? <CheckCircle2 size={9}/> : ov ? <AlertCircle size={9}/> : <CreditCard size={9}/>}
+                                {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : ov ? "OVERDUE" : `due ${p.dueDate}`}
+                                {p.paid && p.invoiceNumber && (
+                                  <span className="text-emerald-700/70 font-normal">· {p.invoiceNumber}</span>
+                                )}
+                              </div>
+                              {(p.intermediaryAdvanceUsd ?? 0) > 0 && (
+                                <div className="flex items-center gap-1 text-amber-600 font-medium">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                                  Intermediary: ${p.intermediaryAdvanceUsd!.toLocaleString()} fronted
+                                  {(p.intermediaryRecoveredUsd ?? 0) > 0 && ` / $${p.intermediaryRecoveredUsd!.toLocaleString()} recovered`}
+                                </div>
+                              )}
+                              {(p.intermediarySupplierPaidUsd ?? 0) > 0 && (
+                                <div className="flex items-center gap-1 text-violet-600 font-medium">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-violet-400 shrink-0" />
+                                  Intermediary paid supplier: ${p.intermediarySupplierPaidUsd!.toLocaleString()}
+                                  {p.intermediarySupplierPaidAt && ` on ${shortDate(p.intermediarySupplierPaidAt)}`}
+                                </div>
+                              )}
+                            </div>
+                            {!p.paid && !isFormOpen && (
+                              <button type="button" onClick={() => openMarkPaid(activeShipment.id, i as 0|1)}
+                                className="text-[11px] font-semibold px-2 py-1 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
+                                Mark Paid
+                              </button>
+                            )}
+                            {p.paid && (
+                              <button type="button" onClick={() => undoPaymentPaid(activeShipment.id, i as 0|1)}
+                                className="text-[11px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
+                                Undo
+                              </button>
+                            )}
+                            {isFormOpen && (
+                              <button type="button" onClick={() => setMarkPaidForm(null)}
+                                className="text-[11px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
+                                Cancel
+                              </button>
                             )}
                           </div>
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                          <button onClick={e=>toggleFlag(activeMessage.id,e)} title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
-                            <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
-                            {activeMessage.isFlagged?"Flagged":"Flag"}
-                          </button>
-                          {repliedIds.has(activeMessage.id)&&<span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
-                        </div>
-                      </div>
-                      {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
-                        <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
-                          <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
-                            <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
-                          </div>
-                          <button onClick={() => setActiveView("needs-review")}
-                            className="shrink-0 text-[9px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1">
-                            <ArrowRight size={9}/>Reassign
-                          </button>
-                        </div>
-                      )}
-                      <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
-                      {activeMessage.rawChatText && (
-                        <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
-                          <button onClick={() => setChatTranscriptExpanded(v => !v)}
-                            className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left">
-                            <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
-                            <span className="text-[10px] font-bold text-indigo-700 flex-1">Chat transcript</span>
-                            <span className="text-[9px] text-indigo-400 font-medium">{activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":"Chat"} · forwarded</span>
-                            {chatTranscriptExpanded?<ChevronUp size={11} className="text-indigo-400 shrink-0"/>:<ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
-                          </button>
-                          {chatTranscriptExpanded && (
-                            <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
-                              <pre className="text-[10px] text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
+                          {isFormOpen && markPaidForm && (
+                            <div className="mt-1.5 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2">
+                              <p className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">Record Payment</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                                  <input type="number" min="0" value={markPaidForm.amount}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, amount: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
+                                  <input type="date" value={markPaidForm.date}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-[#5E687B] font-medium block mb-0.5">
+                                    Invoice # <span className="text-red-500">*</span>
+                                  </label>
+                                  <input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001"
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, invoiceNumber: e.target.value } : f)}
+                                    className={`w-full px-2 py-1 text-xs border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim() ? "border-red-300 focus:border-red-400" : "border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
+                                  <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Method</label>
+                                  <select value={markPaidForm.method}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
+                                    className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
+                                    <option>Wire</option>
+                                    <option>Credit</option>
+                                    <option>Other</option>
+                                  </select>
+                                </div>
+                              </div>
+                              {/* Intermediary payment to supplier */}
+                              <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
+                                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                  <input type="checkbox" checked={markPaidForm.intermediarySupplierPaid}
+                                    onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierPaid: e.target.checked } : f)}
+                                    className="accent-[#9000FF] w-3 h-3"/>
+                                  <span className="text-[11px] font-semibold text-[#5E687B]">Intermediary paid supplier</span>
+                                </label>
+                                {markPaidForm.intermediarySupplierPaid && (
+                                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                                    <div>
+                                      <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                                      <input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0"
+                                        onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierAmount: e.target.value } : f)}
+                                        className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Date Paid</label>
+                                      <input type="date" value={markPaidForm.intermediarySupplierDate}
+                                        onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierDate: e.target.value } : f)}
+                                        className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()}
+                                className="w-full py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]">
+                                <CheckCircle2 size={10}/> Confirm Payment
+                              </button>
                             </div>
                           )}
                         </div>
+                      );
+                    })}
+                  </div>
+                  {/* Your Spread row */}
+                  <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
+                    <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
+                      {!editingBuyerPrice && (
+                        <button
+                          onClick={() => {
+                            setEditingBuyerPrice(true);
+                            setBuyerPriceDraft({
+                              unitPrice: activeShipment.buyerUnitPrice != null ? String(activeShipment.buyerUnitPrice) : "",
+                              quantity: activeShipment.buyerQuantity != null ? String(activeShipment.buyerQuantity) : "",
+                            });
+                          }}
+                          className="text-[11px] font-semibold text-[#9000FF] hover:underline">
+                          {activeShipment.spreadPct !== null ? "Edit" : "Add Buyer Price"}
+                        </button>
                       )}
-                      {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
-                      {activeMessage.aiAction && (
-                        <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden mt-3">
-                          <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
-                          <div className="flex items-start gap-2.5 relative">
-                            <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[8px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
-                              <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
-                              {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-[10px] text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
-                              {!repliedIds.has(activeMessage.id)?(
-                                <div className="flex gap-2">
-                                  <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
-                                  <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-[10px] font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
-                                </div>
-                              ):(
-                                <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
+                      {editingBuyerPrice && (
+                        <button onClick={() => setEditingBuyerPrice(false)} className="text-[11px] text-[#5E687B] hover:underline">Cancel</button>
+                      )}
+                    </div>
+                    {editingBuyerPrice ? (
+                      <div className="space-y-2">
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
+                            <input type="number" min="0" step="0.01" autoFocus
+                              value={buyerPriceDraft.unitPrice}
+                              onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
+                              placeholder="0.00"
+                              className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Quantity</label>
+                            <input type="number" min="1" step="1"
+                              value={buyerPriceDraft.quantity}
+                              onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
+                              placeholder="0"
+                              className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
+                          </div>
+                          <button
+                            disabled={!buyerPriceDraft.unitPrice || !buyerPriceDraft.quantity || patchDealPending}
+                            onClick={() => {
+                              const up = Number(buyerPriceDraft.unitPrice);
+                              const qty = Number(buyerPriceDraft.quantity);
+                              if (!up || !qty) return;
+                              patchDealForShipment({ id: activeShipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
+                            }}
+                            className="text-[11px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
+                            {patchDealPending ? "…" : "Save"}
+                          </button>
+                        </div>
+                        {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
+                          const buyerTotal = Number(buyerPriceDraft.unitPrice) * Number(buyerPriceDraft.quantity);
+                          const supplierTotal = activeShipment.payments.reduce((s, p) => s + p.amountUsd, 0);
+                          const spread = buyerTotal - supplierTotal;
+                          const pct = buyerTotal > 0 ? (spread / buyerTotal) * 100 : 0;
+                          const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                          return (
+                            <div className={`text-[11px] font-semibold ${cls}`}>
+                              Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ) : activeShipment.spreadPct !== null && activeShipment.spreadPct !== undefined ? (() => {
+                      const pct = activeShipment.spreadPct!;
+                      const usd = activeShipment.spreadUsd;
+                      const supplierCostUsd = activeShipment.payments.reduce((sum, p) => sum + p.amountUsd, 0);
+                      const buyerTotalUsd = usd !== null && usd !== undefined ? usd + supplierCostUsd : null;
+                      const barCls = pct >= 25 ? "bg-emerald-500" : pct >= 10 ? "bg-amber-400" : "bg-red-500";
+                      const textCls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
+                      const bgCls = pct >= 25 ? "bg-emerald-50 border-emerald-100" : pct >= 10 ? "bg-amber-50 border-amber-100" : "bg-red-50 border-red-100";
+                      const label = pct >= 25 ? "Healthy" : pct >= 10 ? "Thin" : "Loss";
+                      return (
+                        <div className={`rounded-lg border px-3 py-2 ${bgCls}`}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-sm font-bold ${textCls}`}>{pct.toFixed(1)}%</span>
+                              {usd !== null && usd !== undefined && (
+                                <span className={`text-xs font-semibold ${textCls}`}>· ${Math.round(usd).toLocaleString()}</span>
                               )}
+                              <span className={`text-[11px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${textCls} opacity-80`}>{label}</span>
                             </div>
                           </div>
+                          <div className="h-1 w-full bg-white/60 rounded-full overflow-hidden mb-1.5">
+                            <div className={`h-full rounded-full transition-all ${barCls}`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}/>
+                          </div>
+                          {buyerTotalUsd !== null && (
+                            <div className="flex items-center justify-between text-[11px] text-[#5E687B]">
+                              <span>Supplier: ${supplierCostUsd.toLocaleString()}</span>
+                              <span>Buyer: ${Math.round(buyerTotalUsd).toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
+                      );
+                    })() : (
+                      <p className="text-xs text-[#C0C8D4] italic">No buyer price set — click "Add Buyer Price" to track your spread</p>
+                    )}
+                  </div>
+                  {/* Supplier contact email */}
+                  {activeSupplier ? (
+                    <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
+                      <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        <Mail size={8}/>Supplier Contact
+                      </div>
+                      {editingEmail ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            autoFocus
+                            type="email"
+                            value={emailDraft}
+                            onChange={e => setEmailDraft(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") saveEmail(); if (e.key === "Escape") setEditingEmail(false); }}
+                            placeholder="supplier@example.com"
+                            className="flex-1 px-2 py-1 text-xs border border-[#9000FF]/40 rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/20 text-[#212833]"
+                          />
+                          <button onClick={saveEmail} disabled={updateSupplierMutation.isPending} className="text-[11px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">Save</button>
+                          <button onClick={() => setEditingEmail(false)} className="text-[11px] text-[#5E687B] px-1.5 py-1 rounded-md hover:bg-[#F0F4F8] shrink-0">✕</button>
+                        </div>
+                      ) : activeSupplierEmail ? (
+                        <div className="flex items-center gap-1.5 group">
+                          <span className="text-xs text-[#212833] truncate">{activeSupplierEmail}</span>
+                          <button
+                            onClick={() => { setEmailDraft(activeSupplierEmail ?? ""); setEditingEmail(true); }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#5E687B] shrink-0"
+                            title="Edit contact email"
+                          >
+                            <Pencil size={9}/>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEmailDraft(""); setEditingEmail(true); }}
+                          className="text-[11px] text-[#9000FF] hover:underline flex items-center gap-1"
+                        >
+                          <Plus size={8}/>Add contact email to improve routing
+                        </button>
                       )}
+                    </div>
+                  ) : null}
+                  </>}
+                </div>
+              )}
+
+              {/* Tabs + tab content — hidden while compose panel is open or detail pane is cleared */}
+              {!showComposePanel && activeMessageId !== "__cleared__" && <><div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
+                {([
+                  {id:"message" as RightTab, label:"Message"},
+                  {id:"docs"    as RightTab, label:"Docs"},
+                  {id:"risk"    as RightTab, label:"Risk",    icon:ShieldAlert},
+                  {id:"copilot" as RightTab, label:"Copilot", icon:Sparkles},
+                ] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
+                  <button key={t.id} onClick={()=>setRightTab(t.id)}
+                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id
+                      ? t.id==="copilot" ? "border-amber-400 text-amber-700" : "border-[#9000FF] text-[#9000FF]"
+                      : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
+                    {t.icon&&<t.icon size={10}/>}
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      {t.label}
+                      {t.id==="docs"&&docsCount>0&&(
+                        <span className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[11px] font-bold leading-none ${docsHasFindings?"bg-amber-100 text-amber-700 border border-amber-300":"bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0]"} ${rightTab==="docs"?"opacity-100":"opacity-80"}`}>
+                          {docsCount}
+                        </span>
+                      )}
+                      {t.id==="copilot"&&(apiProposals??[]).filter(p=>p.status==="pending").length>0&&(
+                        <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[11px] font-bold leading-none bg-amber-100 text-amber-700 border border-amber-200">
+                          {(apiProposals??[]).filter(p=>p.status==="pending").length}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Docs tab */}
+              {rightTab==="docs"&&<DocsPanel shipmentId={activeShipment?.id??""}/>}
+
+              {/* Copilot tab */}
+              {rightTab==="copilot"&&(
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                  <div className="bg-[#9000FF]/5 border border-[#9000FF]/15 rounded-xl p-3 flex items-start gap-2 shrink-0">
+                    <Sparkles size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#9000FF] mb-0.5">Copilot — {activeShipment?.po}</p>
+                      <p className="text-xs text-[#5E687B]">AI-generated actions for the active thread.</p>
+                    </div>
+                    <button onClick={()=>setActiveView("copilot")} className="text-[11px] text-[#5E687B] hover:text-[#212833] shrink-0 flex items-center gap-0.5 whitespace-nowrap">Full queue<ArrowUpRight size={9}/></button>
+                  </div>
+                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).slice(0,4).map(p=>{
+                    const payload=(p.payload??{}) as Record<string,unknown>;
+                    const draftBody=String(payload.draftBody??payload.messageSnippet??"");
+                    const displayTitle=(p.actionType||"action").replace(/_/g," ");
+                    const conf=p.confidence??0;
+                    const priorityLabel=conf>=0.7?"high":conf>=0.4?"medium":"low";
+                    return (
+                      <div key={p.id} className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm">
+                        <div className="flex items-start gap-2.5 p-3">
+                          <div className="w-6 h-6 rounded-lg bg-[#F8F9FB] border border-[#E5EAF0] flex items-center justify-center shrink-0"><Sparkles size={11} className="text-[#9000FF]"/></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[11px] font-bold text-[#212833] capitalize">{displayTitle}</span>
+                              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${priorityLabel==="high"?"bg-red-50 text-red-600 border-red-100":priorityLabel==="medium"?"bg-amber-50 text-amber-600 border-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>{priorityLabel}</span>
+                            </div>
+                            <p className="text-xs text-[#5E687B]">{p.reasoning}</p>
+                          </div>
+                        </div>
+                        {draftBody&&<div className="mx-3 mb-3 bg-[#9000FF]/4 border border-[#9000FF]/15 rounded-lg p-2.5"><p className="text-xs font-bold text-[#9000FF] mb-1">Draft</p><p className="text-xs text-[#212833] leading-relaxed line-clamp-3">{draftBody}</p></div>}
+                      </div>
+                    );
+                  })}
+                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).length===0&&(
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]">
+                      <Sparkles size={28} className="opacity-30 mb-2"/>
+                      <p className="text-sm font-semibold text-[#212833]">No pending actions</p>
+                      <p className="text-xs mt-1">Copilot will surface suggestions as new messages arrive.</p>
                     </div>
                   )}
 
                   {/* Quote AI hint — quotes stage */}
                   {isQuotesStage&&<div className="px-4 pb-4"><div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed"><div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead time. Recommend Foshan if margin is priority; Guangzhou if relationship and speed matter more.</div></div>}
 
-                  {/* ── Finance section ── */}
-                  {(()=>{
-                    const unpaid = activeShipment?.payments.filter(p=>!p.paid)??[];
-                    const isOv = unpaid.some(p=>new Date(`${p.dueDate} 2026`)<new Date());
-                    const finSum = unpaid.length>0 ? `${unpaid[0].label} $${unpaid[0].amountUsd.toLocaleString()} — ${isOv?"Overdue":`due ${unpaid[0].dueDate}`}` : "All paid";
-                    return (
-                      <CollapsibleSection title="Finance" isOpen={sectionOpen.finance} onToggle={()=>toggleSection("finance")} summary={finSum}
-                        badge={isOv?<span className="inline-flex items-center gap-0.5 text-[8px] font-bold bg-red-100 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full ml-1"><AlertCircle size={8}/>Overdue</span>:undefined}>
-                        {activeShipment && (
-                          <div className="space-y-1.5 pt-2">
-                            <div className="bg-white rounded-lg border border-[#E5EAF0] p-2.5 mb-3">
-                              <div className="flex items-center justify-between text-[9px] mb-1.5">
-                                <span className="font-bold text-[#212833] flex items-center gap-1"><MapPin size={9} className="text-[#9000FF]"/>{activeStage?.label??"—"}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[#5E687B]">Stage {activeStageIdx+1} of {stages.length}</span>
-                                  <button onClick={()=>activeShipment&&openAdvanceDialog(activeShipment)} className="text-[8px] font-semibold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-2 py-0.5 rounded-full hover:bg-[#9000FF]/15 transition-colors flex items-center gap-1"><ChevronRight size={8}/>Advance</button>
-                                  <button onClick={()=>setShowHistory(h=>!h)} className={`text-[8px] font-semibold px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showHistory?"bg-[#9000FF]/10 border-[#9000FF]/20 text-[#9000FF]":"text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}><Clock size={8}/>History</button>
-                                </div>
+              {/* Message tab */}
+              {rightTab==="message"&&<>
+                {/* Quote panel */}
+                {isQuotesStage&&activeShipment?.quotes&&(
+                  <div className="px-4 pt-4 shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
+                )}
+
+                {/* Message body */}
+                {!isQuotesStage&&(
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
+                        <div className="text-[11px] text-[#5E687B] flex items-center gap-1 flex-wrap">
+                          {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
+                          {activeMessage.rawChatText && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[11px] uppercase tracking-wide">
+                              <MessageSquare size={8}/>Forwarded chat
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="ml-auto flex items-center gap-2">
+                        <button
+                          onClick={e=>toggleFlag(activeMessage.id,e)}
+                          title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
+                          <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
+                          {activeMessage.isFlagged?"Flagged":"Flag"}
+                        </button>
+                        {repliedIds.has(activeMessage.id)&&<span className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
+                      </div>
+                    </div>
+                    {/* Needs-review banner for chat-forward messages awaiting confirmation */}
+                    {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
+                      <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
+                        <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
+                          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
+                        </div>
+                        <button
+                          onClick={() => setActiveView("needs-review")}
+                          className="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1"
+                        >
+                          <ArrowRight size={9}/>Reassign
+                        </button>
+                      </div>
+                    )}
+                    <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
+                    {/* Collapsible chat transcript for forwarded chats */}
+                    {activeMessage.rawChatText && (
+                      <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
+                        <button
+                          onClick={() => setChatTranscriptExpanded(v => !v)}
+                          className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left"
+                        >
+                          <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
+                          <span className="text-xs font-bold text-indigo-700 flex-1">Chat transcript</span>
+                          <span className="text-[11px] text-indigo-400 font-medium">{activeMessage.channel === "whatsapp" ? "WhatsApp" : activeMessage.channel === "wechat" ? "WeChat" : activeMessage.channel === "imessage" ? "iMessage" : "Chat"} · forwarded</span>
+                          {chatTranscriptExpanded ? <ChevronUp size={11} className="text-indigo-400 shrink-0"/> : <ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
+                        </button>
+                        {chatTranscriptExpanded && (
+                          <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
+                            <pre className="text-xs text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
+                    {activeMessage.aiAction&&(
+                      <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">
+                        <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
+                        <div className="flex items-start gap-2.5 relative">
+                          <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
+                            <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
+                            {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-xs text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
+                            {!repliedIds.has(activeMessage.id)?(
+                              <div className="flex gap-2">
+                                <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
+                                <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-xs font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
                               </div>
-                              <div className="flex gap-px h-1.5 mb-2">{stages.map((_,idx)=><div key={idx} className={`flex-1 rounded-full transition-all duration-500 ${idx<activeStageIdx?"bg-[#9000FF]":idx===activeStageIdx?"bg-[#9000FF] opacity-50":"bg-[#E5EAF0]"}`}/>)}</div>
-                              <div className="flex items-center gap-1 overflow-x-auto">{stages.slice(activeStageIdx,activeStageIdx+5).map((st,i)=><div key={st.id} className={`flex items-center gap-1 shrink-0 text-[9px] ${i===0?"text-[#9000FF] font-bold":"text-[#9E9FAE]"}`}>{i>0&&<ChevronRight size={8} className="text-[#D6E3EB]"/>}{st.label}</div>)}</div>
-                              {showHistory&&activeShipment&&(<div className="mt-2.5 pt-2.5 border-t border-[#F0F4F8]"><StageHistory shipmentId={activeShipment.shipmentId} stageLabels={Object.fromEntries(stages.map(s=>[s.id,s.label]))}/></div>)}
-                            </div>
-                            {activeShipment.payments.map((p,i)=>{
-                              const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();
-                              const isFormOpen=markPaidForm?.shipmentId===activeShipment.id&&markPaidForm?.paymentIdx===i;
-                              return (
-                                <div key={i}>
-                                  <div className="flex items-center gap-2">
-                                    <div className={`flex flex-col gap-0.5 text-[9px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
-                                      <div className="flex items-center gap-1">
-                                        {p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}
-                                        {p.label}: ${p.amountUsd.toLocaleString()} {p.paid?`paid ${p.paidAt?shortDate(p.paidAt):""}`.trim():ov?"OVERDUE":`due ${p.dueDate}`}
-                                        {p.paid&&p.invoiceNumber&&<span className="text-emerald-700/70 font-normal">· {p.invoiceNumber}</span>}
-                                      </div>
-                                      {(p.intermediaryAdvanceUsd??0)>0&&(<div className="flex items-center gap-1 text-amber-600 font-medium"><span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0"/>Intermediary: ${p.intermediaryAdvanceUsd!.toLocaleString()} fronted{(p.intermediaryRecoveredUsd??0)>0&&` / $${p.intermediaryRecoveredUsd!.toLocaleString()} recovered`}</div>)}
-                                      {(p.intermediarySupplierPaidUsd??0)>0&&(<div className="flex items-center gap-1 text-violet-600 font-medium"><span className="inline-block w-2 h-2 rounded-full bg-violet-400 shrink-0"/>Intermediary paid supplier: ${p.intermediarySupplierPaidUsd!.toLocaleString()}{p.intermediarySupplierPaidAt&&` on ${shortDate(p.intermediarySupplierPaidAt)}`}</div>)}
-                                    </div>
-                                    {!p.paid&&!isFormOpen&&(<button type="button" onClick={()=>openMarkPaid(activeShipment.id,i as 0|1)} className="text-[9px] font-semibold px-2 py-1 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">Mark Paid</button>)}
-                                    {p.paid&&(<button type="button" onClick={()=>undoPaymentPaid(activeShipment.id,i as 0|1)} className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">Undo</button>)}
-                                    {isFormOpen&&(<button type="button" onClick={()=>setMarkPaidForm(null)} className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">Cancel</button>)}
-                                  </div>
-                                  {isFormOpen&&markPaidForm&&(
-                                    <div className="mt-1.5 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2">
-                                      <p className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Record Payment</p>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label><input type="number" min="0" value={markPaidForm.amount} onChange={e=>setMarkPaidForm(f=>f?{...f,amount:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
-                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Payment Date</label><input type="date" value={markPaidForm.date} onChange={e=>setMarkPaidForm(f=>f?{...f,date:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
-                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Invoice # <span className="text-red-500">*</span></label><input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001" onChange={e=>setMarkPaidForm(f=>f?{...f,invoiceNumber:e.target.value}:f)} className={`w-full px-2 py-1 text-[10px] border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim()?"border-red-300 focus:border-red-400":"border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/></div>
-                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label><input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001" onChange={e=>setMarkPaidForm(f=>f?{...f,reference:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/></div>
-                                        <div className="col-span-2"><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label><select value={markPaidForm.method} onChange={e=>setMarkPaidForm(f=>f?{...f,method:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white"><option>Wire</option><option>Credit</option><option>Other</option></select></div>
-                                      </div>
-                                      <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
-                                        <label className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={markPaidForm.intermediarySupplierPaid} onChange={e=>setMarkPaidForm(f=>f?{...f,intermediarySupplierPaid:e.target.checked}:f)} className="accent-[#9000FF] w-3 h-3"/><span className="text-[9px] font-semibold text-[#5E687B]">Intermediary paid supplier</span></label>
-                                        {markPaidForm.intermediarySupplierPaid&&(<div className="grid grid-cols-2 gap-2 pt-0.5"><div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label><input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0" onChange={e=>setMarkPaidForm(f=>f?{...f,intermediarySupplierAmount:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div><div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Date Paid</label><input type="date" value={markPaidForm.intermediarySupplierDate} onChange={e=>setMarkPaidForm(f=>f?{...f,intermediarySupplierDate:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div></div>)}
-                                      </div>
-                                      <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()} className="w-full py-1.5 text-[10px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]"><CheckCircle2 size={10}/> Confirm Payment</button>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                              <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                                <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
-                                {!editingBuyerPrice&&(<button onClick={()=>{setEditingBuyerPrice(true);setBuyerPriceDraft({unitPrice:activeShipment.buyerUnitPrice!=null?String(activeShipment.buyerUnitPrice):"",quantity:activeShipment.buyerQuantity!=null?String(activeShipment.buyerQuantity):"",});}} className="text-[9px] font-semibold text-[#9000FF] hover:underline">{activeShipment.spreadPct!==null?"Edit":"Add Buyer Price"}</button>)}
-                                {editingBuyerPrice&&(<button onClick={()=>setEditingBuyerPrice(false)} className="text-[9px] text-[#5E687B] hover:underline">Cancel</button>)}
-                              </div>
-                              {editingBuyerPrice?(
-                                <div className="space-y-2">
-                                  <div className="flex items-end gap-2">
-                                    <div className="flex-1"><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label><input type="number" min="0" step="0.01" autoFocus value={buyerPriceDraft.unitPrice} onChange={e=>setBuyerPriceDraft(d=>({...d,unitPrice:e.target.value}))} placeholder="0.00" className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
-                                    <div className="flex-1"><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Quantity</label><input type="number" min="1" step="1" value={buyerPriceDraft.quantity} onChange={e=>setBuyerPriceDraft(d=>({...d,quantity:e.target.value}))} placeholder="0" className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
-                                    <button disabled={!buyerPriceDraft.unitPrice||!buyerPriceDraft.quantity||patchDealPending} onClick={()=>{const up=Number(buyerPriceDraft.unitPrice);const qty=Number(buyerPriceDraft.quantity);if(!up||!qty)return;patchDealForShipment({id:activeShipment.shipmentId,data:{buyerUnitPrice:up,buyerQuantity:qty}});}} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">{patchDealPending?"…":"Save"}</button>
-                                  </div>
-                                  {buyerPriceDraft.unitPrice&&buyerPriceDraft.quantity&&(()=>{const bt=Number(buyerPriceDraft.unitPrice)*Number(buyerPriceDraft.quantity);const st=activeShipment.payments.reduce((s,p)=>s+p.amountUsd,0);const sp=bt-st;const pct=bt>0?(sp/bt)*100:0;const cls=pct>=25?"text-emerald-700":pct>=10?"text-amber-700":"text-red-700";return(<div className={`text-[9px] font-semibold ${cls}`}>Preview: {pct.toFixed(1)}% · ${Math.round(sp).toLocaleString()}</div>);})()}
-                                </div>
-                              ):activeShipment.spreadPct!==null&&activeShipment.spreadPct!==undefined?(()=>{
-                                const pct=activeShipment.spreadPct!;const usd=activeShipment.spreadUsd;const sc=activeShipment.payments.reduce((sum,p)=>sum+p.amountUsd,0);const bt=usd!==null&&usd!==undefined?usd+sc:null;
-                                const barCls=pct>=25?"bg-emerald-500":pct>=10?"bg-amber-400":"bg-red-500";const textCls=pct>=25?"text-emerald-700":pct>=10?"text-amber-700":"text-red-700";const bgCls=pct>=25?"bg-emerald-50 border-emerald-100":pct>=10?"bg-amber-50 border-amber-100":"bg-red-50 border-red-100";const lbl=pct>=25?"Healthy":pct>=10?"Thin":"Loss";
-                                return(<div className={`rounded-lg border px-3 py-2 ${bgCls}`}><div className="flex items-center justify-between mb-1.5"><div className="flex items-center gap-1.5"><span className={`text-sm font-bold ${textCls}`}>{pct.toFixed(1)}%</span>{usd!==null&&usd!==undefined&&<span className={`text-[10px] font-semibold ${textCls}`}>· ${Math.round(usd).toLocaleString()}</span>}<span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${textCls} opacity-80`}>{lbl}</span></div></div><div className="h-1 w-full bg-white/60 rounded-full overflow-hidden mb-1.5"><div className={`h-full rounded-full transition-all ${barCls}`} style={{width:`${Math.min(100,Math.max(0,pct))}%`}}/></div>{bt!==null&&<div className="flex items-center justify-between text-[9px] text-[#5E687B]"><span>Supplier: ${sc.toLocaleString()}</span><span>Buyer: ${Math.round(bt).toLocaleString()}</span></div>}</div>);
-                              })():(
-                                <p className="text-[9px] text-[#C0C8D4] italic">No buyer price set — click "Add Buyer Price" to track your spread</p>
-                              )}
-                            </div>
-                            {activeSupplier&&(
-                              <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                                <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Mail size={8}/>Supplier Contact</div>
-                                {editingEmail?(
-                                  <div className="flex items-center gap-1.5">
-                                    <input autoFocus type="email" value={emailDraft} onChange={e=>setEmailDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEmail();if(e.key==="Escape")setEditingEmail(false);}} placeholder="supplier@example.com" className="flex-1 px-2 py-1 text-[10px] border border-[#9000FF]/40 rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/20 text-[#212833]"/>
-                                    <button onClick={saveEmail} disabled={updateSupplierMutation.isPending} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">Save</button>
-                                    <button onClick={()=>setEditingEmail(false)} className="text-[9px] text-[#5E687B] px-1.5 py-1 rounded-md hover:bg-[#F0F4F8] shrink-0">✕</button>
-                                  </div>
-                                ):activeSupplierEmail?(
-                                  <div className="flex items-center gap-1.5 group">
-                                    <span className="text-[10px] text-[#212833] truncate">{activeSupplierEmail}</span>
-                                    <button onClick={()=>{setEmailDraft(activeSupplierEmail??"");setEditingEmail(true);}} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#5E687B] shrink-0" title="Edit contact email"><Pencil size={9}/></button>
-                                  </div>
-                                ):(
-                                  <button onClick={()=>{setEmailDraft("");setEditingEmail(true);}} className="text-[9px] text-[#9000FF] hover:underline flex items-center gap-1"><Plus size={8}/>Add contact email to improve routing</button>
-                                )}
-                              </div>
+                            ):(
+                              <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
                             )}
                           </div>
                         )}
@@ -3318,12 +3588,12 @@ export default function Home() {
                         {activeMessage.channel==="gmail"&&gmailStatus?.connected&&(
                           <button onClick={()=>{if(composeText.trim())sendViaGmail(activeMessage.messageId,composeText.trim());}} disabled={!composeText.trim()||sendReplyMutation.isPending}
                             title="Send reply through your connected Gmail account"
-                            className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${composeText.trim()&&!sendReplyMutation.isPending?"bg-blue-600 text-white hover:bg-blue-700":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
+                            className={`px-2.5 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${composeText.trim()&&!sendReplyMutation.isPending?"bg-blue-600 text-white hover:bg-blue-700":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
                             <Mail size={10}/>Gmail
                           </button>
                         )}
                         <button onClick={()=>{if(composeText.trim())sendReply(activeMessage.id);}}
-                          className={`px-3 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 transition-all ${composeText.trim()?"bg-[#212833] text-white hover:bg-black":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
+                          className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-all ${composeText.trim()?"bg-[#212833] text-white hover:bg-black":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
                           Reply<Send size={10}/>
                         </button>
                       </div>
@@ -3347,19 +3617,19 @@ export default function Home() {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E5EAF0] bg-[#FAFBFC]">
                 <h2 className="text-sm font-bold text-[#212833]">Advance Shipment Stage</h2>
-                <p className="text-[11px] text-[#5E687B] mt-0.5">
+                <p className="text-xs text-[#5E687B] mt-0.5">
                   {advanceDialogShipment.po} — {advanceDialogShipment.product}
                 </p>
               </div>
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                   <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                    <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                    <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
                     <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceDialogShipment.currentStageId}</span>
                   </div>
                   <ChevronRight size={20} className="text-[#9000FF] shrink-0" />
                   <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                    <span className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
+                    <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
                     <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
                   </div>
                 </div>
