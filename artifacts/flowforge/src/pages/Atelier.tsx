@@ -242,6 +242,9 @@ export function Atelier() {
   }, [apiShipments]);
 
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
+  const [historyShipmentId, setHistoryShipmentId] = useState<number | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<"threads" | "docs" | "quotes" | null>(null);
+  const [moreMenuId, setMoreMenuId] = useState<number | null>(null);
 
   // Sync activeShipmentId ↔ URL param ?po=
   useEffect(() => {
