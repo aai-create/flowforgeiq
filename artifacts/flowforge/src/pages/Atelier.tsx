@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { ShipmentDrawer, type MarkPaidForm } from "@/components/ShipmentDrawer";
 
 // ---------------------------------------------------------------------------
 // Shared data (mirrors ConversationHub)
@@ -203,7 +204,6 @@ export function Atelier() {
 
   const [advanceTarget, setAdvanceTarget] = useState<UiShipment | null>(null);
   const [advanceNote, setAdvanceNote] = useState("");
-  const [historyShipmentId, setHistoryShipmentId] = useState<string | null>(null);
   const createStageEventMutation = useCreateShipmentStageEvent();
 
   const openAdvanceDialog = (shipment: UiShipment) => {
@@ -255,7 +255,29 @@ export function Atelier() {
   }, [apiShipments]);
 
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
-  const [activeDetailTab, setActiveDetailTab] = useState<"threads" | "docs" | "quotes" | null>(null);
+
+  // Sync activeShipmentId ↔ URL param ?po=
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (activeShipmentId) {
+      url.searchParams.set("po", activeShipmentId);
+    } else {
+      url.searchParams.delete("po");
+    }
+    window.history.replaceState({}, "", url.toString());
+  }, [activeShipmentId]);
+
+  // Restore from URL on initial shipments load
+  useEffect(() => {
+    if (shipments.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const po = params.get("po");
+    if (po && shipments.some(s => s.id === po)) {
+      setActiveShipmentId(po);
+    }
+    // Run only once when shipments first populate
+  }, [shipments.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { data: allMessages = [] } = useListMessages();
   const { data: allDocuments = [] } = useListDocuments();
   const [customerFilter, setCustomerFilter] = useState<string | null>(null);
@@ -272,16 +294,9 @@ export function Atelier() {
   };
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
-  const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Mark-paid inline form
-  interface MarkPaidForm {
-    shipmentId: string; paymentIdx: number;
-    amount: string; date: string; reference: string; method: string;
-    invoiceNumber: string;
-    intermediarySupplierPaid: boolean; intermediarySupplierAmount: string; intermediarySupplierDate: string;
-  }
+  // Mark-paid form (rendered inside ShipmentDrawer)
   const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm | null>(null);
   const openMarkPaid = (shipmentId: string, paymentIdx: number) => {
     const ship = shipments.find(s => s.id === shipmentId);
@@ -727,7 +742,7 @@ export function Atelier() {
                 return (
                   <div key={shipment.id}
                     id={`shipment-${shipment.id}`}
-                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); setMoreMenuId(null); setActiveDetailTab(null); }}
+                    onClick={() => { setActiveShipmentId(isActive ? null : shipment.id); }}
                     className={`border rounded-xl p-4 transition-all cursor-pointer ${isActive ? "border-[#9000FF]/30 shadow-md bg-[#FAFBFF]" : "border-[#E5EAF0] bg-white hover:border-[#D6E3EB] hover:shadow-sm"}`}>
 
                     {/* Header row */}
@@ -919,7 +934,6 @@ export function Atelier() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {shipment.payments.map((p, i) => {
                         const overdue = !p.paid && new Date(`${p.dueDate} 2026`) < new Date();
-                        const isFormOpen = markPaidForm?.shipmentId === shipment.id && markPaidForm?.paymentIdx === i;
                         return (
                           <div key={i} className="flex items-center gap-1.5">
                             <div className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full border ${
@@ -929,18 +943,6 @@ export function Atelier() {
                               {p.paid ? <CheckCircle2 className="w-2.5 h-2.5" /> : overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
                               {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : overdue ? "OVERDUE" : `due ${p.dueDate}`}
                             </div>
-                            {isActive && !p.paid && !isFormOpen && (
-                              <button type="button" onClick={e => { e.stopPropagation(); openMarkPaid(shipment.id, i); }}
-                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
-                                Mark Paid
-                              </button>
-                            )}
-                            {isActive && p.paid && (
-                              <button type="button" onClick={e => { e.stopPropagation(); undoPaymentPaid(shipment.id, i); }}
-                                className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
-                                Undo
-                              </button>
-                            )}
                           </div>
                         );
                       })}
@@ -955,406 +957,7 @@ export function Atelier() {
                       )}
                     </div>
 
-                    {/* History section */}
-                    {historyShipmentId === shipment.id && (
-                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Clock className="w-3 h-3 text-[#9000FF]" />
-                          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Stage History</span>
-                        </div>
-                        <StageHistory
-                          shipmentId={shipment.shipmentId}
-                          stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
-                        />
-                      </div>
-                    )}
 
-                    {/* Buyer PO Links (many-to-many management) — visible when card is active */}
-                    {isActive && (
-                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1"><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
-                          <button type="button"
-                            onClick={() => setLinkPanelShipmentId(linkPanelShipmentId === shipment.shipmentId ? null : shipment.shipmentId)}
-                            className="text-[9px] font-semibold text-[#9000FF] hover:underline">
-                            {linkPanelShipmentId === shipment.shipmentId ? "Close" : "Manage"}
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mb-1.5">
-                          {shipment.buyerPoNumbers.length === 0 && !shipment.buyerPoNumber && (
-                            <span className="text-[9px] text-[#C0C8D4] italic">No buyer PO linked</span>
-                          )}
-                          {(shipment.buyerPoNumbers.length > 0 ? shipment.buyerPoNumbers : (shipment.buyerPoNumber ? [shipment.buyerPoNumber] : [])).map(bpo => {
-                            const deal = existingDeals?.find(d => d.buyerPoNumber === bpo);
-                            return (
-                              <span key={bpo} className="inline-flex items-center gap-1 text-[9px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                {bpo}
-                                {deal && linkPanelShipmentId === shipment.shipmentId && (
-                                  <button type="button" title="Unlink" onClick={() => unlinkDeal({ id: shipment.shipmentId, dealId: deal.id })}
-                                    className="text-red-400 hover:text-red-600 ml-0.5">×</button>
-                                )}
-                              </span>
-                            );
-                          })}
-                        </div>
-                        {linkPanelShipmentId === shipment.shipmentId && existingDeals && (
-                          <div className="border border-[#E5EAF0] rounded-md overflow-hidden max-h-[120px] overflow-y-auto">
-                            {existingDeals
-                              .filter(d => !shipment.buyerPoNumbers.includes(d.buyerPoNumber) && d.buyerPoNumber !== shipment.buyerPoNumber)
-                              .map(d => (
-                                <button key={d.id} type="button"
-                                  onClick={() => linkDeal({ id: shipment.shipmentId, data: { dealId: d.id } })}
-                                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 border-b border-[#F0F4F8] last:border-b-0 transition-colors">
-                                  <span className="text-[10px] font-mono font-semibold text-emerald-700">{d.buyerPoNumber}</span>
-                                  <span className="text-[9px] text-[#5E687B] truncate">{d.customerName}</span>
-                                  <span className="ml-auto text-[8px] text-[#9000FF] font-semibold shrink-0">+ Link</span>
-                                </button>
-                              ))}
-                            {existingDeals.filter(d => !shipment.buyerPoNumbers.includes(d.buyerPoNumber) && d.buyerPoNumber !== shipment.buyerPoNumber).length === 0 && (
-                              <p className="text-[9px] text-[#C0C8D4] italic px-3 py-2">All available deals are already linked</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Buyer Price — edit buyer unit price & quantity for spread tracking */}
-                    {isActive && (
-                      <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
-                            <DollarSign className="w-2.5 h-2.5"/>Buyer Price
-                          </span>
-                          <button type="button"
-                            onClick={() => {
-                              if (buyerPriceFormId === shipment.id) {
-                                setBuyerPriceFormId(null);
-                              } else {
-                                setBuyerPriceFormId(shipment.id);
-                                setBuyerPriceDraft({
-                                  unitPrice: shipment.buyerUnitPrice != null ? String(shipment.buyerUnitPrice) : "",
-                                  quantity: shipment.buyerQuantity != null ? String(shipment.buyerQuantity) : "",
-                                });
-                              }
-                            }}
-                            className="text-[9px] font-semibold text-[#9000FF] hover:underline">
-                            {buyerPriceFormId === shipment.id ? "Cancel" : shipment.spreadPct !== null ? "Edit" : "Add"}
-                          </button>
-                        </div>
-                        {shipment.spreadPct !== null && buyerPriceFormId !== shipment.id && (
-                          <div className="text-[10px] text-[#5E687B]">
-                            ${shipment.buyerUnitPrice?.toFixed(2) ?? "—"} × {shipment.buyerQuantity?.toLocaleString() ?? "—"} &nbsp;·&nbsp;
-                            <span className={`font-semibold ${shipment.spreadPct >= 25 ? "text-emerald-700" : shipment.spreadPct >= 10 ? "text-amber-700" : "text-red-700"}`}>
-                              {shipment.spreadPct.toFixed(1)}% spread
-                            </span>
-                          </div>
-                        )}
-                        {shipment.spreadPct === null && buyerPriceFormId !== shipment.id && (
-                          <span className="text-[9px] text-[#C0C8D4] italic">No buyer price set — spread unavailable</span>
-                        )}
-                        {buyerPriceFormId === shipment.id && (
-                          <>
-                            <div className="flex items-end gap-2">
-                              <div className="flex-1">
-                                <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
-                                <input type="number" min="0" step="0.01"
-                                  value={buyerPriceDraft.unitPrice}
-                                  onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
-                                  placeholder="0.00"
-                                  className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                              </div>
-                              <div className="flex-1">
-                                <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Quantity</label>
-                                <input type="number" min="1" step="1"
-                                  value={buyerPriceDraft.quantity}
-                                  onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
-                                  placeholder="0"
-                                  className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                              </div>
-                              <button type="button"
-                                disabled={!buyerPriceDraft.unitPrice || !buyerPriceDraft.quantity || patchDealPending}
-                                onClick={() => {
-                                  const up = Number(buyerPriceDraft.unitPrice);
-                                  const qty = Number(buyerPriceDraft.quantity);
-                                  if (!up || !qty) return;
-                                  patchDealForShipment({ id: shipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
-                                }}
-                                className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
-                                {patchDealPending ? "…" : "Save"}
-                              </button>
-                            </div>
-                            {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
-                              const buyerTotal = Number(buyerPriceDraft.unitPrice) * Number(buyerPriceDraft.quantity);
-                              const supplierTotal = shipment.payments.reduce((s, p) => s + p.amountUsd, 0);
-                              const spread = buyerTotal - supplierTotal;
-                              const pct = buyerTotal > 0 ? (spread / buyerTotal) * 100 : 0;
-                              const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
-                              return (
-                                <div className={`mt-1 text-[9px] font-semibold ${cls}`}>
-                                  Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
-                                </div>
-                              );
-                            })()}
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Mark-paid inline form */}
-                    {isActive && markPaidForm?.shipmentId === shipment.id && (
-                      <div className="mt-2 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between">
-                          <p className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Record Payment — {shipment.payments[markPaidForm.paymentIdx].label}</p>
-                          <button type="button" onClick={() => setMarkPaidForm(null)} className="text-[#9E9FAE] hover:text-[#212833]"><X className="w-3 h-3"/></button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
-                            <input type="number" min="0" value={markPaidForm.amount}
-                              onChange={e => setMarkPaidForm(f => f ? { ...f, amount: e.target.value } : f)}
-                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
-                            <input type="date" value={markPaidForm.date}
-                              onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
-                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">
-                              Invoice # <span className="text-red-500">*</span>
-                            </label>
-                            <input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001"
-                              onChange={e => setMarkPaidForm(f => f ? { ...f, invoiceNumber: e.target.value } : f)}
-                              className={`w-full px-2 py-1 text-[10px] border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim() ? "border-red-300 focus:border-red-400" : "border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/>
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
-                            <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
-                              onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
-                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
-                          </div>
-                          <div className="col-span-2">
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label>
-                            <select value={markPaidForm.method}
-                              onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
-                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
-                              <option>Wire</option>
-                              <option>Credit</option>
-                              <option>Other</option>
-                            </select>
-                          </div>
-                        </div>
-                        {/* Intermediary payment to supplier */}
-                        <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
-                          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input type="checkbox" checked={markPaidForm.intermediarySupplierPaid}
-                              onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierPaid: e.target.checked } : f)}
-                              className="accent-[#9000FF] w-3 h-3"/>
-                            <span className="text-[9px] font-semibold text-[#5E687B]">Intermediary paid supplier</span>
-                          </label>
-                          {markPaidForm.intermediarySupplierPaid && (
-                            <div className="grid grid-cols-2 gap-2 pt-0.5">
-                              <div>
-                                <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
-                                <input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0"
-                                  onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierAmount: e.target.value } : f)}
-                                  className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                              </div>
-                              <div>
-                                <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Date Paid</label>
-                                <input type="date" value={markPaidForm.intermediarySupplierDate}
-                                  onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierDate: e.target.value } : f)}
-                                  className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()}
-                          className="w-full py-1.5 text-[10px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]">
-                          <CheckCircle2 className="w-3 h-3"/> Confirm Payment
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Expanded detail row */}
-                    {isActive && (
-                      <div onClick={e => e.stopPropagation()}>
-                        <div className="mt-3 pt-3 border-t border-[#E5EAF0] flex items-center justify-between">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {/* Open Threads tab */}
-                            <button
-                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "threads" ? null : "threads"); }}
-                              className={`text-[10px] px-3 py-1.5 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${activeDetailTab === "threads" ? "bg-[#9000FF] text-white hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <MessageCircle className="w-3 h-3" /> Open Threads
-                            </button>
-                            {/* View Docs tab */}
-                            <button
-                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "docs" ? null : "docs"); }}
-                              className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "docs" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <FileText className="w-3 h-3" /> View Docs
-                            </button>
-                            {/* Factory Quotes tab */}
-                            <button
-                              onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "quotes" ? null : "quotes"); }}
-                              className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "quotes" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <DollarSign className="w-3 h-3" /> Factory Quotes
-                            </button>
-                            {/* Advance Stage — unchanged */}
-                            <button
-                              onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
-                              className="text-[10px] bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
-                              <MapPin className="w-3 h-3" /> Advance Stage
-                            </button>
-                            {/* History */}
-                            <button
-                              onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
-                              className={`text-[10px] px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <Clock className="w-3 h-3" /> History
-                            </button>
-                          </div>
-                          <div className="relative">
-                            <button
-                              onClick={e => { e.stopPropagation(); setMoreMenuId(moreMenuId === shipment.id ? null : shipment.id); }}
-                              className="text-[#5E687B] hover:text-[#212833] hover:bg-[#F0F4F8] p-1 rounded transition-colors">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                            {moreMenuId === shipment.id && (
-                              <div
-                                onClick={e => e.stopPropagation()}
-                                className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
-                                {[
-                                  { label: "Edit PO", action: () => { openEditPO(shipment); setMoreMenuId(null); } },
-                                  { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
-                                  { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
-                                  { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
-                                  { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); } },
-                                ].map(({ label, action }) => (
-                                  <button key={label} onClick={action}
-                                    className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#212833] transition-colors">
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Inline detail panel — shown when a tab is active */}
-                        {activeDetailTab !== null && (
-                          <div className="mt-3 border border-[#E5EAF0] rounded-xl bg-white overflow-hidden">
-                            {/* Threads panel */}
-                            {activeDetailTab === "threads" && (() => {
-                              const msgs: Message[] = allMessages
-                                .filter((m: Message) => m.shipmentId === shipment.shipmentId)
-                                .sort((a: Message, b: Message) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
-                                .slice(0, 5);
-                              return (
-                                <div>
-                                  <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Recent Threads</span>
-                                    <span className="text-[9px] text-[#C0C8D4]">{msgs.length} of {allMessages.filter((m: Message) => m.shipmentId === shipment.shipmentId).length}</span>
-                                  </div>
-                                  {msgs.length === 0 ? (
-                                    <p className="text-[11px] text-[#C0C8D4] italic px-4 py-4 text-center">No messages for this shipment</p>
-                                  ) : (
-                                    <ul>
-                                      {msgs.map((msg: Message) => (
-                                        <li key={msg.id} className="flex items-start gap-3 px-4 py-3 border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#FAFBFC] transition-colors">
-                                          <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 text-[#9000FF] flex items-center justify-center shrink-0 text-[9px] font-bold mt-0.5">
-                                            {msg.sender.charAt(0).toUpperCase()}
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2">
-                                              <span className="text-[11px] font-semibold text-[#212833] truncate">{msg.sender}</span>
-                                              <span className="text-[9px] text-[#C0C8D4] shrink-0">{new Date(msg.receivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                                            </div>
-                                            {msg.subject && <p className="text-[10px] text-[#5E687B] font-medium truncate mt-0.5">{msg.subject}</p>}
-                                            <p className="text-[10px] text-[#9E9FAE] truncate mt-0.5">{msg.snippet}</p>
-                                          </div>
-                                          {msg.unread && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0 mt-2" />}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Docs panel */}
-                            {activeDetailTab === "docs" && (() => {
-                              const docs: DocumentWithExtraction[] = allDocuments
-                                .filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId)
-                                .sort((a: DocumentWithExtraction, b: DocumentWithExtraction) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                .slice(0, 5);
-                              return (
-                                <div>
-                                  <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Attached Documents</span>
-                                    <span className="text-[9px] text-[#C0C8D4]">{docs.length} of {allDocuments.filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId).length}</span>
-                                  </div>
-                                  {docs.length === 0 ? (
-                                    <p className="text-[11px] text-[#C0C8D4] italic px-4 py-4 text-center">No documents attached to this shipment</p>
-                                  ) : (
-                                    <ul>
-                                      {docs.map((doc: DocumentWithExtraction) => (
-                                        <li key={doc.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#F0F4F8] last:border-b-0 hover:bg-[#FAFBFC] transition-colors">
-                                          <FileText className="w-4 h-4 text-[#9000FF] shrink-0" />
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-[11px] font-semibold text-[#212833] truncate">{doc.fileName}</p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                              <span className="text-[9px] text-[#9E9FAE] uppercase">{doc.fileType}</span>
-                                              <span className="text-[9px] text-[#C0C8D4]">·</span>
-                                              <span className="text-[9px] text-[#9E9FAE]">{doc.sourceChannel}</span>
-                                              <span className="text-[9px] text-[#C0C8D4]">·</span>
-                                              <span className="text-[9px] text-[#9E9FAE]">{new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                                            </div>
-                                          </div>
-                                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${doc.status === "extracted" ? "bg-emerald-50 text-emerald-700" : "bg-[#F0F4F8] text-[#9E9FAE]"}`}>
-                                            {doc.status}
-                                          </span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Factory Quotes panel */}
-                            {activeDetailTab === "quotes" && (
-                              <div>
-                                <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                  <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Factory Quotes</span>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
-                                        <HelpCircle className="w-3.5 h-3.5" />
-                                      </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-64 p-3 text-[12px]" align="end">
-                                      <p className="font-semibold text-[#212833] mb-1">Factory Quotes</p>
-                                      <p className="text-[#5E687B] leading-relaxed">Compare quotes from multiple factories. Select the winning quote to lock in the unit price — FlowForgeIQ tracks the margin automatically.</p>
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                                <div className="p-3">
-                                  <QuotesTab
-                                    shipmentId={shipment.shipmentId}
-                                    quotes={shipmentQuotesMap.get(shipment.shipmentId) ?? []}
-                                    currentStage={shipment.currentStage}
-                                    supplierNames={apiSuppliers.map(s => s.name)}
-                                    onQuotesChange={(updated) =>
-                                      setShipmentQuotesMap(prev => new Map(prev).set(shipment.shipmentId, updated))
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -1491,6 +1094,39 @@ export function Atelier() {
 
         </div>
     </div>
+
+    {/* ── SHIPMENT DRAWER ── */}
+    <ShipmentDrawer
+      shipment={activeShipmentId ? (shipments.find(s => s.id === activeShipmentId) ?? null) : null}
+      stages={stages}
+      allMessages={allMessages}
+      allDocuments={allDocuments}
+      apiSuppliers={apiSuppliers}
+      shipmentQuotesMap={shipmentQuotesMap}
+      existingDeals={existingDeals}
+      riskScore={activeShipmentId ? riskByShipmentId.get(shipments.find(s => s.id === activeShipmentId)?.shipmentId ?? -1) : undefined}
+      markPaidForm={markPaidForm}
+      setMarkPaidForm={setMarkPaidForm}
+      openMarkPaid={openMarkPaid}
+      confirmMarkPaid={confirmMarkPaid}
+      undoPaymentPaid={undoPaymentPaid}
+      buyerPriceFormId={buyerPriceFormId}
+      setBuyerPriceFormId={setBuyerPriceFormId}
+      buyerPriceDraft={buyerPriceDraft}
+      setBuyerPriceDraft={setBuyerPriceDraft}
+      patchDealForShipment={patchDealForShipment}
+      patchDealPending={patchDealPending}
+      linkPanelShipmentId={linkPanelShipmentId}
+      setLinkPanelShipmentId={setLinkPanelShipmentId}
+      linkDeal={linkDeal}
+      unlinkDeal={unlinkDeal}
+      openAdvanceDialog={openAdvanceDialog}
+      openEditPO={openEditPO}
+      setShipments={setShipments}
+      setAiInput={setAiInput}
+      setShipmentQuotesMap={setShipmentQuotesMap}
+      onClose={() => setActiveShipmentId(null)}
+    />
 
     {/* ── ADVANCE STAGE CONFIRMATION DIALOG ── */}
     {advanceTarget && (() => {
