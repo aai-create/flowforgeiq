@@ -83,6 +83,7 @@ export interface UiMessage {
   rawSenderEmail?: string | null;
   matchMethod?: string | null;
   rawChatText?: string | null;
+  routedToUserName?: string | null;
 }
 
 export interface UiTask {
@@ -170,6 +171,7 @@ export function adaptMessages(rows: ApiMessage[], shipments: UiShipment[]): UiMe
       rawSenderEmail: m.rawSenderEmail,
       matchMethod: m.matchMethod,
       rawChatText: m.rawChatText ?? null,
+      routedToUserName: m.routedToUserName,
     };
   });
 }

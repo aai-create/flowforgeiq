@@ -63,10 +63,51 @@ function RadarIcon({ size = 16, className = "" }: { size?: number; className?: s
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CollapsibleSection — progressive-disclosure panel section
+// ─────────────────────────────────────────────────────────────────────────────
+function CollapsibleSection({
+  title, summary, isOpen, onToggle, children, badge, accentColor = "default",
+}: {
+  title: string;
+  summary?: React.ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+  accentColor?: "default" | "amber";
+}) {
+  return (
+    <div className="border-t border-[#E5EAF0]">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#FAFBFC] transition-colors text-left group/cs"
+      >
+        <ChevronRight
+          size={11}
+          className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""} ${accentColor === "amber" ? "text-amber-600" : "text-[#9E9FAE]"}`}
+        />
+        <span className={`text-[10px] font-bold uppercase tracking-wider ${accentColor === "amber" ? "text-amber-700" : "text-[#5E687B]"}`}>
+          {title}
+        </span>
+        {badge}
+        {!isOpen && summary && (
+          <span className="ml-auto text-[9px] text-[#9E9FAE] truncate max-w-[180px] font-normal">{summary}</span>
+        )}
+        {isOpen && <span className="ml-auto"/>}
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-0.5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 type ActiveView = "inbox" | "calendar" | "buyers" | "import" | "copilot" | "needs-review" | "settings";
-type RightTab   = "message" | "docs" | "risk" | "copilot";
 type Channel    = "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -1779,7 +1820,11 @@ export default function Home() {
   const [flaggedFilter, setFlaggedFilter] = useState(false);
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
-  const [shipmentContextExpanded, setShipmentContextExpanded] = useState(true);
+  const [sectionOpen, setSectionOpen] = useState<Record<string,boolean>>(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return { finance: false, docs: tab === "docs", copilot: tab === "copilot", risk: tab === "risk" };
+  });
+  const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !prev[key] }));
   useEffect(() => {
     if (!showTaskPanel) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowTaskPanel(false); };
@@ -1789,13 +1834,7 @@ export default function Home() {
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
   const [showComposePanel, setShowComposePanel] = useState(false);
-  const [rightTab, setRightTab]           = useState<RightTab>(() => {
-    const VALID_TABS = ["message", "docs", "risk", "copilot"] as string[];
-    const p = new URLSearchParams(window.location.search).get("tab");
-    if (VALID_TABS.includes(p ?? "")) return p as RightTab;
-    const saved = sessionStorage.getItem("flowforge:rightTab");
-    return VALID_TABS.includes(saved ?? "") ? (saved as RightTab) : "message";
-  });
+  const [_rightTabUnused, _setRightTabUnused] = useState("message"); // kept for URL compat only
   const [toast, setToast]                 = useState<string|null>(null);
   const [repliedIds, setRepliedIds]       = useState<Set<string>>(new Set());
   const [advanceDialogShipment, setAdvanceDialogShipment] = useState<UiShipment | null>(null);
@@ -1894,8 +1933,8 @@ export default function Home() {
     if (!supplierParam && !shipmentParam && !tabParam) return;
     urlParamsApplied.current = true;
     setActiveView("inbox");
-    if (tabParam && (["message", "docs", "risk", "copilot"] as string[]).includes(tabParam)) {
-      setRightTab(tabParam as RightTab);
+    if (tabParam && (["docs", "risk", "copilot"] as string[]).includes(tabParam)) {
+      setSectionOpen(prev => ({ ...prev, [tabParam]: true }));
     }
     if (shipmentParam) {
       const uiId = `s${shipmentParam}`;
@@ -1913,17 +1952,7 @@ export default function Home() {
     }
   }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep ?tab= in sync with rightTab so the URL is bookmarkable and the back
-  // button can restore the active tab. Use replace (not push) so tab switches
-  // don't pollute the browser history stack. Also persist to sessionStorage so
-  // that navigating away via the sidebar and returning restores the active tab.
-  useEffect(() => {
-    sessionStorage.setItem("flowforge:rightTab", rightTab);
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === rightTab) return;
-    params.set("tab", rightTab);
-    navigate(`?${params.toString()}`, { replace: true });
-  }, [rightTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  // (rightTab URL sync removed — sections use sectionOpen state)
 
   // Keep ?shipment= in sync with selectedShipmentId. Guard against running
   // before the deep-link effect has had a chance to consume any pending URL
@@ -2078,7 +2107,7 @@ export default function Home() {
         updateMessage(msg.messageId, { unread: false }).catch(() => {});
       }, 1500);
     }
-    setComposeText(""); setRightTab("message");
+    setComposeText("");
   };
   const toggleFlag = (msgId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2864,7 +2893,7 @@ export default function Home() {
                 <div className="flex items-center gap-1">
                   {activeShipment && (
                     <button
-                      onClick={() => { setShowComposePanel(true); setRightTab("message"); }}
+                      onClick={() => { setShowComposePanel(true); }}
                       title={`Compose new message for ${activeShipment.po}`}
                       className="flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold text-[#9000FF] hover:bg-[#9000FF]/8 border border-[#9000FF]/20 transition-colors"
                     >
@@ -2950,10 +2979,10 @@ export default function Home() {
                   onCancel={() => setShowComposePanel(false)}
                 />
               )}
-              {/* Shipment context */}
+              {/* Shipment context — compact header */}
               {!showComposePanel && activeShipment&&(
                 <div className="border-b border-[#E5EAF0] p-4 bg-[#FAFBFC] shrink-0">
-                  <div className="flex items-start justify-between mb-2.5">
+                  <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                         <span className="text-[8px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
@@ -3003,503 +3032,274 @@ export default function Home() {
                       </div>
                       <div className="text-[11px] text-[#5E687B]">{activeShipment.product}</div>
                     </div>
-                    <div className="flex items-start gap-1.5 shrink-0">
-                      <div className="text-right"><div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
-                      <button onClick={()=>setShipmentContextExpanded(v=>!v)} className="p-1 rounded hover:bg-[#E5EAF0] text-[#5E687B] transition-colors mt-0.5" title={shipmentContextExpanded?"Collapse details":"Expand details"}>
-                        {shipmentContextExpanded?<ChevronUp size={11}/>:<ChevronDown size={11}/>}
-                      </button>
+                    <div className="text-right shrink-0">
+                      <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div>
+                      <div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div>
                     </div>
                   </div>
-                  {shipmentContextExpanded&&<>
-                  {/* Stage bar */}
-                  <div className="bg-white rounded-lg border border-[#E5EAF0] p-2.5 mb-2.5">
-                    <div className="flex items-center justify-between text-[9px] mb-1.5">
-                      <span className="font-bold text-[#212833] flex items-center gap-1"><MapPin size={9} className="text-[#9000FF]"/>{activeStage?.label??"—"}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#5E687B]">Stage {activeStageIdx+1} of {stages.length}</span>
-                        <button
-                          onClick={() => activeShipment && openAdvanceDialog(activeShipment)}
-                          className="text-[8px] font-semibold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-2 py-0.5 rounded-full hover:bg-[#9000FF]/15 transition-colors flex items-center gap-1">
-                          <ChevronRight size={8}/>Advance
-                        </button>
-                        <button
-                          onClick={() => setShowHistory(h => !h)}
-                          className={`text-[8px] font-semibold px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showHistory?"bg-[#9000FF]/10 border-[#9000FF]/20 text-[#9000FF]":"text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}>
-                          <Clock size={8}/>History
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex gap-px h-1.5 mb-2">{stages.map((_,idx)=><div key={idx} className={`flex-1 rounded-full transition-all duration-500 ${idx<activeStageIdx?"bg-[#9000FF]":idx===activeStageIdx?"bg-[#9000FF] opacity-50":"bg-[#E5EAF0]"}`}/>)}</div>
-                    <div className="flex items-center gap-1 overflow-x-auto">{stages.slice(activeStageIdx,activeStageIdx+5).map((st,i)=><div key={st.id} className={`flex items-center gap-1 shrink-0 text-[9px] ${i===0?"text-[#9000FF] font-bold":"text-[#9E9FAE]"}`}>{i>0&&<ChevronRight size={8} className="text-[#D6E3EB]"/>}{st.label}</div>)}</div>
-                    {showHistory&&activeShipment&&(
-                      <div className="mt-2.5 pt-2.5 border-t border-[#F0F4F8]">
-                        <StageHistory
-                          shipmentId={activeShipment.shipmentId}
-                          stageLabels={Object.fromEntries(stages.map(s => [s.id, s.label]))}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  {/* Payment inline */}
-                  <div className="space-y-1.5">
-                    {activeShipment.payments.map((p, i) => {
-                      const ov = !p.paid && new Date(`${p.dueDate} 2026`) < new Date();
-                      const isFormOpen = markPaidForm?.shipmentId === activeShipment.id && markPaidForm?.paymentIdx === i;
-                      return (
-                        <div key={i}>
-                          <div className="flex items-center gap-2">
-                            <div className={`flex flex-col gap-0.5 text-[9px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ov ? "bg-red-50 text-red-600 border-red-100" : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
-                              <div className="flex items-center gap-1">
-                                {p.paid ? <CheckCircle2 size={9}/> : ov ? <AlertCircle size={9}/> : <CreditCard size={9}/>}
-                                {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : ov ? "OVERDUE" : `due ${p.dueDate}`}
-                                {p.paid && p.invoiceNumber && (
-                                  <span className="text-emerald-700/70 font-normal">· {p.invoiceNumber}</span>
-                                )}
-                              </div>
-                              {(p.intermediaryAdvanceUsd ?? 0) > 0 && (
-                                <div className="flex items-center gap-1 text-amber-600 font-medium">
-                                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                                  Intermediary: ${p.intermediaryAdvanceUsd!.toLocaleString()} fronted
-                                  {(p.intermediaryRecoveredUsd ?? 0) > 0 && ` / $${p.intermediaryRecoveredUsd!.toLocaleString()} recovered`}
-                                </div>
-                              )}
-                              {(p.intermediarySupplierPaidUsd ?? 0) > 0 && (
-                                <div className="flex items-center gap-1 text-violet-600 font-medium">
-                                  <span className="inline-block w-2 h-2 rounded-full bg-violet-400 shrink-0" />
-                                  Intermediary paid supplier: ${p.intermediarySupplierPaidUsd!.toLocaleString()}
-                                  {p.intermediarySupplierPaidAt && ` on ${shortDate(p.intermediarySupplierPaidAt)}`}
-                                </div>
-                              )}
-                            </div>
-                            {!p.paid && !isFormOpen && (
-                              <button type="button" onClick={() => openMarkPaid(activeShipment.id, i as 0|1)}
-                                className="text-[9px] font-semibold px-2 py-1 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
-                                Mark Paid
-                              </button>
-                            )}
-                            {p.paid && (
-                              <button type="button" onClick={() => undoPaymentPaid(activeShipment.id, i as 0|1)}
-                                className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
-                                Undo
-                              </button>
-                            )}
-                            {isFormOpen && (
-                              <button type="button" onClick={() => setMarkPaidForm(null)}
-                                className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
-                                Cancel
-                              </button>
-                            )}
-                          </div>
-                          {isFormOpen && markPaidForm && (
-                            <div className="mt-1.5 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2">
-                              <p className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Record Payment</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
-                                  <input type="number" min="0" value={markPaidForm.amount}
-                                    onChange={e => setMarkPaidForm(f => f ? { ...f, amount: e.target.value } : f)}
-                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                                </div>
-                                <div>
-                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
-                                  <input type="date" value={markPaidForm.date}
-                                    onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
-                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                                </div>
-                                <div>
-                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">
-                                    Invoice # <span className="text-red-500">*</span>
-                                  </label>
-                                  <input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001"
-                                    onChange={e => setMarkPaidForm(f => f ? { ...f, invoiceNumber: e.target.value } : f)}
-                                    className={`w-full px-2 py-1 text-[10px] border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim() ? "border-red-300 focus:border-red-400" : "border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/>
-                                </div>
-                                <div>
-                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
-                                  <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
-                                    onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
-                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
-                                </div>
-                                <div className="col-span-2">
-                                  <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label>
-                                  <select value={markPaidForm.method}
-                                    onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
-                                    className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
-                                    <option>Wire</option>
-                                    <option>Credit</option>
-                                    <option>Other</option>
-                                  </select>
-                                </div>
-                              </div>
-                              {/* Intermediary payment to supplier */}
-                              <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
-                                <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                                  <input type="checkbox" checked={markPaidForm.intermediarySupplierPaid}
-                                    onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierPaid: e.target.checked } : f)}
-                                    className="accent-[#9000FF] w-3 h-3"/>
-                                  <span className="text-[9px] font-semibold text-[#5E687B]">Intermediary paid supplier</span>
-                                </label>
-                                {markPaidForm.intermediarySupplierPaid && (
-                                  <div className="grid grid-cols-2 gap-2 pt-0.5">
-                                    <div>
-                                      <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
-                                      <input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0"
-                                        onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierAmount: e.target.value } : f)}
-                                        className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                                    </div>
-                                    <div>
-                                      <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Date Paid</label>
-                                      <input type="date" value={markPaidForm.intermediarySupplierDate}
-                                        onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierDate: e.target.value } : f)}
-                                        className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()}
-                                className="w-full py-1.5 text-[10px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]">
-                                <CheckCircle2 size={10}/> Confirm Payment
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Your Spread row */}
-                  <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                    <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                      <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
-                      {!editingBuyerPrice && (
-                        <button
-                          onClick={() => {
-                            setEditingBuyerPrice(true);
-                            setBuyerPriceDraft({
-                              unitPrice: activeShipment.buyerUnitPrice != null ? String(activeShipment.buyerUnitPrice) : "",
-                              quantity: activeShipment.buyerQuantity != null ? String(activeShipment.buyerQuantity) : "",
-                            });
-                          }}
-                          className="text-[9px] font-semibold text-[#9000FF] hover:underline">
-                          {activeShipment.spreadPct !== null ? "Edit" : "Add Buyer Price"}
-                        </button>
-                      )}
-                      {editingBuyerPrice && (
-                        <button onClick={() => setEditingBuyerPrice(false)} className="text-[9px] text-[#5E687B] hover:underline">Cancel</button>
-                      )}
-                    </div>
-                    {editingBuyerPrice ? (
-                      <div className="space-y-2">
-                        <div className="flex items-end gap-2">
-                          <div className="flex-1">
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
-                            <input type="number" min="0" step="0.01" autoFocus
-                              value={buyerPriceDraft.unitPrice}
-                              onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
-                              placeholder="0.00"
-                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Quantity</label>
-                            <input type="number" min="1" step="1"
-                              value={buyerPriceDraft.quantity}
-                              onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
-                              placeholder="0"
-                              className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
-                          </div>
-                          <button
-                            disabled={!buyerPriceDraft.unitPrice || !buyerPriceDraft.quantity || patchDealPending}
-                            onClick={() => {
-                              const up = Number(buyerPriceDraft.unitPrice);
-                              const qty = Number(buyerPriceDraft.quantity);
-                              if (!up || !qty) return;
-                              patchDealForShipment({ id: activeShipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
-                            }}
-                            className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
-                            {patchDealPending ? "…" : "Save"}
-                          </button>
-                        </div>
-                        {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
-                          const buyerTotal = Number(buyerPriceDraft.unitPrice) * Number(buyerPriceDraft.quantity);
-                          const supplierTotal = activeShipment.payments.reduce((s, p) => s + p.amountUsd, 0);
-                          const spread = buyerTotal - supplierTotal;
-                          const pct = buyerTotal > 0 ? (spread / buyerTotal) * 100 : 0;
-                          const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
-                          return (
-                            <div className={`text-[9px] font-semibold ${cls}`}>
-                              Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    ) : activeShipment.spreadPct !== null && activeShipment.spreadPct !== undefined ? (() => {
-                      const pct = activeShipment.spreadPct!;
-                      const usd = activeShipment.spreadUsd;
-                      const supplierCostUsd = activeShipment.payments.reduce((sum, p) => sum + p.amountUsd, 0);
-                      const buyerTotalUsd = usd !== null && usd !== undefined ? usd + supplierCostUsd : null;
-                      const barCls = pct >= 25 ? "bg-emerald-500" : pct >= 10 ? "bg-amber-400" : "bg-red-500";
-                      const textCls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
-                      const bgCls = pct >= 25 ? "bg-emerald-50 border-emerald-100" : pct >= 10 ? "bg-amber-50 border-amber-100" : "bg-red-50 border-red-100";
-                      const label = pct >= 25 ? "Healthy" : pct >= 10 ? "Thin" : "Loss";
-                      return (
-                        <div className={`rounded-lg border px-3 py-2 ${bgCls}`}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-sm font-bold ${textCls}`}>{pct.toFixed(1)}%</span>
-                              {usd !== null && usd !== undefined && (
-                                <span className={`text-[10px] font-semibold ${textCls}`}>· ${Math.round(usd).toLocaleString()}</span>
-                              )}
-                              <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${textCls} opacity-80`}>{label}</span>
-                            </div>
-                          </div>
-                          <div className="h-1 w-full bg-white/60 rounded-full overflow-hidden mb-1.5">
-                            <div className={`h-full rounded-full transition-all ${barCls}`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}/>
-                          </div>
-                          {buyerTotalUsd !== null && (
-                            <div className="flex items-center justify-between text-[9px] text-[#5E687B]">
-                              <span>Supplier: ${supplierCostUsd.toLocaleString()}</span>
-                              <span>Buyer: ${Math.round(buyerTotalUsd).toLocaleString()}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })() : (
-                      <p className="text-[9px] text-[#C0C8D4] italic">No buyer price set — click "Add Buyer Price" to track your spread</p>
-                    )}
-                  </div>
-                  {/* Supplier contact email */}
-                  {activeSupplier ? (
-                    <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                      <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                        <Mail size={8}/>Supplier Contact
-                      </div>
-                      {editingEmail ? (
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            autoFocus
-                            type="email"
-                            value={emailDraft}
-                            onChange={e => setEmailDraft(e.target.value)}
-                            onKeyDown={e => { if (e.key === "Enter") saveEmail(); if (e.key === "Escape") setEditingEmail(false); }}
-                            placeholder="supplier@example.com"
-                            className="flex-1 px-2 py-1 text-[10px] border border-[#9000FF]/40 rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/20 text-[#212833]"
-                          />
-                          <button onClick={saveEmail} disabled={updateSupplierMutation.isPending} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">Save</button>
-                          <button onClick={() => setEditingEmail(false)} className="text-[9px] text-[#5E687B] px-1.5 py-1 rounded-md hover:bg-[#F0F4F8] shrink-0">✕</button>
-                        </div>
-                      ) : activeSupplierEmail ? (
-                        <div className="flex items-center gap-1.5 group">
-                          <span className="text-[10px] text-[#212833] truncate">{activeSupplierEmail}</span>
-                          <button
-                            onClick={() => { setEmailDraft(activeSupplierEmail ?? ""); setEditingEmail(true); }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#5E687B] shrink-0"
-                            title="Edit contact email"
-                          >
-                            <Pencil size={9}/>
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => { setEmailDraft(""); setEditingEmail(true); }}
-                          className="text-[9px] text-[#9000FF] hover:underline flex items-center gap-1"
-                        >
-                          <Plus size={8}/>Add contact email to improve routing
-                        </button>
-                      )}
-                    </div>
-                  ) : null}
-                  </>}
                 </div>
               )}
 
-              {/* Tabs + tab content — hidden while compose panel is open or detail pane is cleared */}
-              {!showComposePanel && activeMessageId !== "__cleared__" && <><div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
-                {([
-                  {id:"message" as RightTab, label:"Message"},
-                  {id:"docs"    as RightTab, label:"Docs"},
-                  {id:"risk"    as RightTab, label:"Risk",    icon:ShieldAlert},
-                  {id:"copilot" as RightTab, label:"Copilot", icon:Sparkles},
-                ] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
-                  <button key={t.id} onClick={()=>setRightTab(t.id)}
-                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id
-                      ? t.id==="copilot" ? "border-amber-400 text-amber-700" : "border-[#9000FF] text-[#9000FF]"
-                      : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
-                    {t.icon&&<t.icon size={10}/>}
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      {t.label}
-                      {t.id==="docs"&&docsCount>0&&(
-                        <span className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none ${docsHasFindings?"bg-amber-100 text-amber-700 border border-amber-300":"bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0]"} ${rightTab==="docs"?"opacity-100":"opacity-80"}`}>
-                          {docsCount}
-                        </span>
-                      )}
-                      {t.id==="copilot"&&(apiProposals??[]).filter(p=>p.status==="pending").length>0&&(
-                        <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none bg-amber-100 text-amber-700 border border-amber-200">
-                          {(apiProposals??[]).filter(p=>p.status==="pending").length}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {/* Progressive-disclosure sections — hidden when compose panel open or message cleared */}
+              {!showComposePanel && activeMessageId !== "__cleared__" && activeMessage && <>
+                <div className="flex-1 overflow-y-auto">
+                  {/* Quote panel — quotes stage only */}
+                  {isQuotesStage && activeShipment?.quotes && (
+                    <div className="px-4 pt-4 shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
+                  )}
 
-              {/* Docs tab */}
-              {rightTab==="docs"&&<DocsPanel shipmentId={activeShipment?.id??""}/>}
-
-              {/* Copilot tab */}
-              {rightTab==="copilot"&&(
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                  <div className="bg-[#9000FF]/5 border border-[#9000FF]/15 rounded-xl p-3 flex items-start gap-2 shrink-0">
-                    <Sparkles size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold text-[#9000FF] mb-0.5">Copilot — {activeShipment?.po}</p>
-                      <p className="text-[10px] text-[#5E687B]">AI-generated actions for the active thread.</p>
-                    </div>
-                    <button onClick={()=>setActiveView("copilot")} className="text-[9px] text-[#5E687B] hover:text-[#212833] shrink-0 flex items-center gap-0.5 whitespace-nowrap">Full queue<ArrowUpRight size={9}/></button>
-                  </div>
-                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).slice(0,4).map(p=>{
-                    const payload=(p.payload??{}) as Record<string,unknown>;
-                    const draftBody=String(payload.draftBody??payload.messageSnippet??"");
-                    const displayTitle=(p.actionType||"action").replace(/_/g," ");
-                    const conf=p.confidence??0;
-                    const priorityLabel=conf>=0.7?"high":conf>=0.4?"medium":"low";
-                    return (
-                      <div key={p.id} className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm">
-                        <div className="flex items-start gap-2.5 p-3">
-                          <div className="w-6 h-6 rounded-lg bg-[#F8F9FB] border border-[#E5EAF0] flex items-center justify-center shrink-0"><Sparkles size={11} className="text-[#9000FF]"/></div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[11px] font-bold text-[#212833] capitalize">{displayTitle}</span>
-                              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${priorityLabel==="high"?"bg-red-50 text-red-600 border-red-100":priorityLabel==="medium"?"bg-amber-50 text-amber-600 border-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>{priorityLabel}</span>
-                            </div>
-                            <p className="text-[10px] text-[#5E687B]">{p.reasoning}</p>
+                  {/* Message body — always visible primary content */}
+                  {!isQuotesStage && (
+                    <div className="p-4">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
+                          <div className="text-[9px] text-[#5E687B] flex items-center gap-1 flex-wrap">
+                            {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
+                            {activeMessage.rawChatText && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[8px] uppercase tracking-wide">
+                                <MessageSquare size={8}/>Forwarded chat
+                              </span>
+                            )}
                           </div>
                         </div>
-                        {draftBody&&<div className="mx-3 mb-3 bg-[#9000FF]/4 border border-[#9000FF]/15 rounded-lg p-2.5"><p className="text-[9px] font-bold text-[#9000FF] mb-1">Draft</p><p className="text-[10px] text-[#212833] leading-relaxed line-clamp-3">{draftBody}</p></div>}
+                        <div className="ml-auto flex items-center gap-2">
+                          <button onClick={e=>toggleFlag(activeMessage.id,e)} title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
+                            <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
+                            {activeMessage.isFlagged?"Flagged":"Flag"}
+                          </button>
+                          {repliedIds.has(activeMessage.id)&&<span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
+                        </div>
                       </div>
-                    );
-                  })}
-                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).length===0&&(
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]">
-                      <Sparkles size={28} className="opacity-30 mb-2"/>
-                      <p className="text-sm font-semibold text-[#212833]">No pending actions</p>
-                      <p className="text-[11px] mt-1">Copilot will surface suggestions as new messages arrive.</p>
+                      {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
+                        <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
+                          <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
+                            <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
+                          </div>
+                          <button onClick={() => setActiveView("needs-review")}
+                            className="shrink-0 text-[9px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1">
+                            <ArrowRight size={9}/>Reassign
+                          </button>
+                        </div>
+                      )}
+                      <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
+                      {activeMessage.rawChatText && (
+                        <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
+                          <button onClick={() => setChatTranscriptExpanded(v => !v)}
+                            className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left">
+                            <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
+                            <span className="text-[10px] font-bold text-indigo-700 flex-1">Chat transcript</span>
+                            <span className="text-[9px] text-indigo-400 font-medium">{activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":"Chat"} · forwarded</span>
+                            {chatTranscriptExpanded?<ChevronUp size={11} className="text-indigo-400 shrink-0"/>:<ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
+                          </button>
+                          {chatTranscriptExpanded && (
+                            <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
+                              <pre className="text-[10px] text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
+                      {activeMessage.aiAction && (
+                        <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden mt-3">
+                          <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
+                          <div className="flex items-start gap-2.5 relative">
+                            <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[8px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
+                              <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
+                              {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-[10px] text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
+                              {!repliedIds.has(activeMessage.id)?(
+                                <div className="flex gap-2">
+                                  <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
+                                  <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-[10px] font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
+                                </div>
+                              ):(
+                                <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Risk tab */}
-              {rightTab==="risk"&&activeShipment&&(
-                <div className="flex-1 overflow-y-auto p-4">
-                  <ShipmentRiskDetail shipmentId={activeShipment.shipmentId}/>
-                </div>
-              )}
+                  {/* Quote AI hint — quotes stage */}
+                  {isQuotesStage&&<div className="px-4 pb-4"><div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed"><div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead time. Recommend Foshan if margin is priority; Guangzhou if relationship and speed matter more.</div></div>}
 
-              {/* Message tab */}
-              {rightTab==="message"&&<>
-                {/* Quote panel */}
-                {isQuotesStage&&activeShipment?.quotes&&(
-                  <div className="px-4 pt-4 shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
-                )}
-
-                {/* Message body */}
-                {!isQuotesStage&&(
-                  <div className="flex-1 overflow-y-auto p-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
-                        <div className="text-[9px] text-[#5E687B] flex items-center gap-1 flex-wrap">
-                          {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
-                          {activeMessage.rawChatText && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[8px] uppercase tracking-wide">
-                              <MessageSquare size={8}/>Forwarded chat
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="ml-auto flex items-center gap-2">
-                        <button
-                          onClick={e=>toggleFlag(activeMessage.id,e)}
-                          title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
-                          <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
-                          {activeMessage.isFlagged?"Flagged":"Flag"}
-                        </button>
-                        {repliedIds.has(activeMessage.id)&&<span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
-                      </div>
-                    </div>
-                    {/* Needs-review banner for chat-forward messages awaiting confirmation */}
-                    {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
-                      <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
-                        <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
-                          <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
-                        </div>
-                        <button
-                          onClick={() => setActiveView("needs-review")}
-                          className="shrink-0 text-[9px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1"
-                        >
-                          <ArrowRight size={9}/>Reassign
-                        </button>
-                      </div>
-                    )}
-                    <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
-                    {/* Collapsible chat transcript for forwarded chats */}
-                    {activeMessage.rawChatText && (
-                      <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
-                        <button
-                          onClick={() => setChatTranscriptExpanded(v => !v)}
-                          className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left"
-                        >
-                          <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
-                          <span className="text-[10px] font-bold text-indigo-700 flex-1">Chat transcript</span>
-                          <span className="text-[9px] text-indigo-400 font-medium">{activeMessage.channel === "whatsapp" ? "WhatsApp" : activeMessage.channel === "wechat" ? "WeChat" : activeMessage.channel === "imessage" ? "iMessage" : "Chat"} · forwarded</span>
-                          {chatTranscriptExpanded ? <ChevronUp size={11} className="text-indigo-400 shrink-0"/> : <ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
-                        </button>
-                        {chatTranscriptExpanded && (
-                          <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
-                            <pre className="text-[10px] text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
-                    {activeMessage.aiAction&&(
-                      <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">
-                        <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
-                        <div className="flex items-start gap-2.5 relative">
-                          <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[8px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
-                            <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
-                            {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-[10px] text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
-                            {!repliedIds.has(activeMessage.id)?(
-                              <div className="flex gap-2">
-                                <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
-                                <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-[10px] font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
+                  {/* ── Finance section ── */}
+                  {(()=>{
+                    const unpaid = activeShipment?.payments.filter(p=>!p.paid)??[];
+                    const isOv = unpaid.some(p=>new Date(`${p.dueDate} 2026`)<new Date());
+                    const finSum = unpaid.length>0 ? `${unpaid[0].label} $${unpaid[0].amountUsd.toLocaleString()} — ${isOv?"Overdue":`due ${unpaid[0].dueDate}`}` : "All paid";
+                    return (
+                      <CollapsibleSection title="Finance" isOpen={sectionOpen.finance} onToggle={()=>toggleSection("finance")} summary={finSum}
+                        badge={isOv?<span className="inline-flex items-center gap-0.5 text-[8px] font-bold bg-red-100 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full ml-1"><AlertCircle size={8}/>Overdue</span>:undefined}>
+                        {activeShipment && (
+                          <div className="space-y-1.5 pt-2">
+                            <div className="bg-white rounded-lg border border-[#E5EAF0] p-2.5 mb-3">
+                              <div className="flex items-center justify-between text-[9px] mb-1.5">
+                                <span className="font-bold text-[#212833] flex items-center gap-1"><MapPin size={9} className="text-[#9000FF]"/>{activeStage?.label??"—"}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[#5E687B]">Stage {activeStageIdx+1} of {stages.length}</span>
+                                  <button onClick={()=>activeShipment&&openAdvanceDialog(activeShipment)} className="text-[8px] font-semibold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-2 py-0.5 rounded-full hover:bg-[#9000FF]/15 transition-colors flex items-center gap-1"><ChevronRight size={8}/>Advance</button>
+                                  <button onClick={()=>setShowHistory(h=>!h)} className={`text-[8px] font-semibold px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${showHistory?"bg-[#9000FF]/10 border-[#9000FF]/20 text-[#9000FF]":"text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}><Clock size={8}/>History</button>
+                                </div>
                               </div>
-                            ):(
-                              <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
+                              <div className="flex gap-px h-1.5 mb-2">{stages.map((_,idx)=><div key={idx} className={`flex-1 rounded-full transition-all duration-500 ${idx<activeStageIdx?"bg-[#9000FF]":idx===activeStageIdx?"bg-[#9000FF] opacity-50":"bg-[#E5EAF0]"}`}/>)}</div>
+                              <div className="flex items-center gap-1 overflow-x-auto">{stages.slice(activeStageIdx,activeStageIdx+5).map((st,i)=><div key={st.id} className={`flex items-center gap-1 shrink-0 text-[9px] ${i===0?"text-[#9000FF] font-bold":"text-[#9E9FAE]"}`}>{i>0&&<ChevronRight size={8} className="text-[#D6E3EB]"/>}{st.label}</div>)}</div>
+                              {showHistory&&activeShipment&&(<div className="mt-2.5 pt-2.5 border-t border-[#F0F4F8]"><StageHistory shipmentId={activeShipment.shipmentId} stageLabels={Object.fromEntries(stages.map(s=>[s.id,s.label]))}/></div>)}
+                            </div>
+                            {activeShipment.payments.map((p,i)=>{
+                              const ov=!p.paid&&new Date(`${p.dueDate} 2026`)<new Date();
+                              const isFormOpen=markPaidForm?.shipmentId===activeShipment.id&&markPaidForm?.paymentIdx===i;
+                              return (
+                                <div key={i}>
+                                  <div className="flex items-center gap-2">
+                                    <div className={`flex flex-col gap-0.5 text-[9px] font-semibold px-2 py-1 rounded border flex-1 ${p.paid?"bg-emerald-50 text-emerald-600 border-emerald-100":ov?"bg-red-50 text-red-600 border-red-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
+                                      <div className="flex items-center gap-1">
+                                        {p.paid?<CheckCircle2 size={9}/>:ov?<AlertCircle size={9}/>:<CreditCard size={9}/>}
+                                        {p.label}: ${p.amountUsd.toLocaleString()} {p.paid?`paid ${p.paidAt?shortDate(p.paidAt):""}`.trim():ov?"OVERDUE":`due ${p.dueDate}`}
+                                        {p.paid&&p.invoiceNumber&&<span className="text-emerald-700/70 font-normal">· {p.invoiceNumber}</span>}
+                                      </div>
+                                      {(p.intermediaryAdvanceUsd??0)>0&&(<div className="flex items-center gap-1 text-amber-600 font-medium"><span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0"/>Intermediary: ${p.intermediaryAdvanceUsd!.toLocaleString()} fronted{(p.intermediaryRecoveredUsd??0)>0&&` / $${p.intermediaryRecoveredUsd!.toLocaleString()} recovered`}</div>)}
+                                      {(p.intermediarySupplierPaidUsd??0)>0&&(<div className="flex items-center gap-1 text-violet-600 font-medium"><span className="inline-block w-2 h-2 rounded-full bg-violet-400 shrink-0"/>Intermediary paid supplier: ${p.intermediarySupplierPaidUsd!.toLocaleString()}{p.intermediarySupplierPaidAt&&` on ${shortDate(p.intermediarySupplierPaidAt)}`}</div>)}
+                                    </div>
+                                    {!p.paid&&!isFormOpen&&(<button type="button" onClick={()=>openMarkPaid(activeShipment.id,i as 0|1)} className="text-[9px] font-semibold px-2 py-1 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">Mark Paid</button>)}
+                                    {p.paid&&(<button type="button" onClick={()=>undoPaymentPaid(activeShipment.id,i as 0|1)} className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">Undo</button>)}
+                                    {isFormOpen&&(<button type="button" onClick={()=>setMarkPaidForm(null)} className="text-[9px] font-medium px-2 py-1 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">Cancel</button>)}
+                                  </div>
+                                  {isFormOpen&&markPaidForm&&(
+                                    <div className="mt-1.5 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2">
+                                      <p className="text-[9px] font-bold text-[#9000FF] uppercase tracking-wider">Record Payment</p>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label><input type="number" min="0" value={markPaidForm.amount} onChange={e=>setMarkPaidForm(f=>f?{...f,amount:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
+                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Payment Date</label><input type="date" value={markPaidForm.date} onChange={e=>setMarkPaidForm(f=>f?{...f,date:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
+                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Invoice # <span className="text-red-500">*</span></label><input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001" onChange={e=>setMarkPaidForm(f=>f?{...f,invoiceNumber:e.target.value}:f)} className={`w-full px-2 py-1 text-[10px] border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim()?"border-red-300 focus:border-red-400":"border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/></div>
+                                        <div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label><input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001" onChange={e=>setMarkPaidForm(f=>f?{...f,reference:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/></div>
+                                        <div className="col-span-2"><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Method</label><select value={markPaidForm.method} onChange={e=>setMarkPaidForm(f=>f?{...f,method:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white"><option>Wire</option><option>Credit</option><option>Other</option></select></div>
+                                      </div>
+                                      <div className="border border-[#E5EAF0] rounded-lg p-2 space-y-1.5">
+                                        <label className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={markPaidForm.intermediarySupplierPaid} onChange={e=>setMarkPaidForm(f=>f?{...f,intermediarySupplierPaid:e.target.checked}:f)} className="accent-[#9000FF] w-3 h-3"/><span className="text-[9px] font-semibold text-[#5E687B]">Intermediary paid supplier</span></label>
+                                        {markPaidForm.intermediarySupplierPaid&&(<div className="grid grid-cols-2 gap-2 pt-0.5"><div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label><input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0" onChange={e=>setMarkPaidForm(f=>f?{...f,intermediarySupplierAmount:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div><div><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Date Paid</label><input type="date" value={markPaidForm.intermediarySupplierDate} onChange={e=>setMarkPaidForm(f=>f?{...f,intermediarySupplierDate:e.target.value}:f)} className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div></div>)}
+                                      </div>
+                                      <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()} className="w-full py-1.5 text-[10px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]"><CheckCircle2 size={10}/> Confirm Payment</button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
+                              <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                                <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
+                                {!editingBuyerPrice&&(<button onClick={()=>{setEditingBuyerPrice(true);setBuyerPriceDraft({unitPrice:activeShipment.buyerUnitPrice!=null?String(activeShipment.buyerUnitPrice):"",quantity:activeShipment.buyerQuantity!=null?String(activeShipment.buyerQuantity):"",});}} className="text-[9px] font-semibold text-[#9000FF] hover:underline">{activeShipment.spreadPct!==null?"Edit":"Add Buyer Price"}</button>)}
+                                {editingBuyerPrice&&(<button onClick={()=>setEditingBuyerPrice(false)} className="text-[9px] text-[#5E687B] hover:underline">Cancel</button>)}
+                              </div>
+                              {editingBuyerPrice?(
+                                <div className="space-y-2">
+                                  <div className="flex items-end gap-2">
+                                    <div className="flex-1"><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label><input type="number" min="0" step="0.01" autoFocus value={buyerPriceDraft.unitPrice} onChange={e=>setBuyerPriceDraft(d=>({...d,unitPrice:e.target.value}))} placeholder="0.00" className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
+                                    <div className="flex-1"><label className="text-[9px] text-[#5E687B] font-medium block mb-0.5">Quantity</label><input type="number" min="1" step="1" value={buyerPriceDraft.quantity} onChange={e=>setBuyerPriceDraft(d=>({...d,quantity:e.target.value}))} placeholder="0" className="w-full px-2 py-1 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/></div>
+                                    <button disabled={!buyerPriceDraft.unitPrice||!buyerPriceDraft.quantity||patchDealPending} onClick={()=>{const up=Number(buyerPriceDraft.unitPrice);const qty=Number(buyerPriceDraft.quantity);if(!up||!qty)return;patchDealForShipment({id:activeShipment.shipmentId,data:{buyerUnitPrice:up,buyerQuantity:qty}});}} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">{patchDealPending?"…":"Save"}</button>
+                                  </div>
+                                  {buyerPriceDraft.unitPrice&&buyerPriceDraft.quantity&&(()=>{const bt=Number(buyerPriceDraft.unitPrice)*Number(buyerPriceDraft.quantity);const st=activeShipment.payments.reduce((s,p)=>s+p.amountUsd,0);const sp=bt-st;const pct=bt>0?(sp/bt)*100:0;const cls=pct>=25?"text-emerald-700":pct>=10?"text-amber-700":"text-red-700";return(<div className={`text-[9px] font-semibold ${cls}`}>Preview: {pct.toFixed(1)}% · ${Math.round(sp).toLocaleString()}</div>);})()}
+                                </div>
+                              ):activeShipment.spreadPct!==null&&activeShipment.spreadPct!==undefined?(()=>{
+                                const pct=activeShipment.spreadPct!;const usd=activeShipment.spreadUsd;const sc=activeShipment.payments.reduce((sum,p)=>sum+p.amountUsd,0);const bt=usd!==null&&usd!==undefined?usd+sc:null;
+                                const barCls=pct>=25?"bg-emerald-500":pct>=10?"bg-amber-400":"bg-red-500";const textCls=pct>=25?"text-emerald-700":pct>=10?"text-amber-700":"text-red-700";const bgCls=pct>=25?"bg-emerald-50 border-emerald-100":pct>=10?"bg-amber-50 border-amber-100":"bg-red-50 border-red-100";const lbl=pct>=25?"Healthy":pct>=10?"Thin":"Loss";
+                                return(<div className={`rounded-lg border px-3 py-2 ${bgCls}`}><div className="flex items-center justify-between mb-1.5"><div className="flex items-center gap-1.5"><span className={`text-sm font-bold ${textCls}`}>{pct.toFixed(1)}%</span>{usd!==null&&usd!==undefined&&<span className={`text-[10px] font-semibold ${textCls}`}>· ${Math.round(usd).toLocaleString()}</span>}<span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${textCls} opacity-80`}>{lbl}</span></div></div><div className="h-1 w-full bg-white/60 rounded-full overflow-hidden mb-1.5"><div className={`h-full rounded-full transition-all ${barCls}`} style={{width:`${Math.min(100,Math.max(0,pct))}%`}}/></div>{bt!==null&&<div className="flex items-center justify-between text-[9px] text-[#5E687B]"><span>Supplier: ${sc.toLocaleString()}</span><span>Buyer: ${Math.round(bt).toLocaleString()}</span></div>}</div>);
+                              })():(
+                                <p className="text-[9px] text-[#C0C8D4] italic">No buyer price set — click "Add Buyer Price" to track your spread</p>
+                              )}
+                            </div>
+                            {activeSupplier&&(
+                              <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
+                                <div className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Mail size={8}/>Supplier Contact</div>
+                                {editingEmail?(
+                                  <div className="flex items-center gap-1.5">
+                                    <input autoFocus type="email" value={emailDraft} onChange={e=>setEmailDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEmail();if(e.key==="Escape")setEditingEmail(false);}} placeholder="supplier@example.com" className="flex-1 px-2 py-1 text-[10px] border border-[#9000FF]/40 rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/20 text-[#212833]"/>
+                                    <button onClick={saveEmail} disabled={updateSupplierMutation.isPending} className="text-[9px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">Save</button>
+                                    <button onClick={()=>setEditingEmail(false)} className="text-[9px] text-[#5E687B] px-1.5 py-1 rounded-md hover:bg-[#F0F4F8] shrink-0">✕</button>
+                                  </div>
+                                ):activeSupplierEmail?(
+                                  <div className="flex items-center gap-1.5 group">
+                                    <span className="text-[10px] text-[#212833] truncate">{activeSupplierEmail}</span>
+                                    <button onClick={()=>{setEmailDraft(activeSupplierEmail??"");setEditingEmail(true);}} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[#F0F4F8] text-[#5E687B] shrink-0" title="Edit contact email"><Pencil size={9}/></button>
+                                  </div>
+                                ):(
+                                  <button onClick={()=>{setEmailDraft("");setEditingEmail(true);}} className="text-[9px] text-[#9000FF] hover:underline flex items-center gap-1"><Plus size={8}/>Add contact email to improve routing</button>
+                                )}
+                              </div>
                             )}
                           </div>
+                        )}
+                      </CollapsibleSection>
+                    );
+                  })()}
+
+                  {/* ── Docs & Flags section ── */}
+                  {(()=>{
+                    const findingsCount=(docsTabData??[]).reduce((sum,d)=>sum+(d.extraction?.reconciliationFindings?.length??0),0);
+                    const docSum=docsCount>0?`${docsCount} doc${docsCount!==1?"s":""}${findingsCount>0?` · ${findingsCount} flag${findingsCount!==1?"s":""}`:""}` : "No documents";
+                    return (
+                      <CollapsibleSection title="Docs & Flags" isOpen={sectionOpen.docs} onToggle={()=>toggleSection("docs")} summary={docSum}
+                        badge={docsHasFindings?<span className="inline-flex items-center gap-0.5 text-[8px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full ml-1"><AlertCircle size={8}/>Flags</span>:docsCount>0?<span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] ml-1">{docsCount}</span>:undefined}>
+                        <div className="pt-1"><DocsPanel shipmentId={activeShipment?.id??""}/></div>
+                      </CollapsibleSection>
+                    );
+                  })()}
+
+                  {/* ── Copilot section ── */}
+                  {(()=>{
+                    const activeProps=(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId);
+                    const pendingCnt=activeProps.filter(p=>p.status==="pending").length;
+                    const copSum=pendingCnt>0?`${pendingCnt} pending action${pendingCnt!==1?"s":""}` : "No suggestions";
+                    return (
+                      <CollapsibleSection title="Copilot" isOpen={sectionOpen.copilot} onToggle={()=>toggleSection("copilot")} summary={copSum} accentColor="amber"
+                        badge={pendingCnt>0?<span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold leading-none bg-amber-100 text-amber-700 border border-amber-200 ml-1">{pendingCnt}</span>:undefined}>
+                        <div className="pt-2 flex flex-col gap-3">
+                          <div className="bg-[#9000FF]/5 border border-[#9000FF]/15 rounded-xl p-3 flex items-start gap-2 shrink-0">
+                            <Sparkles size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
+                            <div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-[#9000FF] mb-0.5">Copilot — {activeShipment?.po}</p><p className="text-[10px] text-[#5E687B]">AI-generated actions for the active thread.</p></div>
+                            <button onClick={()=>setActiveView("copilot")} className="text-[9px] text-[#5E687B] hover:text-[#212833] shrink-0 flex items-center gap-0.5 whitespace-nowrap">Full queue<ArrowUpRight size={9}/></button>
+                          </div>
+                          {activeProps.slice(0,4).map(p=>{
+                            const payload=(p.payload??{}) as Record<string,unknown>;
+                            const draftBody=String(payload.draftBody??payload.messageSnippet??"");
+                            const displayTitle=(p.actionType||"action").replace(/_/g," ");
+                            const conf=p.confidence??0;
+                            const priorityLabel=conf>=0.7?"high":conf>=0.4?"medium":"low";
+                            return (
+                              <div key={p.id} className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm">
+                                <div className="flex items-start gap-2.5 p-3">
+                                  <div className="w-6 h-6 rounded-lg bg-[#F8F9FB] border border-[#E5EAF0] flex items-center justify-center shrink-0"><Sparkles size={11} className="text-[#9000FF]"/></div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-0.5"><span className="text-[11px] font-bold text-[#212833] capitalize">{displayTitle}</span><span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${priorityLabel==="high"?"bg-red-50 text-red-600 border-red-100":priorityLabel==="medium"?"bg-amber-50 text-amber-600 border-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>{priorityLabel}</span></div>
+                                    <p className="text-[10px] text-[#5E687B]">{p.reasoning}</p>
+                                  </div>
+                                </div>
+                                {draftBody&&<div className="mx-3 mb-3 bg-[#9000FF]/4 border border-[#9000FF]/15 rounded-lg p-2.5"><p className="text-[9px] font-bold text-[#9000FF] mb-1">Draft</p><p className="text-[10px] text-[#212833] leading-relaxed line-clamp-3">{draftBody}</p></div>}
+                              </div>
+                            );
+                          })}
+                          {activeProps.length===0&&(<div className="flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]"><Sparkles size={28} className="opacity-30 mb-2"/><p className="text-sm font-semibold text-[#212833]">No pending actions</p><p className="text-[11px] mt-1">Copilot will surface suggestions as new messages arrive.</p></div>)}
                         </div>
-                      </div>
-                    )}
-                    {/* Quote AI hint */}
-                    {isQuotesStage&&(
-                      <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed">
-                        <div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>
-                        Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead. Recommend Foshan if margin is priority.
-                      </div>
-                    )}
-                  </div>
-                )}
+                      </CollapsibleSection>
+                    );
+                  })()}
 
-                {/* Quote scroll area */}
-                {isQuotesStage&&<div className="flex-1 overflow-y-auto px-4 pb-4"><div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed"><div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead time. Recommend Foshan if margin is priority; Guangzhou if relationship and speed matter more.</div></div>}
+                  {/* ── Risk section ── */}
+                  <CollapsibleSection title="Risk" isOpen={sectionOpen.risk} onToggle={()=>toggleSection("risk")}
+                    summary={activeShipment?.status==="on-track"?"No critical flags":activeShipment?.status==="at-risk"?"At risk":"Delayed"}>
+                    {activeShipment&&(<div className="pt-1"><ShipmentRiskDetail shipmentId={activeShipment.shipmentId}/></div>)}
+                  </CollapsibleSection>
+                </div>
 
-                {/* Compose + Template Picker  (P1) */}
+                {/* Compose area — always visible at bottom */}
                 <div className="p-3 border-t border-[#E5EAF0] bg-white shrink-0">
                   {composeFocused&&activeShipment&&(
                     <TemplatePicker stageId={activeShipment.currentStageId} onPick={body=>{setComposeText(body);}}/>
@@ -3515,10 +3315,8 @@ export default function Home() {
                         <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="p-1 hover:bg-[#E5EAF0] rounded" title="AI draft"><Sparkles size={13} className="text-[#9000FF]"/></button>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        {activeMessage.channel==="gmail" && gmailStatus?.connected && (
-                          <button
-                            onClick={()=>{ if(composeText.trim()) sendViaGmail(activeMessage.messageId, composeText.trim()); }}
-                            disabled={!composeText.trim() || sendReplyMutation.isPending}
+                        {activeMessage.channel==="gmail"&&gmailStatus?.connected&&(
+                          <button onClick={()=>{if(composeText.trim())sendViaGmail(activeMessage.messageId,composeText.trim());}} disabled={!composeText.trim()||sendReplyMutation.isPending}
                             title="Send reply through your connected Gmail account"
                             className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all ${composeText.trim()&&!sendReplyMutation.isPending?"bg-blue-600 text-white hover:bg-blue-700":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>
                             <Mail size={10}/>Gmail
@@ -3532,7 +3330,6 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </>}
               </>}
             </div>
             </ResizablePanel>
