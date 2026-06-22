@@ -50,6 +50,23 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Stage" }
+    post:
+      operationId: createStage
+      tags: [stages]
+      summary: Create a new pipeline stage for the org (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StageCreate" }
+      responses:
+        "201":
+          description: Created stage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Stage" }
+        "403":
+          description: Admin required
   /stages/reorder:
     post:
       operationId: reorderStages
@@ -67,6 +84,47 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Stage" }
+  /stages/{id}:
+    put:
+      operationId: updateStage
+      tags: [stages]
+      summary: Rename a stage or update its sort order (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StageUpdate" }
+      responses:
+        "200":
+          description: Updated stage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Stage" }
+        "403":
+          description: Admin required
+        "404":
+          description: Stage not found
+    delete:
+      operationId: deleteStage
+      tags: [stages]
+      summary: Delete a pipeline stage (admin only; 409 if shipments are at this stage)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Admin required
+        "409":
+          description: Cannot delete — shipments currently at this stage
 
   /suppliers:
     get:
@@ -1521,6 +1579,17 @@ components:
         id:        { type: string }
         label:     { type: string }
         sortOrder: { type: integer }
+    StageCreate:
+      type: object
+      required: [id, label]
+      properties:
+        id:    { type: string, description: "Stable text key for this stage (e.g. 'stage-customs'). Must be unique within the org." }
+        label: { type: string, description: "Display name shown to users." }
+    StageUpdate:
+      type: object
+      properties:
+        label:     { type: string, description: "New display name for the stage." }
+        sortOrder: { type: integer, description: "New sort position." }
     StageOrderInput:
       type: object
       required: [stageIds]

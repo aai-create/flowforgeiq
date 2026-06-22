@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown } from "lucide-react";
-import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress } from "@workspace/api-client-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X } from "lucide-react";
+import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
 import { useUserPref } from "@/lib/useUserPref";
+import type { Stage } from "@workspace/api-client-react";
 
-type SettingsTab = "general" | "channels" | "team";
+type SettingsTab = "general" | "pipeline" | "channels" | "team";
 
 function BeeperSection() {
   const [open, setOpen] = useState(false);
@@ -334,6 +335,225 @@ function TeamSection() {
   );
 }
 
+function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
+  const { data: stages = [], refetch } = useListStages();
+  const createStage = useCreateStage();
+  const updateStage = useUpdateStage();
+  const deleteStage = useDeleteStage();
+  const reorderStages = useReorderStages();
+
+  const [localStages, setLocalStages] = useState<Stage[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [addingNew, setAddingNew] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const dragItem = useRef<number | null>(null);
+  const dragOver = useRef<number | null>(null);
+
+  useEffect(() => {
+    const sorted = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
+    setLocalStages(sorted);
+  }, [stages]);
+
+  const handleDragStart = (idx: number) => { dragItem.current = idx; };
+  const handleDragEnter = (idx: number) => { dragOver.current = idx; };
+
+  const handleDragEnd = async () => {
+    const from = dragItem.current;
+    const to = dragOver.current;
+    if (from === null || to === null || from === to) { dragItem.current = null; dragOver.current = null; return; }
+    const updated = [...localStages];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved!);
+    setLocalStages(updated);
+    dragItem.current = null;
+    dragOver.current = null;
+    try {
+      await reorderStages.mutateAsync({ data: { stageIds: updated.map(s => s.id) } });
+      void refetch();
+    } catch {
+      setError("Failed to save new order.");
+      void refetch();
+    }
+  };
+
+  const startEdit = (stage: Stage) => {
+    setEditingId(stage.id);
+    setEditLabel(stage.label);
+    setError(null);
+  };
+
+  const commitEdit = async (id: string) => {
+    if (!editLabel.trim()) { setEditingId(null); return; }
+    setSaving(true);
+    try {
+      await updateStage.mutateAsync({ id, data: { label: editLabel.trim() } });
+      void refetch();
+    } catch {
+      setError("Failed to rename stage.");
+    } finally {
+      setSaving(false);
+      setEditingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setError(null);
+    try {
+      await deleteStage.mutateAsync({ id });
+      void refetch();
+    } catch (e: unknown) {
+      const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
+      if (status === 409) {
+        const data = (e as { data?: { error?: string } }).data;
+        setError(data?.error ?? "Cannot delete: shipments are currently at this stage.");
+      } else {
+        setError("Failed to delete stage.");
+      }
+    }
+  };
+
+  const handleAddStage = async () => {
+    if (!newLabel.trim()) return;
+    const id = "stage-" + newLabel.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    setSaving(true);
+    setError(null);
+    try {
+      await createStage.mutateAsync({ data: { id, label: newLabel.trim() } });
+      void refetch();
+      setNewLabel("");
+      setAddingNew(false);
+    } catch {
+      setError("Failed to create stage. The ID may already exist.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
+        <GitBranch className="w-3.5 h-3.5 text-[#9000FF]" />
+        <span className="text-xs font-bold text-[#212833]">Pipeline stages</span>
+        <span className="ml-auto text-[10px] font-bold bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full">{localStages.length}</span>
+      </div>
+
+      <div className="px-4 py-3 border-b border-[#E5EAF0] bg-[#FAFBFC]">
+        <p className="text-[11px] text-[#5E687B] leading-relaxed">
+          {isAdmin
+            ? "Drag to reorder stages, click the pencil to rename, or use the delete button. Stages with active shipments cannot be deleted."
+            : "Your organisation's pipeline stages. Contact an admin to make changes."}
+        </p>
+      </div>
+
+      {error && (
+        <div className="mx-4 mt-3 bg-red-50 border border-red-100 text-red-700 text-xs px-3 py-2 rounded-lg">{error}</div>
+      )}
+
+      <ul className="divide-y divide-[#E5EAF0]">
+        {localStages.map((stage, idx) => (
+          <li
+            key={stage.id}
+            draggable={isAdmin}
+            onDragStart={() => handleDragStart(idx)}
+            onDragEnter={() => handleDragEnter(idx)}
+            onDragEnd={() => void handleDragEnd()}
+            onDragOver={e => e.preventDefault()}
+            className="flex items-center gap-3 px-4 py-2.5 group hover:bg-[#F7F9FA] transition-colors"
+          >
+            {isAdmin && (
+              <GripVertical className="w-3.5 h-3.5 text-[#C0C8D4] group-hover:text-[#9E9FAE] cursor-grab shrink-0" />
+            )}
+            <span className="w-5 h-5 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0 text-[9px] font-bold text-[#9000FF]">
+              {idx + 1}
+            </span>
+            {editingId === stage.id ? (
+              <input
+                autoFocus
+                value={editLabel}
+                onChange={e => setEditLabel(e.target.value)}
+                onBlur={() => void commitEdit(stage.id)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") void commitEdit(stage.id);
+                  if (e.key === "Escape") setEditingId(null);
+                }}
+                disabled={saving}
+                className="flex-1 border border-[#9000FF] rounded px-2 py-0.5 text-xs font-medium text-[#212833] outline-none focus:ring-1 focus:ring-[#9000FF]/20"
+              />
+            ) : (
+              <span className="flex-1 text-xs font-medium text-[#212833]">{stage.label}</span>
+            )}
+            {isAdmin && editingId !== stage.id && (
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <button
+                  onClick={() => startEdit(stage)}
+                  className="p-1 rounded text-[#9E9FAE] hover:text-[#9000FF] hover:bg-[#9000FF]/8 transition-colors"
+                  title="Rename"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => void handleDelete(stage.id)}
+                  className="p-1 rounded text-[#9E9FAE] hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {isAdmin && (
+        <div className="px-4 py-3 border-t border-[#E5EAF0]">
+          {addingNew ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={newLabel}
+                onChange={e => setNewLabel(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") void handleAddStage();
+                  if (e.key === "Escape") { setAddingNew(false); setNewLabel(""); }
+                }}
+                placeholder="New stage name…"
+                disabled={saving}
+                className="flex-1 border border-[#9000FF] rounded-md px-3 py-1.5 text-xs text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 focus:ring-[#9000FF]/20"
+              />
+              <button
+                onClick={() => void handleAddStage()}
+                disabled={saving || !newLabel.trim()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors"
+              >
+                {saving ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                Add
+              </button>
+              <button
+                onClick={() => { setAddingNew(false); setNewLabel(""); }}
+                className="p-1.5 text-[#9E9FAE] hover:text-[#212833] hover:bg-[#E5EAF0] rounded-md transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setAddingNew(true); setError(null); }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#9000FF] hover:text-[#7A00D9] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add stage
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 type LandingPagePref = "inbox" | "orders" | "risk-radar";
 
 const LANDING_PAGE_OPTIONS: { value: LandingPagePref; label: string; description: string }[] = [
@@ -394,6 +614,21 @@ export function Settings() {
   const { signOut } = useClerk();
   const { user } = useUser();
 
+  const [myRole, setMyRole] = useState<string>("member");
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${basePath}api/team`);
+        if (!res.ok) return;
+        const data = await res.json() as { members: { clerkUserId: string; role: string }[] };
+        const me = data.members.find(m => m.clerkUserId === user?.id);
+        if (me) setMyRole(me.role);
+      } catch { /* ignore */ }
+    })();
+  }, [user?.id, basePath]);
+
   const [prefix, setPrefix] = useState("PO-");
   const [sequenceFormat, setSequenceFormat] = useState("{seq}");
   const [supplierSuffix, setSupplierSuffix] = useState("S");
@@ -429,6 +664,7 @@ export function Settings() {
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: "general", label: "General", icon: <Settings2 className="w-3.5 h-3.5" /> },
+    { id: "pipeline", label: "Pipeline", icon: <GitBranch className="w-3.5 h-3.5" /> },
     { id: "channels", label: "Chat Channels", icon: <MessageCircle className="w-3.5 h-3.5" /> },
     { id: "team", label: "Team", icon: <Users className="w-3.5 h-3.5" /> },
   ];
@@ -582,6 +818,21 @@ export function Settings() {
                 )}
               </section>
               </>
+            )}
+
+            {activeTab === "pipeline" && (
+              <div>
+                <div className="mb-4">
+                  <h2 className="text-sm font-bold text-[#212833] mb-1">Pipeline stages</h2>
+                  <p className="text-xs text-[#5E687B] leading-relaxed">
+                    Define the stages shipments move through from factory quote to delivery.
+                    {myRole === "admin"
+                      ? " Drag to reorder, click the pencil to rename, add new stages, or remove ones that are no longer used."
+                      : " Contact an admin to make changes."}
+                  </p>
+                </div>
+                <PipelineSection isAdmin={myRole === "admin"} />
+              </div>
             )}
 
             {activeTab === "channels" && (

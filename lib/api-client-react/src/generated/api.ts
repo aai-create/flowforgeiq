@@ -85,9 +85,11 @@ import type {
   ShipmentPrediction,
   ShipmentUpdate,
   Stage,
+  StageCreate,
   StageEvent,
   StageEventInput,
   StageOrderInput,
+  StageUpdate,
   SupplierCreate,
   SupplierSummary,
   SupplierUpdate,
@@ -261,6 +263,77 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
 
 
 
+export const getCreateStageUrl = () => {
+
+
+
+
+  return `/api/stages`
+}
+
+/**
+ * @summary Create a new pipeline stage for the org (admin only)
+ */
+export const createStage = async (stageCreate: StageCreate, options?: RequestInit): Promise<Stage> => {
+
+  return customFetch<Stage>(getCreateStageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      stageCreate,)
+  }
+);}
+
+
+
+
+export const getCreateStageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStage>>, TError,{data: BodyType<StageCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStage>>, TError,{data: BodyType<StageCreate>}, TContext> => {
+
+const mutationKey = ['createStage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStage>>, {data: BodyType<StageCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStageMutationResult = NonNullable<Awaited<ReturnType<typeof createStage>>>
+    export type CreateStageMutationBody = BodyType<StageCreate>
+    export type CreateStageMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a new pipeline stage for the org (admin only)
+ */
+export const useCreateStage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStage>>, TError,{data: BodyType<StageCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStage>>,
+        TError,
+        {data: BodyType<StageCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateStageMutationOptions(options));
+    }
+
 export const getReorderStagesUrl = () => {
 
 
@@ -324,6 +397,148 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getReorderStagesMutationOptions(options));
+    }
+
+export const getUpdateStageUrl = (id: string,) => {
+
+
+
+
+  return `/api/stages/${id}`
+}
+
+/**
+ * @summary Rename a stage or update its sort order (admin only)
+ */
+export const updateStage = async (id: string,
+    stageUpdate: StageUpdate, options?: RequestInit): Promise<Stage> => {
+
+  return customFetch<Stage>(getUpdateStageUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      stageUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateStageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStage>>, TError,{id: string;data: BodyType<StageUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateStage>>, TError,{id: string;data: BodyType<StageUpdate>}, TContext> => {
+
+const mutationKey = ['updateStage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateStage>>, {id: string;data: BodyType<StageUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateStage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateStageMutationResult = NonNullable<Awaited<ReturnType<typeof updateStage>>>
+    export type UpdateStageMutationBody = BodyType<StageUpdate>
+    export type UpdateStageMutationError = ErrorType<void>
+
+    /**
+ * @summary Rename a stage or update its sort order (admin only)
+ */
+export const useUpdateStage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStage>>, TError,{id: string;data: BodyType<StageUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateStage>>,
+        TError,
+        {id: string;data: BodyType<StageUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateStageMutationOptions(options));
+    }
+
+export const getDeleteStageUrl = (id: string,) => {
+
+
+
+
+  return `/api/stages/${id}`
+}
+
+/**
+ * @summary Delete a pipeline stage (admin only; 409 if shipments are at this stage)
+ */
+export const deleteStage = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteStageUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteStageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStage>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStage>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteStage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStage>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteStage(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStage>>>
+
+    export type DeleteStageMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a pipeline stage (admin only; 409 if shipments are at this stage)
+ */
+export const useDeleteStage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStage>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStage>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteStageMutationOptions(options));
     }
 
 export const getListSuppliersUrl = () => {

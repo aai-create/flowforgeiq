@@ -24,6 +24,15 @@ export const ListStagesResponseItem = zod.object({
 export const ListStagesResponse = zod.array(ListStagesResponseItem)
 
 
+/**
+ * @summary Create a new pipeline stage for the org (admin only)
+ */
+export const CreateStageBody = zod.object({
+  "id": zod.string().describe('Stable text key for this stage (e.g. \'stage-customs\'). Must be unique within the org.'),
+  "label": zod.string().describe('Display name shown to users.')
+})
+
+
 export const ReorderStagesBody = zod.object({
   "stageIds": zod.array(zod.string())
 })
@@ -34,6 +43,33 @@ export const ReorderStagesResponseItem = zod.object({
   "sortOrder": zod.number()
 })
 export const ReorderStagesResponse = zod.array(ReorderStagesResponseItem)
+
+
+/**
+ * @summary Rename a stage or update its sort order (admin only)
+ */
+export const UpdateStageParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateStageBody = zod.object({
+  "label": zod.string().optional().describe('New display name for the stage.'),
+  "sortOrder": zod.number().optional().describe('New sort position.')
+})
+
+export const UpdateStageResponse = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Delete a pipeline stage (admin only; 409 if shipments are at this stage)
+ */
+export const DeleteStageParams = zod.object({
+  "id": zod.coerce.string()
+})
 
 
 export const ListSuppliersResponseItem = zod.object({

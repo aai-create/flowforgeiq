@@ -268,7 +268,8 @@ router.post("/rfqs/:id/convert", async (req, res) => {
   if (!supplier) { res.status(400).json({ error: "Supplier not found" }); return; }
 
   const [firstStage] = await db.select().from(stagesTable).where(eq(stagesTable.orgId, orgId)).orderBy(asc(stagesTable.sortOrder)).limit(1);
-  const stageId = firstStage?.id ?? "stage-spec-sheet";
+  if (!firstStage) { res.status(400).json({ error: "No pipeline stages configured for this organization" }); return; }
+  const stageId = firstStage.id;
 
   const depositPct = body.depositPct ?? 30;
   const totalUsd = acceptedQuote.unitPriceUsd * rfq.quantity;

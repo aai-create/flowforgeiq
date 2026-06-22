@@ -71,6 +71,20 @@ export interface Stage {
   sortOrder: number;
 }
 
+export interface StageCreate {
+  /** Stable text key for this stage (e.g. 'stage-customs'). Must be unique within the org. */
+  id: string;
+  /** Display name shown to users. */
+  label: string;
+}
+
+export interface StageUpdate {
+  /** New display name for the stage. */
+  label?: string;
+  /** New sort position. */
+  sortOrder?: number;
+}
+
 export interface StageOrderInput {
   stageIds: string[];
 }

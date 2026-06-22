@@ -10,6 +10,7 @@ import {
   poNumberingConfigTable,
   dealShipmentsTable,
   teamUsersTable,
+  stagesTable,
 } from "@workspace/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
@@ -199,10 +200,19 @@ router.post("/shipments", async (req, res) => {
     .where(and(eq(suppliersTable.id, shipmentFields.supplierId), eq(suppliersTable.orgId, orgId))).limit(1);
   if (!supplierCheck) { res.status(400).json({ error: "Supplier not found" }); return; }
 
+  // Resolve default stage from the org's first stage by sortOrder
+  let defaultStageId = shipmentFields.currentStageId;
+  if (!defaultStageId) {
+    const [firstStage] = await db.select({ id: stagesTable.id }).from(stagesTable)
+      .where(eq(stagesTable.orgId, orgId)).orderBy(asc(stagesTable.sortOrder)).limit(1);
+    if (!firstStage) { res.status(400).json({ error: "No pipeline stages configured for this organization" }); return; }
+    defaultStageId = firstStage.id;
+  }
+
   const input = {
     ...shipmentFields,
     status: shipmentFields.status ?? "on-track",
-    currentStageId: shipmentFields.currentStageId ?? "stage-spec-sheet",
+    currentStageId: defaultStageId,
     via: shipmentFields.via ?? "OCEAN",
     orgId,
   };

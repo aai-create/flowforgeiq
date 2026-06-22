@@ -28,15 +28,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ShipmentDrawer, type MarkPaidForm } from "@/components/ShipmentDrawer";
 
-// ---------------------------------------------------------------------------
-// Shared data (mirrors ConversationHub)
-// ---------------------------------------------------------------------------
-const STAGES = [
-  "Spec Sheet", "Factory Quotes", "Sample Order", "Sample Approval",
-  "PO Issued", "Production", "QC Inspection", "Ex-Factory",
-  "In Transit", "Payment Clearance", "Delivered",
-];
-
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
 interface Payment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; }
@@ -150,10 +141,6 @@ const statusCls = (s: ShipmentStatus) =>
 
 const urgencyDot = (u: Task["urgency"]) =>
   u === "high" ? "bg-red-500" : u === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]";
-
-function stageIndex(stage: string) {
-  return STAGES.indexOf(stage);
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -734,8 +721,8 @@ export function Atelier() {
           <ScrollArea className="flex-1">
             <div className="p-5 space-y-4">
               {visibleShipments.map(shipment => {
-                const stageIdx  = stageIndex(shipment.currentStage);
-                const stagePct  = STAGES.length > 1 ? (stageIdx / (STAGES.length - 1)) * 100 : 0;
+                const stageIdx  = stages.findIndex(s => s.id === shipment.currentStageId);
+                const stagePct  = stages.length > 1 ? (Math.max(0, stageIdx) / (stages.length - 1)) * 100 : 0;
                 const isActive  = activeShipmentId === shipment.id;
                 const balanceOverdue = shipment.payments[1] != null && !shipment.payments[1].paid && new Date(`${shipment.payments[1].dueDate} 2026`) < new Date();
 
@@ -870,7 +857,7 @@ export function Atelier() {
                         </PopoverTrigger>
                         <PopoverContent className="w-64 p-3 text-[12px]" align="end">
                           <p className="font-semibold text-[#212833] mb-1">Stage Tracker</p>
-                          <p className="text-[#5E687B] leading-relaxed">Every shipment moves through 11 milestones from Spec Sheet to Delivered. Click "Advance Stage" to log a stage change with an optional note.</p>
+                          <p className="text-[#5E687B] leading-relaxed">Every shipment moves through {stages.length} milestones from {stages[0]?.label ?? "the first stage"} to {stages[stages.length - 1]?.label ?? "the last stage"}. Click "Advance Stage" to log a stage change with an optional note.</p>
                           <Link to="/help#track-shipment" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
                             Learn more →
                           </Link>
@@ -893,11 +880,11 @@ export function Atelier() {
 
                       {/* Stage dots */}
                       <div className="relative flex justify-between">
-                        {STAGES.map((stage, idx) => {
+                        {stages.map((stage, idx) => {
                           const isPast    = idx < stageIdx;
                           const isCurrent = idx === stageIdx;
                           return (
-                            <div key={stage} className="flex flex-col items-center">
+                            <div key={stage.id} className="flex flex-col items-center">
                               <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 bg-white transition-all ${
                                 isCurrent
                                   ? shipment.status === "delayed" ? "border-red-500 ring-4 ring-red-500/10"
@@ -914,7 +901,7 @@ export function Atelier() {
                                   shipment.status === "delayed" ? "text-red-500"
                                   : shipment.status === "at-risk" ? "text-amber-600"
                                   : "text-[#9000FF]"}`}>
-                                  {stage}
+                                  {stage.label}
                                 </span>
                               )}
                             </div>
@@ -925,9 +912,9 @@ export function Atelier() {
 
                     {/* Stage labels — compact, only boundaries */}
                     <div className="flex justify-between text-[11px] text-[#9E9FAE] mb-3 px-0.5">
-                      <span>{STAGES[0]}</span>
-                      <span>{STAGES[Math.floor(STAGES.length / 2)]}</span>
-                      <span>{STAGES[STAGES.length - 1]}</span>
+                      <span>{stages[0]?.label}</span>
+                      <span>{stages[Math.floor(stages.length / 2)]?.label}</span>
+                      <span>{stages[stages.length - 1]?.label}</span>
                     </div>
 
                     {/* Payment chips */}
@@ -961,11 +948,11 @@ export function Atelier() {
                       })}
 
                       {/* Next stage hint */}
-                      {stageIdx < STAGES.length - 1 && (
+                      {stageIdx >= 0 && stageIdx < stages.length - 1 && (
                         <div className="ml-auto flex items-center gap-1 text-[11px] text-[#9E9FAE]">
                           <span>Next:</span>
                           <ChevronRight className="w-3 h-3" />
-                          <span className="font-medium text-[#5E687B]">{STAGES[stageIdx + 1]}</span>
+                          <span className="font-medium text-[#5E687B]">{stages[stageIdx + 1]?.label}</span>
                         </div>
                       )}
                     </div>
