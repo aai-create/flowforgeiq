@@ -2324,7 +2324,7 @@ export default function Home() {
         {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
         <div className="flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
-            <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
+            <img src="/flowforge-logo.svg" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
           </div>
           <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
             {isLoading ? "Loading FlowForgeIQ…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
@@ -2547,7 +2547,7 @@ export default function Home() {
         <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 relative">
           <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
             <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-              <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
+              <img src="/flowforge-logo.svg" alt="FlowForgeIQ" className="w-full h-full object-contain" />
             </div>
             <span className="text-[#9000FF] tracking-tight">FlowForgeIQ</span>
             <span className="text-[#E5EAF0]">/</span>

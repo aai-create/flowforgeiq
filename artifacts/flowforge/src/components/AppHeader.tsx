@@ -12,7 +12,7 @@ export function AppHeader({ pageLabel }: AppHeaderProps) {
     <header className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-2 w-[260px]">
         <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-          <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
+          <img src="/flowforge-logo.svg" alt="FlowForgeIQ" className="w-full h-full object-contain" />
         </div>
         <span className="font-bold text-sm tracking-tight text-[#9000FF]">FlowForgeIQ</span>
         <span className="text-[#E5EAF0] mx-1">/</span>

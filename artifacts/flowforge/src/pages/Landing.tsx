@@ -10,7 +10,7 @@ export function LandingPage() {
       <div className="w-full max-w-md text-center">
         <div className="flex items-center gap-2 justify-center mb-10">
           <div className="w-9 h-9 rounded-[7px] overflow-hidden shrink-0">
-            <img src={`${basePath}/flowforge-logo.png`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
+            <img src={`${basePath}/flowforge-logo.svg`} alt="FlowForgeIQ" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-2xl tracking-tight text-[#9000FF]">FlowForge IQ</span>
         </div>
