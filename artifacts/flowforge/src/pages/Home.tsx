@@ -2001,6 +2001,7 @@ export default function Home() {
     setTimeout(() => setCopiedPo(null), 1500);
   };
   const [chatTranscriptExpanded, setChatTranscriptExpanded] = useState(false);
+  const [shipmentContextExpanded, setShipmentContextExpanded] = useState(false);
 
   // Buyer price editing
   const [editingBuyerPrice, setEditingBuyerPrice] = useState(false);
