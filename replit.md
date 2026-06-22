@@ -8,7 +8,10 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/db run generate` — generate a new migration file after editing the schema
+- `pnpm --filter @workspace/db run migrate` — apply pending migrations to the database (non-interactive)
+- `pnpm --filter @workspace/db run stamp` — mark all existing migrations as applied without running SQL (one-time use when switching an already-synced DB from push to migrate)
+- `pnpm --filter @workspace/db run push` — push DB schema changes directly (dev only, requires interactive TTY)
 - `pnpm --filter @workspace/db run seed` — reseed all tables from seed-data.json (wipes first)
 - Required env: `DATABASE_URL` — Postgres connection string
 - Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (defaults to `iq@flowforgeiq.com`); per-user addresses are assembled as `iq+{token}@flowforgeiq.com` and surfaced via `GET /settings/inbound-email` (auth required)
@@ -60,7 +63,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 ## Gotchas
 
 - After editing `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen` before relying on new types/hooks.
-- After editing `lib/db/src/schema/*`, run `pnpm --filter @workspace/db run push`, then `pnpm --filter @workspace/db run seed` to reseed.
+- After editing `lib/db/src/schema/*`, run `pnpm --filter @workspace/db run generate` to create a migration file, then `pnpm --filter @workspace/db run migrate` to apply it, then `pnpm --filter @workspace/db run seed` to reseed. Prefer `generate`+`migrate` over `push` — `push` requires an interactive TTY and cannot run non-interactively in agent/CI contexts.
+- `lib/db/migrations/` holds the migration SQL and snapshot files. `drizzle.config.ts` sets `out: "./migrations"`. The `drizzle` Postgres schema tracks applied migrations in `drizzle.__drizzle_migrations`. To bootstrap a fresh DB, run `migrate` (not `stamp`). Use `stamp` only once when switching an already-in-sync DB from `push` to `migrate` — it inserts migration records without executing SQL.
 - The seed script wipes all tables and re-inserts from `scripts/src/seed-data.json`. To regenerate from the spreadsheet: `pnpm --filter @workspace/scripts run build-seed-data`.
 - "Today" is hardcoded as 2026-05-18 in both `scripts/src/build-seed-data.ts` and `artifacts/flowforge/src/lib/adapters.ts` (`relativeAge`). Update both if shifting.
 - `aiRoutingGuess.buyerName` and `aiRoutingGuess.shipmentId` are nullable — the OpenAPI spec and Zod schema must declare them `["type", "null"]` or the `GET /messages/needs-review` endpoint returns 500.
