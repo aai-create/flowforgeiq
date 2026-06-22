@@ -3513,176 +3513,90 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Tabs + tab content — hidden while compose panel is open or detail pane is cleared */}
-              {!showComposePanel && activeMessageId !== "__cleared__" && <><div className="flex border-b border-[#E5EAF0] shrink-0 bg-white">
-                {([
-                  {id:"message" as RightTab, label:"Message"},
-                  {id:"docs"    as RightTab, label:"Docs"},
-                  {id:"risk"    as RightTab, label:"Risk",    icon:ShieldAlert},
-                  {id:"copilot" as RightTab, label:"Copilot", icon:Sparkles},
-                ] as {id:RightTab;label:string;icon?:React.ElementType}[]).map(t=>(
-                  <button key={t.id} onClick={()=>setRightTab(t.id)}
-                    className={`flex-1 py-2 text-[11px] font-semibold transition-colors border-b-2 flex items-center justify-center gap-1 ${rightTab===t.id
-                      ? t.id==="copilot" ? "border-amber-400 text-amber-700" : "border-[#9000FF] text-[#9000FF]"
-                      : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}>
-                    {t.icon&&<t.icon size={10}/>}
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      {t.label}
-                      {t.id==="docs"&&docsCount>0&&(
-                        <span className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[11px] font-bold leading-none ${docsHasFindings?"bg-amber-100 text-amber-700 border border-amber-300":"bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0]"} ${rightTab==="docs"?"opacity-100":"opacity-80"}`}>
-                          {docsCount}
-                        </span>
-                      )}
-                      {t.id==="copilot"&&(apiProposals??[]).filter(p=>p.status==="pending").length>0&&(
-                        <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[11px] font-bold leading-none bg-amber-100 text-amber-700 border border-amber-200">
-                          {(apiProposals??[]).filter(p=>p.status==="pending").length}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Docs tab */}
-              {rightTab==="docs"&&<DocsPanel shipmentId={activeShipment?.id??""}/>}
-
-              {/* Copilot tab */}
-              {rightTab==="copilot"&&(
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                  <div className="bg-[#9000FF]/5 border border-[#9000FF]/15 rounded-xl p-3 flex items-start gap-2 shrink-0">
-                    <Sparkles size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#9000FF] mb-0.5">Copilot — {activeShipment?.po}</p>
-                      <p className="text-xs text-[#5E687B]">AI-generated actions for the active thread.</p>
-                    </div>
-                    <button onClick={()=>setActiveView("copilot")} className="text-[11px] text-[#5E687B] hover:text-[#212833] shrink-0 flex items-center gap-0.5 whitespace-nowrap">Full queue<ArrowUpRight size={9}/></button>
-                  </div>
-                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).slice(0,4).map(p=>{
-                    const payload=(p.payload??{}) as Record<string,unknown>;
-                    const draftBody=String(payload.draftBody??payload.messageSnippet??"");
-                    const displayTitle=(p.actionType||"action").replace(/_/g," ");
-                    const conf=p.confidence??0;
-                    const priorityLabel=conf>=0.7?"high":conf>=0.4?"medium":"low";
-                    return (
-                      <div key={p.id} className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm">
-                        <div className="flex items-start gap-2.5 p-3">
-                          <div className="w-6 h-6 rounded-lg bg-[#F8F9FB] border border-[#E5EAF0] flex items-center justify-center shrink-0"><Sparkles size={11} className="text-[#9000FF]"/></div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[11px] font-bold text-[#212833] capitalize">{displayTitle}</span>
-                              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${priorityLabel==="high"?"bg-red-50 text-red-600 border-red-100":priorityLabel==="medium"?"bg-amber-50 text-amber-600 border-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>{priorityLabel}</span>
-                            </div>
-                            <p className="text-xs text-[#5E687B]">{p.reasoning}</p>
-                          </div>
-                        </div>
-                        {draftBody&&<div className="mx-3 mb-3 bg-[#9000FF]/4 border border-[#9000FF]/15 rounded-lg p-2.5"><p className="text-xs font-bold text-[#9000FF] mb-1">Draft</p><p className="text-xs text-[#212833] leading-relaxed line-clamp-3">{draftBody}</p></div>}
-                      </div>
-                    );
-                  })}
-                  {(apiProposals??[]).filter(p=>activeShipment&&p.shipmentId===activeShipment.shipmentId).length===0&&(
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]">
-                      <Sparkles size={28} className="opacity-30 mb-2"/>
-                      <p className="text-sm font-semibold text-[#212833]">No pending actions</p>
-                      <p className="text-xs mt-1">Copilot will surface suggestions as new messages arrive.</p>
-                    </div>
-                  )}
-
-                  {/* Quote AI hint — quotes stage */}
-                  {isQuotesStage&&<div className="px-4 pb-4"><div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3 text-[11px] text-[#5E687B] leading-relaxed"><div className="flex items-center gap-2 mb-1.5"><Sparkles size={12} className="text-[#9000FF]"/><span className="font-semibold text-[#212833] text-xs">FlowForgeIQ AI — Quote Analysis</span></div>Foshan Grid Factory offers the best unit price at $6.10 with 35-day lead time. Guangzhou Metalworks is your existing supplier with a shorter lead time. Recommend Foshan if margin is priority; Guangzhou if relationship and speed matter more.</div></div>}
-
-              {/* Message tab */}
-              {rightTab==="message"&&<>
+              {/* Message body + collapsible sections */}
+              {!showComposePanel && activeMessageId !== "__cleared__" && <>
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                 {/* Quote panel */}
                 {isQuotesStage&&activeShipment?.quotes&&(
-                  <div className="px-4 pt-4 shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
+                  <div className="shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
                 )}
-
-                {/* Message body */}
-                {!isQuotesStage&&(
-                  <div className="flex-1 overflow-y-auto p-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
-                        <div className="text-[11px] text-[#5E687B] flex items-center gap-1 flex-wrap">
-                          {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
-                          {activeMessage.rawChatText && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[11px] uppercase tracking-wide">
-                              <MessageSquare size={8}/>Forwarded chat
-                            </span>
+                {/* Message body — always visible */}
+                {!isQuotesStage&&(<>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm font-bold text-[#5E687B] shrink-0">{activeMessage.sender.charAt(0)}</div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
+                      <div className="text-[11px] text-[#5E687B] flex items-center gap-1 flex-wrap">
+                        {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
+                        {activeMessage.rawChatText && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[11px] uppercase tracking-wide">
+                            <MessageSquare size={8}/>Forwarded chat
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="ml-auto flex items-center gap-2">
+                      <button onClick={e=>toggleFlag(activeMessage.id,e)} title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
+                        <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
+                        {activeMessage.isFlagged?"Flagged":"Flag"}
+                      </button>
+                      {repliedIds.has(activeMessage.id)&&<span className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
+                    </div>
+                  </div>
+                  {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
+                    <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
+                      <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
+                        <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
+                      </div>
+                      <button onClick={() => setActiveView("needs-review")}
+                        className="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1">
+                        <ArrowRight size={9}/>Reassign
+                      </button>
+                    </div>
+                  )}
+                  <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
+                  {activeMessage.rawChatText && (
+                    <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
+                      <button onClick={() => setChatTranscriptExpanded(v => !v)}
+                        className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left">
+                        <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
+                        <span className="text-xs font-bold text-indigo-700 flex-1">Chat transcript</span>
+                        <span className="text-[11px] text-indigo-400 font-medium">{activeMessage.channel === "whatsapp" ? "WhatsApp" : activeMessage.channel === "wechat" ? "WeChat" : activeMessage.channel === "imessage" ? "iMessage" : "Chat"} · forwarded</span>
+                        {chatTranscriptExpanded ? <ChevronUp size={11} className="text-indigo-400 shrink-0"/> : <ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
+                      </button>
+                      {chatTranscriptExpanded && (
+                        <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
+                          <pre className="text-xs text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
+                  {activeMessage.aiAction&&(
+                    <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">
+                      <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
+                      <div className="flex items-start gap-2.5 relative">
+                        <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
+                          <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
+                          {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-xs text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
+                          {!repliedIds.has(activeMessage.id)?(
+                            <div className="flex gap-2">
+                              <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
+                              <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-xs font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
+                            </div>
+                          ):(
+                            <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
                           )}
                         </div>
                       </div>
-                      <div className="ml-auto flex items-center gap-2">
-                        <button
-                          onClick={e=>toggleFlag(activeMessage.id,e)}
-                          title={activeMessage.isFlagged?"Remove flag":"Flag for follow-up"}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border transition-all ${activeMessage.isFlagged?"bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100":"bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0] hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200"}`}>
-                          <Bookmark size={10} className={activeMessage.isFlagged?"fill-amber-400":""}/>
-                          {activeMessage.isFlagged?"Flagged":"Flag"}
-                        </button>
-                        {repliedIds.has(activeMessage.id)&&<span className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 size={9}/>Replied</span>}
-                      </div>
                     </div>
-                    {/* Needs-review banner for chat-forward messages awaiting confirmation */}
-                    {activeMessage.rawChatText && activeMessage.routingStatus === "needs-review" && (
-                      <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
-                        <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-amber-800">Forwarded chat — routing needs confirmation</p>
-                          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">This chat was auto-routed with low confidence. Please confirm it belongs to this shipment or reassign it.</p>
-                        </div>
-                        <button
-                          onClick={() => setActiveView("needs-review")}
-                          className="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center gap-1"
-                        >
-                          <ArrowRight size={9}/>Reassign
-                        </button>
-                      </div>
-                    )}
-                    <div className="bg-white border border-[#E5EAF0] rounded-xl p-4 shadow-sm mb-4 text-[11px] text-[#212833] whitespace-pre-wrap leading-relaxed">{activeMessage.fullBody}</div>
-                    {/* Collapsible chat transcript for forwarded chats */}
-                    {activeMessage.rawChatText && (
-                      <div className="mb-4 border border-indigo-100 rounded-xl overflow-hidden">
-                        <button
-                          onClick={() => setChatTranscriptExpanded(v => !v)}
-                          className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left"
-                        >
-                          <MessageSquare size={11} className="text-indigo-500 shrink-0"/>
-                          <span className="text-xs font-bold text-indigo-700 flex-1">Chat transcript</span>
-                          <span className="text-[11px] text-indigo-400 font-medium">{activeMessage.channel === "whatsapp" ? "WhatsApp" : activeMessage.channel === "wechat" ? "WeChat" : activeMessage.channel === "imessage" ? "iMessage" : "Chat"} · forwarded</span>
-                          {chatTranscriptExpanded ? <ChevronUp size={11} className="text-indigo-400 shrink-0"/> : <ChevronDown size={11} className="text-indigo-400 shrink-0"/>}
-                        </button>
-                        {chatTranscriptExpanded && (
-                          <div className="bg-white px-4 py-3 max-h-72 overflow-y-auto">
-                            <pre className="text-xs text-[#5E687B] whitespace-pre-wrap leading-relaxed font-mono">{activeMessage.rawChatText}</pre>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
-                    {activeMessage.aiAction&&(
-                      <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">
-                        <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
-                        <div className="flex items-start gap-2.5 relative">
-                          <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
-                            <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
-                            {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-xs text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
-                            {!repliedIds.has(activeMessage.id)?(
-                              <div className="flex gap-2">
-                                <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
-                                <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-xs font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
-                              </div>
-                            ):(
-                              <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
-                            )}
-                          </div>
-                        )}
-                      </CollapsibleSection>
-                    );
-                  })()}
+                  )}
+                </>)}
 
                   {/* ── Docs & Flags section ── */}
                   {(()=>{
