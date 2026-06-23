@@ -3483,28 +3483,32 @@ export default function Home() {
                     </div>
                   )}
                   {activeShipment && <ReconciliationChips shipmentId={activeShipment.id}/>}
-                  {activeMessage.aiAction&&(
-                    <div className="bg-gradient-to-br from-[#9000FF]/5 to-transparent border border-[#9000FF]/20 rounded-xl p-3.5 relative overflow-hidden">
-                      <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#9000FF]/8 rounded-full blur-2xl pointer-events-none"/>
-                      <div className="flex items-start gap-2.5 relative">
-                        <Wand2 size={13} className="text-[#9000FF] mt-0.5 shrink-0"/>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Zap size={8}/>AI Suggested Action</div>
-                          <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
-                          {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-xs text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
-                          {!repliedIds.has(activeMessage.id)?(
-                            <div className="flex gap-2">
-                              <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
-                              <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-xs font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
-                            </div>
-                          ):(
-                            <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
-                          )}
+                </>)}
+
+                {/* ── AI Suggested Action + Docs / Copilot / Risk — unified grouped card ── */}
+                <div className="border border-[#9000FF]/20 rounded-xl overflow-hidden">
+                  {/* Header — icon and text properly centered in a single flex row */}
+                  <div className="bg-gradient-to-r from-[#9000FF]/8 to-transparent px-3.5 py-2.5 flex items-center gap-1.5">
+                    <Wand2 size={12} className="text-[#9000FF] shrink-0"/>
+                    <Zap size={8} className="text-[#9000FF] shrink-0"/>
+                    <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">AI Suggested Action</span>
+                  </div>
+
+                  {/* AI action content — only shown when a suggestion exists for this message */}
+                  {!isQuotesStage && activeMessage.aiAction && (
+                    <div className="px-3.5 py-3 border-t border-[#9000FF]/10 bg-[#9000FF]/[0.03]">
+                      <div className="text-[11px] text-[#212833] mb-2 font-semibold">{activeMessage.aiAction}</div>
+                      {activeMessage.aiDraft&&<div className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 text-xs text-[#5E687B] mb-3 leading-relaxed font-mono">"{activeMessage.aiDraft}"</div>}
+                      {!repliedIds.has(activeMessage.id)?(
+                        <div className="flex gap-2">
+                          <button onClick={()=>sendReply(activeMessage.id)} className="bg-[#9000FF] text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-[#7A00D9] flex items-center gap-1.5 shadow-sm"><Send size={10}/>Send & Update</button>
+                          <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md text-xs font-medium hover:bg-[#F0F4F8]">Edit Draft</button>
                         </div>
-                      </div>
+                      ):(
+                        <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle2 size={12}/>Sent — stage advanced</div>
+                      )}
                     </div>
                   )}
-                </>)}
 
                   {/* ── Docs & Flags section ── */}
                   {(()=>{
@@ -3562,6 +3566,7 @@ export default function Home() {
                     summary={activeShipment?.status==="on-track"?"No critical flags":activeShipment?.status==="at-risk"?"At risk":"Delayed"}>
                     {activeShipment&&(<div className="pt-1"><ShipmentRiskDetail shipmentId={activeShipment.shipmentId}/></div>)}
                   </CollapsibleSection>
+                </div>
                 </div>
 
                 {/* Compose area — always visible at bottom */}
