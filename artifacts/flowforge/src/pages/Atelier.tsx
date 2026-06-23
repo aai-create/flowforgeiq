@@ -373,6 +373,8 @@ export function Atelier() {
   const [newPODragOver, setNewPODragOver] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [supplierFilter, setSupplierFilter] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createShipmentMutation = useCreateShipment();
   const createSupplierMutation = useCreateSupplier();
@@ -572,8 +574,15 @@ export function Atelier() {
     return Array.from(counts.entries()).map(([name, count], i) => ({ id: `c${i + 1}`, name, count }));
   })();
 
+  const SUPPLIERS = (() => {
+    const counts = new Map<string, number>();
+    for (const s of shipments) counts.set(s.supplier, (counts.get(s.supplier) ?? 0) + 1);
+    return Array.from(counts.entries()).map(([name, count], i) => ({ id: `s${i + 1}`, name, count }));
+  })();
+
   const visibleShipments = shipments.filter(s => {
     if (customerFilter && s.customer !== customerFilter) return false;
+    if (supplierFilter && s.supplier !== supplierFilter) return false;
     if (statusFilter !== "all" && s.status !== statusFilter) return false;
     if (poSearch.trim()) {
       const q = poSearch.toLowerCase().trim();
@@ -607,43 +616,19 @@ export function Atelier() {
           <ScrollArea className="flex-1">
             <div className="px-3 pb-3">
 
-              {/* Customers */}
-              <div className="mb-1.5 px-2 flex items-center justify-between group">
-                <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase">Buyers</span>
-                <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-[#E5EAF0] rounded">
-                  <Plus className="w-3 h-3 text-[#5E687B]" />
-                </button>
-              </div>
-              <div className="space-y-0.5 mb-5">
-                {CUSTOMERS.map(c => (
-                  <button key={c.id} onClick={() => setCustomerFilter(customerFilter === c.name ? null : c.name)}
-                    className={`w-full group flex items-center justify-between px-2 h-7 rounded-md text-sm transition-colors ${customerFilter === c.name ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                    <span className="flex items-center gap-1.5 truncate">
-                      <Hash className="w-3 h-3 opacity-50 shrink-0" />
-                      <span className="truncate text-xs">{c.name}</span>
-                    </span>
-                    <span className="text-xs bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{c.count}</span>
-                  </button>
-                ))}
-                {customerFilter && (
-                  <button onClick={() => setCustomerFilter(null)}
-                    className="w-full text-xs text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
-                    <X className="w-3 h-3" /> Clear filter
-                  </button>
-                )}
-              </div>
-
-              <Separator className="mb-4" />
-
-              {/* Task list */}
+              {/* Today's Focus — top of sidebar */}
               <div className="px-2 mb-2 flex items-center justify-between">
                 <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
                   <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
                 </span>
-                <span className="text-[11px] text-[#5E687B]">{doneCount}/{tasks.length} done</span>
+                {doneCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-500 font-medium">
+                    <CheckCircle2 className="w-3 h-3" />{doneCount}/{tasks.length}
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 mb-4">
                 {tasks.map(task => (
                   <div key={task.id}
                     onClick={() => focusShipment(task.shipmentId)}
@@ -667,6 +652,70 @@ export function Atelier() {
                   </div>
                 ))}
               </div>
+
+              <Separator className="mb-3" />
+
+              {/* Filters — collapsible, collapsed by default */}
+              <button
+                onClick={() => setFiltersOpen(o => !o)}
+                className="w-full px-2 mb-1 flex items-center justify-between group hover:bg-[#E5EAF0] rounded-md py-1 transition-colors"
+              >
+                <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                  <Filter className="w-3 h-3" /> Filters
+                  {(customerFilter || supplierFilter) && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0" />}
+                </span>
+                {filtersOpen
+                  ? <ChevronDown className="w-3 h-3 text-[#5E687B]" />
+                  : <ChevronRight className="w-3 h-3 text-[#5E687B]" />}
+              </button>
+
+              {filtersOpen && (
+                <div className="mt-1">
+                  <div className="mb-1 px-2">
+                    <span className="text-xs font-semibold tracking-wider text-[#9E9FAE] uppercase">Suppliers</span>
+                  </div>
+                  <div className="space-y-0.5 mb-3">
+                    {SUPPLIERS.map(s => (
+                      <button key={s.id} onClick={() => setSupplierFilter(supplierFilter === s.name ? null : s.name)}
+                        className={`w-full flex items-center justify-between px-2 h-7 rounded-md transition-colors ${supplierFilter === s.name ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Hash className="w-3 h-3 opacity-50 shrink-0" />
+                          <span className="truncate text-xs">{s.name}</span>
+                        </span>
+                        <span className="text-xs bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{s.count}</span>
+                      </button>
+                    ))}
+                    {supplierFilter && (
+                      <button onClick={() => setSupplierFilter(null)}
+                        className="w-full text-xs text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
+                        <X className="w-3 h-3" /> Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mb-1 px-2">
+                    <span className="text-xs font-semibold tracking-wider text-[#9E9FAE] uppercase">Buyers</span>
+                  </div>
+                  <div className="space-y-0.5 mb-3">
+                    {CUSTOMERS.map(c => (
+                      <button key={c.id} onClick={() => setCustomerFilter(customerFilter === c.name ? null : c.name)}
+                        className={`w-full flex items-center justify-between px-2 h-7 rounded-md transition-colors ${customerFilter === c.name ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Hash className="w-3 h-3 opacity-50 shrink-0" />
+                          <span className="truncate text-xs">{c.name}</span>
+                        </span>
+                        <span className="text-xs bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{c.count}</span>
+                      </button>
+                    ))}
+                    {customerFilter && (
+                      <button onClick={() => setCustomerFilter(null)}
+                        className="w-full text-xs text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
+                        <X className="w-3 h-3" /> Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </NavSidebar>
