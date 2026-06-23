@@ -33,9 +33,10 @@ interface NotificationItem {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// localStorage helpers
+// localStorage helpers + cross-tab sync via BroadcastChannel
 // ─────────────────────────────────────────────────────────────────────────────
 const LS_KEY = "ff_notifications_last_opened";
+const BC_CHANNEL = "ff_notifications";
 
 function getLastOpened(): Date {
   try {
@@ -45,10 +46,20 @@ function getLastOpened(): Date {
   return new Date(0);
 }
 
-function persistLastOpened() {
+function persistLastOpened(): string {
+  const iso = new Date().toISOString();
   try {
-    localStorage.setItem(LS_KEY, new Date().toISOString());
+    localStorage.setItem(LS_KEY, iso);
   } catch {}
+  return iso;
+}
+
+function getChannel(): BroadcastChannel | null {
+  try {
+    return new BroadcastChannel(BC_CHANNEL);
+  } catch {
+    return null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -269,11 +280,28 @@ export function NotificationsBell() {
     n => new Date(n.timestamp).getTime() > lastOpened.getTime(),
   ).length;
 
+  // Sync lastOpened across tabs via BroadcastChannel
+  useEffect(() => {
+    const bc = getChannel();
+    if (!bc) return;
+    bc.onmessage = (ev: MessageEvent<{ lastOpened: string }>) => {
+      if (ev.data?.lastOpened) {
+        setLastOpenedState(new Date(ev.data.lastOpened));
+      }
+    };
+    return () => { bc.close(); };
+  }, []);
+
   const handleOpenChange = useCallback((next: boolean) => {
     setOpen(next);
     if (next) {
-      persistLastOpened();
-      setLastOpenedState(new Date());
+      const iso = persistLastOpened();
+      setLastOpenedState(new Date(iso));
+      const bc = getChannel();
+      if (bc) {
+        bc.postMessage({ lastOpened: iso });
+        bc.close();
+      }
     }
   }, []);
 
