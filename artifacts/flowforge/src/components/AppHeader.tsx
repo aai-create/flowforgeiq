@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { AICopilotBar } from "./AICopilotBar";
 import { NotificationsBell } from "./NotificationsPanel";
-import { TodaysFocusButton, TodaysFocusDrawer } from "./TodaysFocusDrawer";
+import { AIDrawer, AISparklesButton } from "./TodaysFocusDrawer";
+import { useListFocusItems } from "@workspace/api-client-react";
 
 interface AppHeaderProps {
   pageLabel: string;
 }
 
 export function AppHeader({ pageLabel }: AppHeaderProps) {
-  const [focusOpen, setFocusOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data } = useListFocusItems();
+  const pendingCount = data?.pendingCount ?? 0;
 
   return (
     <>
@@ -22,11 +24,8 @@ export function AppHeader({ pageLabel }: AppHeaderProps) {
           <span className="text-[#E5EAF0] mx-1">/</span>
           <span className="text-[#5E687B] font-medium text-xs">{pageLabel}</span>
         </div>
-        <div className="flex-1 flex justify-center max-w-lg">
-          <AICopilotBar className="w-full" />
-        </div>
-        <div className="flex items-center gap-2 w-[260px] justify-end">
-          <TodaysFocusButton onClick={() => setFocusOpen(true)} />
+        <div className="flex items-center gap-2 justify-end flex-1">
+          <AISparklesButton onClick={() => setDrawerOpen(true)} pendingCount={pendingCount} />
           <Separator orientation="vertical" className="h-4" />
           <NotificationsBell />
           <Separator orientation="vertical" className="h-4" />
@@ -35,7 +34,7 @@ export function AppHeader({ pageLabel }: AppHeaderProps) {
           </div>
         </div>
       </header>
-      <TodaysFocusDrawer open={focusOpen} onClose={() => setFocusOpen(false)} />
+      <AIDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </>
   );
 }
