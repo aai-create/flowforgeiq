@@ -107,7 +107,7 @@ function CollapsibleSection({
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type ActiveView = "inbox" | "calendar" | "buyers" | "import" | "copilot" | "needs-review" | "settings";
+type ActiveView = "inbox" | "calendar" | "import" | "copilot" | "needs-review" | "settings";
 type Channel    = "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -134,10 +134,6 @@ interface Doc {
 interface CalendarEvent {
   day: number; month: number; label: string; po: string;
   type: "payment" | "exfactory" | "qc" | "production"; status: ShipmentStatus;
-}
-interface BuyerChat {
-  id: string; buyer: string; question: string; botAnswer: string;
-  time: string; po: string; resolved: boolean;
 }
 interface EmailTemplate { label: string; body: string; }
 
@@ -234,16 +230,6 @@ const CALENDAR_EVENTS: CalendarEvent[] = [
   { day:  2, month: 5, label: "Balance due $3,780",  po: "PO-0165", type: "payment",   status: "at-risk"  },
   { day: 10, month: 5, label: "Ex-Factory",           po: "PO-0168", type: "exfactory", status: "on-track" },
   { day: 25, month: 5, label: "Balance due $5,250",  po: "PO-0168", type: "payment",   status: "on-track" },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Buyer chatbot data  (P3)
-// ─────────────────────────────────────────────────────────────────────────────
-const BUYER_CHATS: BuyerChat[] = [
-  { id: "bc1", buyer: "Vellum Studio",          question: "Where is my serving fork order?",      botAnswer: "Your order PO-2026-0142 (Stainless Serving Fork) is at Sample Approval stage. Ex-factory target is May 17. We'll email you once goods ship.",          time: "10:15 AM", po: "PO-0142", resolved: true  },
-  { id: "bc2", buyer: "Northbound Outfitters",  question: "Is my LED light order running late?",  botAnswer: "PO-2026-0157 is currently showing a 2-day delay due to production backlog. Revised ex-factory: May 20. You'll receive a shipping notification automatically.", time: "9:48 AM",  po: "PO-0157", resolved: true  },
-  { id: "bc3", buyer: "Marlowe & Sons",         question: "What's happening with my hanger order?", botAnswer: "PO-2026-0165 is at Ex-Factory stage but there's a 4-day port congestion delay at Tianjin. New estimated delivery has been pushed to June 10.", time: "Yesterday", po: "PO-0165", resolved: false },
-  { id: "bc4", buyer: "Pioneer Goods Co.",      question: "Has my flooring passed QC?",            botAnswer: "Yes! PO-2026-0160 passed AQL 2.5 QC inspection on May 12 with only 2 minor defects. Ex-factory confirmed May 22. Balance payment needed to release the container.", time: "Mon", po: "PO-0160", resolved: true  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -530,112 +516,6 @@ function CalendarView({ shipments }: { shipments: Shipment[] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Buyers Chatbot View  (P3)
-// ─────────────────────────────────────────────────────────────────────────────
-function BuyersView() {
-  const [activeChat, setActiveChat] = useState<BuyerChat>(BUYER_CHATS[0]);
-  const [input, setInput] = useState("");
-  const [extraMessages, setExtraMessages] = useState<{q:string;a:string}[]>([]);
-  const send = () => {
-    if (!input.trim()) return;
-    setExtraMessages(prev => [...prev, { q: input, a: `I'm checking the latest status on that for you. Based on our tracker, your order is progressing as expected. Would you like me to send you an email notification when the shipment is dispatched?` }]);
-    setInput("");
-  };
-  return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Left: buyer list */}
-      <div className="w-[240px] border-r border-[#E5EAF0] bg-[#FAFBFC] flex flex-col shrink-0">
-        <div className="p-4 border-b border-[#E5EAF0]">
-          <div className="text-xs font-bold text-[#212833] mb-0.5 flex items-center gap-2"><Bot size={14} className="text-[#9000FF]"/>Buyer Chatbot</div>
-          <div className="text-xs text-[#5E687B]">Auto-answers buyer shipment queries</div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
-          {BUYER_CHATS.map(c=>(
-            <button key={c.id} onClick={()=>{setActiveChat(c);setExtraMessages([]);}}
-              className={`text-left px-3 py-2.5 rounded-lg border transition-all ${activeChat.id===c.id?"border-[#9000FF]/30 bg-white shadow-sm":"border-[#E5EAF0] bg-white hover:border-[#D6E3EB]"}`}>
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="text-[11px] font-semibold text-[#212833] truncate">{c.buyer}</span>
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ml-1 ${c.resolved?"bg-emerald-400":"bg-amber-400"}`}/>
-              </div>
-              <div className="text-xs text-[#5E687B] truncate">{c.question}</div>
-              <div className="text-[11px] text-[#9E9FAE] mt-0.5">{c.time} · {c.po}</div>
-            </button>
-          ))}
-        </div>
-        <div className="p-3 border-t border-[#E5EAF0]">
-          <div className="text-[11px] text-[#5E687B] text-center">Widget embeds on buyer's website</div>
-          <button className="mt-1.5 w-full text-xs text-[#9000FF] font-semibold flex items-center justify-center gap-1 hover:underline"><Link2 size={10}/>Get embed code</button>
-        </div>
-      </div>
-
-      {/* Center: chat simulation */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <div className="border-b border-[#E5EAF0] px-5 py-3 flex items-center justify-between shrink-0">
-          <div>
-            <div className="text-sm font-bold text-[#212833] flex items-center gap-2">{activeChat.buyer}<span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${activeChat.resolved?"bg-emerald-50 text-emerald-600 border border-emerald-100":"bg-amber-50 text-amber-600 border border-amber-100"}`}>{activeChat.resolved?"Resolved":"Pending"}</span></div>
-            <div className="text-xs text-[#5E687B]">{activeChat.po} · {activeChat.time}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="text-xs text-[#5E687B] border border-[#E5EAF0] px-2.5 py-1 rounded-md hover:bg-[#F0F4F8] font-medium transition-colors flex items-center gap-1"><ArrowUpRight size={11}/>Open PO</button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
-          {/* Buyer question */}
-          <div className="flex justify-end">
-            <div className="max-w-[70%] bg-[#F0F4F8] text-[#212833] px-4 py-2.5 rounded-2xl rounded-tr-sm text-xs leading-relaxed">{activeChat.question}</div>
-          </div>
-          {/* Bot response */}
-          <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0"><Bot size={14} className="text-[#9000FF]"/></div>
-            <div className="max-w-[80%]">
-              <div className="bg-white border border-[#E5EAF0] shadow-sm text-[#212833] px-4 py-3 rounded-2xl rounded-tl-sm text-xs leading-relaxed">{activeChat.botAnswer}</div>
-              <div className="text-[11px] text-[#9E9FAE] mt-1 ml-1">FlowForgeIQ Bot · {activeChat.time}</div>
-              <div className="flex gap-2 mt-2 flex-wrap">
-                {["Track shipment","Payment status","Contact supplier"].map(a=>(
-                  <button key={a} className="text-[11px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 font-semibold transition-colors">{a}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Extra messages */}
-          {extraMessages.map((m,i)=>(
-            <React.Fragment key={i}>
-              <div className="flex justify-end"><div className="max-w-[70%] bg-[#F0F4F8] text-[#212833] px-4 py-2.5 rounded-2xl rounded-tr-sm text-xs leading-relaxed">{m.q}</div></div>
-              <div className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0"><Bot size={14} className="text-[#9000FF]"/></div>
-                <div className="max-w-[80%] bg-white border border-[#E5EAF0] shadow-sm text-[#212833] px-4 py-3 rounded-2xl rounded-tl-sm text-xs leading-relaxed">{m.a}</div>
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-
-        <div className="p-4 border-t border-[#E5EAF0] bg-white shrink-0">
-          <div className="text-[11px] text-[#5E687B] mb-2 flex items-center gap-1"><Eye size={9}/>Preview as buyer</div>
-          <div className="flex gap-2">
-            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Type a buyer question to test..." className="flex-1 px-3 py-2 text-xs border border-[#E5EAF0] rounded-lg outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10"/>
-            <button onClick={send} className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${input.trim()?"bg-[#9000FF] text-white hover:bg-[#7A00D9]":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}><Send size={11}/>Send</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Right: analytics */}
-      <div className="w-[240px] border-l border-[#E5EAF0] bg-[#FAFBFC] flex flex-col shrink-0 p-4">
-        <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-3">Bot Performance</div>
-        {[{ label:"Queries this week", value:"14", sub:"↑ 3 vs last week", pos:true },{ label:"Auto-resolved", value:"11", sub:"78.5% resolution rate", pos:true },{ label:"Escalated to you", value:"3", sub:"Port delay + payment q.", pos:false },{ label:"Avg response time", value:"<1s", sub:"vs 4h manual", pos:true }].map(s=>(
-          <div key={s.label} className="bg-white border border-[#E5EAF0] rounded-lg p-3 mb-2 shadow-sm">
-            <div className="text-[11px] text-[#5E687B] mb-1">{s.label}</div>
-            <div className="text-lg font-bold text-[#212833]">{s.value}</div>
-            <div className={`text-[11px] font-semibold ${s.pos?"text-emerald-600":"text-amber-500"}`}>{s.sub}</div>
-          </div>
-        ))}
-        <div className="mt-auto">
-          <button className="w-full text-xs bg-[#9000FF] text-white py-2 rounded-lg font-semibold hover:bg-[#7A00D9] transition-colors flex items-center justify-center gap-1.5"><ArrowUpRight size={11}/>Chatbot Settings</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Excel Import View  (P3)
@@ -2591,7 +2471,6 @@ export default function Home() {
                     : supplierFilter ?? (channelFilter!=="all" ? channelFilter[0].toUpperCase()+channelFilter.slice(1) : "Inbox"))
                   : activeView==="calendar"  ? "Calendar"
                   : activeView==="copilot"   ? "Copilot Queue"
-                  : activeView==="buyers"    ? "Buyer Chatbot"
                   : "Doc Intelligence"}
             </span>
             {breadcrumbSegments.length > 0 && (
@@ -2935,7 +2814,6 @@ export default function Home() {
           {/* ── FULL-PAGE VIEWS ── */}
           {activeView==="copilot"&&<CopilotQueue/>}
           {activeView==="calendar"&&<CalendarView shipments={shipments}/>}
-          {activeView==="buyers"&&<BuyersView/>}
           {activeView==="import"&&<DocumentIntake onDone={()=>setActiveView("inbox")}/>}
           {activeView==="needs-review"&&(
             <div className="flex-1 flex flex-col overflow-hidden">

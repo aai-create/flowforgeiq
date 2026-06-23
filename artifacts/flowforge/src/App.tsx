@@ -13,6 +13,7 @@ import { RFQs } from "@/pages/RFQs";
 import { RiskRadar } from "@/pages/RiskRadar";
 import { Reports } from "@/pages/Reports";
 import { Suppliers } from "@/pages/Suppliers";
+import { Buyers } from "@/pages/Buyers";
 import { Help } from "@/pages/Help";
 import { Settings } from "@/pages/Settings";
 import { useProvisionUser } from "@/lib/useCurrentUser";
@@ -196,6 +197,7 @@ function Router() {
       <Route path="/risk-radar" component={() => <ProtectedRoute component={RiskRadarPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
       <Route path="/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
+      <Route path="/buyers" component={() => <ProtectedRoute component={Buyers} />} />
       <Route path="/help" component={() => <ProtectedRoute component={Help} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/sign-in/*?" component={SignInPage} />

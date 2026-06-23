@@ -1,0 +1,546 @@
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
+import { NavSidebar } from "@/components/NavSidebar";
+import { AppHeader } from "@/components/AppHeader";
+import { useCopilotHint } from "@/lib/CopilotContext";
+import {
+  useListShipments,
+  useListStages,
+  useListMessages,
+  useGetRiskRadar,
+} from "@workspace/api-client-react";
+import type { Shipment, Stage } from "@workspace/api-client-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Search, Package, X, ArrowRight, Users,
+  ChevronRight, AlertTriangle, MessageCircle,
+  Mail, MessageSquare, User, Phone, Globe,
+  Check, Pencil,
+} from "lucide-react";
+import { shortDate } from "@/lib/adapters";
+
+const statusCls = (status: string) =>
+  status === "on-track"
+    ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+    : status === "delayed"
+    ? "bg-red-50 text-red-700 border border-red-100"
+    : "bg-amber-50 text-amber-700 border border-amber-100";
+
+interface BuyerSummary {
+  name: string;
+  activePOs: number;
+  atRiskCount: number;
+  shipments: Shipment[];
+}
+
+interface BuyerContact {
+  contactName: string;
+  email: string;
+  phone: string;
+  region: string;
+}
+
+function buildBuyers(shipments: Shipment[]): BuyerSummary[] {
+  const map = new Map<string, Shipment[]>();
+  for (const s of shipments) {
+    if (!s.customerName) continue;
+    if (!map.has(s.customerName)) map.set(s.customerName, []);
+    map.get(s.customerName)!.push(s);
+  }
+  return Array.from(map.entries())
+    .map(([name, all]) => {
+      const active = all.filter(s => s.status !== "delivered");
+      const atRisk = active.filter(s => s.status === "delayed" || s.status === "at-risk");
+      return { name, activePOs: active.length, atRiskCount: atRisk.length, shipments: all };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ---------------------------------------------------------------------------
+// Inline-editable field (mirrors SupplierDetailPanel's EditableField)
+// ---------------------------------------------------------------------------
+interface EditableFieldProps {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  placeholder?: string;
+  type?: "text" | "email" | "tel";
+  onSave: (val: string) => void;
+}
+
+function EditableField({ label, value, icon: Icon, placeholder, type = "text", onSave }: EditableFieldProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+
+  function startEdit() {
+    setDraft(value);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function commit() {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed !== value) onSave(trimmed);
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter") commit();
+    if (e.key === "Escape") { setEditing(false); setDraft(value); }
+  }
+
+  return (
+    <div className="group">
+      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1 flex items-center gap-1">
+        <Icon className="w-3 h-3" />
+        {label}
+      </div>
+      {editing ? (
+        <div className="flex items-center gap-1">
+          <input
+            ref={inputRef}
+            type={type}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={handleKey}
+            placeholder={placeholder}
+            className="flex-1 h-7 text-[12px] px-2 border border-[#9000FF]/40 rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/20 bg-white text-[#212833]"
+          />
+          <button onClick={commit} className="text-[#9000FF] hover:text-[#7A00D9]">
+            <Check className="w-4 h-4" />
+          </button>
+          <button onClick={() => { setEditing(false); setDraft(value); }} className="text-[#9E9FAE] hover:text-[#5E687B]">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={startEdit}
+          className="w-full flex items-center justify-between h-7 px-2 rounded-md border border-transparent hover:border-[#E5EAF0] hover:bg-[#FAFBFC] text-left transition-colors"
+        >
+          <span className={`text-[12px] truncate ${value ? "text-[#212833]" : "text-[#9E9FAE] italic"}`}>
+            {value || placeholder || "—"}
+          </span>
+          <Pencil className="w-3 h-3 text-[#9E9FAE] opacity-0 group-hover:opacity-100 shrink-0 ml-1" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Buyer detail panel
+// ---------------------------------------------------------------------------
+interface DetailPanelProps {
+  buyer: BuyerSummary;
+  contact: BuyerContact;
+  stages: Stage[];
+  onClose: () => void;
+  onContactChange: (field: keyof BuyerContact, value: string) => void;
+}
+
+function BuyerDetailPanel({ buyer, contact, stages, onClose, onContactChange }: DetailPanelProps) {
+  const [, navigate] = useLocation();
+  const { data: messagesData } = useListMessages();
+  const now = useMemo(() => new Date(), []);
+
+  const stageLabel = useMemo(() => {
+    const map = new Map(stages.map(st => [st.id, st.label]));
+    return (id: string) => map.get(id) ?? id;
+  }, [stages]);
+
+  const active = useMemo(
+    () =>
+      buyer.shipments
+        .filter(s => s.status !== "delivered")
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+    [buyer.shipments],
+  );
+
+  const recent = useMemo(
+    () =>
+      buyer.shipments
+        .filter(s => s.status === "delivered")
+        .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())
+        .slice(0, 3),
+    [buyer.shipments],
+  );
+
+  const buyerShipmentIds = useMemo(
+    () => new Set(buyer.shipments.map(s => s.id)),
+    [buyer.shipments],
+  );
+
+  const recentMessages = useMemo(() => {
+    if (!messagesData) return [];
+    return messagesData
+      .filter(m => m.shipmentId != null && buyerShipmentIds.has(m.shipmentId))
+      .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+      .slice(0, 5);
+  }, [messagesData, buyerShipmentIds]);
+
+  const channelIcon = (ch: string) => {
+    if (ch === "whatsapp") return <MessageCircle className="w-3 h-3 text-emerald-500 shrink-0" />;
+    if (ch === "email" || ch === "gmail") return <Mail className="w-3 h-3 text-blue-500 shrink-0" />;
+    return <MessageSquare className="w-3 h-3 text-[#9E9FAE] shrink-0" />;
+  };
+
+  return (
+    <div className="w-[360px] border-l border-[#E5EAF0] bg-white flex flex-col shrink-0">
+      {/* Header */}
+      <div className="h-12 border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#9000FF]/10 to-[#9000FF]/20 flex items-center justify-center shrink-0">
+            <Users className="w-3.5 h-3.5 text-[#9000FF]" />
+          </div>
+          <span className="text-sm font-semibold text-[#212833] truncate">{buyer.name}</span>
+        </div>
+        <button onClick={onClose} className="p-1 rounded-md text-[#9E9FAE] hover:text-[#212833] hover:bg-[#F0F4F8] transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-5">
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">Active POs</div>
+              <div className="text-xl font-bold text-[#212833]">{active.length}</div>
+            </div>
+            <div className={`border rounded-lg p-3 ${buyer.atRiskCount > 0 ? "bg-red-50 border-red-100" : "bg-[#FAFBFC] border-[#E5EAF0]"}`}>
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">At Risk</div>
+              <div className={`text-xl font-bold ${buyer.atRiskCount > 0 ? "text-red-600" : "text-[#9E9FAE]"}`}>
+                {buyer.atRiskCount}
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Contact details — editable inline */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-3">Contact Details</div>
+            <div className="space-y-3">
+              <EditableField
+                label="Contact Name"
+                value={contact.contactName}
+                icon={User}
+                placeholder="Add contact name"
+                onSave={v => onContactChange("contactName", v)}
+              />
+              <EditableField
+                label="Email"
+                value={contact.email}
+                icon={Mail}
+                placeholder="Add email address"
+                type="email"
+                onSave={v => onContactChange("email", v)}
+              />
+              <EditableField
+                label="Phone"
+                value={contact.phone}
+                icon={Phone}
+                placeholder="Add phone number"
+                type="tel"
+                onSave={v => onContactChange("phone", v)}
+              />
+              <EditableField
+                label="Region"
+                value={contact.region}
+                icon={Globe}
+                placeholder="e.g. North America"
+                onSave={v => onContactChange("region", v)}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Active shipments */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2 flex items-center gap-1.5">
+              <Package className="w-3 h-3" />
+              Active POs
+              <span className="text-[#9E9FAE] font-normal">({active.length})</span>
+            </div>
+            {active.length === 0 ? (
+              <p className="text-xs text-[#9E9FAE]">No active purchase orders.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {active.map(s => {
+                  const days = Math.ceil((new Date(s.dueDate).getTime() - now.getTime()) / 86_400_000);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => navigate(`/inbox?shipment=${s.id}`)}
+                      className="w-full text-left flex items-center gap-2 p-2 rounded-lg border border-[#E5EAF0] hover:border-[#9000FF]/30 hover:bg-[#FAFBFC] group transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                          <span className="font-mono text-[10px] text-[#5E687B] bg-[#F0F4F8] px-1.5 py-0.5 rounded">
+                            {s.poNumber}
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${statusCls(s.status)}`}>
+                            {s.status === "on-track" ? "On Track" : s.status === "delayed" ? "Delayed" : "At Risk"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#212833] font-medium truncate">{s.product}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-[#7A00D9] bg-[#9000FF]/8 px-1.5 py-0.5 rounded truncate max-w-[140px]">
+                            {stageLabel(s.currentStageId)}
+                          </span>
+                          <span className="text-[10px] text-[#9E9FAE]">
+                            Due {shortDate(s.dueDate)}{days < 0 ? ` · ${Math.abs(days)}d late` : days <= 7 ? ` · ${days}d` : ""}
+                          </span>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#9000FF] opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {recent.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">Recent POs</div>
+                <div className="space-y-1">
+                  {recent.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => navigate(`/inbox?shipment=${s.id}`)}
+                      className="w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#FAFBFC] group transition-colors"
+                    >
+                      <span className="text-[11px] text-[#5E687B] truncate">{s.product}</span>
+                      <span className="flex items-center gap-1 text-[10px] text-[#9E9FAE] shrink-0 ml-2">
+                        {shortDate(s.dueDate)}
+                        <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {recentMessages.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">Recent Messages</div>
+                <div className="space-y-1.5">
+                  {recentMessages.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => m.shipmentId != null && navigate(`/inbox?shipment=${m.shipmentId}`)}
+                      className="w-full text-left flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-[#FAFBFC] group transition-colors"
+                    >
+                      {channelIcon(m.channel)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-[#212833] truncate">{m.subject || m.snippet || "—"}</p>
+                        <p className="text-[10px] text-[#9E9FAE]">{shortDate(m.receivedAt)}</p>
+                      </div>
+                      <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+const EMPTY_CONTACT: BuyerContact = { contactName: "", email: "", phone: "", region: "" };
+
+export function Buyers() {
+  useCopilotHint("Browse buyers and their active orders", [
+    "Which buyer has the most at-risk orders?",
+    "Show me all active POs for Marlowe & Sons",
+    "Which buyers have delayed shipments?",
+  ]);
+
+  const { data: shipmentsData } = useListShipments();
+  const { data: stagesData } = useListStages();
+  const { data: radarData } = useGetRiskRadar();
+
+  const shipments: Shipment[] = shipmentsData ?? [];
+  const stages: Stage[] = stagesData ?? [];
+
+  const buyers = useMemo(() => buildBuyers(shipments), [shipments]);
+
+  const [search, setSearch] = useState("");
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<Record<string, BuyerContact>>({});
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return !q ? buyers : buyers.filter(b => b.name.toLowerCase().includes(q));
+  }, [buyers, search]);
+
+  const selectedBuyer = buyers.find(b => b.name === selectedName) ?? null;
+
+  function updateContact(buyerName: string, field: keyof BuyerContact, value: string) {
+    setContacts(prev => ({
+      ...prev,
+      [buyerName]: { ...(prev[buyerName] ?? EMPTY_CONTACT), [field]: value },
+    }));
+  }
+
+  function SortableHeader({ label }: { label: string }) {
+    return (
+      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B]">
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+      <AppHeader pageLabel="Buyers" />
+
+      <div className="flex-1 flex overflow-hidden">
+        <NavSidebar
+          showBrand={false}
+          counts={{
+            riskRadar: radarData ? radarData.items.filter(i => i.riskScore >= 70).length : null,
+          }}
+        />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+              {/* Toolbar */}
+              <div className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-sm font-bold text-[#212833]">Buyers</h1>
+                  <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
+                    {filtered.length} of {buyers.length}
+                  </span>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9E9FAE]" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search buyers…"
+                    className="h-8 pl-8 pr-3 text-[12px] bg-[#F0F4F8] border border-transparent focus:border-[#9000FF]/30 focus:bg-white rounded-md outline-none w-52 transition-all placeholder:text-[#9E9FAE]"
+                  />
+                  {search && (
+                    <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE] hover:text-[#5E687B]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 overflow-hidden flex flex-col min-w-0">
+                  <ScrollArea className="flex-1">
+                    <div className="min-w-[480px]">
+                      {/* Table header */}
+                      <div className="sticky top-0 z-10 bg-[#F7F9FA] border-b border-[#E5EAF0] grid grid-cols-[2fr_1fr_1fr_auto] px-5 py-2">
+                        <SortableHeader label="Buyer" />
+                        <SortableHeader label="Active POs" />
+                        <SortableHeader label="At Risk" />
+                        <span />
+                      </div>
+
+                      {/* Rows */}
+                      {filtered.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <Users className="w-8 h-8 text-[#D6E3EB] mb-3" />
+                          <p className="text-sm text-[#5E687B] font-medium">No buyers found</p>
+                          <p className="text-xs text-[#9E9FAE] mt-1">Try adjusting your search.</p>
+                        </div>
+                      ) : (
+                        filtered.map(b => {
+                          const isSelected = selectedName === b.name;
+                          return (
+                            <div
+                              key={b.name}
+                              onClick={() => setSelectedName(isSelected ? null : b.name)}
+                              className={`grid grid-cols-[2fr_1fr_1fr_auto] px-5 py-3 border-b border-[#F0F4F8] cursor-pointer transition-colors ${
+                                isSelected
+                                  ? "bg-[#9000FF]/5 border-l-2 border-l-[#9000FF]"
+                                  : "hover:bg-[#FAFBFC]"
+                              }`}
+                            >
+                              {/* Name */}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#9000FF]/10 to-[#9000FF]/20 flex items-center justify-center text-[#9000FF] font-bold text-[10px] shrink-0">
+                                  {b.name.slice(0, 2).toUpperCase()}
+                                </div>
+                                <p className="text-[13px] font-semibold text-[#212833] truncate">{b.name}</p>
+                              </div>
+
+                              {/* Active POs */}
+                              <div className="flex items-center">
+                                {b.activePOs > 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#212833]">
+                                    <Package className="w-3 h-3 text-[#9000FF]" />
+                                    {b.activePOs}
+                                  </span>
+                                ) : (
+                                  <span className="text-[12px] text-[#9E9FAE]">—</span>
+                                )}
+                              </div>
+
+                              {/* At risk */}
+                              <div className="flex items-center">
+                                {b.atRiskCount > 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-red-600">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    {b.atRiskCount}
+                                  </span>
+                                ) : (
+                                  <span className="text-[12px] text-emerald-600 font-medium">—</span>
+                                )}
+                              </div>
+
+                              {/* Chevron */}
+                              <div className="flex items-center pl-2">
+                                <ChevronRight className={`w-3.5 h-3.5 text-[#9000FF] transition-transform ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {/* Detail panel */}
+                {selectedBuyer && (
+                  <BuyerDetailPanel
+                    buyer={selectedBuyer}
+                    contact={contacts[selectedBuyer.name] ?? EMPTY_CONTACT}
+                    stages={stages}
+                    onClose={() => setSelectedName(null)}
+                    onContactChange={(field, value) => updateContact(selectedBuyer.name, field, value)}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

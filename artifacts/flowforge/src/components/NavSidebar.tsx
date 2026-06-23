@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, Link } from "wouter";
-import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion } from "lucide-react";
+import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 
 interface NavSidebarProps {
@@ -36,6 +36,7 @@ export function NavSidebar({
     { icon: ShieldAlert,  label: "Risk Radar",  to: "/risk-radar",  count: counts.riskRadar ?? null },
     { icon: BarChart3,    label: "Reports",     to: "/reports",     count: null              },
     { icon: Building2,    label: "Suppliers",   to: "/suppliers",   count: null              },
+    { icon: Users,        label: "Buyers",      to: "/buyers",      count: null              },
     { icon: BookOpen,     label: "Help",        to: "/help",        count: null              },
     { icon: Settings2,    label: "Settings",    to: "/settings",    count: null              },
   ];
