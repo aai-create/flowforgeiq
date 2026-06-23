@@ -16,7 +16,7 @@ import {
   Search, Package, X, ArrowRight, Users,
   ChevronRight, AlertTriangle, MessageCircle,
   Mail, MessageSquare, User, Phone, Globe,
-  Check, Pencil,
+  Check, Pencil, DollarSign, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { shortDate } from "@/lib/adapters";
 
@@ -27,10 +27,16 @@ const statusCls = (status: string) =>
     ? "bg-red-50 text-red-700 border border-red-100"
     : "bg-amber-50 text-amber-700 border border-amber-100";
 
+type SortCol = "name" | "activePOs" | "atRisk" | "spend" | "onTime";
+type SortDir = "asc" | "desc";
+
 interface BuyerSummary {
   name: string;
   activePOs: number;
   atRiskCount: number;
+  totalSpendUsd: number;
+  onTimePct: number | null;
+  spendThisYearUsd: number;
   shipments: Shipment[];
 }
 
@@ -40,6 +46,8 @@ interface BuyerContact {
   phone: string;
   region: string;
 }
+
+const CURRENT_YEAR = new Date().getUTCFullYear();
 
 function buildBuyers(shipments: Shipment[]): BuyerSummary[] {
   const map = new Map<string, Shipment[]>();
@@ -52,9 +60,23 @@ function buildBuyers(shipments: Shipment[]): BuyerSummary[] {
     .map(([name, all]) => {
       const active = all.filter(s => s.status !== "delivered");
       const atRisk = active.filter(s => s.status === "delayed" || s.status === "at-risk");
-      return { name, activePOs: active.length, atRiskCount: atRisk.length, shipments: all };
+      const shipmentSpend = (s: Shipment) =>
+        s.payments.reduce((acc, p) => acc + p.amountUsd, 0);
+      const totalSpendUsd = all.reduce((sum, s) => sum + shipmentSpend(s), 0);
+      const onCount = all.filter(s => s.status === "on-track").length;
+      const onTimePct = all.length > 0 ? Math.round((onCount / all.length) * 100) : null;
+      const spendThisYearUsd = all
+        .filter(s => new Date(s.dueDate).getUTCFullYear() === CURRENT_YEAR)
+        .reduce((sum, s) => sum + shipmentSpend(s), 0);
+      return { name, activePOs: active.length, atRiskCount: atRisk.length, totalSpendUsd, onTimePct, spendThisYearUsd, shipments: all };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function fmtUsd(val: number): string {
+  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
+  if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
+  return `$${val.toFixed(0)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +239,23 @@ function BuyerDetailPanel({ buyer, contact, stages, onClose, onContactChange }: 
               <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">At Risk</div>
               <div className={`text-xl font-bold ${buyer.atRiskCount > 0 ? "text-red-600" : "text-[#9E9FAE]"}`}>
                 {buyer.atRiskCount}
+              </div>
+            </div>
+            <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">Spend This Year</div>
+              <div className="text-xl font-bold text-[#212833]">
+                {buyer.spendThisYearUsd > 0 ? fmtUsd(buyer.spendThisYearUsd) : <span className="text-[#9E9FAE]">—</span>}
+              </div>
+            </div>
+            <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">On-Time %</div>
+              <div className={`text-xl font-bold ${
+                buyer.onTimePct === null ? "text-[#9E9FAE]"
+                : buyer.onTimePct >= 70 ? "text-emerald-600"
+                : buyer.onTimePct >= 40 ? "text-amber-600"
+                : "text-red-600"
+              }`}>
+                {buyer.onTimePct !== null ? `${buyer.onTimePct}%` : "—"}
               </div>
             </div>
           </div>
@@ -386,11 +425,31 @@ export function Buyers() {
   const [search, setSearch] = useState("");
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, BuyerContact>>({});
+  const [sortCol, setSortCol] = useState<SortCol>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(col: SortCol) {
+    if (sortCol === col) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortCol(col);
+      setSortDir(col === "name" ? "asc" : "desc");
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return !q ? buyers : buyers.filter(b => b.name.toLowerCase().includes(q));
-  }, [buyers, search]);
+    const base = !q ? buyers : buyers.filter(b => b.name.toLowerCase().includes(q));
+    const mul = sortDir === "asc" ? 1 : -1;
+    return [...base].sort((a, b) => {
+      if (sortCol === "name") return mul * a.name.localeCompare(b.name);
+      if (sortCol === "activePOs") return mul * (a.activePOs - b.activePOs);
+      if (sortCol === "atRisk") return mul * (a.atRiskCount - b.atRiskCount);
+      if (sortCol === "spend") return mul * (a.totalSpendUsd - b.totalSpendUsd);
+      if (sortCol === "onTime") return mul * ((a.onTimePct ?? -1) - (b.onTimePct ?? -1));
+      return 0;
+    });
+  }, [buyers, search, sortCol, sortDir]);
 
   const selectedBuyer = buyers.find(b => b.name === selectedName) ?? null;
 
@@ -401,11 +460,17 @@ export function Buyers() {
     }));
   }
 
-  function SortableHeader({ label }: { label: string }) {
+  function SortableHeader({ label, col }: { label: string; col: SortCol }) {
+    const active = sortCol === col;
+    const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
     return (
-      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B]">
+      <button
+        onClick={() => handleSort(col)}
+        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#5E687B] hover:text-[#212833] transition-colors group"
+      >
         {label}
-      </span>
+        <Icon className={`w-3 h-3 transition-colors ${active ? "text-[#9000FF]" : "text-[#9E9FAE] group-hover:text-[#5E687B]"}`} />
+      </button>
     );
   }
 
@@ -453,12 +518,14 @@ export function Buyers() {
               <div className="flex-1 flex overflow-hidden">
                 <div className="flex-1 overflow-hidden flex flex-col min-w-0">
                   <ScrollArea className="flex-1">
-                    <div className="min-w-[480px]">
+                    <div className="min-w-[640px]">
                       {/* Table header */}
-                      <div className="sticky top-0 z-10 bg-[#F7F9FA] border-b border-[#E5EAF0] grid grid-cols-[2fr_1fr_1fr_auto] px-5 py-2">
-                        <SortableHeader label="Buyer" />
-                        <SortableHeader label="Active POs" />
-                        <SortableHeader label="At Risk" />
+                      <div className="sticky top-0 z-10 bg-[#F7F9FA] border-b border-[#E5EAF0] grid grid-cols-[2fr_1fr_1fr_1.2fr_1fr_auto] px-5 py-2">
+                        <SortableHeader label="Buyer" col="name" />
+                        <SortableHeader label="Active POs" col="activePOs" />
+                        <SortableHeader label="At Risk" col="atRisk" />
+                        <SortableHeader label="Total Spend" col="spend" />
+                        <SortableHeader label="On-Time %" col="onTime" />
                         <span />
                       </div>
 
@@ -476,7 +543,7 @@ export function Buyers() {
                             <div
                               key={b.name}
                               onClick={() => setSelectedName(isSelected ? null : b.name)}
-                              className={`grid grid-cols-[2fr_1fr_1fr_auto] px-5 py-3 border-b border-[#F0F4F8] cursor-pointer transition-colors ${
+                              className={`grid grid-cols-[2fr_1fr_1fr_1.2fr_1fr_auto] px-5 py-3 border-b border-[#F0F4F8] cursor-pointer transition-colors ${
                                 isSelected
                                   ? "bg-[#9000FF]/5 border-l-2 border-l-[#9000FF]"
                                   : "hover:bg-[#FAFBFC]"
@@ -511,6 +578,33 @@ export function Buyers() {
                                   </span>
                                 ) : (
                                   <span className="text-[12px] text-emerald-600 font-medium">—</span>
+                                )}
+                              </div>
+
+                              {/* Total Spend */}
+                              <div className="flex items-center">
+                                {b.totalSpendUsd > 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#212833]">
+                                    <DollarSign className="w-3 h-3 text-[#9000FF]" />
+                                    {fmtUsd(b.totalSpendUsd)}
+                                  </span>
+                                ) : (
+                                  <span className="text-[12px] text-[#9E9FAE]">—</span>
+                                )}
+                              </div>
+
+                              {/* On-Time % */}
+                              <div className="flex items-center">
+                                {b.onTimePct !== null ? (
+                                  <span className={`text-[12px] font-semibold ${
+                                    b.onTimePct >= 70 ? "text-emerald-600"
+                                    : b.onTimePct >= 40 ? "text-amber-600"
+                                    : "text-red-600"
+                                  }`}>
+                                    {b.onTimePct}%
+                                  </span>
+                                ) : (
+                                  <span className="text-[12px] text-[#9E9FAE]">—</span>
                                 )}
                               </div>
 
