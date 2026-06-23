@@ -3364,7 +3364,7 @@ export default function Home() {
 
               {/* Message body + collapsible sections */}
               {!showComposePanel && activeMessageId !== "__cleared__" && <>
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
                 {/* Quote panel */}
                 {isQuotesStage&&activeShipment?.quotes&&(
                   <div className="shrink-0"><QuotePanel quotes={activeShipment.quotes} shipmentId={activeShipment.id} onSelect={selectQuote}/></div>
