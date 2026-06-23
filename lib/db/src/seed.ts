@@ -134,7 +134,6 @@ async function main() {
     .values(buyerNames.map(name => ({ name, orgId: DEFAULT_ORG_ID })))
     .returning();
   const buyerByName = new Map(insertedBuyers.map(b => [b.name, b.id]));
-  void buyerByName;
 
   console.log("Inserting deals...");
   const dealIdMap = new Map<string, number>();
@@ -171,6 +170,7 @@ async function main() {
       category: s.category,
       supplierId: supplierByName.get(s.supplierName)!,
       customerName: s.customerName,
+      buyerId: buyerByName.get(s.customerName) ?? null,
       dealId: shipmentSeedToDealId.get(s.id) ?? null,
       status: s.status,
       currentStageId: s.currentStageId,

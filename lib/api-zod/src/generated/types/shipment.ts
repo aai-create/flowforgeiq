@@ -24,6 +24,11 @@ export interface Shipment {
   supplierId: number;
   supplierName: string;
   customerName: string;
+  /**
+     * FK to the buyers table. Null if no buyer record is linked.
+     * @nullable
+     */
+  buyerId?: number | null;
   /** @nullable */
   dealId?: number | null;
   status: string;

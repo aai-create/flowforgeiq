@@ -47,7 +47,7 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 function buildBuyerStats(buyers: BuyerSummary[], shipments: Shipment[]): BuyerWithStats[] {
   return buyers.map(buyer => {
-    const all = shipments.filter(s => s.customerName === buyer.name);
+    const all = shipments.filter(s => s.buyerId != null ? s.buyerId === buyer.id : s.customerName === buyer.name);
     const active = all.filter(s => s.status !== "delivered");
     const atRisk = active.filter(s => s.status === "delayed" || s.status === "at-risk");
     const shipmentSpend = (s: Shipment) =>

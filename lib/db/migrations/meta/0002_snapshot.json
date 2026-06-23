@@ -1,6 +1,6 @@
 {
-  "id": "a116cab5-6d69-4049-bd90-e2f94bb74eb5",
-  "prevId": "22da9b94-c60d-4721-95ab-24e722a641dc",
+  "id": "226e0b4b-4635-4a06-99a4-fffcf1e63601",
+  "prevId": "a116cab5-6d69-4049-bd90-e2f94bb74eb5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -388,6 +388,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "buyer_id": {
+          "name": "buyer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "deal_id": {
           "name": "deal_id",
           "type": "integer",
@@ -496,6 +502,19 @@
         }
       },
       "foreignKeys": {
+        "shipments_buyer_id_buyers_id_fk": {
+          "name": "shipments_buyer_id_buyers_id_fk",
+          "tableFrom": "shipments",
+          "tableTo": "buyers",
+          "columnsFrom": [
+            "buyer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "shipments_deal_id_deals_id_fk": {
           "name": "shipments_deal_id_deals_id_fk",
           "tableFrom": "shipments",
@@ -2746,6 +2765,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "inbound_handle": {
+          "name": "inbound_handle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "org_id": {
           "name": "org_id",
           "type": "integer",
@@ -2800,6 +2825,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "inbound_token"
+          ]
+        },
+        "team_users_inbound_handle_unique": {
+          "name": "team_users_inbound_handle_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "inbound_handle"
           ]
         }
       },

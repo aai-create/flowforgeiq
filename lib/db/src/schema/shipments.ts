@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { dealsTable } from "./deals";
+import { buyersTable } from "./buyers";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizationsTable } from "./organizations";
@@ -11,6 +12,7 @@ export const shipmentsTable = pgTable("shipments", {
   category: text("category").notNull(),
   supplierId: integer("supplier_id").notNull(),
   customerName: text("customer_name").notNull(),
+  buyerId: integer("buyer_id").references(() => buyersTable.id, { onDelete: "set null" }),
   dealId: integer("deal_id").references(() => dealsTable.id, { onDelete: "set null" }),
   status: text("status").notNull(),
   currentStageId: text("current_stage_id").notNull(),

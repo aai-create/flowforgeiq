@@ -1884,6 +1884,7 @@ components:
         supplierId:     { type: integer }
         supplierName:   { type: string }
         customerName:   { type: string }
+        buyerId:        { type: ["integer", "null"], description: "FK to the buyers table. Null if no buyer record is linked." }
         dealId:         { type: ["integer", "null"] }
         status:         { type: string }
         currentStageId: { type: string }
