@@ -1767,11 +1767,13 @@ export default function Home() {
 
   type BreadcrumbSegment = { label: string; href: string } | { label: string; href?: undefined };
 
-  function parseBreadcrumb(param: string | null, po?: string): BreadcrumbSegment[] {
+  function parseBreadcrumb(param: string | null, po?: string, shipmentId?: string | null): BreadcrumbSegment[] {
     if (!param) return [];
+    const numericId = shipmentId ? shipmentId.replace(/^s/, "") : undefined;
+    const poHref = numericId ? `/?shipment=${numericId}` : undefined;
     if (param === "risk-radar") {
       const segs: BreadcrumbSegment[] = [{ label: "Risk Radar", href: "/risk-radar" }];
-      if (po) segs.push({ label: po });
+      if (po) segs.push(poHref ? { label: po, href: poHref } : { label: po });
       return segs;
     }
     if (param.startsWith("reports")) {
@@ -1780,7 +1782,7 @@ export default function Home() {
       if (cardId && FROM_CARD_LABELS[cardId]) {
         segments.push({ label: FROM_CARD_LABELS[cardId] });
       }
-      if (po) segments.push({ label: po });
+      if (po) segments.push(poHref ? { label: po, href: poHref } : { label: po });
       return segments;
     }
     return [];
@@ -1843,7 +1845,7 @@ export default function Home() {
     return sessionStorage.getItem("flowforge:selectedShipmentId");
   });
   const selectedShipmentPo = selectedShipmentId ? shipments.find(s => s.id === selectedShipmentId)?.po : undefined;
-  const breadcrumbSegments = parseBreadcrumb(fromParam, selectedShipmentPo);
+  const breadcrumbSegments = parseBreadcrumb(fromParam, selectedShipmentPo, selectedShipmentId);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
     if (initParams.has("shipment") || initParams.has("supplier")) return "all";
