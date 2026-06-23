@@ -128,4 +128,5 @@ export * from './teamMemberRole';
 export * from './teamResponse';
 export * from './testGmailSend200';
 export * from './testGmailSendBody';
+export * from './updateInboundHandleBody';
 export * from './uploadDocumentBody';

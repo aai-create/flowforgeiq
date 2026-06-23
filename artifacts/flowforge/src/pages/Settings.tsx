@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe } from "lucide-react";
-import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
+import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
 import { useUserPref } from "@/lib/useUserPref";
@@ -601,10 +601,41 @@ export function Settings() {
   const { t, i18n: i18nHook } = useTranslation();
   const { data: config, isLoading } = useGetPoNumberingConfig();
   const updateMutation = useUpdatePoNumberingConfig();
-  const { data: inboundEmailData } = useGetInboundEmailAddress();
+  const { data: inboundEmailData, refetch: refetchInboundEmail } = useGetInboundEmailAddress();
   const inboundEmail = inboundEmailData?.inboundEmailAddress || "ai@flowforge.com";
   const [emailCopied, setEmailCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+
+  // Derive the current handle (the part between + and @) from the full address
+  const currentHandle = (() => {
+    const m = inboundEmail.match(/\+([^@]+)@/);
+    return m?.[1] ?? "";
+  })();
+  const [editingHandle, setEditingHandle] = useState(false);
+  const [handleDraft, setHandleDraft] = useState("");
+  const [handleError, setHandleError] = useState("");
+  const updateHandleMutation = useUpdateInboundEmailHandle();
+
+  const saveHandle = async () => {
+    const normalized = handleDraft.toLowerCase().trim();
+    if (normalized.length < 3 || normalized.length > 40) {
+      setHandleError("Handle must be 3–40 characters");
+      return;
+    }
+    if (!/^[a-z0-9][a-z0-9.\-]*[a-z0-9]$|^[a-z0-9]{3,40}$/.test(normalized)) {
+      setHandleError("Lowercase letters, numbers, dots, and hyphens only");
+      return;
+    }
+    try {
+      await updateHandleMutation.mutateAsync({ data: { handle: normalized } });
+      await refetchInboundEmail();
+      setEditingHandle(false);
+      setHandleError("");
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message;
+      setHandleError(msg?.includes("taken") ? "That handle is already taken — try another" : (msg ?? "Failed to save"));
+    }
+  };
 
   const { signOut } = useClerk();
   const { user } = useUser();
@@ -883,16 +914,63 @@ export function Settings() {
                     <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("settings.channels.inboundAddress")}</span>
                   </div>
                   <p className="text-[10px] text-[#9E9FAE] mb-2.5">{t("settings.channels.inboundDesc")}</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">
-                      {inboundEmail}
-                    </code>
-                    <button
-                      onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setEmailCopied(true);setTimeout(()=>setEmailCopied(false),1800);});}}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
-                      {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>{t("common.copied")}</> : <><Copy className="w-3 h-3"/>{t("common.copy")}</>}
-                    </button>
-                  </div>
+
+                  {/* View mode */}
+                  {!editingHandle && (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">
+                        {inboundEmail}
+                      </code>
+                      <button
+                        onClick={() => { setHandleDraft(currentHandle); setHandleError(""); setEditingHandle(true); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
+                        <Pencil className="w-3 h-3"/>Edit
+                      </button>
+                      <button
+                        onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setEmailCopied(true);setTimeout(()=>setEmailCopied(false),1800);});}}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
+                        {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>{t("common.copied")}</> : <><Copy className="w-3 h-3"/>{t("common.copy")}</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Edit mode */}
+                  {editingHandle && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-0 bg-white border border-[#9000FF]/40 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-[#9000FF]/20">
+                        <span className="pl-3 pr-1 font-mono text-sm text-[#9E9FAE] shrink-0 select-none">
+                          {(() => { const m = inboundEmail.match(/^([^+@]+)\+?[^@]*@(.+)$/); return m ? `${m[1]}+` : "iq+"; })()}
+                        </span>
+                        <input
+                          type="text"
+                          value={handleDraft}
+                          onChange={e => { setHandleDraft(e.target.value); setHandleError(""); }}
+                          onKeyDown={e => { if (e.key === "Enter") { void saveHandle(); } if (e.key === "Escape") { setEditingHandle(false); } }}
+                          className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-transparent py-1.5 outline-none min-w-0"
+                          autoFocus
+                          placeholder="your.name"
+                        />
+                        <span className="pr-3 pl-1 font-mono text-sm text-[#9E9FAE] shrink-0 select-none">
+                          {(() => { const m = inboundEmail.match(/@(.+)$/); return m ? `@${m[1]}` : "@flowforgeiq.com"; })()}
+                        </span>
+                      </div>
+                      {handleError && <p className="text-[11px] text-red-600 font-medium">{handleError}</p>}
+                      <p className="text-[10px] text-[#9E9FAE]">3–40 chars, lowercase letters, numbers, dots, and hyphens only.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { void saveHandle(); }}
+                          disabled={updateHandleMutation.isPending || !handleDraft.trim()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9000FF] text-white rounded-md text-xs font-bold hover:bg-[#7A00D9] disabled:opacity-50 transition-colors">
+                          {updateHandleMutation.isPending ? "Saving…" : <><Check className="w-3 h-3"/>Save</>}
+                        </button>
+                        <button
+                          onClick={() => { setEditingHandle(false); setHandleError(""); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] text-[#5E687B] rounded-md text-xs font-medium hover:bg-white transition-colors">
+                          <X className="w-3 h-3"/>Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
             )}

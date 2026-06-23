@@ -8,6 +8,32 @@ function generateInboundToken(): string {
   return crypto.randomBytes(8).toString("hex");
 }
 
+/** Derive a clean handle from a display name: lowercase, spaces→dots, strip non-alphanumeric except dots/hyphens, max 30 chars */
+function slugifyName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, ".")
+    .replace(/[^a-z0-9.\-]/g, "")
+    .slice(0, 30)
+    || "user";
+}
+
+/** Find a unique inbound_handle, appending 2/3/… if the base slug is taken */
+async function generateUniqueHandle(name: string): Promise<string> {
+  const base = slugifyName(name);
+  let candidate = base;
+  let suffix = 2;
+  while (true) {
+    const [existing] = await db
+      .select({ h: teamUsersTable.inboundHandle })
+      .from(teamUsersTable)
+      .where(eq(teamUsersTable.inboundHandle, candidate));
+    if (!existing) return candidate;
+    candidate = `${base}${suffix}`;
+    suffix++;
+  }
+}
+
 const router: IRouter = Router();
 
 router.get("/org", requireAuth, async (req, res) => {
@@ -100,14 +126,22 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
   if (existing.length === 0) {
     const clerkEmail = inv.email;
     const clerkName = clerkEmail.split("@")[0] ?? "Team Member";
+    const handle = await generateUniqueHandle(clerkName);
     await db.insert(teamUsersTable).values({
       clerkUserId: req.userId!,
       email: clerkEmail,
       name: clerkName,
       role: inv.role,
       inboundToken: generateInboundToken(),
+      inboundHandle: handle,
       orgId: inv.orgId,
     });
+  } else if (!existing[0]!.inboundHandle) {
+    const handle = await generateUniqueHandle(existing[0]!.name);
+    await db
+      .update(teamUsersTable)
+      .set({ inboundHandle: handle })
+      .where(eq(teamUsersTable.clerkUserId, req.userId!));
   }
 
   const [user] = await db
@@ -127,10 +161,19 @@ router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
 
   if (existing.length > 0) {
     const existingUser = existing[0]!;
+    const updates: Record<string, unknown> = {};
+
     if (!existingUser.inboundToken) {
+      updates.inboundToken = generateInboundToken();
+    }
+    if (!existingUser.inboundHandle) {
+      updates.inboundHandle = await generateUniqueHandle(existingUser.name);
+    }
+
+    if (Object.keys(updates).length > 0) {
       await db
         .update(teamUsersTable)
-        .set({ inboundToken: generateInboundToken() })
+        .set(updates)
         .where(eq(teamUsersTable.clerkUserId, req.userId!));
       const [updated] = await db
         .select()
@@ -146,15 +189,18 @@ router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
   const allMembers = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, 1));
   const isFirstUser = allMembers.length === 0;
   const role = isFirstUser ? "admin" : "member";
+  const displayName = name || email?.split("@")[0] || "Team Member";
+  const handle = await generateUniqueHandle(displayName);
 
   const [user] = await db
     .insert(teamUsersTable)
     .values({
       clerkUserId: req.userId!,
       email: email || `user-${req.userId}@flowforge.local`,
-      name: name || email?.split("@")[0] || "Team Member",
+      name: displayName,
       role,
       inboundToken: generateInboundToken(),
+      inboundHandle: handle,
       orgId: 1,
     })
     .onConflictDoNothing()

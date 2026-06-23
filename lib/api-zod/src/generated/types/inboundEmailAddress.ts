@@ -7,6 +7,6 @@
  */
 
 export interface InboundEmailAddress {
-  /** The authenticated user's personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound token */
+  /** The authenticated user's personal inbound address (iq+{handle}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound handle */
   inboundEmailAddress: string;
 }

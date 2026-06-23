@@ -1101,6 +1101,25 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InboundEmailAddress" }
+    put:
+      operationId: updateInboundEmailHandle
+      tags: [settings]
+      summary: Update the user's inbound email handle (the part after the + sign)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateInboundHandleBody" }
+      responses:
+        "200":
+          description: Updated inbound email address
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InboundEmailAddress" }
+        "400":
+          description: Invalid handle format
+        "409":
+          description: Handle already taken
 
   /messages/ingest-chat:
     post:
@@ -2460,7 +2479,13 @@ components:
       type: object
       required: [inboundEmailAddress]
       properties:
-        inboundEmailAddress: { type: string, description: "The authenticated user's personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound token" }
+        inboundEmailAddress: { type: string, description: "The authenticated user's personal inbound address (iq+{handle}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound handle" }
+
+    UpdateInboundHandleBody:
+      type: object
+      required: [handle]
+      properties:
+        handle: { type: string, minLength: 3, maxLength: 40, description: "Lowercase alphanumeric slug with dots/hyphens (3–40 chars). Becomes the + part of the inbound address." }
 
     ChatIngestInput:
       type: object

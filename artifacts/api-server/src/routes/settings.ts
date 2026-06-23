@@ -3,7 +3,7 @@ import { db, poNumberingConfigTable, teamUsersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
-import { resolveOrgId } from "../middlewares/requireAuth";
+import { resolveOrgId, requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -27,29 +27,80 @@ function makePreview(cfg: { prefix: string; sequenceFormat: string; supplierSuff
   return { buyerPo, supplierPo };
 }
 
+const HANDLE_RE = /^[a-z0-9][a-z0-9.\-]{1,38}[a-z0-9]$|^[a-z0-9]{3,40}$/;
+
+function buildAddress(localPart: string, domain: string, handle: string | null | undefined, token: string | null | undefined): string {
+  const plus = handle || token;
+  if (plus && localPart && domain) return `${localPart}+${plus}@${domain}`;
+  return `${localPart}@${domain}`;
+}
+
 router.get("/settings/inbound-email", async (req, res) => {
   const base = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
+  const [localPart, domain] = base.split("@") as [string, string];
 
-  // Try to get the authenticated user's token (optional auth — unauthenticated callers get the base address)
   let inboundEmailAddress = base;
   try {
     const auth = getAuth(req);
     const userId = auth?.userId;
     if (userId) {
-      const [localPart, domain] = base.split("@");
       const [teamUser] = await db
-        .select({ inboundToken: teamUsersTable.inboundToken })
+        .select({ inboundHandle: teamUsersTable.inboundHandle, inboundToken: teamUsersTable.inboundToken })
         .from(teamUsersTable)
         .where(eq(teamUsersTable.clerkUserId, userId));
-      const token = teamUser?.inboundToken;
-      if (token && localPart && domain) {
-        inboundEmailAddress = `${localPart}+${token}@${domain}`;
-      }
+      inboundEmailAddress = buildAddress(localPart, domain, teamUser?.inboundHandle, teamUser?.inboundToken);
     }
   } catch {
-    // If auth resolution fails, fall back to the base address
+    // fall back to base address if auth fails
   }
 
+  res.json({ inboundEmailAddress });
+});
+
+const UpdateHandleBody = z.object({
+  handle: z.string(),
+});
+
+router.put("/settings/inbound-email", requireAuth, async (req, res) => {
+  let body: z.infer<typeof UpdateHandleBody>;
+  try {
+    body = UpdateHandleBody.parse(req.body);
+  } catch {
+    res.status(400).json({ error: "handle is required" });
+    return;
+  }
+
+  const { handle } = body;
+  const normalized = handle.toLowerCase().trim();
+
+  if (normalized.length < 3 || normalized.length > 40) {
+    res.status(400).json({ error: "Handle must be 3–40 characters" });
+    return;
+  }
+  if (!HANDLE_RE.test(normalized)) {
+    res.status(400).json({ error: "Handle may only contain lowercase letters, numbers, dots, and hyphens" });
+    return;
+  }
+
+  // Check uniqueness (excluding current user)
+  const [conflict] = await db
+    .select({ clerkUserId: teamUsersTable.clerkUserId })
+    .from(teamUsersTable)
+    .where(eq(teamUsersTable.inboundHandle, normalized));
+
+  if (conflict && conflict.clerkUserId !== req.userId) {
+    res.status(409).json({ error: "That handle is already taken" });
+    return;
+  }
+
+  await db
+    .update(teamUsersTable)
+    .set({ inboundHandle: normalized })
+    .where(eq(teamUsersTable.clerkUserId, req.userId!));
+
+  const base = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
+  const [localPart, domain] = base.split("@") as [string, string];
+  const inboundEmailAddress = buildAddress(localPart, domain, normalized, null);
   res.json({ inboundEmailAddress });
 });
 

@@ -711,10 +711,19 @@ router.post("/webhooks/email", async (req, res) => {
   let scopedClerkUserId: string | null = null;
   let scopedOrgId = 1;
   if (plusToken) {
-    const [tokenRow] = await db
+    // Try clean handle first, fall back to legacy hex token
+    let tokenRow = await db
       .select({ clerkUserId: teamUsersTable.clerkUserId, orgId: teamUsersTable.orgId })
       .from(teamUsersTable)
-      .where(eq(teamUsersTable.inboundToken, plusToken));
+      .where(eq(teamUsersTable.inboundHandle, plusToken))
+      .then(r => r[0] ?? null);
+    if (!tokenRow) {
+      tokenRow = await db
+        .select({ clerkUserId: teamUsersTable.clerkUserId, orgId: teamUsersTable.orgId })
+        .from(teamUsersTable)
+        .where(eq(teamUsersTable.inboundToken, plusToken))
+        .then(r => r[0] ?? null);
+    }
     scopedClerkUserId = tokenRow?.clerkUserId ?? null;
     scopedOrgId = tokenRow?.orgId ?? 1;
   }

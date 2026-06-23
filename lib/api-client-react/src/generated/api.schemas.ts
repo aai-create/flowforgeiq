@@ -945,8 +945,17 @@ export interface PoNumberingConfigUpdate {
 }
 
 export interface InboundEmailAddress {
-  /** The authenticated user's personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound token */
+  /** The authenticated user's personal inbound address (iq+{handle}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound handle */
   inboundEmailAddress: string;
+}
+
+export interface UpdateInboundHandleBody {
+  /**
+     * Lowercase alphanumeric slug with dots/hyphens (3–40 chars). Becomes the + part of the inbound address.
+     * @minLength 3
+     * @maxLength 40
+     */
+  handle: string;
 }
 
 /**

@@ -1569,7 +1569,24 @@ export const SaveExtractionCorrectionResponse = zod.object({
  * @summary Get the configured inbound email address for chat/email forwarding
  */
 export const GetInboundEmailAddressResponse = zod.object({
-  "inboundEmailAddress": zod.string().describe('The authenticated user\'s personal inbound address (iq+{token}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user\'s inbound token')
+  "inboundEmailAddress": zod.string().describe('The authenticated user\'s personal inbound address (iq+{handle}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user\'s inbound handle')
+})
+
+
+/**
+ * @summary Update the user's inbound email handle (the part after the + sign)
+ */
+export const updateInboundEmailHandleBodyHandleMin = 3;
+export const updateInboundEmailHandleBodyHandleMax = 40;
+
+
+
+export const UpdateInboundEmailHandleBody = zod.object({
+  "handle": zod.string().min(updateInboundEmailHandleBodyHandleMin).max(updateInboundEmailHandleBodyHandleMax).describe('Lowercase alphanumeric slug with dots\/hyphens (3–40 chars). Becomes the + part of the inbound address.')
+})
+
+export const UpdateInboundEmailHandleResponse = zod.object({
+  "inboundEmailAddress": zod.string().describe('The authenticated user\'s personal inbound address (iq+{handle}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user\'s inbound handle')
 })
 
 

@@ -9,6 +9,7 @@ export const teamUsersTable = pgTable("team_users", {
   name: text("name").notNull(),
   role: text("role").notNull().default("member"),
   inboundToken: text("inbound_token").notNull().unique(),
+  inboundHandle: text("inbound_handle").unique(),
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("team_users_org_id_idx").on(t.orgId)]);

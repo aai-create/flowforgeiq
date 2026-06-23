@@ -102,6 +102,7 @@ import type {
   TeamResponse,
   TestGmailSend200,
   TestGmailSendBody,
+  UpdateInboundHandleBody,
   UploadDocumentBody
 } from './api.schemas';
 
@@ -4495,6 +4496,77 @@ export function useGetInboundEmailAddress<TData = Awaited<ReturnType<typeof getI
 
 
 
+
+export const getUpdateInboundEmailHandleUrl = () => {
+
+
+
+
+  return `/api/settings/inbound-email`
+}
+
+/**
+ * @summary Update the user's inbound email handle (the part after the + sign)
+ */
+export const updateInboundEmailHandle = async (updateInboundHandleBody: UpdateInboundHandleBody, options?: RequestInit): Promise<InboundEmailAddress> => {
+
+  return customFetch<InboundEmailAddress>(getUpdateInboundEmailHandleUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateInboundHandleBody,)
+  }
+);}
+
+
+
+
+export const getUpdateInboundEmailHandleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInboundEmailHandle>>, TError,{data: BodyType<UpdateInboundHandleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInboundEmailHandle>>, TError,{data: BodyType<UpdateInboundHandleBody>}, TContext> => {
+
+const mutationKey = ['updateInboundEmailHandle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInboundEmailHandle>>, {data: BodyType<UpdateInboundHandleBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateInboundEmailHandle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInboundEmailHandleMutationResult = NonNullable<Awaited<ReturnType<typeof updateInboundEmailHandle>>>
+    export type UpdateInboundEmailHandleMutationBody = BodyType<UpdateInboundHandleBody>
+    export type UpdateInboundEmailHandleMutationError = ErrorType<void>
+
+    /**
+ * @summary Update the user's inbound email handle (the part after the + sign)
+ */
+export const useUpdateInboundEmailHandle = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInboundEmailHandle>>, TError,{data: BodyType<UpdateInboundHandleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInboundEmailHandle>>,
+        TError,
+        {data: BodyType<UpdateInboundHandleBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateInboundEmailHandleMutationOptions(options));
+    }
 
 export const getIngestChatUrl = () => {
 
