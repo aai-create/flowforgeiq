@@ -1846,6 +1846,11 @@ export default function Home() {
     if (initParams.has("supplier")) return null; // deep-link effect will set it
     return sessionStorage.getItem("flowforge:supplierFilter");
   });
+  const [customerFilter, setCustomerFilter] = useState<string|null>(() => {
+    const initParams = new URLSearchParams(initialSearchRef.current);
+    if (initParams.has("customer")) return null; // deep-link effect will set it
+    return null;
+  });
   const [flaggedFilter, setFlaggedFilter] = useState(false);
   const [leftPanelMode, setLeftPanelMode] = useState<"all" | "suppliers" | "pos" | "channels">("all");
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1948,7 +1953,7 @@ export default function Home() {
     setMarkPaidForm(null);
   };
 
-  // Apply deep-link URL params (?supplier=, ?shipment=, ?tab=) once messages are loaded.
+  // Apply deep-link URL params (?supplier=, ?shipment=, ?customer=, ?tab=) once messages are loaded.
   // Reports navigates here with these params so users land on the right filtered view.
   // ?tab= alone (without supplier/shipment) is also honoured so deep-links that only
   // specify a tab land on the right panel.
@@ -1960,8 +1965,9 @@ export default function Home() {
     const params = new URLSearchParams(initialSearchRef.current);
     const supplierParam = params.get("supplier");
     const shipmentParam = params.get("shipment");
+    const customerParam = params.get("customer");
     const tabParam = params.get("tab");
-    if (!supplierParam && !shipmentParam && !tabParam) return;
+    if (!supplierParam && !shipmentParam && !customerParam && !tabParam) return;
     urlParamsApplied.current = true;
     setActiveView("inbox");
     if (tabParam && (["docs", "risk", "copilot"] as string[]).includes(tabParam)) {
@@ -1972,12 +1978,19 @@ export default function Home() {
       setSelectedShipmentId(uiId);
       setChannelFilter("all");
       setSupplierFilter(null);
+      setCustomerFilter(null);
       const first = messages.find(m => m.shipmentId === uiId);
       if (first) setActiveMessageId(first.id);
+    } else if (customerParam) {
+      setCustomerFilter(customerParam);
+      setSupplierFilter(null);
+      setSelectedShipmentId(null);
+      setChannelFilter("all");
     } else if (supplierParam) {
       setSupplierFilter(supplierParam);
       setSelectedShipmentId(null);
       setChannelFilter("all");
+      setCustomerFilter(null);
       const first = messages.find(m => m.supplierId === supplierParam);
       if (first) setActiveMessageId(first.id);
     }
@@ -2014,6 +2027,19 @@ export default function Home() {
     }
     navigate(`?${params.toString()}`, { replace: true });
   }, [supplierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep ?customer= in sync with customerFilter.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!urlParamsApplied.current && params.has("customer")) return;
+    if (params.get("customer") === customerFilter) return;
+    if (customerFilter) {
+      params.set("customer", customerFilter);
+    } else {
+      params.delete("customer");
+    }
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [customerFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist inbox filters to sessionStorage so they are restored when the user
   // navigates away and returns (same tab/session). Cleared values remove the key
@@ -2120,11 +2146,21 @@ export default function Home() {
     doc => (doc.extraction?.reconciliationFindings?.length ?? 0) > 0
   );
 
+  const customerShipmentIds = useMemo(() => {
+    if (!customerFilter) return null;
+    const ids = new Set<string>();
+    for (const s of shipments) {
+      if (s.customer === customerFilter) ids.add(s.id);
+    }
+    return ids;
+  }, [customerFilter, shipments]);
+
   const visibleMessages = messages.filter(m => {
     if (flaggedFilter && !m.isFlagged) return false;
     if (selectedShipmentId && m.shipmentId !== selectedShipmentId) return false;
     if (channelFilter !== "all" && m.channel !== channelFilter) return false;
     if (supplierFilter && m.supplierId !== supplierFilter) return false;
+    if (customerShipmentIds && (m.shipmentId == null || !customerShipmentIds.has(m.shipmentId))) return false;
     return true;
   });
 
@@ -2161,7 +2197,7 @@ export default function Home() {
   };
   const selectShipment = (id: string) => {
     const next = selectedShipmentId===id ? null : id;
-    setSelectedShipmentId(next); setChannelFilter("all"); setSupplierFilter(null);
+    setSelectedShipmentId(next); setChannelFilter("all"); setSupplierFilter(null); setCustomerFilter(null);
     if (next) { const f = messages.find(m => m.shipmentId===next); if(f) openMessage(f.id); }
   };
   const advanceStage = (shipmentId: string, note?: string) => {
@@ -2283,13 +2319,13 @@ export default function Home() {
     setToast("Factory quote selected");
   };
   const toggleChannel = (ch: Channel|"all") => {
-    setChannelFilter(ch); setSelectedShipmentId(null); setSupplierFilter(null); setFlaggedFilter(false);
+    setChannelFilter(ch); setSelectedShipmentId(null); setSupplierFilter(null); setCustomerFilter(null); setFlaggedFilter(false);
     const f = ch==="all" ? messages[0] : messages.find(m=>m.channel===ch);
     if(f) openMessage(f.id);
   };
   const toggleSupplier = (id: string) => {
     const next = supplierFilter===id ? null : id;
-    setSupplierFilter(next); setSelectedShipmentId(null); setChannelFilter("all"); setFlaggedFilter(false);
+    setSupplierFilter(next); setSelectedShipmentId(null); setChannelFilter("all"); setCustomerFilter(null); setFlaggedFilter(false);
     if(next) { const f=messages.find(m=>m.supplierId===next); if(f) openMessage(f.id); }
   };
 
@@ -2731,7 +2767,7 @@ export default function Home() {
                 const active = activeView==="inbox" && leftPanelMode==="all" && !flaggedFilter;
                 return (
                   <button
-                    onClick={()=>{ urlParamsApplied.current=true; setActiveView("inbox"); setLeftPanelMode("all"); setChannelFilter("all"); setSupplierFilter(null); setSelectedShipmentId(null); setFlaggedFilter(false); }}
+                    onClick={()=>{ urlParamsApplied.current=true; setActiveView("inbox"); setLeftPanelMode("all"); setChannelFilter("all"); setSupplierFilter(null); setCustomerFilter(null); setSelectedShipmentId(null); setFlaggedFilter(false); }}
                     className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#9000FF] text-white":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
                     All
                     {unreadCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-white/30 text-white":"bg-[#9000FF]/10 text-[#9000FF]"}`}>{unreadCount}</span>}
@@ -2788,13 +2824,24 @@ export default function Home() {
                 const active = flaggedFilter && activeView==="inbox";
                 return (
                   <button
-                    onClick={()=>{ setActiveView("inbox"); setLeftPanelMode("all"); setFlaggedFilter(f=>!f); setChannelFilter("all"); setSelectedShipmentId(null); setSupplierFilter(null); if(!flaggedFilter){const fm=messages.find(m=>m.isFlagged);if(fm)openMessage(fm.id);} }}
+                    onClick={()=>{ setActiveView("inbox"); setLeftPanelMode("all"); setFlaggedFilter(f=>!f); setChannelFilter("all"); setSelectedShipmentId(null); setSupplierFilter(null); setCustomerFilter(null); if(!flaggedFilter){const fm=messages.find(m=>m.isFlagged);if(fm)openMessage(fm.id);} }}
                     className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
                     <Bookmark className="w-2.5 h-2.5"/>Flagged
                     {flaggedCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>}
                   </button>
                 );
               })()}
+
+              {/* Buyer filter pill — visible only when customerFilter is active */}
+              {customerFilter && (
+                <button
+                  onClick={()=>setCustomerFilter(null)}
+                  className="flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 bg-[#9000FF]/10 text-[#9000FF] hover:bg-[#9000FF]/20 transition-colors"
+                >
+                  <ChevronLeft className="w-2.5 h-2.5"/>
+                  <span className="max-w-[100px] truncate">{customerFilter}</span>
+                </button>
+              )}
 
               {/* Needs Review */}
               {(()=>{
@@ -2880,6 +2927,7 @@ export default function Home() {
                 urlParamsApplied.current = true;
                 setSelectedShipmentId(shipmentId);
                 setSupplierFilter(null);
+                setCustomerFilter(null);
                 setChannelFilter("all");
                 setFlaggedFilter(false);
                 setLeftPanelMode("all");
@@ -2895,6 +2943,7 @@ export default function Home() {
                 urlParamsApplied.current = true;
                 setChannelFilter(ch);
                 setSupplierFilter(null);
+                setCustomerFilter(null);
                 setSelectedShipmentId(null);
                 setFlaggedFilter(false);
                 setLeftPanelMode("all");

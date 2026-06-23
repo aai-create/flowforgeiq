@@ -375,7 +375,16 @@ function BuyerDetailPanel({ buyer, contact, stages, onClose, onContactChange }: 
             <>
               <Separator />
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">Recent Messages</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B]">Recent Messages</div>
+                  <button
+                    onClick={() => navigate(`/inbox?customer=${encodeURIComponent(buyer.name)}`)}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-[#9000FF] hover:text-[#7000CC] transition-colors"
+                  >
+                    View all in Inbox
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
                 <div className="space-y-1.5">
                   {recentMessages.map(m => (
                     <button
