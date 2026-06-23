@@ -1762,21 +1762,24 @@ export default function Home() {
 
   type BreadcrumbSegment = { label: string; href: string } | { label: string; href?: undefined };
 
-  function parseBreadcrumb(param: string | null): BreadcrumbSegment[] {
+  function parseBreadcrumb(param: string | null, po?: string): BreadcrumbSegment[] {
     if (!param) return [];
-    if (param === "risk-radar") return [{ label: "Risk Radar", href: "/risk-radar" }];
+    if (param === "risk-radar") {
+      const segs: BreadcrumbSegment[] = [{ label: "Risk Radar", href: "/risk-radar" }];
+      if (po) segs.push({ label: po });
+      return segs;
+    }
     if (param.startsWith("reports")) {
       const cardId = param.split(":")[1];
       const segments: BreadcrumbSegment[] = [{ label: "Reports", href: "/reports" }];
       if (cardId && FROM_CARD_LABELS[cardId]) {
         segments.push({ label: FROM_CARD_LABELS[cardId] });
       }
+      if (po) segments.push({ label: po });
       return segments;
     }
     return [];
   }
-
-  const breadcrumbSegments = parseBreadcrumb(fromParam);
   useCopilotHint("Draft a reply or ask about shipment status", [
     "Draft a reply to this supplier",
     "Any overdue payments on this PO?",
@@ -1834,6 +1837,8 @@ export default function Home() {
     if (initParams.has("shipment")) return null; // deep-link effect will set it
     return sessionStorage.getItem("flowforge:selectedShipmentId");
   });
+  const selectedShipmentPo = selectedShipmentId ? shipments.find(s => s.id === selectedShipmentId)?.po : undefined;
+  const breadcrumbSegments = parseBreadcrumb(fromParam, selectedShipmentPo);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
     if (initParams.has("shipment") || initParams.has("supplier")) return "all";
