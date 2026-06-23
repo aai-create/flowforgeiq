@@ -11,6 +11,7 @@ import {
   dealShipmentsTable,
   teamUsersTable,
   stagesTable,
+  tasksTable,
 } from "@workspace/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
@@ -503,6 +504,24 @@ router.post("/shipments/:id/deals", async (req, res) => {
   }
   const updated = await loadShipment(shipmentId, orgId);
   res.status(201).json(updated);
+});
+
+// DELETE /shipments/:id — permanently remove a shipment and its related records
+router.delete("/shipments/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const orgId = await resolveOrgId(req);
+  const shipment = await loadShipment(id, orgId);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
+  await db.transaction(async (tx) => {
+    // Manually delete tables without FK cascade on shipmentId
+    await tx.delete(paymentsTable).where(and(eq(paymentsTable.shipmentId, id), eq(paymentsTable.orgId, orgId)));
+    await tx.delete(factoryQuotesTable).where(and(eq(factoryQuotesTable.shipmentId, id), eq(factoryQuotesTable.orgId, orgId)));
+    await tx.delete(tasksTable).where(and(eq(tasksTable.shipmentId, id), eq(tasksTable.orgId, orgId)));
+    // stage_events and deal_shipments have ON DELETE CASCADE on shipmentId
+    await tx.delete(shipmentsTable).where(and(eq(shipmentsTable.id, id), eq(shipmentsTable.orgId, orgId)));
+  });
+  res.status(204).send();
 });
 
 // DELETE /shipments/:id/deals/:dealId — unlink a deal from this shipment

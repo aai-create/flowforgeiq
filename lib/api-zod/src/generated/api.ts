@@ -363,6 +363,11 @@ export const CreateShipmentBody = zod.object({
 })
 
 
+export const DeleteShipmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
 export const UpdateShipmentParams = zod.object({
   "id": zod.coerce.number()
 })

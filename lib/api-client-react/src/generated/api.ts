@@ -1309,6 +1309,70 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateShipmentMutationOptions(options));
     }
 
+export const getDeleteShipmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}`
+}
+
+export const deleteShipment = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteShipmentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteShipmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteShipment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteShipment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteShipment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteShipment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteShipment>>>
+
+    export type DeleteShipmentMutationError = ErrorType<void>
+
+    export const useDeleteShipment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteShipment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteShipment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteShipmentMutationOptions(options));
+    }
+
 export const getUpdateShipmentUrl = (id: number,) => {
 
 

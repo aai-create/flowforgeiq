@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal } from "@workspace/api-client-react";
+import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
@@ -353,6 +353,26 @@ export function Atelier() {
       },
     },
   });
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const deleteShipmentMutation = useDeleteShipment();
+  const confirmDeleteShipment = async () => {
+    if (deleteConfirmId === null) return;
+    const id = deleteConfirmId;
+    setDeleteConfirmId(null);
+    setShipments(prev => prev.filter(s => s.shipmentId !== id));
+    if (activeShipmentId) {
+      const active = shipments.find(s => s.id === activeShipmentId);
+      if (active?.shipmentId === id) setActiveShipmentId(null);
+    }
+    deleteShipmentMutation.mutate({ id }, {
+      onError: () => {
+        queryClient.invalidateQueries({ queryKey: shipmentsQueryKey });
+        setToast("Failed to delete PO — please try again");
+        setTimeout(() => setToast(null), 3000);
+      },
+    });
+  };
   const [newPOForm, setNewPOForm] = useState({
     poNumber: "", buyerPoNumber: "", product: "", category: "", customerName: "",
     supplierId: "", dueDate: "", exFactoryDate: "",
@@ -1279,17 +1299,23 @@ export function Atelier() {
                                 onClick={e => e.stopPropagation()}
                                 className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
                                 {[
-                                  { label: "Edit PO", action: () => { openEditPO(shipment); setMoreMenuId(null); } },
-                                  { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); } },
-                                  { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); } },
-                                  { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); } },
-                                  { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); } },
-                                ].map(({ label, action }) => (
+                                  { label: "Edit PO", action: () => { openEditPO(shipment); setMoreMenuId(null); }, danger: false },
+                                  { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); }, danger: false },
+                                  { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); }, danger: false },
+                                  { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); }, danger: false },
+                                  { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); }, danger: false },
+                                ].map(({ label, action, danger }) => (
                                   <button key={label} onClick={action}
-                                    className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#212833] transition-colors">
+                                    className={`w-full text-left px-3 py-2 hover:bg-[#F0F4F8] transition-colors ${danger ? "text-red-600" : "text-[#212833]"}`}>
                                     {label}
                                   </button>
                                 ))}
+                                <div className="border-t border-[#F0F4F8] my-1" />
+                                <button
+                                  onClick={() => { setDeleteConfirmId(shipment.shipmentId); setMoreMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 transition-colors">
+                                  Delete PO
+                                </button>
                               </div>
                             )}
                           </div>
@@ -1634,6 +1660,30 @@ export function Atelier() {
         </Dialog>
       );
     })()}
+
+    {/* ── DELETE PO CONFIRMATION DIALOG ── */}
+    <Dialog open={deleteConfirmId !== null} onOpenChange={open => { if (!open) setDeleteConfirmId(null); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold text-[#212833]">Delete PO?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-[#5E687B] py-1">
+          This will permanently remove this PO and all its payment records, factory quotes, and tasks. This cannot be undone.
+        </p>
+        <DialogFooter className="flex gap-2 pt-2">
+          <button
+            onClick={() => setDeleteConfirmId(null)}
+            className="px-4 py-2 text-xs font-semibold text-[#5E687B] border border-[#E5EAF0] rounded-lg hover:bg-[#F0F4F8] transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={confirmDeleteShipment}
+            className="px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
+            Delete PO
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     {/* ── NEW PO / EDIT PO DIALOG ── */}
     <Dialog open={showNewPO} onOpenChange={open => { if (!open) resetNewPO(); }}>

@@ -304,6 +304,19 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Shipment" }
   /shipments/{id}:
+    delete:
+      operationId: deleteShipment
+      tags: [shipments]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Shipment deleted
+        "404":
+          description: Not found
     patch:
       operationId: updateShipment
       tags: [shipments]
