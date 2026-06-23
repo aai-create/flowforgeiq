@@ -12,7 +12,7 @@ import {
   Inbox, ShieldAlert,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import {
   useListShipments,
@@ -1389,6 +1389,326 @@ function SpreadCardContent({ deals }: { deals: DealWithSpread[] }) {
   );
 }
 
+// ─── Spread Over Time Card ───────────────────────────────────────────────────
+
+const SPREAD_THRESHOLD = 10; // highlight below this %
+
+type GroupBy = "month" | "quarter";
+
+function bucketKey(iso: string, groupBy: GroupBy): string {
+  const d = new Date(iso);
+  const y = d.getUTCFullYear();
+  if (groupBy === "quarter") {
+    const q = Math.floor(d.getUTCMonth() / 3) + 1;
+    return `${y}-Q${q}`;
+  }
+  return `${y}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function bucketLabel(key: string, groupBy: GroupBy): string {
+  if (groupBy === "quarter") return key; // e.g. "2026-Q2"
+  const [y, m] = key.split("-");
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-US", { month: "short", year: "2-digit" });
+}
+
+interface SpreadBucket {
+  key: string;
+  label: string;
+  avgPct: number;
+  totalUsd: number;
+  count: number;
+  belowThreshold: number;
+}
+
+function spreadBarColor(pct: number): string {
+  if (pct < SPREAD_THRESHOLD) return "#EF4444"; // red
+  if (pct < 18)               return "#F59E0B"; // amber
+  return                              "#10B981"; // green
+}
+
+function SpreadOverTimeCardContent({ shipments }: { shipments: Shipment[] }) {
+  const [groupBy, setGroupBy] = useState<GroupBy>("month");
+  const [filterSupplier, setFilterSupplier] = useState("");
+  const [filterBuyer,    setFilterBuyer]    = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+
+  // Unique filter options
+  const supplierOptions = useMemo(() => {
+    const s = new Set(shipments.map(sh => sh.supplierName).filter(Boolean));
+    return [...s].sort();
+  }, [shipments]);
+
+  const buyerOptions = useMemo(() => {
+    const s = new Set(shipments.map(sh => sh.customerName).filter(Boolean));
+    return [...s].sort();
+  }, [shipments]);
+
+  const categoryOptions = useMemo(() => {
+    const s = new Set(shipments.map(sh => sh.category).filter(Boolean));
+    return [...s].sort();
+  }, [shipments]);
+
+  // Filtered shipments: must have spread data and exFactoryDate
+  const filtered = useMemo(() => {
+    return shipments.filter(sh => {
+      if (sh.spreadPct == null || sh.spreadUsd == null) return false;
+      if (!sh.exFactoryDate) return false;
+      if (filterSupplier && sh.supplierName !== filterSupplier) return false;
+      if (filterBuyer    && sh.customerName !== filterBuyer)    return false;
+      if (filterCategory && sh.category     !== filterCategory) return false;
+      return true;
+    });
+  }, [shipments, filterSupplier, filterBuyer, filterCategory]);
+
+  // Bucket by period
+  const chartData = useMemo(() => {
+    const map = new Map<string, { pcts: number[]; usd: number; below: number }>();
+    for (const sh of filtered) {
+      const key = bucketKey(sh.exFactoryDate!, groupBy);
+      const entry = map.get(key) ?? { pcts: [], usd: 0, below: 0 };
+      entry.pcts.push(sh.spreadPct!);
+      entry.usd += sh.spreadUsd!;
+      if (sh.spreadPct! < SPREAD_THRESHOLD) entry.below++;
+      map.set(key, entry);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, { pcts, usd, below }]): SpreadBucket => ({
+        key,
+        label: bucketLabel(key, groupBy),
+        avgPct: pcts.reduce((s, v) => s + v, 0) / pcts.length,
+        totalUsd: usd,
+        count: pcts.length,
+        belowThreshold: below,
+      }));
+  }, [filtered, groupBy]);
+
+  const totalShipments   = filtered.length;
+  const belowCount       = filtered.filter(sh => sh.spreadPct! < SPREAD_THRESHOLD).length;
+  const overallAvgPct    = totalShipments > 0
+    ? filtered.reduce((s, sh) => s + sh.spreadPct!, 0) / totalShipments
+    : 0;
+  const overallTotalUsd  = filtered.reduce((s, sh) => s + sh.spreadUsd!, 0);
+
+  const hasFilters = filterSupplier || filterBuyer || filterCategory;
+
+  function clearFilters() {
+    setFilterSupplier("");
+    setFilterBuyer("");
+    setFilterCategory("");
+  }
+
+  if (totalShipments === 0) {
+    return (
+      <div className="py-10 text-center text-[#9E9FAE] text-sm">
+        {hasFilters
+          ? "No shipments with spread data match the selected filters."
+          : "No shipments with spread data yet."}
+        {hasFilters && (
+          <button onClick={clearFilters} className="ml-2 underline text-[#9000FF] hover:opacity-80">Clear filters</button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Shipments with Spread",  value: totalShipments.toString(),       color: "text-[#212833]" },
+          { label: "Avg Spread %",            value: `${overallAvgPct.toFixed(1)}%`,  color: overallAvgPct < SPREAD_THRESHOLD ? "text-red-600" : overallAvgPct < 18 ? "text-amber-600" : "text-emerald-600" },
+          { label: "Total Spread USD",        value: fmtUsd(overallTotalUsd),         color: "text-[#212833]" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3 text-center">
+            <div className={`text-lg font-bold ${color}`}>{value}</div>
+            <div className="text-[10px] text-[#5E687B] mt-0.5">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide shrink-0">Filter by</span>
+
+        {/* Supplier */}
+        <select
+          value={filterSupplier}
+          onChange={e => setFilterSupplier(e.target.value)}
+          className="text-[11px] border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#5E687B] focus:outline-none focus:border-[#9000FF]/50 cursor-pointer"
+        >
+          <option value="">All Suppliers</option>
+          {supplierOptions.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        {/* Buyer */}
+        <select
+          value={filterBuyer}
+          onChange={e => setFilterBuyer(e.target.value)}
+          className="text-[11px] border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#5E687B] focus:outline-none focus:border-[#9000FF]/50 cursor-pointer"
+        >
+          <option value="">All Buyers</option>
+          {buyerOptions.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+
+        {/* Category */}
+        <select
+          value={filterCategory}
+          onChange={e => setFilterCategory(e.target.value)}
+          className="text-[11px] border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#5E687B] focus:outline-none focus:border-[#9000FF]/50 cursor-pointer"
+        >
+          <option value="">All Categories</option>
+          {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+
+        <div className="w-px h-4 bg-[#E5EAF0]" />
+
+        {/* Group by toggle */}
+        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Group by</span>
+        {(["month", "quarter"] as GroupBy[]).map(g => (
+          <button
+            key={g}
+            onClick={() => setGroupBy(g)}
+            className={`text-[11px] font-medium px-3 py-1.5 rounded-full border transition-all capitalize ${
+              groupBy === g
+                ? "bg-[#9000FF] text-white border-[#9000FF]"
+                : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#9000FF]/40"
+            }`}
+          >
+            {g}
+          </button>
+        ))}
+
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 text-[11px] text-[#9E9FAE] hover:text-[#212833] transition-colors ml-auto"
+            title="Clear all filters"
+          >
+            <X className="w-3.5 h-3.5" />
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* Below-threshold alert */}
+      {belowCount > 0 && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+          <span className="text-[11px] text-red-700">
+            <span className="font-bold">{belowCount}</span> of {totalShipments} shipment{totalShipments !== 1 ? "s" : ""} below the {SPREAD_THRESHOLD}% spread threshold
+          </span>
+        </div>
+      )}
+
+      {/* Bar chart */}
+      {chartData.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-3">
+            Avg Spread % by {groupBy === "month" ? "Month" : "Quarter"} (ex-factory date)
+          </div>
+          <ChartContainer
+            config={{ avgPct: { label: "Avg Spread %", color: "#10B981" } } satisfies ChartConfig}
+            className="h-[200px] w-full"
+          >
+            <BarChart data={chartData} barCategoryGap="35%">
+              <CartesianGrid vertical={false} stroke="#F0F4F8" />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#5E687B" }} axisLine={false} tickLine={false} />
+              <YAxis
+                tickFormatter={v => `${Number(v).toFixed(0)}%`}
+                tick={{ fontSize: 10, fill: "#9E9FAE" }}
+                axisLine={false}
+                tickLine={false}
+                width={36}
+                domain={[0, "auto"]}
+              />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(v, _name, item) => {
+                      const d = item.payload as SpreadBucket;
+                      return [
+                        <span key="v" className="font-semibold">{Number(v).toFixed(1)}%</span>,
+                        <span key="sub" className="text-[#9E9FAE] ml-1">
+                          avg · {fmtUsd(d.totalUsd)} total · {d.count} shipment{d.count !== 1 ? "s" : ""}
+                          {d.belowThreshold > 0 ? ` · ${d.belowThreshold} below ${SPREAD_THRESHOLD}%` : ""}
+                        </span>,
+                      ];
+                    }}
+                  />
+                }
+              />
+              <ReferenceLine
+                y={SPREAD_THRESHOLD}
+                stroke="#EF4444"
+                strokeDasharray="4 3"
+                strokeWidth={1.5}
+                label={{ value: `${SPREAD_THRESHOLD}% min`, position: "insideTopLeft", fontSize: 9, fill: "#EF4444" }}
+              />
+              <Bar dataKey="avgPct" radius={[3, 3, 0, 0]}>
+                {chartData.map(d => (
+                  <Cell key={d.key} fill={spreadBarColor(d.avgPct)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 justify-center mt-1">
+            <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />≥ 18%</span>
+            <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />10–18%</span>
+            <span className="flex items-center gap-1.5 text-[10px] text-[#5E687B]"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" />&lt; 10% (below threshold)</span>
+          </div>
+        </div>
+      )}
+
+      {/* Period summary table */}
+      {chartData.length > 1 && (
+        <div>
+          <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">
+            Period Breakdown
+          </div>
+          <div className="border border-[#E5EAF0] rounded-xl overflow-hidden">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="bg-[#FAFBFC] border-b border-[#E5EAF0]">
+                  <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Period</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Shipments</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Avg Spread %</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Total Spread</th>
+                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Below Threshold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map(row => {
+                  const pctColor = row.avgPct < SPREAD_THRESHOLD
+                    ? "text-red-600 font-bold"
+                    : row.avgPct < 18
+                    ? "text-amber-600 font-semibold"
+                    : "text-emerald-600 font-semibold";
+                  return (
+                    <tr key={row.key} className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC]">
+                      <td className="px-3 py-2 font-medium text-[#212833]">{row.label}</td>
+                      <td className="px-3 py-2 text-right text-[#5E687B]">{row.count}</td>
+                      <td className={`px-3 py-2 text-right ${pctColor}`}>{row.avgPct.toFixed(1)}%</td>
+                      <td className="px-3 py-2 text-right text-[#212833] font-semibold">{fmtUsd(row.totalUsd)}</td>
+                      <td className="px-3 py-2 text-right">
+                        {row.belowThreshold > 0
+                          ? <span className="text-red-600 font-semibold">{row.belowThreshold}</span>
+                          : <span className="text-[#9E9FAE]">—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Reports page ────────────────────────────────────────────────────────
 export function Reports() {
   const [location, navigate] = useLocation();
@@ -1480,6 +1800,21 @@ export function Reports() {
       ),
       subtitle: `${deals.length} buyer deal${deals.length !== 1 ? "s" : ""} · ${fmtUsd(totalBuyerKpi)} total buyer value`,
       content: <SpreadCardContent deals={deals} />,
+    },
+    {
+      id: "spread-history",
+      icon: TrendingDown,
+      title: "Spread Over Time",
+      iconColor: "text-[#9000FF]",
+      iconBg: "bg-[#9000FF]/10",
+      kpi: (
+        <span>
+          {avgSpreadPctKpi.toFixed(1)}%{" "}
+          <span className="text-sm font-medium text-[#5E687B]">avg margin</span>
+        </span>
+      ),
+      subtitle: `${allShipments.filter(s => s.spreadPct != null).length} shipments with spread data · trend by month or quarter`,
+      content: <SpreadOverTimeCardContent shipments={allShipments} />,
     },
     {
       id: "finance",
