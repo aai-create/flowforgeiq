@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, buyersTable } from "@workspace/db";
+import { db, buyersTable, shipmentsTable } from "@workspace/db";
 import { and, asc, eq } from "drizzle-orm";
 import { ListBuyersResponseItem, UpdateBuyerBody } from "@workspace/api-zod";
 import { resolveOrgId } from "../middlewares/requireAuth";
@@ -59,6 +59,13 @@ router.patch("/buyers/:id", async (req, res) => {
   if (updated.length === 0) {
     res.status(404).json({ error: "Buyer not found" });
     return;
+  }
+
+  if (fields.name !== undefined) {
+    await db
+      .update(shipmentsTable)
+      .set({ customerName: fields.name })
+      .where(and(eq(shipmentsTable.buyerId, id), eq(shipmentsTable.orgId, orgId)));
   }
 
   res.json(ListBuyersResponseItem.parse(updated[0]));

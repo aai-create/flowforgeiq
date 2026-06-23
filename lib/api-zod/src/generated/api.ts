@@ -91,6 +91,7 @@ export const UpdateBuyerParams = zod.object({
 })
 
 export const UpdateBuyerBody = zod.object({
+  "name": zod.string().optional(),
   "contactName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),

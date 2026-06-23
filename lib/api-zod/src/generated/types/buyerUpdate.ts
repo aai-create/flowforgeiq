@@ -7,6 +7,7 @@
  */
 
 export interface BuyerUpdate {
+  name?: string;
   contactName?: string | null;
   email?: string | null;
   phone?: string | null;
