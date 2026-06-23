@@ -62,6 +62,7 @@ export interface UiShipment {
   spreadPct: number | null;
   assigneeId: string | null;
   assigneeName: string | null;
+  archivedAt: string | null;
 }
 
 export interface UiMessage {
@@ -146,6 +147,7 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     buyerQuantity: s.buyerQuantity ?? null,
     spreadUsd: s.spreadUsd ?? null,
     spreadPct: s.spreadPct ?? null,
+    archivedAt: s.archivedAt ?? null,
   }));
 }
 

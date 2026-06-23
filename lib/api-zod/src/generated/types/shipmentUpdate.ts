@@ -25,4 +25,9 @@ export interface ShipmentUpdate {
   quantity?: number | null;
   /** @nullable */
   unitCostUsd?: number | null;
+  /**
+     * Set to an ISO timestamp to archive, null to unarchive.
+     * @nullable
+     */
+  archivedAt?: Date | null;
 }

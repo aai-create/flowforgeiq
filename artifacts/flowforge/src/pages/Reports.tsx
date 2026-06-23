@@ -1825,6 +1825,7 @@ function SpreadOverTimeCardContent({ shipments }: { shipments: Shipment[] }) {
 export function Reports() {
   const [location, navigate] = useLocation();
   const { data: apiShipments, isLoading: loadingShipments } = useListShipments(
+    { includeArchived: true },
     { query: { queryKey: getListShipmentsQueryKey(), refetchInterval: 30_000 } },
   );
   const { data: apiTasks,     isLoading: loadingTasks     } = useListTasks();

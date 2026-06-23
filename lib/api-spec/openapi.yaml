@@ -281,6 +281,11 @@ paths:
     get:
       operationId: listShipments
       tags: [shipments]
+      parameters:
+        - in: query
+          name: includeArchived
+          schema: { type: boolean }
+          description: "When true, include archived shipments in the response. Defaults to false."
       responses:
         "200":
           description: All shipments with embedded payments and quotes
@@ -1948,6 +1953,7 @@ components:
         spreadPct:      { type: ["number", "null"], description: "Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero." }
         assigneeId:     { type: ["string", "null"], description: "Clerk userId of the assigned team member" }
         assigneeName:   { type: ["string", "null"], description: "Display name of the assigned team member" }
+        archivedAt:     { type: ["string", "null"], format: date-time, description: "ISO timestamp when this shipment was archived. Null means active." }
         payments:
           type: array
           items: { $ref: "#/components/schemas/Payment" }
@@ -2010,6 +2016,7 @@ components:
         notes:          { type: ["string", "null"] }
         quantity:       { type: ["integer", "null"] }
         unitCostUsd:    { type: ["integer", "null"] }
+        archivedAt:     { type: ["string", "null"], format: date-time, description: "Set to an ISO timestamp to archive, null to unarchive." }
 
     StageEvent:
       type: object

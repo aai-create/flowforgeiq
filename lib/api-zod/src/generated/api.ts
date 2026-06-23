@@ -276,6 +276,10 @@ export const UpdateDealResponse = zod.object({
 })
 
 
+export const ListShipmentsQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().optional().describe('When true, include archived shipments in the response. Defaults to false.')
+})
+
 export const ListShipmentsResponseItem = zod.object({
   "id": zod.number(),
   "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
@@ -303,6 +307,7 @@ export const ListShipmentsResponseItem = zod.object({
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -388,7 +393,8 @@ export const UpdateShipmentBody = zod.object({
   "via": zod.string().optional(),
   "notes": zod.string().nullish(),
   "quantity": zod.number().nullish(),
-  "unitCostUsd": zod.number().nullish()
+  "unitCostUsd": zod.number().nullish(),
+  "archivedAt": zod.coerce.date().nullish().describe('Set to an ISO timestamp to archive, null to unarchive.')
 })
 
 export const UpdateShipmentResponse = zod.object({
@@ -418,6 +424,7 @@ export const UpdateShipmentResponse = zod.object({
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),
@@ -565,6 +572,7 @@ export const PatchShipmentDealResponse = zod.object({
   "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
   "payments": zod.array(zod.object({
   "id": zod.number(),
   "shipmentId": zod.number(),

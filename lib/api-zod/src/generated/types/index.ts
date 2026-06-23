@@ -66,6 +66,7 @@ export * from './linkDealToShipmentBody';
 export * from './listCopilotProposalsParams';
 export * from './listDocumentsParams';
 export * from './listMessagesParams';
+export * from './listShipmentsParams';
 export * from './message';
 export * from './messageAiRoutingGuess';
 export * from './messageAssignInput';

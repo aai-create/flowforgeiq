@@ -16,7 +16,7 @@ import {
   Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
   DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
   MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft, Upload,
-  HelpCircle, Link2, Copy, Check as CheckIcon,
+  HelpCircle, Link2, Copy, Check as CheckIcon, Archive, ArchiveRestore,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -175,7 +175,7 @@ export function Atelier() {
     "Which tasks are still open this week?",
   ]);
   const { data: apiStages }    = useListStages();
-  const { data: apiShipments } = useListShipments();
+  const { data: apiShipments } = useListShipments({ includeArchived: true });
   const { data: apiTasks }     = useListTasks();
   const { data: radarData }    = useGetRiskRadar();
   const { data: suppliersData } = useListSuppliers();
@@ -245,9 +245,9 @@ export function Atelier() {
   }, [apiShipments]);
 
   const [activeShipmentId, setActiveShipmentId] = useState<string | null>(null);
-  const [historyShipmentId, setHistoryShipmentId] = useState<number | null>(null);
+  const [historyShipmentId, setHistoryShipmentId] = useState<string | null>(null);
   const [activeDetailTab, setActiveDetailTab] = useState<"threads" | "docs" | "quotes" | null>(null);
-  const [moreMenuId, setMoreMenuId] = useState<number | null>(null);
+  const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
 
   // Sync activeShipmentId ↔ URL param ?po=
   useEffect(() => {
@@ -356,6 +356,20 @@ export function Atelier() {
       },
     },
   });
+
+  const [showArchived, setShowArchived] = useState(false);
+
+  const handleArchiveShipment = (shipmentId: number, archive: boolean) => {
+    const now = archive ? new Date().toISOString() : null;
+    setShipments(prev => prev.map(s => s.shipmentId === shipmentId ? { ...s, archivedAt: now } : s));
+    updateShipmentMutation.mutate({ id: shipmentId, data: { archivedAt: now } }, {
+      onError: () => {
+        queryClient.invalidateQueries({ queryKey: shipmentsQueryKey });
+        setToast(archive ? "Failed to archive PO — please try again" : "Failed to unarchive PO — please try again");
+        setTimeout(() => setToast(null), 3000);
+      },
+    });
+  };
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const deleteShipmentMutation = useDeleteShipment();
@@ -612,6 +626,10 @@ export function Atelier() {
   })();
 
   const visibleShipments = shipments.filter(s => {
+    const isArchived = s.archivedAt != null;
+    if (!showArchived && isArchived) return false;
+    if (showArchived && !isArchived) return false;
+
     if (customerFilter !== null) {
       const matches = s.buyerId === customerFilter ||
         (s.buyerId === null && customerFilterName !== null && s.customer === customerFilterName);
@@ -628,6 +646,7 @@ export function Atelier() {
     }
     return true;
   });
+  const archivedCount = shipments.filter(s => s.archivedAt != null).length;
 
   const highCount  = tasks.filter(t => t.urgency === "high"   && !t.done).length;
   const doneCount  = tasks.filter(t => t.done).length;
@@ -799,6 +818,18 @@ export function Atelier() {
                 </button>
               ))}
               <Separator orientation="vertical" className="h-5 mx-1" />
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-md border transition-colors ${showArchived ? "bg-amber-50 border-amber-300 text-amber-700" : "bg-white border-[#E5EAF0] text-[#5E687B] hover:border-[#C0C8D4]"}`}>
+                <Archive className="w-3 h-3" />
+                {t("orders.showArchivedToggle")}
+                {archivedCount > 0 && (
+                  <span className={`ml-0.5 text-[10px] font-bold px-1 py-0.5 rounded-full ${showArchived ? "bg-amber-200 text-amber-800" : "bg-[#E5EAF0] text-[#5E687B]"}`}>
+                    {archivedCount}
+                  </span>
+                )}
+              </button>
+              <Separator orientation="vertical" className="h-5 mx-1" />
               <button onClick={() => setShowNewPO(true)} className="flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-3 py-1.5 rounded-md transition-colors">
                 <Plus className="w-3.5 h-3.5" /> {t("orders.newPo")}
               </button>
@@ -904,6 +935,12 @@ export function Atelier() {
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(shipment.status)}`}>
                           {shipment.status === "at-risk" ? t("orders.atRisk") : shipment.status === "delayed" ? t("orders.delayed") : t("orders.onTrack")}
                         </span>
+                        {shipment.archivedAt && (
+                          <span className="flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                            <Archive className="w-2.5 h-2.5" />
+                            {t("orders.archivedBadge")}
+                          </span>
+                        )}
                         {shipment.spreadPct !== null ? (() => {
                           const pct = shipment.spreadPct!;
                           const cls = pct >= 25
@@ -1325,6 +1362,22 @@ export function Atelier() {
                                     {label}
                                   </button>
                                 ))}
+                                <div className="border-t border-[#F0F4F8] my-1" />
+                                {shipment.archivedAt ? (
+                                  <button
+                                    onClick={() => { handleArchiveShipment(shipment.shipmentId, false); setMoreMenuId(null); }}
+                                    className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-amber-700 transition-colors flex items-center gap-2">
+                                    <ArchiveRestore className="w-3.5 h-3.5" />
+                                    {t("orders.menuUnarchivePo")}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => { handleArchiveShipment(shipment.shipmentId, true); setMoreMenuId(null); }}
+                                    className="w-full text-left px-3 py-2 hover:bg-[#F0F4F8] text-[#5E687B] transition-colors flex items-center gap-2">
+                                    <Archive className="w-3.5 h-3.5" />
+                                    {t("orders.menuArchivePo")}
+                                  </button>
+                                )}
                                 <div className="border-t border-[#F0F4F8] my-1" />
                                 <button
                                   onClick={() => { setDeleteConfirmId(shipment.shipmentId); setMoreMenuId(null); }}

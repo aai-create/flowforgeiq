@@ -317,6 +317,11 @@ export interface Shipment {
      * @nullable
      */
   assigneeName?: string | null;
+  /**
+     * ISO timestamp when this shipment was archived. Null means active.
+     * @nullable
+     */
+  archivedAt?: string | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }
@@ -371,6 +376,11 @@ export interface ShipmentUpdate {
   quantity?: number | null;
   /** @nullable */
   unitCostUsd?: number | null;
+  /**
+     * Set to an ISO timestamp to archive, null to unarchive.
+     * @nullable
+     */
+  archivedAt?: string | null;
 }
 
 export interface StageEvent {
@@ -1263,6 +1273,13 @@ export interface SendRfqEmailBody {
 export interface SendRfqEmailResponse {
   ok: boolean;
 }
+
+export type ListShipmentsParams = {
+/**
+ * When true, include archived shipments in the response. Defaults to false.
+ */
+includeArchived?: boolean;
+};
 
 export type LinkDealToShipmentBody = {
   dealId: number;

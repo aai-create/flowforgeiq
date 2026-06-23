@@ -58,6 +58,7 @@ import type {
   ListCopilotProposalsParams,
   ListDocumentsParams,
   ListMessagesParams,
+  ListShipmentsParams,
   Message,
   MessageAssignInput,
   MessageInput,
@@ -1178,17 +1179,24 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getUpdateDealMutationOptions(options));
     }
 
-export const getListShipmentsUrl = () => {
+export const getListShipmentsUrl = (params?: ListShipmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/shipments`
+  return stringifiedParams.length > 0 ? `/api/shipments?${stringifiedParams}` : `/api/shipments`
 }
 
-export const listShipments = async ( options?: RequestInit): Promise<Shipment[]> => {
+export const listShipments = async (params?: ListShipmentsParams, options?: RequestInit): Promise<Shipment[]> => {
 
-  return customFetch<Shipment[]>(getListShipmentsUrl(),
+  return customFetch<Shipment[]>(getListShipmentsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1201,23 +1209,23 @@ export const listShipments = async ( options?: RequestInit): Promise<Shipment[]>
 
 
 
-export const getListShipmentsQueryKey = () => {
+export const getListShipmentsQueryKey = (params?: ListShipmentsParams,) => {
     return [
-    `/api/shipments`
+    `/api/shipments`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListShipmentsQueryOptions = <TData = Awaited<ReturnType<typeof listShipments>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListShipmentsQueryOptions = <TData = Awaited<ReturnType<typeof listShipments>>, TError = ErrorType<unknown>>(params?: ListShipmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListShipmentsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListShipmentsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShipments>>> = ({ signal }) => listShipments({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShipments>>> = ({ signal }) => listShipments(params, { signal, ...requestOptions });
 
 
 
@@ -1232,11 +1240,11 @@ export type ListShipmentsQueryError = ErrorType<unknown>
 
 
 export function useListShipments<TData = Awaited<ReturnType<typeof listShipments>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListShipmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShipments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListShipmentsQueryOptions(options)
+  const queryOptions = getListShipmentsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

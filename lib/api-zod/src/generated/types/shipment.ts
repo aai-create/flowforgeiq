@@ -71,6 +71,11 @@ export interface Shipment {
      * @nullable
      */
   assigneeName?: string | null;
+  /**
+     * ISO timestamp when this shipment was archived. Null means active.
+     * @nullable
+     */
+  archivedAt?: Date | null;
   payments: Payment[];
   quotes: FactoryQuote[];
 }

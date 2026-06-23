@@ -14,7 +14,7 @@ import {
   tasksTable,
   buyersTable,
 } from "@workspace/db";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import {
   ListShipmentsResponseItem,
   CreateShipmentBody,
@@ -89,6 +89,10 @@ async function loadShipment(id: number, orgId?: number) {
 
 router.get("/shipments", async (req, res) => {
   const orgId = await resolveOrgId(req);
+  const includeArchived = req.query["includeArchived"] === "true";
+  const whereConditions = includeArchived
+    ? [eq(shipmentsTable.orgId, orgId)]
+    : [eq(shipmentsTable.orgId, orgId), isNull(shipmentsTable.archivedAt)];
   const shipments = await db
     .select({
       shipment: shipmentsTable,
@@ -103,7 +107,7 @@ router.get("/shipments", async (req, res) => {
     .innerJoin(suppliersTable, and(eq(shipmentsTable.supplierId, suppliersTable.id), eq(suppliersTable.orgId, orgId)))
     .leftJoin(dealsTable, and(eq(shipmentsTable.dealId, dealsTable.id), eq(dealsTable.orgId, orgId)))
     .leftJoin(teamUsersTable, eq(shipmentsTable.assigneeId, teamUsersTable.clerkUserId))
-    .where(eq(shipmentsTable.orgId, orgId))
+    .where(and(...whereConditions))
     .orderBy(asc(shipmentsTable.id));
   const [allPayments, allQuotes, allDealShipments] = await Promise.all([
     shipments.length
