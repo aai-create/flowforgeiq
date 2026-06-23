@@ -136,6 +136,7 @@ const monthlyChartConfig: ChartConfig = {
 };
 
 interface RecoveryForm { paymentId: number; amount: string; date: string; }
+interface MarkPaidForm  { paymentId: number; amount: string; date: string; }
 
 function FinanceCardContent({
   shipments, rangeStart, rangeEnd,
@@ -145,6 +146,9 @@ function FinanceCardContent({
   const [recoveryForm, setRecoveryForm] = useState<RecoveryForm | null>(null);
   const [recoveryOverrides, setRecoveryOverrides] = useState<Record<number, number>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [markPaidForm, setMarkPaidForm] = useState<MarkPaidForm | null>(null);
+  const [markPaidOverrides, setMarkPaidOverrides] = useState<Set<number>>(new Set());
+  const [savingMarkPaidId, setSavingMarkPaidId] = useState<number | null>(null);
 
   const allPayments = useMemo(() => {
     const payments = shipments.flatMap(s => s.payments);
@@ -152,10 +156,10 @@ function FinanceCardContent({
     return payments.filter(p => inRange(p.dueDate, rangeStart, rangeEnd));
   }, [shipments, rangeStart, rangeEnd]);
 
-  // Both totals use paidAt (actual recorded payment date) as the source of truth.
-  // A payment is "paid to date" when paidAt is set; "outstanding" when paidAt is null.
-  const totalPaidToDate  = allPayments.filter(p => p.paidAt != null).reduce((s, p) => s + p.amountUsd, 0);
-  const totalOutstanding = allPayments.filter(p => p.paidAt == null).reduce((s, p) => s + p.amountUsd, 0);
+  // Both totals use paidAt as the source of truth, plus markPaidOverrides for optimistic updates.
+  // markPaidOverrides contains payment IDs the user just marked paid but whose server refetch is pending.
+  const totalPaidToDate  = allPayments.filter(p => p.paidAt != null || markPaidOverrides.has(p.id)).reduce((s, p) => s + p.amountUsd, 0);
+  const totalOutstanding = allPayments.filter(p => p.paidAt == null && !markPaidOverrides.has(p.id)).reduce((s, p) => s + p.amountUsd, 0);
 
   // Monthly payments chart — buckets payments by the month of paidAt
   const monthlyPaidData = useMemo(() => {
@@ -232,6 +236,29 @@ function FinanceCardContent({
     }
   };
 
+  const openMarkPaid = (paymentId: number, amountUsd: number) => {
+    setMarkPaidForm({ paymentId, amount: String(amountUsd), date: new Date().toISOString().split("T")[0] });
+  };
+
+  const saveMarkPaid = async () => {
+    if (!markPaidForm) return;
+    const { paymentId, amount, date } = markPaidForm;
+    const amountUsd = Math.round(Number(amount));
+    if (isNaN(amountUsd) || amountUsd <= 0) return;
+    const paidAt = date ? new Date(date + "T00:00:00Z").toISOString() : new Date().toISOString();
+    setSavingMarkPaidId(paymentId);
+    setMarkPaidOverrides(prev => new Set([...prev, paymentId]));
+    setMarkPaidForm(null);
+    try {
+      await updatePayment(paymentId, { paid: true, paidAt });
+      void queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+    } catch {
+      setMarkPaidOverrides(prev => { const next = new Set(prev); next.delete(paymentId); return next; });
+    } finally {
+      setSavingMarkPaidId(null);
+    }
+  };
+
   // Bucket payments by due-date proximity
   const chartData = useMemo(() => {
     const buckets: Record<string, { paid: number; unpaid: number }> = {
@@ -249,30 +276,42 @@ function FinanceCardContent({
         : d <= 90     ? "61–90 days"
         : null;
       if (!key) continue;
-      if (p.paidAt != null) buckets[key].paid   += p.amountUsd;
-      else                  buckets[key].unpaid += p.amountUsd;
+      if (p.paidAt != null || markPaidOverrides.has(p.id)) buckets[key].paid   += p.amountUsd;
+      else                                                  buckets[key].unpaid += p.amountUsd;
     }
     return Object.entries(buckets).map(([name, v]) => ({ name, ...v }));
-  }, [allPayments]);
+  }, [allPayments, markPaidOverrides]);
 
-  // Outstanding ranked by supplier — includes intermediary advance breakdown
-  // Uses paidAt == null (recorded-payment semantics) consistent with totalOutstanding above
+  // Outstanding ranked by supplier — individual payment milestones grouped by supplier
+  // Uses paidAt == null (recorded-payment semantics) consistent with totalOutstanding above.
+  // Excludes optimistically-paid payments (markPaidOverrides) for immediate UI feedback.
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { supplier: string; unpaid: number; overdue: number; intermediaryAdvance: number; intermediaryRecovered: number }>();
+    const map = new Map<string, Array<{
+      paymentId: number; shipmentId: number; shipmentPo: string;
+      label: string; amountUsd: number; dueDate: string; overdue: boolean;
+    }>>();
     for (const s of shipments) {
       for (const p of s.payments) {
         if (p.paidAt != null) continue;
+        if (markPaidOverrides.has(p.id)) continue;
         if (!inRange(p.dueDate, rangeStart, rangeEnd)) continue;
-        const e = map.get(s.supplierName) ?? { supplier: s.supplierName, unpaid: 0, overdue: 0, intermediaryAdvance: 0, intermediaryRecovered: 0 };
-        e.unpaid += p.amountUsd;
-        if (daysDiff(p.dueDate) < 0) e.overdue += p.amountUsd;
-        e.intermediaryAdvance   += (p.intermediaryAdvanceUsd  ?? 0);
-        e.intermediaryRecovered += (p.intermediaryRecoveredUsd ?? 0);
-        map.set(s.supplierName, e);
+        if (!map.has(s.supplierName)) map.set(s.supplierName, []);
+        map.get(s.supplierName)!.push({
+          paymentId: p.id, shipmentId: s.id, shipmentPo: s.poNumber,
+          label: p.label, amountUsd: p.amountUsd, dueDate: p.dueDate,
+          overdue: daysDiff(p.dueDate) < 0,
+        });
       }
     }
-    return [...map.values()].sort((a, b) => b.unpaid - a.unpaid);
-  }, [shipments, rangeStart, rangeEnd]);
+    return [...map.entries()]
+      .map(([supplier, payments]) => ({
+        supplier,
+        payments: payments.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+        unpaid:  payments.reduce((s, p) => s + p.amountUsd, 0),
+        overdue: payments.filter(p => p.overdue).reduce((s, p) => s + p.amountUsd, 0),
+      }))
+      .sort((a, b) => b.unpaid - a.unpaid);
+  }, [shipments, rangeStart, rangeEnd, markPaidOverrides]);
 
   return (
     <div className="space-y-5">
@@ -333,69 +372,141 @@ function FinanceCardContent({
         </div>
       </div>
 
-      {/* Unpaid by supplier table */}
+      {/* Unpaid by supplier table — individual payment milestones, grouped by supplier */}
       <div>
         <div className="mb-2">
           <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Unpaid by Supplier</div>
-          <div className="text-[10px] text-[#9E9FAE] mt-0.5">owed by Buyer</div>
+          <div className="text-[10px] text-[#9E9FAE] mt-0.5">outstanding payment milestones — click a row to view in inbox</div>
         </div>
         {bySupplier.length === 0
           ? <p className="text-xs text-[#9E9FAE]">All payments are up to date.</p>
           : (
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="border-b border-[#E5EAF0]">
-                  <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">Supplier</th>
-                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
-                    <span title="Amount the Buyer has not yet remitted to this Supplier">Unpaid</span>
-                  </th>
-                  <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
-                    <span title="Unpaid amount where the Buyer's due date has already passed">Overdue</span>
-                  </th>
-                  {hasIntermediaryData && (
-                    <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide py-2">
-                      <span title="Amount the Intermediary has already fronted to this Supplier on behalf of the Buyer">Intermediary Advance</span>
+            <div className="border border-[#E5EAF0] rounded-lg overflow-hidden">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b border-[#E5EAF0] bg-[#FAFBFC]">
+                    <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">Milestone</th>
+                    <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">
+                      <span title="Amount the Buyer has not yet remitted">Amount</span>
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {bySupplier.map(row => (
-                  <tr
-                    key={row.supplier}
-                    className="border-b border-[#F0F4F8] last:border-0 hover:bg-[#FAFBFC] cursor-pointer transition-colors group"
-                    onClick={() => navigate(`/?supplier=${encodeURIComponent(row.supplier)}`)}
-                    title={`Open inbox filtered by ${row.supplier}`}
-                  >
-                    <td className="py-2 text-[#212833] font-medium">
-                      <span className="flex items-center gap-1.5">
-                        {row.supplier}
-                        <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </span>
-                    </td>
-                    <td className="py-2 text-right font-semibold text-[#212833]">{fmtUsd(row.unpaid)}</td>
-                    <td className="py-2 text-right">
-                      {row.overdue > 0
-                        ? <span className="text-red-600 font-semibold">{fmtUsd(row.overdue)}</span>
-                        : <span className="text-[#9E9FAE]">—</span>
-                      }
-                    </td>
-                    {hasIntermediaryData && (
-                      <td className="py-2 text-right">
-                        {row.intermediaryAdvance > 0
-                          ? (
-                            <span className="text-amber-600 font-semibold" title={`${fmtUsd(row.intermediaryRecovered)} recovered so far`}>
-                              {fmtUsd(row.intermediaryAdvance)}
-                            </span>
-                          )
-                          : <span className="text-[#9E9FAE]">—</span>
-                        }
-                      </td>
-                    )}
+                    <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wide px-3 py-2">
+                      <span title="Due date for this payment milestone">Due</span>
+                    </th>
+                    <th className="px-3 py-2" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {bySupplier.map(group => (
+                    <React.Fragment key={group.supplier}>
+                      {/* Supplier group header */}
+                      <tr
+                        className="bg-[#F5F7FA] cursor-pointer hover:bg-[#EEF1F6] transition-colors group/sup"
+                        onClick={() => navigate(`/?supplier=${encodeURIComponent(group.supplier)}`)}
+                        title={`Open inbox filtered by ${group.supplier}`}
+                      >
+                        <td className="px-3 py-1.5" colSpan={3}>
+                          <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#212833]">
+                            {group.supplier}
+                            <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover/sup:opacity-100 transition-opacity" />
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 text-right">
+                          <span className="text-[10px] font-semibold text-[#5E687B]">
+                            {fmtUsd(group.unpaid)} total
+                            {group.overdue > 0 && (
+                              <span className="ml-1.5 text-red-600">· {fmtUsd(group.overdue)} overdue</span>
+                            )}
+                          </span>
+                        </td>
+                      </tr>
+                      {/* Individual payment milestone rows */}
+                      {group.payments.map(pmt => {
+                        const isOpen    = markPaidForm?.paymentId === pmt.paymentId;
+                        const isSaving  = savingMarkPaidId === pmt.paymentId;
+                        const days      = daysDiff(pmt.dueDate);
+                        const tl        = trafficLight(days);
+                        return (
+                          <React.Fragment key={pmt.paymentId}>
+                            <tr
+                              className="border-t border-[#F0F4F8] hover:bg-[#FAFBFC] cursor-pointer transition-colors group/pmt"
+                              onClick={() => navigate(`/?shipment=${pmt.shipmentId}&from=reports:finance`)}
+                              title={`Open ${pmt.shipmentPo} in inbox`}
+                            >
+                              <td className="px-3 py-2 pl-6">
+                                <div className="font-medium text-[#212833] truncate max-w-[160px] flex items-center gap-1" title={pmt.label}>
+                                  {pmt.label}
+                                  <ArrowRight className="w-2.5 h-2.5 text-[#9000FF] opacity-0 group-hover/pmt:opacity-100 transition-opacity shrink-0" />
+                                </div>
+                                <div className="text-[10px] text-[#9E9FAE]">{pmt.shipmentPo}</div>
+                              </td>
+                              <td className="px-3 py-2 text-right font-semibold text-[#212833]">{fmtUsd(pmt.amountUsd)}</td>
+                              <td className="px-3 py-2 text-right">
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${tl.badge}`}>
+                                  {tl.label}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  type="button"
+                                  disabled={isSaving}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    isOpen ? setMarkPaidForm(null) : openMarkPaid(pmt.paymentId, pmt.amountUsd);
+                                  }}
+                                  className={`text-[10px] font-semibold px-2 py-1 rounded border transition-colors whitespace-nowrap ${
+                                    isOpen
+                                      ? "border-[#9000FF]/30 bg-[#9000FF]/10 text-[#9000FF]"
+                                      : "border-[#E5EAF0] bg-white text-[#5E687B] hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                                  } disabled:opacity-50`}
+                                >
+                                  {isSaving ? "Saving…" : isOpen ? "Cancel" : "Mark Paid"}
+                                </button>
+                              </td>
+                            </tr>
+                            {/* Inline mark-paid form */}
+                            {isOpen && (
+                              <tr className="border-t border-[#E5EAF0]">
+                                <td colSpan={4} className="px-3 py-3 pl-6 bg-emerald-50/60">
+                                  <div className="flex items-end gap-2 flex-wrap">
+                                    <div className="flex flex-col gap-1">
+                                      <label className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">Amount (USD)</label>
+                                      <div
+                                        className="w-32 text-xs border border-emerald-100 rounded px-2 py-1.5 bg-emerald-50 text-emerald-800 font-semibold select-none"
+                                        title="Milestone amount — confirmed on save"
+                                      >
+                                        {fmtUsd(Number(markPaidForm.amount))}
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <label className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">Payment Date</label>
+                                      <input
+                                        type="date"
+                                        value={markPaidForm.date}
+                                        onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
+                                        className="text-xs border border-emerald-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={saveMarkPaid}
+                                      disabled={!markPaidForm.date}
+                                      className="text-[11px] font-semibold px-3 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition-colors flex items-center gap-1"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      Confirm Payment
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )
         }
       </div>
