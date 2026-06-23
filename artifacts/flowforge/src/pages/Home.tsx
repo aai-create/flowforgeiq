@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
@@ -157,28 +158,30 @@ const DEFAULT_STAGES: Stage[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 // Email templates by stage  (P1)
 // ─────────────────────────────────────────────────────────────────────────────
-const EMAIL_TEMPLATES: Record<string, EmailTemplate[]> = {
-  spec:       [{ label: "Request spec sheet",      body: "Hi, could you please provide a detailed spec sheet including materials, dimensions, finish options, and target cost?" },
-               { label: "Spec revision request",   body: "Thank you for the spec sheet. We'd like to request the following revisions before proceeding to quotes:\n\n1. [Revision 1]\n2. [Revision 2]" }],
-  quotes:     [{ label: "RFQ to factory",          body: "Please provide your best unit price for the attached spec. We're targeting [qty] units with ex-factory by [date]. Please include lead time, MOQ, and payment terms." },
-               { label: "Quote follow-up",          body: "Following up on our RFQ sent on [date]. Please confirm your pricing at your earliest convenience — we have a time-sensitive buyer deadline." },
-               { label: "Quote accepted",           body: "Thank you for your quotation. We'd like to proceed at $[price]/unit. Please confirm and advise next steps for sample order." }],
-  sample_ord: [{ label: "Sample order request",    body: "Please proceed with 1× pre-production sample as per the attached spec. Required by [date]. Courier to: [address]. Please send tracking once dispatched." }],
-  sample_apr: [{ label: "Approve sample",          body: "We have reviewed the sample and are happy to proceed. Sample is approved as-is. Please issue the PI and we'll arrange deposit." },
-               { label: "Reject with feedback",    body: "Thank you for the sample. We cannot approve at this stage. Please revise the following:\n\n1. [Issue 1]\n2. [Issue 2]\n\nPlease resubmit within [X] days." },
-               { label: "Sample follow-up",        body: "We have not yet received the sample. Could you please confirm dispatch date and tracking number?" }],
-  po_issued:  [{ label: "PO confirmation",         body: "Please find attached PO [number] for [qty] units. Kindly confirm receipt, production start date, and any risks to the ex-factory date." }],
-  production: [{ label: "Production update request", body: "Could you please share a production update for PO [number]? We need: current completion %, ex-factory ETA, and any risks to the schedule." },
-               { label: "QC inspection notice",    body: "We are arranging a QC inspection for PO [number]. Please confirm when production will be 100% complete so we can schedule our inspector." }],
-  qc:         [{ label: "QC passed — request docs", body: "QC has passed — congratulations on a clean result. Please send: Commercial Invoice, Packing List, Certificate of Origin, and Bill of Lading draft." },
-               { label: "QC fail notice",          body: "Unfortunately the QC inspection found [X] major defects. Production must be rectified before we can proceed to ex-factory. Details attached." }],
-  ex_factory: [{ label: "Confirm ex-factory",      body: "Please confirm today's ex-factory dispatch and provide: container number, seal number, vessel name, and ETD/ETA." },
-               { label: "Balance payment notice",  body: "We are processing the balance payment of $[amount] for PO [number]. Please confirm bank details are unchanged and expect receipt within [X] days." }],
-  in_transit: [{ label: "Shipment tracking request", body: "Could you share the latest tracking update for PO [number]? Vessel name, container number, and current ETA to [destination port]." }],
-  payment:    [{ label: "Payment clearance",       body: "Balance payment of $[amount] has been wired today for PO [number]. Please confirm receipt and advise when container will be released." }],
-  delivered:  [{ label: "Delivery confirmation",   body: "PO [number] has been received in full. Thank you for a smooth delivery. We look forward to working together on the next order." },
-               { label: "Post-delivery follow-up", body: "Now that PO [number] is delivered, wanted to check in — any feedback on the process? We're keen to improve lead times on future orders." }],
-};
+function getEmailTemplates(t: (k: string) => string): Record<string, EmailTemplate[]> {
+  return {
+    spec:       [{ label: t("home.tpl_requestSpec"),      body: t("home.tplBody_requestSpec") },
+                 { label: t("home.tpl_specRevision"),     body: t("home.tplBody_specRevision") }],
+    quotes:     [{ label: t("home.tpl_rfqToFactory"),     body: t("home.tplBody_rfqToFactory") },
+                 { label: t("home.tpl_quoteFollowup"),    body: t("home.tplBody_quoteFollowup") },
+                 { label: t("home.tpl_quoteAccepted"),    body: t("home.tplBody_quoteAccepted") }],
+    sample_ord: [{ label: t("home.tpl_sampleOrder"),      body: t("home.tplBody_sampleOrder") }],
+    sample_apr: [{ label: t("home.tpl_approveSample"),    body: t("home.tplBody_approveSample") },
+                 { label: t("home.tpl_rejectFeedback"),   body: t("home.tplBody_rejectFeedback") },
+                 { label: t("home.tpl_sampleFollowup"),   body: t("home.tplBody_sampleFollowup") }],
+    po_issued:  [{ label: t("home.tpl_poConfirmation"),   body: t("home.tplBody_poConfirmation") }],
+    production: [{ label: t("home.tpl_productionUpdate"), body: t("home.tplBody_productionUpdate") },
+                 { label: t("home.tpl_qcInspection"),     body: t("home.tplBody_qcInspection") }],
+    qc:         [{ label: t("home.tpl_qcPassedDocs"),     body: t("home.tplBody_qcPassedDocs") },
+                 { label: t("home.tpl_qcFail"),           body: t("home.tplBody_qcFail") }],
+    ex_factory: [{ label: t("home.tpl_confirmExFactory"), body: t("home.tplBody_confirmExFactory") },
+                 { label: t("home.tpl_balancePayment"),   body: t("home.tplBody_balancePayment") }],
+    in_transit: [{ label: t("home.tpl_trackingRequest"),  body: t("home.tplBody_trackingRequest") }],
+    payment:    [{ label: t("home.tpl_paymentClearance"), body: t("home.tplBody_paymentClearance") }],
+    delivered:  [{ label: t("home.tpl_deliveryConfirm"),  body: t("home.tplBody_deliveryConfirm") },
+                 { label: t("home.tpl_postDelivery"),     body: t("home.tplBody_postDelivery") }],
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Documents per shipment  (P1)
@@ -1048,19 +1051,20 @@ function ReconciliationChips({ shipmentId }: { shipmentId: string }) {
 // Template picker  (P1)
 // ─────────────────────────────────────────────────────────────────────────────
 function TemplatePicker({ stageId, onPick }: { stageId: string; onPick: (body: string) => void }) {
-  const templates = EMAIL_TEMPLATES[stageId] ?? [];
+  const { t } = useTranslation();
+  const templates = getEmailTemplates(t)[stageId] ?? [];
   if (templates.length === 0) return null;
   return (
     <div className="mb-2 border border-[#9000FF]/20 rounded-lg overflow-hidden bg-[#FAFBFF]">
       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#9000FF]/10 bg-[#9000FF]/5">
         <Wand2 size={10} className="text-[#9000FF]"/>
-        <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">Templates for this stage</span>
+        <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">{t("home.templatesForStage")}</span>
       </div>
       <div className="flex flex-col divide-y divide-[#E5EAF0]">
-        {templates.map(t=>(
-          <button key={t.label} onClick={()=>onPick(t.body)}
+        {templates.map(tpl=>(
+          <button key={tpl.label} onClick={()=>onPick(tpl.body)}
             className="flex items-center gap-2 px-3 py-2 text-left hover:bg-white transition-colors group">
-            <span className="text-xs font-medium text-[#212833] flex-1">{t.label}</span>
+            <span className="text-xs font-medium text-[#212833] flex-1">{tpl.label}</span>
             <ArrowRight size={10} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0"/>
           </button>
         ))}
@@ -1082,8 +1086,9 @@ interface ComposePanelProps {
 }
 
 function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePanelProps) {
+  const { t } = useTranslation();
   const stageId = shipment.currentStageId;
-  const templates = EMAIL_TEMPLATES[stageId] ?? [];
+  const templates = getEmailTemplates(t)[stageId] ?? [];
   const defaultBody = templates[0]?.body ?? "";
 
   const [channel, setChannel]   = useState<ComposeChannel>("gmail");

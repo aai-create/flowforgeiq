@@ -1,7 +1,9 @@
 import React from "react";
 import { useLocation, Link } from "wouter";
-import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users } from "lucide-react";
+import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users, Globe } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 interface NavSidebarProps {
   showBrand?: boolean;
@@ -16,6 +18,12 @@ interface NavSidebarProps {
   children?: React.ReactNode;
 }
 
+const LANG_OPTIONS = [
+  { code: "en", label: "EN" },
+  { code: "zh-CN", label: "简体" },
+  { code: "zh-TW", label: "繁體" },
+] as const;
+
 export function NavSidebar({
   showBrand = true,
   onCalendarClick,
@@ -27,25 +35,26 @@ export function NavSidebar({
   const [location, navigate] = useLocation();
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { t, i18n: i18nHook } = useTranslation();
 
   const navItems = [
-    { icon: Inbox,        label: "Inbox",       to: "/inbox",       count: counts.inbox     ?? null },
-    { icon: LayoutGrid,   label: "My Orders",   to: "/orders",      count: counts.myOrders  ?? null },
-    { icon: Calendar,     label: "Calendar",    to: "/inbox",       count: null              },
-    { icon: FileQuestion, label: "RFQs",        to: "/rfqs",        count: null              },
-    { icon: ShieldAlert,  label: "Risk Radar",  to: "/risk-radar",  count: counts.riskRadar ?? null },
-    { icon: BarChart3,    label: "Reports",     to: "/reports",     count: null              },
-    { icon: Building2,    label: "Suppliers",   to: "/suppliers",   count: null              },
-    { icon: Users,        label: "Buyers",      to: "/buyers",      count: null              },
-    { icon: BookOpen,     label: "Help",        to: "/help",        count: null              },
-    { icon: Settings2,    label: "Settings",    to: "/settings",    count: null              },
+    { id: "inbox",     icon: Inbox,        to: "/inbox",       count: counts.inbox     ?? null },
+    { id: "myOrders",  icon: LayoutGrid,   to: "/orders",      count: counts.myOrders  ?? null },
+    { id: "calendar",  icon: Calendar,     to: "/inbox",       count: null              },
+    { id: "rfqs",      icon: FileQuestion, to: "/rfqs",        count: null              },
+    { id: "riskRadar", icon: ShieldAlert,  to: "/risk-radar",  count: counts.riskRadar ?? null },
+    { id: "reports",   icon: BarChart3,    to: "/reports",     count: null              },
+    { id: "suppliers", icon: Building2,    to: "/suppliers",   count: null              },
+    { id: "buyers",    icon: Users,        to: "/buyers",      count: null              },
+    { id: "help",      icon: BookOpen,     to: "/help",        count: null              },
+    { id: "settings",  icon: Settings2,    to: "/settings",    count: null              },
   ];
 
-  function isActive(label: string, to: string) {
-    if (label === "Calendar") return isCalendarActive;
-    if (label === "Inbox" && isCalendarActive) return false;
-    if (label === "Inbox") return location === to || location === "/";
-    if (label === "My Orders") return location === to || location === "/command";
+  function isActive(id: string, to: string) {
+    if (id === "calendar") return isCalendarActive;
+    if (id === "inbox" && isCalendarActive) return false;
+    if (id === "inbox") return location === to || location === "/";
+    if (id === "myOrders") return location === to || location === "/command";
     return location === to;
   }
 
@@ -58,6 +67,8 @@ export function NavSidebar({
 
   const displayName = user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const initials = displayName.charAt(0).toUpperCase() || "?";
+
+  const currentLang = i18nHook.language;
 
   return (
     <div className="w-[240px] bg-[#F7F9FA] border-r border-[#E5EAF0] flex flex-col shrink-0">
@@ -76,20 +87,20 @@ export function NavSidebar({
         </div>
       )}
       <div className={`p-2 flex flex-col gap-0.5 shrink-0 ${!showBrand ? "mt-1" : ""}`}>
-        {navItems.map(({ icon: Icon, label, to, count }) => {
-          const active = isActive(label, to);
+        {navItems.map(({ id, icon: Icon, to, count }) => {
+          const active = isActive(id, to);
 
-          if (label === "Calendar") {
+          if (id === "calendar") {
             return (
               <button
-                key={label}
+                key={id}
                 onClick={() => { if (onCalendarClick) { onCalendarClick(); } else { navigate(to); } }}
                 aria-pressed={isCalendarActive}
                 className={itemClassName(active)}
               >
                 <span className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#9000FF]" : ""}`} />
-                  {label}
+                  {t(`nav.${id}`)}
                 </span>
               </button>
             );
@@ -97,15 +108,15 @@ export function NavSidebar({
 
           return (
             <Link
-              key={label}
+              key={id}
               href={to}
-              onClick={label === "Inbox" ? onInboxClick : undefined}
+              onClick={id === "inbox" ? onInboxClick : undefined}
               aria-current={active ? "page" : undefined}
               className={itemClassName(active)}
             >
               <span className="flex items-center gap-2">
-                <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#9000FF]" : label === "Risk Radar" ? "text-[#9000FF]" : ""}`} />
-                {label}
+                <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#9000FF]" : id === "riskRadar" ? "text-[#9000FF]" : ""}`} />
+                {t(`nav.${id}`)}
               </span>
               {count != null && (
                 <span className={`text-[10px] px-1.5 rounded-full font-bold ${
@@ -123,9 +134,36 @@ export function NavSidebar({
           {children}
         </div>
       )}
+
+      {/* Language switcher */}
+      <div className="border-t border-[#E5EAF0] px-2 py-2 shrink-0">
+        <div className="flex items-center gap-1.5 px-2 py-1">
+          <Globe className="w-3 h-3 text-[#9E9FAE] shrink-0" />
+          <div className="flex gap-0.5 ml-0.5">
+            {LANG_OPTIONS.map(({ code, label }) => {
+              const active = currentLang === code || (code === "en" && !["zh-CN", "zh-TW"].includes(currentLang));
+              return (
+                <button
+                  key={code}
+                  onClick={() => void i18n.changeLanguage(code)}
+                  aria-pressed={active}
+                  className={`px-1.5 py-0.5 text-[10px] font-semibold rounded transition-colors ${
+                    active
+                      ? "bg-[#9000FF] text-white"
+                      : "text-[#9E9FAE] hover:text-[#212833] hover:bg-[#E5EAF0]"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* User profile footer */}
       {isLoaded && user && (
-        <div className="mt-auto border-t border-[#E5EAF0] p-2 shrink-0">
+        <div className="border-t border-[#E5EAF0] p-2 shrink-0">
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
             <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0">
               <span className="text-[10px] font-bold text-[#9000FF]">{initials}</span>
@@ -136,8 +174,8 @@ export function NavSidebar({
             </div>
             <button
               onClick={() => void signOut()}
-              title="Sign out"
-              aria-label="Sign out"
+              title={t("common.signOut")}
+              aria-label={t("common.signOut")}
               className="p-1 text-[#9E9FAE] hover:text-[#212833] hover:bg-[#E5EAF0] rounded transition-colors shrink-0"
             >
               <LogOut className="w-3 h-3" />

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Upload, FileText, Image, FileSpreadsheet, Mic, X, CheckCircle2,
@@ -15,6 +16,8 @@ import type {
   ReconciliationFinding, ExtractedLineItem, ExtractionFieldProvenance,
 } from "@workspace/api-client-react";
 
+import { getDisplayLocale } from "@/lib/locale";
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function fmtSize(bytes: number) {
@@ -25,17 +28,17 @@ function fmtSize(bytes: number) {
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString(getDisplayLocale(), { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function relTime(iso: string) {
+function relTime(iso: string, t: (k: string, opts?: Record<string, unknown>) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t("docs.justNow");
+  if (m < 60) return t("docs.mAgo", { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return t("docs.hAgo", { h });
+  return t("docs.dAgo", { d: Math.floor(h / 24) });
 }
 
 function fileTypeIcon(mime: string, size = 18) {
@@ -62,35 +65,35 @@ function confidenceColor(c: number) {
   return "text-red-600 bg-red-50 border-red-200";
 }
 
-function confidenceLabel(c: number) {
-  if (c >= 0.8) return "High";
-  if (c >= 0.5) return "Medium";
-  return "Low";
+function confidenceLabel(c: number, t: (k: string) => string) {
+  if (c >= 0.8) return t("docs.confidence_high");
+  if (c >= 0.5) return t("docs.confidence_medium");
+  return t("docs.confidence_low");
 }
 
-function statusBadge(status: string) {
+function statusBadge(status: string, t: (k: string) => string) {
   if (status === "processing")
-    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200"><RefreshCw size={8} className="animate-spin" />Processing</span>;
+    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200"><RefreshCw size={8} className="animate-spin" />{t("status.processing")}</span>;
   if (status === "extracted")
-    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-600 border-emerald-200"><CheckCircle2 size={8} />Extracted</span>;
+    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-600 border-emerald-200"><CheckCircle2 size={8} />{t("status.extracted")}</span>;
   if (status === "failed")
-    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-red-50 text-red-600 border-red-200"><AlertCircle size={8} />Failed</span>;
+    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-red-50 text-red-600 border-red-200"><AlertCircle size={8} />{t("status.failed")}</span>;
   if (status === "unmatched")
-    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-600 border-amber-200"><AlertTriangle size={8} />Unmatched</span>;
+    return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-600 border-amber-200"><AlertTriangle size={8} />{t("status.unmatched")}</span>;
   return <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"><Clock size={8} />{status}</span>;
 }
 
-function channelBadge(sourceChannel: string) {
+function channelBadge(sourceChannel: string, t: (k: string) => string) {
   if (sourceChannel === "email-forward" || sourceChannel === "gmail")
     return (
       <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
-        <Mail size={8} />Email
+        <Mail size={8} />{t("docs.channelEmail")}
       </span>
     );
   if (sourceChannel === "whatsapp")
     return (
       <span className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
-        <MessageSquare size={8} />WhatsApp
+        <MessageSquare size={8} />{t("docs.channelWhatsapp")}
       </span>
     );
   return null;
@@ -104,6 +107,7 @@ interface DropZoneProps {
 }
 
 function DropZone({ onFiles, uploading }: DropZoneProps) {
+  const { t: tDropZone } = useTranslation();
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -137,7 +141,7 @@ function DropZone({ onFiles, uploading }: DropZoneProps) {
       {uploading ? (
         <>
           <RefreshCw size={28} className="text-[#9000FF] animate-spin" />
-          <p className="text-xs font-medium text-[#5E687B]">Uploading & extracting…</p>
+          <p className="text-xs font-medium text-[#5E687B]">{tDropZone("docs.uploading")}</p>
         </>
       ) : (
         <>
@@ -145,8 +149,8 @@ function DropZone({ onFiles, uploading }: DropZoneProps) {
             <Upload size={22} className="text-[#9000FF]" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-semibold text-[#212833]">Drop documents here</p>
-            <p className="text-[11px] text-[#5E687B] mt-0.5">PDFs, images, spreadsheets, audio — or <span className="text-[#9000FF] font-medium underline underline-offset-1">browse</span></p>
+            <p className="text-sm font-semibold text-[#212833]">{tDropZone("docs.uploadDrop")}</p>
+            <p className="text-[11px] text-[#5E687B] mt-0.5">PDFs, images, spreadsheets, audio — or <span className="text-[#9000FF] font-medium underline underline-offset-1">{tDropZone("docs.uploadBrowse")}</span></p>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-center">
             {["PDF", "JPEG/PNG", "XLS/CSV", "MP3/WAV"].map(t => (
@@ -162,15 +166,16 @@ function DropZone({ onFiles, uploading }: DropZoneProps) {
 // ─── PDF snippet card (inline expand) ────────────────────────────────────────
 
 function PdfSnippetCard({ snippet, label, isInferred }: { snippet: string; label: string; isInferred: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="mx-3 mb-2 rounded-xl overflow-hidden border border-amber-200 shadow-sm">
       <div className="bg-amber-50 border-b border-amber-100 px-3 py-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <FileText className="w-3 h-3 text-amber-600" />
-          <span className="text-[10px] font-semibold text-amber-800">PDF source · {label}</span>
+          <span className="text-[10px] font-semibold text-amber-800">{t("docs.pdfSource")} · {label}</span>
         </div>
         {isInferred && (
-          <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">inferred — not in PDF</span>
+          <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">{t("docs.notInPdf")}</span>
         )}
       </div>
       <div className="bg-white px-4 py-4">
@@ -199,7 +204,7 @@ function PdfSnippetCard({ snippet, label, isInferred }: { snippet: string; label
         </div>
       </div>
       <div className="bg-gray-50 border-t border-gray-100 px-3 py-1.5">
-        <p className="text-[10px] text-gray-500 italic">Extracted value: <span className="font-semibold not-italic text-gray-700">{snippet}</span></p>
+        <p className="text-[10px] text-gray-500 italic">{t("docs.extractedValue")} <span className="font-semibold not-italic text-gray-700">{snippet}</span></p>
       </div>
     </div>
   );
@@ -226,6 +231,7 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
   const [justSaved, setJustSaved] = useState(false);
   const queryClient = useQueryClient();
   const { mutate: saveCorrection } = useSaveExtractionCorrection();
+  const { t } = useTranslation();
 
   const handleSave = () => {
     if (draft === String(value ?? "")) { setEditing(false); return; }
@@ -270,8 +276,8 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
                   {displayVal}
                 </span>
                 {isInferred && (
-                  <span className="text-[8px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded" title="AI inferred this value — please verify">
-                    inferred
+                  <span className="text-[8px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded" title={t("docs.verifyInferred")}>
+                    {t("docs.inferred")}
                   </span>
                 )}
                 {justSaved && <Check size={10} className="text-emerald-500" />}
@@ -286,7 +292,7 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
               </div>
               {isCorrected && !editing && (
                 <span className="text-[9px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                  <Check size={8} />corrected
+                  <Check size={8} />{t("docs.corrected")}
                 </span>
               )}
             </div>
@@ -308,7 +314,7 @@ function FieldRow({ label, value, fieldPath, confidence, snippet, extractionId, 
               }`}
             >
               <FileText size={10} />
-              <span>View in PDF</span>
+              <span>{t("docs.viewInPdf")}</span>
               {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
             </button>
           )}
@@ -331,6 +337,7 @@ interface DocumentDetailProps {
 }
 
 function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProps) {
+  const { t } = useTranslation();
   const ext = doc.extraction;
   const fields = ext?.extractedFields ?? {};
   const provenance = (ext?.fieldProvenance ?? {}) as Record<string, { confidence: number; snippet: string }>;
@@ -358,21 +365,21 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
   }, [savedCorrections]);
 
   const fieldMap: { label: string; key: keyof ExtractedFields }[] = [
-    { label: "Document Type", key: "documentType" },
-    { label: "PO Number", key: "poNumber" },
-    { label: "Invoice Number", key: "invoiceNumber" },
-    { label: "Invoice Date", key: "invoiceDate" },
-    { label: "Supplier", key: "supplier" },
-    { label: "Buyer", key: "buyer" },
-    { label: "Total Amount", key: "totalAmount" },
-    { label: "Currency", key: "currency" },
-    { label: "Payment Terms", key: "paymentTerms" },
-    { label: "Incoterms", key: "incoterms" },
-    { label: "ETD", key: "etd" },
-    { label: "ETA", key: "eta" },
-    { label: "Port of Loading", key: "portOfLoading" },
-    { label: "Port of Discharge", key: "portOfDischarge" },
-    { label: "QC Result", key: "qcResult" },
+    { label: t("docs.fieldLabels.documentType"), key: "documentType" },
+    { label: t("docs.fieldLabels.poNumber"), key: "poNumber" },
+    { label: t("docs.fieldLabels.invoiceNumber"), key: "invoiceNumber" },
+    { label: t("docs.fieldLabels.invoiceDate"), key: "invoiceDate" },
+    { label: t("docs.fieldLabels.supplier"), key: "supplier" },
+    { label: t("docs.fieldLabels.buyer"), key: "buyer" },
+    { label: t("docs.fieldLabels.totalAmount"), key: "totalAmount" },
+    { label: t("docs.fieldLabels.currency"), key: "currency" },
+    { label: t("docs.fieldLabels.paymentTerms"), key: "paymentTerms" },
+    { label: t("docs.fieldLabels.incoterms"), key: "incoterms" },
+    { label: t("docs.fieldLabels.etd"), key: "etd" },
+    { label: t("docs.fieldLabels.eta"), key: "eta" },
+    { label: t("docs.fieldLabels.portOfLoading"), key: "portOfLoading" },
+    { label: t("docs.fieldLabels.portOfDischarge"), key: "portOfDischarge" },
+    { label: t("docs.fieldLabels.qcResult"), key: "qcResult" },
   ];
 
   const handleCorrect = (field: string, val: string) => {
@@ -399,10 +406,10 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
           <p className="text-[10px] text-[#5E687B]">{fmtDate(doc.createdAt)} · {fmtSize(doc.fileSize)}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {statusBadge(doc.status)}
+          {statusBadge(doc.status, t)}
           {ext && (
             <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${confidenceColor(ext.confidence)}`}>
-              {confidenceLabel(ext.confidence)} confidence
+              {confidenceLabel(ext.confidence, t)} {t("docs.confidence_suffix")}
             </span>
           )}
         </div>
@@ -413,9 +420,9 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
         {/* Shipment Link */}
         <div className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-[#F0F4F8] bg-[#FAFBFC]">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider flex items-center gap-1.5"><Link2 size={10} />Shipment Link</span>
+            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider flex items-center gap-1.5"><Link2 size={10} />{t("docs.shipmentLink")}</span>
             <button onClick={() => setLinkOpen(v => !v)} className="text-[10px] text-[#9000FF] font-semibold hover:underline">
-              {linkedShipment ? "Change" : "Link to PO"}
+              {linkedShipment ? t("docs.change") : t("docs.linkPo")}
             </button>
           </div>
           <div className="p-3">
@@ -424,11 +431,11 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
                 <Package size={13} className="text-[#9000FF] shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                    <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("docs.supplierPo")}</span>
                     <span className="text-[11px] font-semibold text-[#212833] font-mono">{linkedShipment.po}</span>
                     {linkedShipment.buyerPoNumber && (
                       <>
-                        <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer PO</span>
+                        <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">{t("docs.buyerPo")}</span>
                         <span className="text-[11px] font-semibold text-emerald-700 font-mono">{linkedShipment.buyerPoNumber}</span>
                       </>
                     )}
@@ -438,7 +445,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
                 <button onClick={() => handleLink(null)} className="p-0.5 text-[#C0C8D4] hover:text-red-500"><X size={11} /></button>
               </div>
             ) : (
-              <p className="text-[11px] text-[#C0C8D4] italic">No shipment linked</p>
+              <p className="text-[11px] text-[#C0C8D4] italic">{t("docs.noShipmentLinked")}</p>
             )}
             {linkOpen && (
               <div className="mt-2 border border-[#E5EAF0] rounded-lg overflow-hidden shadow-sm max-h-[180px] overflow-y-auto">
@@ -458,10 +465,10 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
                             <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded">{s.buyerPoNumber}</span>
                           )}
                           {matchesSupplier && (
-                            <span className="text-[8px] font-bold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-1 py-0.5 rounded uppercase tracking-wider">Supplier PO match</span>
+                            <span className="text-[8px] font-bold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/20 px-1 py-0.5 rounded uppercase tracking-wider">{t("docs.supplierPoMatch")}</span>
                           )}
                           {matchesBuyer && (
-                            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded uppercase tracking-wider">Buyer PO match</span>
+                            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded uppercase tracking-wider">{t("docs.buyerPoMatch")}</span>
                           )}
                         </div>
                         <span className="text-[10px] text-[#5E687B] truncate block">{s.supplier}</span>
@@ -480,7 +487,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
           <div className="bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
             <div className="flex items-center gap-1.5 px-3 py-2 border-b border-amber-200">
               <AlertTriangle size={11} className="text-amber-600" />
-              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">{findings.length} Reconciliation {findings.length === 1 ? "Issue" : "Issues"}</span>
+              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">{findings.length} {t("docs.reconciliation")} {findings.length === 1 ? t("docs.issue") : t("docs.issues")}</span>
             </div>
             <div className="divide-y divide-amber-100">
               {findings.map((f, i) => (
@@ -490,7 +497,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-semibold text-[#212833]">{f.field}</p>
-                    <p className="text-[9px] text-[#5E687B]">{f.type}: expected <span className="font-medium text-emerald-700">{f.expected}</span> · got <span className="font-medium text-red-700">{f.actual}</span></p>
+                    <p className="text-[9px] text-[#5E687B]">{f.type}: {t("docs.expected")} <span className="font-medium text-emerald-700">{f.expected}</span> · {t("docs.got")} <span className="font-medium text-red-700">{f.actual}</span></p>
                   </div>
                 </div>
               ))}
@@ -502,11 +509,11 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
         {ext && (
           <div className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 border-b border-[#F0F4F8] bg-[#FAFBFC]">
-              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={10} className="text-[#9000FF]" />Extracted Fields</span>
+              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={10} className="text-[#9000FF]" />{t("docs.extractedFields")}</span>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-[#9E9FAE] hidden sm:block">Click any field with a source to expand its PDF excerpt</span>
+                <span className="text-[10px] text-[#9E9FAE] hidden sm:block">{t("docs.extractedFieldsHint")}</span>
                 <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${confidenceColor(ext.confidence)}`}>
-                  {Math.round(ext.confidence * 100)}% confidence
+                  {Math.round(ext.confidence * 100)}% {t("docs.confidence_suffix")}
                 </span>
               </div>
             </div>
@@ -527,7 +534,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
               ))}
               {fields.transcriptSummary && (
                 <div className="mt-2 p-2 bg-purple-50 border border-purple-100 rounded-lg">
-                  <p className="text-[9px] font-bold text-purple-600 uppercase tracking-wider mb-1 flex items-center gap-1"><Mic size={9} />Transcript Summary</p>
+                  <p className="text-[9px] font-bold text-purple-600 uppercase tracking-wider mb-1 flex items-center gap-1"><Mic size={9} />{t("docs.transcriptSummary")}</p>
                   <p className="text-[10px] text-[#212833] leading-relaxed">{fields.transcriptSummary}</p>
                 </div>
               )}
@@ -546,13 +553,13 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
         {lineItems.length > 0 && (
           <div className="bg-white border border-[#E5EAF0] rounded-xl overflow-hidden">
             <div className="px-3 py-2 border-b border-[#F0F4F8] bg-[#FAFBFC]">
-              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{lineItems.length} Line Items</span>
+              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{lineItems.length} {t("docs.lineItems")}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-[10px]">
                 <thead>
                   <tr className="border-b border-[#F0F4F8]">
-                    {["Description", "Qty", "Unit Price", "Total"].map(h => (
+                    {[t("docs.lineItemCols.description"), t("docs.lineItemCols.qty"), t("docs.lineItemCols.unitPrice"), t("docs.lineItemCols.total")].map(h => (
                       <th key={h} className="text-left px-3 py-1.5 text-[#5E687B] font-semibold">{h}</th>
                     ))}
                   </tr>
@@ -575,7 +582,7 @@ function DocumentDetail({ doc, shipments, onBack, onLinked }: DocumentDetailProp
         {/* Error */}
         {doc.status === "failed" && ext?.errorMessage && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-            <p className="text-[10px] font-bold text-red-700 flex items-center gap-1 mb-1"><AlertCircle size={11} />Extraction Failed</p>
+            <p className="text-[10px] font-bold text-red-700 flex items-center gap-1 mb-1"><AlertCircle size={11} />{t("docs.extractionFailed")}</p>
             <p className="text-[10px] text-red-600">{ext.errorMessage}</p>
           </div>
         )}
@@ -595,6 +602,7 @@ interface DocRowProps {
 }
 
 function DocRow({ doc, selected, shipments, onClick, onQuickAssign }: DocRowProps) {
+  const { t } = useTranslation();
   const ext = doc.extraction;
   const linked = shipments.find(s => s.id === doc.shipmentId);
   const isUnlinked = doc.status === "unmatched";
@@ -624,12 +632,12 @@ function DocRow({ doc, selected, shipments, onClick, onQuickAssign }: DocRowProp
             {doc.status === "processing" && <RefreshCw size={9} className="text-blue-400 animate-spin shrink-0" />}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {statusBadge(doc.status)}
-            {channelBadge(doc.sourceChannel)}
+            {statusBadge(doc.status, t)}
+            {channelBadge(doc.sourceChannel, t)}
             {linked ? (
               <span className="text-[9px] text-[#9000FF] flex items-center gap-0.5 font-medium"><Package size={8} />{linked.po}</span>
             ) : (
-              <span className="text-[9px] text-amber-500 italic">unlinked</span>
+              <span className="text-[9px] text-amber-500 italic">{t("docs.unlinked")}</span>
             )}
             {ext && (
               <span className={`text-[8px] font-semibold px-1 py-0.5 rounded border ${confidenceColor(ext.confidence)}`}>
@@ -637,10 +645,10 @@ function DocRow({ doc, selected, shipments, onClick, onQuickAssign }: DocRowProp
               </span>
             )}
             {(ext?.reconciliationFindings ?? []).length > 0 && (
-              <span className="text-[8px] text-red-600 flex items-center gap-0.5 font-medium"><AlertTriangle size={8} />{ext!.reconciliationFindings.length} issue{ext!.reconciliationFindings.length !== 1 ? "s" : ""}</span>
+              <span className="text-[8px] text-red-600 flex items-center gap-0.5 font-medium"><AlertTriangle size={8} />{ext!.reconciliationFindings.length} {ext!.reconciliationFindings.length !== 1 ? t("docs.issues") : t("docs.issue")}</span>
             )}
           </div>
-          <div className="text-[9px] text-[#9E9FAE] mt-0.5">{relTime(doc.createdAt)} · {fmtSize(doc.fileSize)}</div>
+          <div className="text-[9px] text-[#9E9FAE] mt-0.5">{relTime(doc.createdAt, t)} · {fmtSize(doc.fileSize)}</div>
         </div>
         <ChevronRight size={13} className="text-[#C0C8D4] shrink-0 mt-1" />
       </button>
@@ -651,7 +659,7 @@ function DocRow({ doc, selected, shipments, onClick, onQuickAssign }: DocRowProp
           {assignOpen ? (
             <div className="border border-[#E5EAF0] rounded-lg overflow-hidden shadow-sm max-h-[160px] overflow-y-auto bg-white">
               <div className="px-3 py-1.5 border-b border-[#F0F4F8] bg-[#FAFBFC] flex items-center justify-between">
-                <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">Assign to PO</span>
+                <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">{t("docs.assignPo")}</span>
                 <button onClick={e => { e.stopPropagation(); setAssignOpen(false); }} className="p-0.5 text-[#C0C8D4] hover:text-[#5E687B]"><X size={10} /></button>
               </div>
               {shipments.map(s => (
@@ -668,7 +676,7 @@ function DocRow({ doc, selected, shipments, onClick, onQuickAssign }: DocRowProp
               onClick={e => { e.stopPropagation(); setAssignOpen(true); }}
               className="flex items-center gap-1 text-[9px] font-semibold text-[#9000FF] hover:underline"
             >
-              <Link2 size={9} />Assign to PO
+              <Link2 size={9} />{t("docs.assignPo")}
             </button>
           )}
         </div>
@@ -684,6 +692,7 @@ interface DocumentIntakeProps {
 }
 
 export function DocumentIntake({ onDone }: DocumentIntakeProps) {
+  const { t } = useTranslation();
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [pollInterval, setPollInterval] = useState<number | false>(false);
@@ -767,12 +776,12 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
   };
 
   const FILTERS: { id: string; label: string; count: number }[] = [
-    { id: "all", label: "All", count: counts.all },
-    { id: "processing", label: "Processing", count: counts.processing },
-    { id: "extracted", label: "Extracted", count: counts.extracted },
-    { id: "unmatched", label: "Unlinked", count: counts.unmatched },
-    { id: "issues", label: "Issues", count: counts.issues },
-    { id: "failed", label: "Failed", count: counts.failed },
+    { id: "all", label: t("docs.filter.all"), count: counts.all },
+    { id: "processing", label: t("docs.filter.processing"), count: counts.processing },
+    { id: "extracted", label: t("docs.filter.extracted"), count: counts.extracted },
+    { id: "unmatched", label: t("docs.filter.unlinked"), count: counts.unmatched },
+    { id: "issues", label: t("docs.filter.issues"), count: counts.issues },
+    { id: "failed", label: t("docs.filter.failed"), count: counts.failed },
   ];
 
   return (
@@ -814,7 +823,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
             <div className="flex flex-col items-center justify-center py-12 text-[#9E9FAE] gap-3">
               <FileBox size={28} className="opacity-30" />
               <p className="text-xs">
-                {statusFilter === "all" ? "No documents yet — drop files above" : `No ${statusFilter} documents`}
+                {statusFilter === "all" ? t("docs.emptyState") : t("docs.emptyStateFiltered", { filter: statusFilter })}
               </p>
             </div>
           ) : statusFilter === "all" && counts.unmatched > 0 ? (
@@ -823,7 +832,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
               <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-100 sticky top-0 z-10">
                 <AlertTriangle size={10} className="text-amber-500 shrink-0" />
                 <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider flex-1">
-                  Needs Assignment — {counts.unmatched} unlinked
+                  {t("docs.unlinkedCount", { count: counts.unmatched })}
                 </span>
               </div>
               {filteredDocs.filter(d => d.status === "unmatched").map(doc => (
@@ -840,7 +849,7 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
               {filteredDocs.filter(d => d.status !== "unmatched").length > 0 && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FAFBFC] border-b border-[#E5EAF0] sticky top-0 z-10">
                   <span className="text-[9px] font-bold text-[#5E687B] uppercase tracking-wider">
-                    All documents
+                    {t("docs.allDocuments")}
                   </span>
                 </div>
               )}
@@ -871,12 +880,12 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
 
         {/* Footer stats */}
         <div className="px-3 py-2 border-t border-[#E5EAF0] flex items-center gap-3 bg-[#FAFBFC]">
-          <span className="text-[9px] text-[#9E9FAE]">{counts.all} documents</span>
+          <span className="text-[9px] text-[#9E9FAE]">{t("docs.docCount", { count: counts.all })}</span>
           {counts.processing > 0 && (
-            <span className="flex items-center gap-1 text-[9px] text-blue-500"><RefreshCw size={8} className="animate-spin" />{counts.processing} processing</span>
+            <span className="flex items-center gap-1 text-[9px] text-blue-500"><RefreshCw size={8} className="animate-spin" />{t("docs.processingCount", { count: counts.processing })}</span>
           )}
           {counts.issues > 0 && (
-            <span className="flex items-center gap-1 text-[9px] text-amber-500"><AlertTriangle size={8} />{counts.issues} issues</span>
+            <span className="flex items-center gap-1 text-[9px] text-amber-500"><AlertTriangle size={8} />{t("docs.issueCount", { count: counts.issues })}</span>
           )}
           <button onClick={() => refetch()} className="ml-auto p-1 rounded hover:bg-[#F0F4F8] text-[#C0C8D4] hover:text-[#5E687B]" title="Refresh">
             <RefreshCw size={10} />
@@ -899,15 +908,15 @@ export function DocumentIntake({ onDone }: DocumentIntakeProps) {
             <Zap size={28} className="text-[#9000FF]/30" />
           </div>
           <div className="text-center max-w-xs">
-            <p className="text-sm font-semibold text-[#5E687B] mb-1">Document Intelligence</p>
-            <p className="text-xs leading-relaxed">Upload PDFs, spreadsheets, images, or audio files. AI extracts structured fields, matches to POs, and flags discrepancies automatically.</p>
+            <p className="text-sm font-semibold text-[#5E687B] mb-1">{t("docs.emptyPanel.title")}</p>
+            <p className="text-xs leading-relaxed">{t("docs.emptyPanel.desc")}</p>
           </div>
           <div className="flex flex-col gap-2 w-full max-w-xs">
             {[
-              { icon: <FileText size={12} className="text-red-500" />, label: "Commercial invoices → PO reconciliation" },
-              { icon: <FileSpreadsheet size={12} className="text-green-500" />, label: "Packing lists → line item extraction" },
-              { icon: <Image size={12} className="text-blue-500" />, label: "QC photos → pass/fail detection" },
-              { icon: <Mic size={12} className="text-purple-500" />, label: "Voice memos → transcript + summary" },
+              { icon: <FileText size={12} className="text-red-500" />, label: t("docs.emptyPanel.bullet1") },
+              { icon: <FileSpreadsheet size={12} className="text-green-500" />, label: t("docs.emptyPanel.bullet2") },
+              { icon: <Image size={12} className="text-blue-500" />, label: t("docs.emptyPanel.bullet3") },
+              { icon: <Mic size={12} className="text-purple-500" />, label: t("docs.emptyPanel.bullet4") },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-2 bg-white border border-[#E5EAF0] rounded-lg px-3 py-2 shadow-sm">
                 {item.icon}

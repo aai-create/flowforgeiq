@@ -27,6 +27,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ShipmentDrawer, type MarkPaidForm } from "@/components/ShipmentDrawer";
+import { useTranslation } from "react-i18next";
+import { getDisplayLocale } from "@/lib/locale";
 
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -165,6 +167,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 // Component
 // ---------------------------------------------------------------------------
 export function Atelier() {
+  const { t } = useTranslation();
   useLocation();
   useCopilotHint("Ask about PO status or draft a quick update", [
     "Which POs need attention today?",
@@ -470,10 +473,10 @@ export function Atelier() {
       const adapted = adaptShipments([updated], stages);
       setShipments(prev => prev.map(s => s.shipmentId === editingShipmentId ? (adapted[0] ?? s) : s));
       resetNewPO();
-      setToast("PO updated");
+      setToast(t("orders.poUpdated"));
       setTimeout(() => setToast(null), 3000);
     } catch {
-      setNewPOError("Failed to update PO. Please try again.");
+      setNewPOError(t("orders.errUpdateFailed"));
     }
   };
 
@@ -484,14 +487,14 @@ export function Atelier() {
     const resolvedSupplierId = newPOForm.supplierId;
 
     if (!newPOForm.buyerPoNumber.trim()) {
-      setNewPOError("A buyer PO number is required. Generate one or enter a buyer-provided PO."); return;
+      setNewPOError(t("orders.errBuyerPoRequired")); return;
     }
     if (!newPOForm.poNumber.trim() || !newPOForm.product.trim() || !newPOForm.category.trim() || !newPOForm.customerName.trim() || !resolvedSupplierId || !newPOForm.dueDate || !newPOForm.exFactoryDate || !newPOForm.destination.trim()) {
-      setNewPOError("Please fill in all required fields."); return;
+      setNewPOError(t("orders.errRequiredFields")); return;
     }
     const totalPct = milestones.reduce((sum, m) => sum + (Number(m.percent) || 0), 0);
     if (totalPct !== 100) {
-      setMilestonesError(`Payment percentages must sum to 100% (currently ${totalPct}%).`);
+      setMilestonesError(t("orders.errMilestoneSum", { totalPct }));
       return;
     }
     const qty = newPOForm.quantity ? Number(newPOForm.quantity) : undefined;
@@ -538,9 +541,9 @@ export function Atelier() {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 409) {
-        setPoNumberError("A PO with this number already exists. Please use a different PO number.");
+        setPoNumberError(t("orders.errPoExists"));
       } else {
-        setNewPOError("Failed to create PO. Please try again.");
+        setNewPOError(t("orders.errCreateFailed"));
       }
     }
   };
@@ -565,7 +568,7 @@ export function Atelier() {
       const data = await res.json() as { reply: string };
       setAiMessages(prev => [...prev, { role: "ai", text: data.reply }]);
     } catch {
-      setAiMessages(prev => [...prev, { role: "ai", text: "Sorry, I couldn't connect to the AI. Please try again." }]);
+      setAiMessages(prev => [...prev, { role: "ai", text: t("orders.aiConnectError") }]);
     } finally {
       setAiLoading(false);
     }
@@ -780,12 +783,12 @@ export function Atelier() {
                       : "bg-red-500 text-white border-red-500"
                     : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"
                   }`}>
-                  {s === "all" ? "All" : s === "on-track" ? "On Track" : s === "at-risk" ? "At Risk" : "Delayed"}
+                  {s === "all" ? t("orders.filterAll") : s === "on-track" ? t("orders.onTrack") : s === "at-risk" ? t("orders.atRisk") : t("orders.delayed")}
                 </button>
               ))}
               <Separator orientation="vertical" className="h-5 mx-1" />
               <button onClick={() => setShowNewPO(true)} className="flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-3 py-1.5 rounded-md transition-colors">
-                <Plus className="w-3.5 h-3.5" /> New PO
+                <Plus className="w-3.5 h-3.5" /> {t("orders.newPo")}
               </button>
             </div>
           </div>
@@ -809,7 +812,7 @@ export function Atelier() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.supplierPoLabel")}</span>
                             <button
                               type="button"
                               onClick={e => copyPo(shipment.po, e)}
@@ -820,7 +823,7 @@ export function Atelier() {
                                 ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                 : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
                             </button>
-                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">Buyer PO</span>
+                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">{t("orders.buyerPoLabel")}</span>
                             {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
                               <>
                                 {shipment.buyerPoNumbers.map((bpo) => (
@@ -855,7 +858,7 @@ export function Atelier() {
                                   type="button"
                                   onClick={e => { e.stopPropagation(); setActiveShipmentId(shipment.id); setLinkPanelShipmentId(shipment.shipmentId); }}
                                   className="text-[11px] font-semibold text-[#9000FF] hover:underline flex items-center gap-0.5 transition-colors">
-                                  <Link2 className="w-2.5 h-2.5" />Link deal
+                                  <Link2 className="w-2.5 h-2.5" />{t("orders.linkDeal")}
                                 </button>
                               </>
                             )}
@@ -887,7 +890,7 @@ export function Atelier() {
                           <Clock className="w-3 h-3" />{shipment.dueDate}
                         </div>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(shipment.status)}`}>
-                          {shipment.status === "at-risk" ? "At Risk" : shipment.status === "delayed" ? "Delayed" : "On Track"}
+                          {shipment.status === "at-risk" ? t("orders.atRisk") : shipment.status === "delayed" ? t("orders.delayed") : t("orders.onTrack")}
                         </span>
                         {shipment.spreadPct !== null ? (() => {
                           const pct = shipment.spreadPct!;
@@ -920,7 +923,7 @@ export function Atelier() {
 
                     {/* Stage tracker header */}
                     <div className="flex items-center justify-between mb-1 mt-1">
-                      <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Stage Tracker</span>
+                      <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.stageTracker")}</span>
                       <Popover>
                         <PopoverTrigger asChild>
                           <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -928,7 +931,7 @@ export function Atelier() {
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 p-3 text-[12px]" align="end">
-                          <p className="font-semibold text-[#212833] mb-1">Stage Tracker</p>
+                          <p className="font-semibold text-[#212833] mb-1">{t("orders.stageTracker")}</p>
                           <p className="text-[#5E687B] leading-relaxed">Every shipment moves through {stages.length} milestones from {stages[0]?.label ?? "the first stage"} to {stages[stages.length - 1]?.label ?? "the last stage"}. Click "Advance Stage" to log a stage change with an optional note.</p>
                           <Link to="/help#track-shipment" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
                             Learn more →
@@ -1000,19 +1003,19 @@ export function Atelier() {
                               : overdue ? "bg-red-50 text-red-600 border-red-100 animate-pulse"
                               : "bg-[#F0F4F8] text-[#5E687B] border-[#E5EAF0]"}`}>
                               {p.paid ? <CheckCircle2 className="w-2.5 h-2.5" /> : overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <CreditCard className="w-2.5 h-2.5" />}
-                              {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `paid ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : overdue ? "OVERDUE" : `due ${p.dueDate}`}
+                              {p.label}: ${p.amountUsd.toLocaleString()} {p.paid ? `${t("orders.paidLabel")} ${p.paidAt ? shortDate(p.paidAt) : ""}`.trim() : overdue ? t("orders.overdueLabel") : `${t("orders.dueLabel")} ${p.dueDate}`}
                             </div>
 
                             {isActive && !p.paid && markPaidForm?.shipmentId !== shipment.id && (
                               <button type="button" onClick={e => { e.stopPropagation(); openMarkPaid(shipment.id, i); }}
                                 className="text-[11px] font-semibold px-1.5 py-0.5 rounded border bg-[#9000FF] text-white border-[#9000FF] hover:bg-[#7A00D9] transition-colors shrink-0">
-                                Mark Paid
+                                {t("orders.markPaid")}
                               </button>
                             )}
                             {isActive && p.paid && (
                               <button type="button" onClick={e => { e.stopPropagation(); undoPaymentPaid(shipment.id, i); }}
                                 className="text-[11px] font-medium px-1.5 py-0.5 rounded border bg-white text-[#5E687B] border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors shrink-0">
-                                Undo
+                                {t("orders.undo")}
                               </button>
                             )}
                           </div>
@@ -1120,18 +1123,18 @@ export function Atelier() {
                           <div className="text-xs text-[#5E687B]">
                             ${shipment.buyerUnitPrice?.toFixed(2) ?? "—"} × {shipment.buyerQuantity?.toLocaleString() ?? "—"} &nbsp;·&nbsp;
                             <span className={`font-semibold ${shipment.spreadPct >= 25 ? "text-emerald-700" : shipment.spreadPct >= 10 ? "text-amber-700" : "text-red-700"}`}>
-                              {shipment.spreadPct.toFixed(1)}% spread
+                              {shipment.spreadPct.toFixed(1)}% {t("orders.spreadSuffix")}
                             </span>
                           </div>
                         )}
                         {shipment.spreadPct === null && buyerPriceFormId !== shipment.id && (
-                          <span className="text-[11px] text-[#C0C8D4] italic">No buyer price set — spread unavailable</span>
+                          <span className="text-[11px] text-[#C0C8D4] italic">{t("orders.noBuyerPriceSet")}</span>
                         )}
                         {buyerPriceFormId === shipment.id && (
                           <>
                             <div className="flex items-end gap-2">
                               <div className="flex-1">
-                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Unit Price (USD)</label>
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelUnitPriceUsd")}</label>
                                 <input type="number" min="0" step="0.01"
                                   value={buyerPriceDraft.unitPrice}
                                   onChange={e => setBuyerPriceDraft(d => ({ ...d, unitPrice: e.target.value }))}
@@ -1139,7 +1142,7 @@ export function Atelier() {
                                   className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
                               </div>
                               <div className="flex-1">
-                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Quantity</label>
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelQuantity")}</label>
                                 <input type="number" min="1" step="1"
                                   value={buyerPriceDraft.quantity}
                                   onChange={e => setBuyerPriceDraft(d => ({ ...d, quantity: e.target.value }))}
@@ -1155,7 +1158,7 @@ export function Atelier() {
                                   patchDealForShipment({ id: shipment.shipmentId, data: { buyerUnitPrice: up, buyerQuantity: qty } });
                                 }}
                                 className="text-[11px] bg-[#9000FF] text-white px-2 py-1 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0">
-                                {patchDealPending ? "…" : "Save"}
+                                {patchDealPending ? "…" : t("common.save")}
                               </button>
                             </div>
                             {buyerPriceDraft.unitPrice && buyerPriceDraft.quantity && (() => {
@@ -1166,7 +1169,7 @@ export function Atelier() {
                               const cls = pct >= 25 ? "text-emerald-700" : pct >= 10 ? "text-amber-700" : "text-red-700";
                               return (
                                 <div className={`mt-1 text-[11px] font-semibold ${cls}`}>
-                                  Preview: {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
+                                  {t("orders.previewLabel")} {pct.toFixed(1)}% · ${Math.round(spread).toLocaleString()}
                                 </div>
                               );
                             })()}
@@ -1179,7 +1182,7 @@ export function Atelier() {
                     {isActive && markPaidForm?.shipmentId === shipment.id && (
                       <div className="mt-2 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">Record Payment — {shipment.payments[markPaidForm.paymentIdx].label}</p>
+                          <p className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">{t("orders.recordPayment", { label: shipment.payments[markPaidForm.paymentIdx].label })}</p>
                           <button type="button" onClick={() => setMarkPaidForm(null)} className="text-[#9E9FAE] hover:text-[#212833]"><X className="w-3 h-3"/></button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -1190,33 +1193,33 @@ export function Atelier() {
                               className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
                           </div>
                           <div>
-                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Payment Date</label>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelPaymentDate")}</label>
                             <input type="date" value={markPaidForm.date}
                               onChange={e => setMarkPaidForm(f => f ? { ...f, date: e.target.value } : f)}
                               className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
                           </div>
                           <div>
                             <label className="text-xs text-[#5E687B] font-medium block mb-0.5">
-                              Invoice # <span className="text-red-500">*</span>
+                              {t("orders.labelInvoiceNum")} <span className="text-red-500">*</span>
                             </label>
                             <input type="text" value={markPaidForm.invoiceNumber} placeholder="e.g. INV-2026-001"
                               onChange={e => setMarkPaidForm(f => f ? { ...f, invoiceNumber: e.target.value } : f)}
                               className={`w-full px-2 py-1 text-xs border rounded-md outline-none focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE] ${!markPaidForm.invoiceNumber.trim() ? "border-red-300 focus:border-red-400" : "border-[#E5EAF0] focus:border-[#9000FF]/40"}`}/>
                           </div>
                           <div>
-                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Reference # (optional)</label>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelReferenceOptional")}</label>
                             <input type="text" value={markPaidForm.reference} placeholder="e.g. TXN-2026-001"
                               onChange={e => setMarkPaidForm(f => f ? { ...f, reference: e.target.value } : f)}
                               className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] placeholder:text-[#9E9FAE]"/>
                           </div>
                           <div className="col-span-2">
-                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Method</label>
+                            <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelMethod")}</label>
                             <select value={markPaidForm.method}
                               onChange={e => setMarkPaidForm(f => f ? { ...f, method: e.target.value } : f)}
                               className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833] bg-white">
-                              <option>Wire</option>
-                              <option>Credit</option>
-                              <option>Other</option>
+                              <option>{t("orders.methodWire")}</option>
+                              <option>{t("orders.methodCredit")}</option>
+                              <option>{t("orders.methodOther")}</option>
                             </select>
                           </div>
                         </div>
@@ -1226,18 +1229,18 @@ export function Atelier() {
                             <input type="checkbox" checked={markPaidForm.intermediarySupplierPaid}
                               onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierPaid: e.target.checked } : f)}
                               className="accent-[#9000FF] w-3 h-3"/>
-                            <span className="text-[11px] font-semibold text-[#5E687B]">Intermediary paid supplier</span>
+                            <span className="text-[11px] font-semibold text-[#5E687B]">{t("orders.intermediaryPaidSupplier")}</span>
                           </label>
                           {markPaidForm.intermediarySupplierPaid && (
                             <div className="grid grid-cols-2 gap-2 pt-0.5">
                               <div>
-                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Amount (USD)</label>
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelAmountUsd")}</label>
                                 <input type="number" min="0" value={markPaidForm.intermediarySupplierAmount} placeholder="0"
                                   onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierAmount: e.target.value } : f)}
                                   className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
                               </div>
                               <div>
-                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">Date Paid</label>
+                                <label className="text-xs text-[#5E687B] font-medium block mb-0.5">{t("orders.labelPaymentDate")}</label>
                                 <input type="date" value={markPaidForm.intermediarySupplierDate}
                                   onChange={e => setMarkPaidForm(f => f ? { ...f, intermediarySupplierDate: e.target.value } : f)}
                                   className="w-full px-2 py-1 text-xs border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/10 text-[#212833]"/>
@@ -1247,7 +1250,7 @@ export function Atelier() {
                         </div>
                         <button type="button" onClick={confirmMarkPaid} disabled={!markPaidForm.invoiceNumber.trim()}
                           className="w-full py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed bg-[#9000FF] text-white hover:bg-[#7A00D9] disabled:hover:bg-[#9000FF]">
-                          <CheckCircle2 className="w-3 h-3"/> Confirm Payment
+                          <CheckCircle2 className="w-3 h-3"/> {t("orders.confirmPayment")}
                         </button>
                       </div>
                     )}
@@ -1261,31 +1264,31 @@ export function Atelier() {
                             <button
                               onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "threads" ? null : "threads"); }}
                               className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${activeDetailTab === "threads" ? "bg-[#9000FF] text-white hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <MessageCircle className="w-3 h-3" /> Open Threads
+                              <MessageCircle className="w-3 h-3" /> {t("orders.openThreads")}
                             </button>
                             {/* View Docs tab */}
                             <button
                               onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "docs" ? null : "docs"); }}
                               className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "docs" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <FileText className="w-3 h-3" /> View Docs
+                              <FileText className="w-3 h-3" /> {t("orders.viewDocs")}
                             </button>
                             {/* Factory Quotes tab */}
                             <button
                               onClick={e => { e.stopPropagation(); setActiveDetailTab(t => t === "quotes" ? null : "quotes"); }}
                               className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${activeDetailTab === "quotes" ? "bg-[#9000FF] text-white font-semibold hover:bg-[#7A00D9]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <DollarSign className="w-3 h-3" /> Factory Quotes
+                              <DollarSign className="w-3 h-3" /> {t("orders.factoryQuotesTab")}
                             </button>
                             {/* Advance Stage — unchanged */}
                             <button
                               onClick={e => { e.stopPropagation(); openAdvanceDialog(shipment); }}
                               className="text-xs bg-white border border-[#E5EAF0] text-[#212833] px-3 py-1.5 rounded-md font-medium hover:bg-[#F0F4F8] transition-colors flex items-center gap-1.5">
-                              <MapPin className="w-3 h-3" /> Advance Stage
+                              <MapPin className="w-3 h-3" /> {t("orders.advanceStage")}
                             </button>
                             {/* History */}
                             <button
                               onClick={e => { e.stopPropagation(); setHistoryShipmentId(historyShipmentId === shipment.id ? null : shipment.id); }}
                               className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${historyShipmentId === shipment.id ? "bg-[#9000FF]/10 border border-[#9000FF]/20 text-[#9000FF]" : "bg-white border border-[#E5EAF0] text-[#212833] hover:bg-[#F0F4F8]"}`}>
-                              <Clock className="w-3 h-3" /> History
+                              <Clock className="w-3 h-3" /> {t("orders.historyTab")}
                             </button>
                           </div>
                           <div className="relative">
@@ -1299,11 +1302,11 @@ export function Atelier() {
                                 onClick={e => e.stopPropagation()}
                                 className="absolute right-0 top-8 z-50 w-48 bg-white border border-[#E5EAF0] rounded-xl shadow-lg py-1 text-[11px]">
                                 {[
-                                  { label: "Edit PO", action: () => { openEditPO(shipment); setMoreMenuId(null); }, danger: false },
-                                  { label: "Mark as At Risk", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); }, danger: false },
-                                  { label: "Mark as On Track", action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); }, danger: false },
-                                  { label: "Ask AI about this PO", action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); }, danger: false },
-                                  { label: "Copy PO number", action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); }, danger: false },
+                                  { label: t("orders.menuEditPo"), action: () => { openEditPO(shipment); setMoreMenuId(null); }, danger: false },
+                                  { label: t("orders.menuMarkAtRisk"), action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); }, danger: false },
+                                  { label: t("orders.menuMarkOnTrack"), action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); }, danger: false },
+                                  { label: t("orders.menuAskAi"), action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); }, danger: false },
+                                  { label: t("orders.menuCopyPo"), action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); }, danger: false },
                                 ].map(({ label, action, danger }) => (
                                   <button key={label} onClick={action}
                                     className={`w-full text-left px-3 py-2 hover:bg-[#F0F4F8] transition-colors ${danger ? "text-red-600" : "text-[#212833]"}`}>
@@ -1314,7 +1317,7 @@ export function Atelier() {
                                 <button
                                   onClick={() => { setDeleteConfirmId(shipment.shipmentId); setMoreMenuId(null); }}
                                   className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 transition-colors">
-                                  Delete PO
+                                  {t("orders.menuDeletePo")}
                                 </button>
                               </div>
                             )}
@@ -1333,11 +1336,11 @@ export function Atelier() {
                               return (
                                 <div>
                                   <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Recent Threads</span>
+                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.recentThreads")}</span>
                                     <span className="text-[11px] text-[#C0C8D4]">{msgs.length} of {allMessages.filter((m: Message) => m.shipmentId === shipment.shipmentId).length}</span>
                                   </div>
                                   {msgs.length === 0 ? (
-                                    <p className="text-xs text-[#C0C8D4] italic px-4 py-4 text-center">No messages for this shipment</p>
+                                    <p className="text-xs text-[#C0C8D4] italic px-4 py-4 text-center">{t("orders.noMessagesShipment")}</p>
                                   ) : (
                                     <ul>
                                       {msgs.map((msg: Message) => (
@@ -1348,7 +1351,7 @@ export function Atelier() {
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
                                               <span className="text-[11px] font-semibold text-[#212833] truncate">{msg.sender}</span>
-                                              <span className="text-[11px] text-[#C0C8D4] shrink-0">{new Date(msg.receivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                              <span className="text-[11px] text-[#C0C8D4] shrink-0">{new Date(msg.receivedAt).toLocaleDateString(getDisplayLocale(), { month: "short", day: "numeric" })}</span>
                                             </div>
                                             {msg.subject && <p className="text-xs text-[#5E687B] font-medium truncate mt-0.5">{msg.subject}</p>}
                                             <p className="text-xs text-[#9E9FAE] truncate mt-0.5">{msg.snippet}</p>
@@ -1371,11 +1374,11 @@ export function Atelier() {
                               return (
                                 <div>
                                   <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Attached Documents</span>
+                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.attachedDocuments")}</span>
                                     <span className="text-[11px] text-[#C0C8D4]">{docs.length} of {allDocuments.filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId).length}</span>
                                   </div>
                                   {docs.length === 0 ? (
-                                    <p className="text-xs text-[#C0C8D4] italic px-4 py-4 text-center">No documents attached to this shipment</p>
+                                    <p className="text-xs text-[#C0C8D4] italic px-4 py-4 text-center">{t("orders.noDocumentsShipment")}</p>
                                   ) : (
                                     <ul>
                                       {docs.map((doc: DocumentWithExtraction) => (
@@ -1388,7 +1391,7 @@ export function Atelier() {
                                               <span className="text-[11px] text-[#C0C8D4]">·</span>
                                               <span className="text-[11px] text-[#9E9FAE]">{doc.sourceChannel}</span>
                                               <span className="text-[11px] text-[#C0C8D4]">·</span>
-                                              <span className="text-[11px] text-[#9E9FAE]">{new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                              <span className="text-[11px] text-[#9E9FAE]">{new Date(doc.createdAt).toLocaleDateString(getDisplayLocale(), { month: "short", day: "numeric" })}</span>
                                             </div>
                                           </div>
                                           <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${doc.status === "extracted" ? "bg-emerald-50 text-emerald-700" : "bg-[#F0F4F8] text-[#9E9FAE]"}`}>
@@ -1406,7 +1409,7 @@ export function Atelier() {
                             {activeDetailTab === "quotes" && (
                               <div>
                                 <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                  <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Factory Quotes</span>
+                                  <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.factoryQuotesTab")}</span>
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -1552,7 +1555,7 @@ export function Atelier() {
               <input type="text" value={aiInput} onChange={e => setAiInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") void sendMessage(); }}
                 disabled={aiLoading}
-                placeholder="Ask about a shipment, supplier..."
+                placeholder={t("orders.aiPlaceholder")}
                 className="flex-1 bg-transparent text-xs h-10 focus:outline-none placeholder:text-[#A0ABB8] disabled:opacity-60" />
               <button onClick={() => void sendMessage()} disabled={aiLoading || !aiInput.trim()} className={`h-7 w-7 rounded-lg mr-1 shrink-0 flex items-center justify-center transition-colors ${aiInput.trim() && !aiLoading ? "bg-[#9000FF] hover:bg-[#7A00D9]" : "bg-[#E5EAF0]"}`}>
                 {aiLoading
@@ -1614,7 +1617,7 @@ export function Atelier() {
         <Dialog open={true} onOpenChange={open => { if (!open) { setAdvanceTarget(null); setAdvanceNote(""); } }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold text-[#212833]">Advance Shipment Stage</DialogTitle>
+              <DialogTitle className="text-base font-bold text-[#212833]">{t("orders.advanceShipmentStage")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-1">
               <p className="text-xs text-[#5E687B]">
@@ -1622,23 +1625,23 @@ export function Atelier() {
               </p>
               <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                  <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.stageCurrentLabel")}</span>
                   <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceTarget.currentStageId}</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-[#9000FF] shrink-0" />
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
+                  <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">{t("orders.stageNextLabel")}</span>
                   <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">
-                  Note <span className="text-[#9E9FAE] font-normal">(optional — e.g. "QC passed, cert attached")</span>
+                  {t("orders.stageNoteLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.stageNoteOptional")}</span>
                 </label>
                 <textarea
                   value={advanceNote}
                   onChange={e => setAdvanceNote(e.target.value)}
-                  placeholder="Add context about this stage change..."
+                  placeholder={t("orders.stageNotePlaceholder")}
                   rows={3}
                   className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors resize-none"
                 />
@@ -1648,12 +1651,12 @@ export function Atelier() {
               <button
                 onClick={() => { setAdvanceTarget(null); setAdvanceNote(""); }}
                 className="px-4 py-2 text-xs font-semibold text-[#5E687B] hover:text-[#212833] transition-colors">
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => void confirmAdvanceStage()}
                 className="px-5 py-2 bg-[#9000FF] text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-[#7A00D9] transition-colors">
-                Confirm Advance
+                {t("orders.confirmAdvance")}
               </button>
             </DialogFooter>
           </DialogContent>
@@ -1665,21 +1668,21 @@ export function Atelier() {
     <Dialog open={deleteConfirmId !== null} onOpenChange={open => { if (!open) setDeleteConfirmId(null); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-[#212833]">Delete PO?</DialogTitle>
+          <DialogTitle className="text-base font-bold text-[#212833]">{t("orders.deletePoTitle")}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-[#5E687B] py-1">
-          This will permanently remove this PO and all its payment records, factory quotes, and tasks. This cannot be undone.
+          {t("orders.deletePoDesc")}
         </p>
         <DialogFooter className="flex gap-2 pt-2">
           <button
             onClick={() => setDeleteConfirmId(null)}
             className="px-4 py-2 text-xs font-semibold text-[#5E687B] border border-[#E5EAF0] rounded-lg hover:bg-[#F0F4F8] transition-colors">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={confirmDeleteShipment}
             className="px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
-            Delete PO
+            {t("orders.menuDeletePo")}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -1690,7 +1693,7 @@ export function Atelier() {
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-[#212833]">
-            {editingShipmentId !== null ? "Edit Purchase Order" : "New Purchase Order"}
+            {editingShipmentId !== null ? t("orders.editPurchaseOrder") : t("orders.newPurchaseOrder")}
           </DialogTitle>
         </DialogHeader>
 
@@ -1699,7 +1702,7 @@ export function Atelier() {
           {/* PO Document upload — create mode only */}
           {editingShipmentId === null && (
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">PO Document <span className="text-[#9E9FAE] font-normal">(optional — PDF, Excel, Word)</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1.5">{t("orders.poDocumentLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.poDocumentOptional")}</span></label>
             {newPOFile ? (
               <div className="flex items-center gap-2.5 px-3 py-2.5 bg-[#F7F9FA] border border-[#E5EAF0] rounded-md">
                 <FileText className="w-4 h-4 text-[#9000FF] shrink-0"/>
@@ -1719,7 +1722,7 @@ export function Atelier() {
                 onClick={() => fileInputRef.current?.click()}
                 className={`flex flex-col items-center gap-1.5 py-5 border-2 border-dashed rounded-md cursor-pointer transition-colors ${newPODragOver ? "border-[#9000FF] bg-[#9000FF]/5" : "border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#F7F9FA]"}`}>
                 <Upload className="w-5 h-5 text-[#9E9FAE]"/>
-                <span className="text-xs text-[#5E687B]">Drop a file here or <span className="text-[#9000FF] font-medium">browse</span></span>
+                <span className="text-xs text-[#5E687B]">{t("orders.dropFileBrowse")} <span className="text-[#9000FF] font-medium">{t("orders.browse")}</span></span>
                 <input ref={fileInputRef} type="file"
                   accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg"
                   className="hidden"
@@ -1732,15 +1735,15 @@ export function Atelier() {
           {/* PO Numbers — create mode: full form; edit mode: read-only display */}
           {editingShipmentId !== null ? (
           <div className="space-y-2 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-            <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers (read-only)</span>
+            <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbersReadOnly")}</span>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer PO</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.buyerPoLabel")}</label>
                 <input readOnly value={newPOForm.buyerPoNumber || "—"}
                   className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier PO</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.supplierPoLabel")}</label>
                 <input readOnly value={newPOForm.poNumber}
                   className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
               </div>
@@ -1749,18 +1752,18 @@ export function Atelier() {
           ) : (
           <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">PO Numbers</span>
+              <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbers")}</span>
               {/* Mode toggle */}
               <div className="flex items-center border border-[#E5EAF0] rounded-md overflow-hidden text-xs font-semibold">
                 <button type="button"
                   onClick={() => setBuyerPoMode("auto")}
                   className={`px-2.5 py-1 transition-colors ${buyerPoMode === "auto" ? "bg-[#9000FF] text-white" : "bg-white text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
-                  Auto-generate
+                  {t("orders.autoGenerate")}
                 </button>
                 <button type="button"
                   onClick={() => setBuyerPoMode("provided")}
                   className={`px-2.5 py-1 border-l border-[#E5EAF0] transition-colors ${buyerPoMode === "provided" ? "bg-[#9000FF] text-white" : "bg-white text-[#5E687B] hover:bg-[#F0F4F8]"}`}>
-                  Buyer provided
+                  {t("orders.buyerProvided")}
                 </button>
               </div>
             </div>
@@ -1768,7 +1771,7 @@ export function Atelier() {
             {buyerPoMode === "auto" ? (
               <div className="space-y-2">
                 <p className="text-xs text-[#9E9FAE]">
-                  Click to auto-generate the next buyer + supplier PO pair from your numbering scheme. The counter advances on each use.
+                  {t("orders.autoGenerateDesc")}
                 </p>
                 <button
                   type="button"
@@ -1781,31 +1784,31 @@ export function Atelier() {
                     } catch {}
                   }}
                   className="w-full flex items-center justify-center gap-2 text-[11px] font-semibold text-[#9000FF] border border-[#9000FF]/30 px-3 py-2 rounded-md hover:bg-[#9000FF]/5 transition-colors">
-                  ✦ Auto-fill next PO pair
+                  {t("orders.autoFillNextPair")}
                 </button>
                 {newPOForm.buyerPoNumber ? (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer PO <span className="text-[#9E9FAE] font-normal">(generated)</span></label>
+                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.buyerPoLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.buyerPoGenerated")}</span></label>
                       <input readOnly value={newPOForm.buyerPoNumber}
                         className="w-full border border-emerald-200 bg-emerald-50 rounded-md px-2 py-1.5 text-[11px] text-emerald-700 font-mono outline-none cursor-default"/>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier PO <span className="text-[#9E9FAE] font-normal">(override allowed)</span></label>
+                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.supplierPoLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.supplierPoOverrideLabel")}</span></label>
                       <input value={newPOForm.poNumber}
                         onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
                         className={`w-full border rounded-md px-2 py-1.5 text-[11px] font-mono outline-none focus:ring-1 transition-colors ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-amber-600 text-center">Click above to generate PO numbers before submitting.</p>
+                  <p className="text-xs text-amber-600 text-center">{t("orders.generateBeforeSubmit")}</p>
                 )}
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                    Buyer PO <span className="text-[#9E9FAE] font-normal">(buyer → trader) — link existing or enter new</span>
+                    {t("orders.buyerPoLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.buyerPoHint")}</span>
                   </label>
                   {existingDeals && existingDeals.length > 0 && (
                     <div className="mb-2 border border-[#E5EAF0] rounded-md overflow-hidden divide-y divide-[#F0F4F8] max-h-28 overflow-y-auto">
@@ -1826,7 +1829,7 @@ export function Atelier() {
                           <span className="text-xs font-mono font-semibold text-emerald-700">{deal.buyerPoNumber}</span>
                           <span className="text-xs text-[#5E687B] truncate">{deal.customerName}</span>
                           {newPOForm.buyerPoNumber === deal.buyerPoNumber && (
-                            <span className="ml-auto text-[11px] font-bold text-emerald-600">selected</span>
+                            <span className="ml-auto text-[11px] font-bold text-emerald-600">{t("orders.selectedBadge")}</span>
                           )}
                         </button>
                       ))}
@@ -1843,13 +1846,13 @@ export function Atelier() {
                         poNumber: bpo.trim() ? bpo.trim() + suffix : p.poNumber,
                       }));
                     }}
-                    placeholder="Type a new buyer PO or select above"
+                    placeholder={t("orders.typeNewBuyerPo")}
                     className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors font-mono"/>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                    Supplier PO <span className="text-red-500">*</span>
-                    <span className="text-[#9E9FAE] font-normal ml-1">(auto-derived from buyer PO + suffix, override below)</span>
+                    {t("orders.supplierPoLabel")} <span className="text-red-500">*</span>
+                    <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.supplierPoHint")}</span>
                   </label>
                   <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
                     placeholder={newPOForm.buyerPoNumber ? newPOForm.buyerPoNumber + (poConfig?.supplierSuffix ?? "S") : "e.g. PO-0001S"}
@@ -1865,7 +1868,7 @@ export function Atelier() {
 
           {/* Product */}
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Product Description <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.productDescription")} <span className="text-red-500">*</span></label>
             <input value={newPOForm.product} onChange={e => setNewPOForm(p => ({ ...p, product: e.target.value }))}
               placeholder="e.g. Chrome Retail Hanger — Heavy Duty Top"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
@@ -1874,13 +1877,13 @@ export function Atelier() {
           {/* Category + Via */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Category <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.categoryLabel")} <span className="text-red-500">*</span></label>
               <input value={newPOForm.category} onChange={e => setNewPOForm(p => ({ ...p, category: e.target.value }))}
                 placeholder="e.g. Hangers"
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Shipping via</label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.shippingVia")}</label>
               <select value={newPOForm.via} onChange={e => setNewPOForm(p => ({ ...p, via: e.target.value }))}
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors bg-white">
                 <option value="OCEAN">Ocean</option>
@@ -1894,8 +1897,8 @@ export function Atelier() {
           {/* Buyer */}
           <div>
             <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-              Buyer <span className="text-red-500">*</span>
-              <span className="text-[#9E9FAE] font-normal ml-1">— type to add a new buyer</span>
+              {t("orders.buyerLabel")} <span className="text-red-500">*</span>
+              <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.buyerHint")}</span>
             </label>
             <input value={newPOForm.customerName} onChange={e => setNewPOForm(p => ({ ...p, customerName: e.target.value }))}
               list="buyer-options-new" placeholder="e.g. Marlowe & Sons"
@@ -1908,8 +1911,8 @@ export function Atelier() {
           {/* Supplier combobox */}
           <div>
             <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-              Supplier <span className="text-red-500">*</span>
-              <span className="text-[#9E9FAE] font-normal ml-1">— type to search or add a new one</span>
+              {t("orders.supplierLabel")} <span className="text-red-500">*</span>
+              <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.supplierHint")}</span>
             </label>
             <div className="relative">
               <input
@@ -1936,7 +1939,7 @@ export function Atelier() {
                     return (
                       <>
                         {filtered.length === 0 && !supplierQuery.trim() && (
-                          <div className="px-3 py-2.5 text-sm text-[#9E9FAE]">Start typing to search…</div>
+                          <div className="px-3 py-2.5 text-sm text-[#9E9FAE]">{t("orders.startTypingSearch")}</div>
                         )}
                         {filtered.map(s => (
                           <button key={s.id} onMouseDown={() => {
@@ -1955,7 +1958,7 @@ export function Atelier() {
                               setNewPOForm(p => ({ ...p, supplierId: String(created.id) }));
                               setSupplierOpen(false);
                             } catch {
-                              setNewPOError("Failed to create supplier.");
+                              setNewPOError(t("orders.errCreateSupplierFailed"));
                             }
                           }} className="w-full text-left px-3 py-2 text-sm text-[#9000FF] hover:bg-[#9000FF]/5 flex items-center gap-1.5 border-t border-[#E5EAF0]">
                             <Plus className="w-3.5 h-3.5 shrink-0"/>
@@ -1971,7 +1974,7 @@ export function Atelier() {
             {createSupplierMutation.isPending && (
               <p className="text-xs text-[#9000FF] mt-1 flex items-center gap-1">
                 <span className="w-2.5 h-2.5 border border-[#9000FF]/40 border-t-[#9000FF] rounded-full animate-spin"/>
-                Creating supplier…
+                {t("orders.creatingSupplier")}
               </p>
             )}
           </div>
@@ -1979,12 +1982,12 @@ export function Atelier() {
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Ex-Factory Date <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.exFactoryDate")} <span className="text-red-500">*</span></label>
               <input type="date" value={newPOForm.exFactoryDate} onChange={e => setNewPOForm(p => ({ ...p, exFactoryDate: e.target.value }))}
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Delivery Due Date <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.deliveryDueDate")} <span className="text-red-500">*</span></label>
               <input type="date" value={newPOForm.dueDate} onChange={e => setNewPOForm(p => ({ ...p, dueDate: e.target.value }))}
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
             </div>
@@ -1992,7 +1995,7 @@ export function Atelier() {
 
           {/* Destination */}
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.destinationLabel")} <span className="text-red-500">*</span></label>
             <input value={newPOForm.destination} onChange={e => setNewPOForm(p => ({ ...p, destination: e.target.value }))}
               placeholder="e.g. Los Angeles, CA"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
@@ -2001,13 +2004,13 @@ export function Atelier() {
           {/* Quantity + Unit Cost */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Quantity <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.labelQuantity")} <span className="text-[#9E9FAE] font-normal">{t("orders.optionalSuffix")}</span></label>
               <input type="number" min="1" value={newPOForm.quantity} onChange={e => setNewPOForm(p => ({ ...p, quantity: e.target.value }))}
                 placeholder="e.g. 5000"
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Unit Cost (USD) <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.unitCostUsd")} <span className="text-[#9E9FAE] font-normal">{t("orders.optionalSuffix")}</span></label>
               <input type="number" min="0" value={newPOForm.unitCostUsd} onChange={e => setNewPOForm(p => ({ ...p, unitCostUsd: e.target.value }))}
                 placeholder="e.g. 4"
                 className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
@@ -2015,7 +2018,7 @@ export function Atelier() {
           </div>
           {newPOForm.quantity && newPOForm.unitCostUsd && (
             <div className="flex items-center gap-1.5 text-xs text-[#5E687B] bg-[#F7F9FA] rounded-md px-3 py-2">
-              <span className="font-medium">Supplier total:</span>
+              <span className="font-medium">{t("orders.supplierTotal")}</span>
               <span className="text-[#212833] font-semibold">${(Number(newPOForm.quantity) * Number(newPOForm.unitCostUsd)).toLocaleString()}</span>
             </div>
           )}
@@ -2023,18 +2026,18 @@ export function Atelier() {
           {/* Buyer Price (for spread tracking) */}
           <div>
             <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-              Buyer Price <span className="text-[#9E9FAE] font-normal">(optional — sets your spread for this PO)</span>
+              {t("orders.buyerPriceLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.buyerPriceOptional")}</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-[#5E687B] mb-1">Buyer Unit Price (USD)</label>
+                <label className="block text-xs text-[#5E687B] mb-1">{t("orders.buyerUnitPriceUsd")}</label>
                 <input type="number" min="0" step="0.01" value={newPOForm.buyerUnitPrice}
                   onChange={e => setNewPOForm(p => ({ ...p, buyerUnitPrice: e.target.value }))}
                   placeholder="e.g. 6.50"
                   className="w-full border border-[#E5EAF0] rounded-md px-2 py-1.5 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors"/>
               </div>
               <div>
-                <label className="block text-xs text-[#5E687B] mb-1">Buyer Quantity</label>
+                <label className="block text-xs text-[#5E687B] mb-1">{t("orders.buyerQuantityLabel")}</label>
                 <input type="number" min="1" value={newPOForm.buyerQuantity}
                   onChange={e => setNewPOForm(p => ({ ...p, buyerQuantity: e.target.value }))}
                   placeholder="e.g. 5000"
@@ -2050,8 +2053,8 @@ export function Atelier() {
               return (
                 <div className={`mt-1.5 flex items-center gap-1.5 text-xs bg-[#F7F9FA] rounded-md px-3 py-2 ${spreadCls}`}>
                   <DollarSign className="w-3 h-3 shrink-0"/>
-                  <span className="font-semibold">Your spread: {spreadPct.toFixed(1)}% · ${Math.round(spreadUsd).toLocaleString()}</span>
-                  <span className="text-[#9E9FAE] font-normal ml-1">(buyer ${buyerTotal.toLocaleString()} − supplier ${supplierTotal.toLocaleString()})</span>
+                  <span className="font-semibold">{t("orders.yourSpread")} {spreadPct.toFixed(1)}% · ${Math.round(spreadUsd).toLocaleString()}</span>
+                  <span className="text-[#9E9FAE] font-normal ml-1">({t("orders.buyerLabel")} ${buyerTotal.toLocaleString()} − {t("orders.supplierLabel")} ${supplierTotal.toLocaleString()})</span>
                 </div>
               );
             })()}
@@ -2061,12 +2064,12 @@ export function Atelier() {
           {editingShipmentId === null && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-[#5E687B]">Payment Milestones</label>
+              <label className="block text-xs font-semibold text-[#5E687B]">{t("orders.paymentMilestones")}</label>
               {milestones.length < 3 && (
                 <button type="button"
                   onClick={() => setMilestones(prev => [...prev, { label: "Milestone", percent: "0", dueDate: "" }])}
                   className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] flex items-center gap-0.5 transition-colors">
-                  <Plus className="w-3 h-3"/>Add row
+                  <Plus className="w-3 h-3"/>{t("orders.addRow")}
                 </button>
               )}
             </div>
@@ -2106,9 +2109,9 @@ export function Atelier() {
             {(() => {
               const total = milestones.reduce((s, m) => s + (Number(m.percent) || 0), 0);
               return total !== 100 ? (
-                <p className="text-xs text-amber-600 mt-1.5">Percentages sum to {total}% — must equal 100% to save.</p>
+                <p className="text-xs text-amber-600 mt-1.5">{t("orders.percentagesSumWarning", { total })}</p>
               ) : (
-                <p className="text-xs text-emerald-600 mt-1.5">✓ Percentages sum to 100%</p>
+                <p className="text-xs text-emerald-600 mt-1.5">{t("orders.percentagesSumOk")}</p>
               );
             })()}
             {milestonesError && (
@@ -2119,7 +2122,7 @@ export function Atelier() {
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Notes <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.notesLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.optionalSuffix")}</span></label>
             <textarea value={newPOForm.notes} onChange={e => setNewPOForm(p => ({ ...p, notes: e.target.value }))}
               rows={2}
               placeholder="e.g. Verbal order from buyer call on May 20 — confirmed by email"
@@ -2133,23 +2136,23 @@ export function Atelier() {
 
         <DialogFooter className="gap-2">
           <button onClick={resetNewPO} className="px-4 py-2 text-sm text-[#5E687B] hover:text-[#212833] transition-colors">
-            Cancel
+            {t("common.cancel")}
           </button>
           {editingShipmentId !== null ? (
             <button onClick={submitEditPO}
               disabled={updateShipmentMutation.isPending || createSupplierMutation.isPending}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
               {(updateShipmentMutation.isPending || createSupplierMutation.isPending)
-                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Saving…</>
-                : <>Save Changes</>}
+                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>{t("orders.savingEllipsis")}</>
+                : <>{t("orders.saveChanges")}</>}
             </button>
           ) : (
             <button onClick={submitNewPO}
               disabled={createShipmentMutation.isPending || createSupplierMutation.isPending}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
               {(createShipmentMutation.isPending || createSupplierMutation.isPending)
-                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>Creating…</>
-                : <><Plus className="w-3.5 h-3.5"/>Create PO{newPOFile ? " + upload doc" : ""}</>}
+                ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"/>{t("orders.creatingEllipsis")}</>
+                : <><Plus className="w-3.5 h-3.5"/>{t("orders.createPo")}{newPOFile ? ` + ${t("orders.uploadDoc")}` : ""}</>}
             </button>
           )}
         </DialogFooter>

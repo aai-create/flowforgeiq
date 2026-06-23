@@ -1,37 +1,37 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X } from "lucide-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe } from "lucide-react";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
 import { useUserPref } from "@/lib/useUserPref";
 import type { Stage } from "@workspace/api-client-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 
 type SettingsTab = "general" | "pipeline" | "channels" | "team";
 
 function BeeperSection() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <div className="border border-[#E5EAF0] rounded-lg overflow-hidden mb-5">
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center justify-between px-3.5 py-3 bg-[#FAFBFC] hover:bg-[#F0F4F8] transition-colors text-left">
         <div className="flex items-center gap-2">
           <Zap className="w-3.5 h-3.5 text-[#9000FF]"/>
-          <span className="text-xs font-semibold text-[#212833]">Upgrade to full automation</span>
+          <span className="text-xs font-semibold text-[#212833]">{t("settings.channels.upgradeTitle")}</span>
           <span className="text-[9px] font-bold bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/15 px-1.5 py-0.5 rounded-full">Beeper</span>
         </div>
         {open ? <ChevronDown className="w-3.5 h-3.5 text-[#9E9FAE]"/> : <ChevronRight className="w-3.5 h-3.5 text-[#9E9FAE]"/>}
       </button>
       {open && (
         <div className="px-3.5 py-3 border-t border-[#E5EAF0] bg-white space-y-2.5">
-          <p className="text-[11px] text-[#5E687B] leading-relaxed">
-            The paste-to-process flow requires manual copying. Connect <strong className="text-[#212833]">Beeper</strong> to
-            receive WhatsApp and iMessage chats automatically — no copy-paste needed.
-          </p>
+          <p className="text-[11px] text-[#5E687B] leading-relaxed">{t("settings.channels.beeperDesc")}</p>
           <ul className="space-y-1.5">
-            {[
-              "Real-time ingest — messages arrive the moment they're sent",
-              "Works with WhatsApp Business, iMessage, WeChat, and SMS",
-              "Uses the same AI extraction pipeline as paste-to-process",
-            ].map(item => (
+            {([
+              t("settings.channels.beeperFeature1"),
+              t("settings.channels.beeperFeature2"),
+              t("settings.channels.beeperFeature3"),
+            ] as string[]).map(item => (
               <li key={item} className="flex items-start gap-1.5 text-[11px] text-[#5E687B]">
                 <Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5"/>
                 {item}
@@ -41,7 +41,7 @@ function BeeperSection() {
           <a href="https://beeper.com/desktop-api" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#9000FF] hover:text-[#7A00D9] transition-colors">
             <ExternalLink className="w-3 h-3"/>
-            Learn about Beeper Desktop API
+            {t("settings.channels.learnBeeper")}
           </a>
         </div>
       )}
@@ -73,6 +73,7 @@ interface TeamInvitation {
 }
 
 function TeamSection() {
+  const { t } = useTranslation();
   const { user } = useUser();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
@@ -97,7 +98,7 @@ function TeamSection() {
       const me = data.members.find(m => m.clerkUserId === user?.id);
       if (me) setMyRole(me.role);
     } catch {
-      setError("Could not load team data.");
+      setError(t("settings.team.couldNotLoad"));
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ function TeamSection() {
 
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !inviteEmail.includes("@")) {
-      setError("Enter a valid email address.");
+      setError(t("settings.team.inviteError"));
       return;
     }
     setInviting(true);
@@ -118,26 +119,26 @@ function TeamSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
       });
-      if (res.status === 403) { setError("Only admins can invite team members."); return; }
+      if (res.status === 403) { setError(t("settings.team.adminOnly")); return; }
       if (!res.ok) throw new Error("Failed");
       const data = await res.json() as { inviteUrl: string };
       setInviteResult({ url: data.inviteUrl });
       setInviteEmail("");
       void loadTeam();
     } catch {
-      setError("Failed to send invite. Please try again.");
+      setError(t("settings.team.failed"));
     } finally {
       setInviting(false);
     }
   };
 
   const handleRemove = async (clerkUserId: string) => {
-    if (!confirm("Remove this team member?")) return;
+    if (!confirm(t("settings.team.removeConfirm"))) return;
     try {
       await fetch(`${basePath}api/team/${clerkUserId}`, { method: "DELETE" });
       void loadTeam();
     } catch {
-      setError("Failed to remove member.");
+      setError(t("settings.team.removeError"));
     }
   };
 
@@ -146,7 +147,7 @@ function TeamSection() {
       await fetch(`${basePath}api/team/invitations/${id}`, { method: "DELETE" });
       void loadTeam();
     } catch {
-      setError("Failed to cancel invitation.");
+      setError(t("settings.team.cancelFailed"));
     }
   };
 
@@ -160,7 +161,7 @@ function TeamSection() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-xs text-[#9E9FAE] py-4">
-        <RefreshCw className="w-3 h-3 animate-spin" /> Loading team…
+        <RefreshCw className="w-3 h-3 animate-spin" /> {t("common.loadingTeam")}
       </div>
     );
   }
@@ -177,11 +178,11 @@ function TeamSection() {
       <div className="bg-white border border-[#E5EAF0] rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
           <Users className="w-3.5 h-3.5 text-[#9000FF]" />
-          <span className="text-xs font-bold text-[#212833]">Team members</span>
+          <span className="text-xs font-bold text-[#212833]">{t("settings.team.members")}</span>
           <span className="ml-auto text-[10px] font-bold bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full">{members.length}</span>
         </div>
         {members.length === 0 ? (
-          <div className="px-4 py-6 text-center text-xs text-[#9E9FAE]">No members yet.</div>
+          <div className="px-4 py-6 text-center text-xs text-[#9E9FAE]">{t("settings.team.noMembers")}</div>
         ) : (
           <ul className="divide-y divide-[#E5EAF0]">
             {members.map(m => (
@@ -195,7 +196,7 @@ function TeamSection() {
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-[#212833] truncate">{m.name}</span>
                     {m.clerkUserId === user?.id && (
-                      <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/15 px-1 py-0.5 rounded-full">You</span>
+                      <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/8 border border-[#9000FF]/15 px-1 py-0.5 rounded-full">{t("common.you")}</span>
                     )}
                   </div>
                   <div className="text-[10px] text-[#9E9FAE] truncate">{m.email}</div>
@@ -229,7 +230,7 @@ function TeamSection() {
         <div className="bg-white border border-[#E5EAF0] rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
             <UserPlus className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-xs font-bold text-[#212833]">Pending invitations</span>
+            <span className="text-xs font-bold text-[#212833]">{t("settings.team.pendingInvites")}</span>
             <span className="ml-auto text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded-full">{pendingInvitations.length}</span>
           </div>
           <ul className="divide-y divide-[#E5EAF0]">
@@ -238,7 +239,7 @@ function TeamSection() {
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-[#212833] truncate">{inv.email}</div>
                   <div className="text-[10px] text-[#9E9FAE]">
-                    Invited as <span className="font-medium">{inv.role}</span>
+                    {t("settings.team.invitedAs")} <span className="font-medium">{inv.role}</span>
                     {" · "}
                     {new Date(inv.createdAt).toLocaleDateString()}
                   </div>
@@ -249,7 +250,7 @@ function TeamSection() {
                     className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium border border-[#E5EAF0] rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors"
                   >
                     <Copy className="w-2.5 h-2.5" />
-                    Copy link
+                    {t("settings.team.copyLink")}
                   </button>
                   {myRole === "admin" && (
                     <button
@@ -271,18 +272,16 @@ function TeamSection() {
         <div className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Plus className="w-3.5 h-3.5 text-[#9000FF]" />
-            <h3 className="text-xs font-bold text-[#212833]">Invite a colleague</h3>
+            <h3 className="text-xs font-bold text-[#212833]">{t("settings.team.inviteTitle")}</h3>
           </div>
-          <p className="text-[11px] text-[#5E687B] mb-4 leading-relaxed">
-            Enter their email address and share the invite link. They'll need to create an account or sign in with the same email.
-          </p>
+          <p className="text-[11px] text-[#5E687B] mb-4 leading-relaxed">{t("settings.team.inviteDesc")}</p>
           <div className="flex gap-2 mb-3">
             <input
               type="email"
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
               onKeyDown={e => e.key === "Enter" && void handleInvite()}
-              placeholder="colleague@company.com"
+              placeholder={t("settings.team.emailPlaceholder")}
               className="flex-1 border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"
             />
             <select
@@ -290,8 +289,8 @@ function TeamSection() {
               onChange={e => setInviteRole(e.target.value as "admin" | "member")}
               className="border border-[#E5EAF0] rounded-md px-2.5 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] bg-white"
             >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
+              <option value="member">{t("settings.team.roleMember")}</option>
+              <option value="admin">{t("settings.team.roleAdmin")}</option>
             </select>
           </div>
           <button
@@ -299,14 +298,14 @@ function TeamSection() {
             disabled={inviting}
             className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors"
           >
-            {inviting ? <><RefreshCw className="w-3 h-3 animate-spin" />Sending…</> : <><UserPlus className="w-3 h-3" />Generate invite link</>}
+            {inviting ? <><RefreshCw className="w-3 h-3 animate-spin" />{t("settings.team.inviting")}</> : <><UserPlus className="w-3 h-3" />{t("settings.team.sendInvite")}</>}
           </button>
 
           {inviteResult && (
             <div className="mt-4 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Invite link created</div>
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">{t("settings.team.inviteLink")}</div>
               <p className="text-[11px] text-[#5E687B] mb-2">
-                Share this link with your colleague. It grants them access to FlowForgeIQ as a <strong>{inviteRole}</strong>.
+                {t("settings.team.inviteLinkDesc")} <strong>{t(inviteRole === "admin" ? "settings.team.roleAdmin" : "settings.team.roleMember")}</strong>.
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-[10px] font-mono text-[#212833] bg-white border border-[#E5EAF0] rounded px-2 py-1.5 truncate">
@@ -316,7 +315,7 @@ function TeamSection() {
                   onClick={() => copyInviteLink(inviteResult.url)}
                   className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white transition-colors shrink-0"
                 >
-                  {copied ? <><Check className="w-3 h-3 text-emerald-500" />Copied!</> : <><Copy className="w-3 h-3" />Copy</>}
+                  {copied ? <><Check className="w-3 h-3 text-emerald-500" />{t("common.copied")}</> : <><Copy className="w-3 h-3" />{t("settings.team.copyTeamLink")}</>}
                 </button>
               </div>
             </div>
@@ -326,9 +325,7 @@ function TeamSection() {
 
       {myRole !== "admin" && (
         <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-4 text-center">
-          <p className="text-[11px] text-[#9E9FAE]">
-            Only admins can invite and remove team members. Contact your admin to make changes.
-          </p>
+          <p className="text-[11px] text-[#9E9FAE]">{t("settings.team.adminOnly")}</p>
         </div>
       )}
     </div>
@@ -336,6 +333,7 @@ function TeamSection() {
 }
 
 function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation();
   const { data: stages = [], refetch } = useListStages();
   const createStage = useCreateStage();
   const updateStage = useUpdateStage();
@@ -375,7 +373,7 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
       await reorderStages.mutateAsync({ data: { stageIds: updated.map(s => s.id) } });
       void refetch();
     } catch {
-      setError("Failed to save new order.");
+      setError(t("settings.pipeline.failedOrder"));
       void refetch();
     }
   };
@@ -393,7 +391,7 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
       await updateStage.mutateAsync({ id, data: { label: editLabel.trim() } });
       void refetch();
     } catch {
-      setError("Failed to rename stage.");
+      setError(t("settings.pipeline.failedRename"));
     } finally {
       setSaving(false);
       setEditingId(null);
@@ -409,9 +407,9 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
       const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
       if (status === 409) {
         const data = (e as { data?: { error?: string } }).data;
-        setError(data?.error ?? "Cannot delete: shipments are currently at this stage.");
+        setError(data?.error ?? t("settings.pipeline.failedDelete"));
       } else {
-        setError("Failed to delete stage.");
+        setError(t("settings.pipeline.failedDeleteGeneric"));
       }
     }
   };
@@ -427,7 +425,7 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
       setNewLabel("");
       setAddingNew(false);
     } catch {
-      setError("Failed to create stage. The ID may already exist.");
+      setError(t("settings.pipeline.failedCreate"));
     } finally {
       setSaving(false);
     }
@@ -437,15 +435,13 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
     <section className="bg-white border border-[#E5EAF0] rounded-xl shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-[#E5EAF0] flex items-center gap-2">
         <GitBranch className="w-3.5 h-3.5 text-[#9000FF]" />
-        <span className="text-xs font-bold text-[#212833]">Pipeline stages</span>
+        <span className="text-xs font-bold text-[#212833]">{t("settings.pipeline.titleHeader")}</span>
         <span className="ml-auto text-[10px] font-bold bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full">{localStages.length}</span>
       </div>
 
       <div className="px-4 py-3 border-b border-[#E5EAF0] bg-[#FAFBFC]">
         <p className="text-[11px] text-[#5E687B] leading-relaxed">
-          {isAdmin
-            ? "Drag to reorder stages, click the pencil to rename, or use the delete button. Stages with active shipments cannot be deleted."
-            : "Your organisation's pipeline stages. Contact an admin to make changes."}
+          {isAdmin ? t("settings.pipeline.adminDesc") : t("settings.pipeline.memberDesc")}
         </p>
       </div>
 
@@ -520,7 +516,7 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
                   if (e.key === "Enter") void handleAddStage();
                   if (e.key === "Escape") { setAddingNew(false); setNewLabel(""); }
                 }}
-                placeholder="New stage name…"
+                placeholder={t("settings.pipeline.newStagePlaceholder")}
                 disabled={saving}
                 className="flex-1 border border-[#9000FF] rounded-md px-3 py-1.5 text-xs text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:ring-1 focus:ring-[#9000FF]/20"
               />
@@ -530,7 +526,7 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors"
               >
                 {saving ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                Add
+                {t("common.add")}
               </button>
               <button
                 onClick={() => { setAddingNew(false); setNewLabel(""); }}
@@ -545,7 +541,7 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
               className="flex items-center gap-1.5 text-xs font-semibold text-[#9000FF] hover:text-[#7A00D9] transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add stage
+              {t("settings.pipeline.addStage")}
             </button>
           )}
         </div>
@@ -556,24 +552,22 @@ function PipelineSection({ isAdmin }: { isAdmin: boolean }) {
 
 type LandingPagePref = "inbox" | "orders" | "risk-radar";
 
-const LANDING_PAGE_OPTIONS: { value: LandingPagePref; label: string; description: string }[] = [
-  { value: "inbox", label: "Inbox", description: "Unified message feed across all suppliers and channels" },
-  { value: "orders", label: "Orders", description: "Shipments grid with PO tracking and spread badges" },
-  { value: "risk-radar", label: "Risk Radar", description: "At-a-glance risk scores across all active shipments" },
-];
-
 function DefaultLandingPageSection() {
+  const { t } = useTranslation();
   const [pref, setPref] = useUserPref<LandingPagePref>("defaultLandingPage", "inbox");
+
+  const landingPageOptions: { value: LandingPagePref; label: string; description: string }[] = [
+    { value: "inbox",      label: t("landingPage.inbox"),      description: t("landingPage.inboxDesc") },
+    { value: "orders",     label: t("landingPage.orders"),     description: t("landingPage.ordersDesc") },
+    { value: "risk-radar", label: t("landingPage.riskRadar"),  description: t("landingPage.riskRadarDesc") },
+  ];
 
   return (
     <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-[#212833] mb-1">Default landing page</h2>
-      <p className="text-xs text-[#5E687B] mb-4 leading-relaxed">
-        Choose which page opens when you sign in or visit the root URL.
-        The setting takes effect immediately.
-      </p>
+      <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.general.landingPage")}</h2>
+      <p className="text-xs text-[#5E687B] mb-4 leading-relaxed">{t("settings.general.landingPageDesc")}</p>
       <div className="space-y-2">
-        {LANDING_PAGE_OPTIONS.map(opt => (
+        {landingPageOptions.map(opt => (
           <label
             key={opt.value}
             className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -604,6 +598,7 @@ function DefaultLandingPageSection() {
 }
 
 export function Settings() {
+  const { t, i18n: i18nHook } = useTranslation();
   const { data: config, isLoading } = useGetPoNumberingConfig();
   const updateMutation = useUpdatePoNumberingConfig();
   const { data: inboundEmailData } = useGetInboundEmailAddress();
@@ -663,10 +658,10 @@ export function Settings() {
   };
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-    { id: "general", label: "General", icon: <Settings2 className="w-3.5 h-3.5" /> },
-    { id: "pipeline", label: "Pipeline", icon: <GitBranch className="w-3.5 h-3.5" /> },
-    { id: "channels", label: "Chat Channels", icon: <MessageCircle className="w-3.5 h-3.5" /> },
-    { id: "team", label: "Team", icon: <Users className="w-3.5 h-3.5" /> },
+    { id: "general",  label: t("settings.tabs.general"),  icon: <Settings2 className="w-3.5 h-3.5" /> },
+    { id: "pipeline", label: t("settings.tabs.pipeline"), icon: <GitBranch className="w-3.5 h-3.5" /> },
+    { id: "channels", label: t("settings.tabs.channels"), icon: <MessageCircle className="w-3.5 h-3.5" /> },
+    { id: "team",     label: t("settings.tabs.team"),     icon: <Users className="w-3.5 h-3.5" /> },
   ];
 
   return (
@@ -676,7 +671,7 @@ export function Settings() {
         <div className="h-12 border-b border-[#E5EAF0] flex items-center px-6 shrink-0 bg-white justify-between">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-[#9000FF]" />
-            <h1 className="text-sm font-bold text-[#212833]">Settings</h1>
+            <h1 className="text-sm font-bold text-[#212833]">{t("settings.title")}</h1>
           </div>
           {user && (
             <div className="flex items-center gap-3">
@@ -693,7 +688,7 @@ export function Settings() {
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] rounded-md transition-colors"
               >
                 <LogOut className="w-3 h-3" />
-                Sign out
+                {t("common.signOut")}
               </button>
             </div>
           )}
@@ -722,30 +717,53 @@ export function Settings() {
 
             {activeTab === "general" && (
               <>
+              {/* Language section */}
+              <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#212833] mb-1 flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-[#9000FF]" />
+                  {t("settings.general.language")}
+                </h2>
+                <p className="text-xs text-[#5E687B] mb-4 leading-relaxed">{t("settings.general.languageDesc")}</p>
+                <div className="flex gap-2 flex-wrap">
+                  {(["en", "zh-CN", "zh-TW"] as const).map((lang) => {
+                    const active = i18nHook.language === lang;
+                    const label = t(`settings.general.lang${lang === "en" ? "En" : lang === "zh-CN" ? "ZhCN" : "ZhTW"}`);
+                    return (
+                      <button
+                        key={lang}
+                        onClick={() => void i18n.changeLanguage(lang)}
+                        className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                          active
+                            ? "border-[#9000FF] bg-[#9000FF]/8 text-[#9000FF]"
+                            : "border-[#E5EAF0] text-[#5E687B] hover:border-[#9000FF] hover:text-[#9000FF]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
               <DefaultLandingPageSection />
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
-                <h2 className="text-sm font-bold text-[#212833] mb-1">PO Numbering Scheme</h2>
-                <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
-                  Configure how buyer-facing and supplier-facing PO numbers are generated.
-                  Both sides share the same prefix and sequence; the supplier PO gets an extra suffix to distinguish
-                  the two sides of each deal.
-                </p>
+                <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.general.poNumbering")}</h2>
+                <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">{t("settings.general.poNumberingDesc")}</p>
 
                 {isLoading ? (
                   <div className="flex items-center gap-2 text-xs text-[#9E9FAE]">
-                    <RefreshCw className="w-3 h-3 animate-spin" /> Loading…
+                    <RefreshCw className="w-3 h-3 animate-spin" /> {t("common.loading")}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-[#5E687B] mb-1">Prefix</label>
+                        <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("settings.general.prefix")}</label>
                         <input value={prefix} onChange={e => setPrefix(e.target.value)}
                           placeholder="PO-"
                           className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier suffix</label>
+                        <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("settings.general.supplierSuffix")}</label>
                         <input value={supplierSuffix} onChange={e => setSupplierSuffix(e.target.value)}
                           placeholder="S"
                           className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
@@ -754,24 +772,24 @@ export function Settings() {
 
                     <div>
                       <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                        Sequence format
+                        {t("settings.general.sequenceFormat")}
                         <span className="text-[#9E9FAE] font-normal ml-1">
-                          — use <code className="font-mono bg-[#F0F4F8] px-1 rounded text-[11px]">{"{seq}"}</code> as the counter placeholder
+                          {t("settings.general.seqHint", { placeholder: "{seq}" })}
                         </span>
                       </label>
                       <input value={sequenceFormat} onChange={e => setSequenceFormat(e.target.value)}
                         placeholder="{seq}"
                         className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors font-mono" />
                       <p className="text-[10px] text-[#9E9FAE] mt-1">
-                        Examples: <code className="font-mono">{"{seq}"}</code> → 0001 &nbsp;·&nbsp;
+                        {t("settings.general.seqExamples")} <code className="font-mono">{"{seq}"}</code> → 0001 &nbsp;·&nbsp;
                         <code className="font-mono">2026-{"{seq}"}</code> → 2026-0001
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                        Reset counter to
-                        <span className="text-[#9E9FAE] font-normal ml-1">(optional — leave blank to keep the current counter)</span>
+                        {t("settings.general.resetCounter")}
+                        <span className="text-[#9E9FAE] font-normal ml-1">({t("settings.general.resetCounterHint")})</span>
                       </label>
                       <input type="number" min="1" value={resetSeq} onChange={e => setResetSeq(e.target.value)}
                         placeholder={String(config?.nextSeq ?? 1)}
@@ -781,25 +799,24 @@ export function Settings() {
                     <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
                       <div className="flex items-center gap-1.5 mb-2.5">
                         <Eye className="w-3 h-3 text-[#9000FF]" />
-                        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Live preview — next PO pair</span>
+                        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("settings.general.livePreview")}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Buyer PO (buyer → trader)</div>
+                          <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">{t("settings.general.buyerPo")}</div>
                           <code className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
                             {preview.buyerPo}
                           </code>
                         </div>
                         <div>
-                          <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Supplier PO (trader → supplier)</div>
+                          <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">{t("settings.general.supplierPo")}</div>
                           <code className="text-sm font-mono font-bold text-[#9000FF] bg-[#9000FF]/8 px-2 py-0.5 rounded border border-[#9000FF]/20">
                             {preview.supplierPo}
                           </code>
                         </div>
                       </div>
                       <p className="text-[10px] text-[#9E9FAE] mt-2.5">
-                        Counter is currently at <strong className="text-[#5E687B]">{config?.nextSeq ?? "—"}</strong>.
-                        It advances by 1 each time you use "Auto-fill" in the New PO form.
+                        {t("settings.general.counterAt", { seq: config?.nextSeq ?? "—" })}
                       </p>
                     </div>
 
@@ -808,10 +825,10 @@ export function Settings() {
                         disabled={updateMutation.isPending}
                         className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] disabled:opacity-60 rounded-md transition-colors">
                         {updateMutation.isPending
-                          ? <><RefreshCw className="w-3 h-3 animate-spin" />Saving…</>
+                          ? <><RefreshCw className="w-3 h-3 animate-spin" />{t("common.saving")}</>
                           : saved
-                            ? <><span className="text-emerald-300">✓</span> Saved!</>
-                            : <><Save className="w-3 h-3" />Save settings</>}
+                            ? <><span className="text-emerald-300">✓</span> {t("common.saved")}</>
+                            : <><Save className="w-3 h-3" />{t("settings.general.saveSettings")}</>}
                       </button>
                     </div>
                   </div>
@@ -823,12 +840,10 @@ export function Settings() {
             {activeTab === "pipeline" && (
               <div>
                 <div className="mb-4">
-                  <h2 className="text-sm font-bold text-[#212833] mb-1">Pipeline stages</h2>
+                  <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.pipeline.title")}</h2>
                   <p className="text-xs text-[#5E687B] leading-relaxed">
-                    Define the stages shipments move through from factory quote to delivery.
-                    {myRole === "admin"
-                      ? " Drag to reorder, click the pencil to rename, add new stages, or remove ones that are no longer used."
-                      : " Contact an admin to make changes."}
+                    {t("settings.pipeline.desc")}
+                    {myRole === "admin" ? t("settings.pipeline.descAdmin") : t("settings.pipeline.descMember")}
                   </p>
                 </div>
                 <PipelineSection isAdmin={myRole === "admin"} />
@@ -837,26 +852,22 @@ export function Settings() {
 
             {activeTab === "channels" && (
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
-                <h2 className="text-sm font-bold text-[#212833] mb-1">Chat Channels</h2>
-                <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
-                  Ingest WhatsApp, WeChat, iMessage, and SMS messages into FlowForgeIQ. Use the
-                  paste-to-process button (<span className="font-mono text-[11px] bg-[#F0F4F8] px-1 rounded">clipboard icon</span>) in the inbox toolbar,
-                  or forward chat exports directly to the inbound email address below.
-                </p>
+                <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.channels.title")}</h2>
+                <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">{t("settings.channels.desc")}</p>
 
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  {[
-                    { name: "WhatsApp", icon: <MessageCircle className="w-4 h-4 text-emerald-500"/>, desc: "Paste or forward WhatsApp exports" },
-                    { name: "WeChat", icon: <MessageSquare className="w-4 h-4 text-teal-500"/>, desc: "Paste WeChat chat history" },
-                    { name: "iMessage", icon: <MessageCircle className="w-4 h-4 text-blue-400"/>, desc: "Forward or paste iMessage threads" },
-                    { name: "SMS", icon: <Smartphone className="w-4 h-4 text-slate-400"/>, desc: "Paste SMS message exports" },
-                  ].map(ch => (
+                  {([
+                    { name: "WhatsApp", icon: <MessageCircle className="w-4 h-4 text-emerald-500"/>, desc: t("settings.channels.whatsappDesc") },
+                    { name: "WeChat",   icon: <MessageSquare className="w-4 h-4 text-teal-500"/>,   desc: t("settings.channels.wechatDesc") },
+                    { name: "iMessage", icon: <MessageCircle className="w-4 h-4 text-blue-400"/>,   desc: t("settings.channels.imessageDesc") },
+                    { name: "SMS",      icon: <Smartphone className="w-4 h-4 text-slate-400"/>,     desc: t("settings.channels.smsDesc") },
+                  ] as { name: string; icon: React.ReactNode; desc: string }[]).map(ch => (
                     <div key={ch.name} className="flex items-start gap-3 p-3 border border-[#E5EAF0] rounded-lg">
                       <div className="w-7 h-7 rounded-md bg-[#F0F4F8] flex items-center justify-center shrink-0">{ch.icon}</div>
                       <div>
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <span className="text-xs font-semibold text-[#212833]">{ch.name}</span>
-                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 rounded-full">Active</span>
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 rounded-full">{t("common.active")}</span>
                         </div>
                         <p className="text-[10px] text-[#9E9FAE]">{ch.desc}</p>
                       </div>
@@ -869,11 +880,9 @@ export function Settings() {
                 <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Mail className="w-3 h-3 text-[#9000FF]"/>
-                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Your personal inbound address</span>
+                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("settings.channels.inboundAddress")}</span>
                   </div>
-                  <p className="text-[10px] text-[#9E9FAE] mb-2.5">
-                    Forward supplier emails or paste chat exports to this address. Each team member gets a unique address so emails route directly to your inbox.
-                  </p>
+                  <p className="text-[10px] text-[#9E9FAE] mb-2.5">{t("settings.channels.inboundDesc")}</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 font-mono text-sm font-semibold text-[#212833] bg-white border border-[#E5EAF0] rounded-md px-3 py-1.5 truncate">
                       {inboundEmail}
@@ -881,7 +890,7 @@ export function Settings() {
                     <button
                       onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setEmailCopied(true);setTimeout(()=>setEmailCopied(false),1800);});}}
                       className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0">
-                      {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>Copied!</> : <><Copy className="w-3 h-3"/>Copy</>}
+                      {emailCopied ? <><Check className="w-3 h-3 text-emerald-500"/>{t("common.copied")}</> : <><Copy className="w-3 h-3"/>{t("common.copy")}</>}
                     </button>
                   </div>
                 </div>
@@ -891,11 +900,8 @@ export function Settings() {
             {activeTab === "team" && (
               <div>
                 <div className="mb-4">
-                  <h2 className="text-sm font-bold text-[#212833] mb-1">Team access</h2>
-                  <p className="text-xs text-[#5E687B] leading-relaxed">
-                    Invite colleagues to collaborate on FlowForgeIQ. Admins can manage team members and settings.
-                    Members can view and act on all shipments.
-                  </p>
+                  <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.team.title")}</h2>
+                  <p className="text-xs text-[#5E687B] leading-relaxed">{t("settings.team.desc")}</p>
                 </div>
                 <TeamSection />
               </div>

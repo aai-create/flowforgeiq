@@ -1033,7 +1033,7 @@ export function ShipmentDrawer({
                                   </span>
                                   <span className="text-[9px] text-[#C0C8D4] shrink-0">
                                     {new Date(msg.receivedAt).toLocaleDateString(
-                                      "en-US",
+                                      getDisplayLocale(),
                                       { month: "short", day: "numeric" }
                                     )}
                                   </span>
@@ -1097,7 +1097,7 @@ export function ShipmentDrawer({
                                   <span className="text-[9px] text-[#C0C8D4]">·</span>
                                   <span className="text-[9px] text-[#9E9FAE]">
                                     {new Date(doc.createdAt).toLocaleDateString(
-                                      "en-US",
+                                      getDisplayLocale(),
                                       { month: "short", day: "numeric" }
                                     )}
                                   </span>

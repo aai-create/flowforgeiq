@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,18 +19,28 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useListDocuments } from "@workspace/api-client-react";
 import type { DocumentWithExtraction } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import i18n from "@/hooks/useI18n";
 
 type DocStatus = "processing" | "extracted" | "failed" | "unmatched" | string;
 
-const STATUS_CONFIG: Record<string, { label: string; icon: keyof typeof Feather.glyphMap; color: string }> = {
-  extracted: { label: "Extracted", icon: "check-circle", color: "#22c55e" },
-  processing: { label: "Processing", icon: "clock", color: "#f59e0b" },
-  failed: { label: "Failed", icon: "alert-circle", color: "#e63946" },
-  unmatched: { label: "Unmatched", icon: "help-circle", color: "#596a7c" },
-};
+function getStatusColor(status: string): string {
+  switch (status) {
+    case "extracted": return "#22c55e";
+    case "processing": return "#f59e0b";
+    case "failed": return "#e63946";
+    case "unmatched": return "#596a7c";
+    default: return "#596a7c";
+  }
+}
 
-function getStatusConfig(status: string) {
-  return STATUS_CONFIG[status] ?? { label: status, icon: "file" as keyof typeof Feather.glyphMap, color: "#596a7c" };
+function getStatusIcon(status: string): keyof typeof Feather.glyphMap {
+  switch (status) {
+    case "extracted": return "check-circle";
+    case "processing": return "clock";
+    case "failed": return "alert-circle";
+    case "unmatched": return "help-circle";
+    default: return "file";
+  }
 }
 
 function getFileIcon(fileType: string): keyof typeof Feather.glyphMap {
@@ -50,7 +61,8 @@ function formatBytes(bytes: number): string {
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const locale = i18n.language === "en" ? "en-US" : i18n.language;
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
 interface DocCardProps {
@@ -60,9 +72,14 @@ interface DocCardProps {
 
 function DocCard({ doc, onPress }: DocCardProps) {
   const colors = useColors();
-  const sc = getStatusConfig(doc.status);
+  const { t } = useTranslation();
+  const color = getStatusColor(doc.status);
+  const icon = getStatusIcon(doc.status);
   const fileIcon = getFileIcon(doc.fileType);
   const hasFindings = (doc.extraction?.reconciliationFindings?.length ?? 0) > 0;
+  const findingCount = doc.extraction?.reconciliationFindings?.length ?? 0;
+
+  const statusLabel = t(`documents.status.${doc.status}`, { defaultValue: doc.status });
 
   return (
     <Animated.View entering={FadeInDown.duration(250).springify()}>
@@ -94,9 +111,9 @@ function DocCard({ doc, onPress }: DocCardProps) {
         </View>
 
         <View style={styles.cardBottom}>
-          <View style={[styles.statusPill, { backgroundColor: `${sc.color}18` }]}>
-            <Feather name={sc.icon} size={12} color={sc.color} />
-            <Text style={[styles.statusLabel, { color: sc.color }]}>{sc.label}</Text>
+          <View style={[styles.statusPill, { backgroundColor: `${color}18` }]}>
+            <Feather name={icon} size={12} color={color} />
+            <Text style={[styles.statusLabel, { color }]}>{statusLabel}</Text>
           </View>
 
           {doc.shipmentId != null && (
@@ -112,7 +129,7 @@ function DocCard({ doc, onPress }: DocCardProps) {
             <View style={[styles.findingPill, { backgroundColor: `${"#f59e0b"}18` }]}>
               <Feather name="alert-triangle" size={11} color="#f59e0b" />
               <Text style={[styles.findingLabel, { color: "#f59e0b" }]}>
-                {doc.extraction!.reconciliationFindings.length} finding{doc.extraction!.reconciliationFindings.length !== 1 ? "s" : ""}
+                {t(findingCount === 1 ? "documents.findings_one" : "documents.findings_other", { count: findingCount })}
               </Text>
             </View>
           )}
@@ -130,13 +147,14 @@ function DocCard({ doc, onPress }: DocCardProps) {
   );
 }
 
-const STATUS_FILTERS = ["all", "extracted", "processing", "unmatched", "failed"] as const;
-type FilterKey = typeof STATUS_FILTERS[number];
+const STATUS_FILTER_KEYS = ["all", "extracted", "processing", "unmatched", "failed"] as const;
+type FilterKey = typeof STATUS_FILTER_KEYS[number];
 
 export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const router = useRouter();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
 
@@ -163,7 +181,7 @@ export default function DocumentsScreen() {
         ]}
       >
         <Text style={styles.headerTitle}>FlowForge</Text>
-        <Text style={styles.headerSubtitle}>Document Extractions</Text>
+        <Text style={styles.headerSubtitle}>{t("documents.headerSubtitle")}</Text>
       </View>
 
       <View style={[styles.searchWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -172,7 +190,7 @@ export default function DocumentsScreen() {
           style={[styles.searchInput, { color: colors.foreground }]}
           value={search}
           onChangeText={setSearch}
-          placeholder="Search by filename or PO..."
+          placeholder={t("documents.searchPlaceholder")}
           placeholderTextColor={colors.mutedForeground}
           autoCapitalize="none"
           autoCorrect={false}
@@ -186,9 +204,10 @@ export default function DocumentsScreen() {
       </View>
 
       <View style={styles.filterRow}>
-        {STATUS_FILTERS.map((f) => {
+        {STATUS_FILTER_KEYS.map((f) => {
           const active = filter === f;
           const count = f === "all" ? (docs?.length ?? 0) : (docs ?? []).filter((d) => d.status === f).length;
+          const label = t(`documents.status.${f}`);
           return (
             <Pressable
               key={f}
@@ -202,7 +221,7 @@ export default function DocumentsScreen() {
               ]}
             >
               <Text style={[styles.filterText, { color: active ? "#fff" : colors.mutedForeground }]}>
-                {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                {label}
                 {count > 0 ? ` ${count}` : ""}
               </Text>
             </Pressable>
@@ -213,19 +232,19 @@ export default function DocumentsScreen() {
       {isLoading && !isRefetching && (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Loading documents…</Text>
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>{t("documents.loadingDocs")}</Text>
         </View>
       )}
 
       {isError && (
         <View style={styles.center}>
           <Feather name="wifi-off" size={32} color={colors.mutedForeground} />
-          <Text style={[styles.errorText, { color: colors.mutedForeground }]}>Could not load documents</Text>
+          <Text style={[styles.errorText, { color: colors.mutedForeground }]}>{t("documents.couldNotLoad")}</Text>
           <Pressable
             onPress={() => refetch()}
             style={[styles.retryBtn, { backgroundColor: colors.primary }]}
           >
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t("documents.retry")}</Text>
           </Pressable>
         </View>
       )}
@@ -234,12 +253,10 @@ export default function DocumentsScreen() {
         <View style={styles.center}>
           <Feather name="inbox" size={36} color={colors.mutedForeground} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-            {search || filter !== "all" ? "No matching documents" : "No documents yet"}
+            {search || filter !== "all" ? t("documents.noMatchingDocs") : t("documents.noDocs")}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-            {search || filter !== "all"
-              ? "Try a different filter or search term"
-              : "Upload a document from the web app to get started"}
+            {search || filter !== "all" ? t("documents.noMatchingDesc") : t("documents.noDocsDesc")}
           </Text>
         </View>
       )}

@@ -1,6 +1,7 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -50,13 +51,13 @@ const CHANNELS: { id: Channel; label: string }[] = [
   { id: "sms", label: "SMS" },
 ];
 
-function ConfidenceBar({ confidence, colors: c }: { confidence: number; colors: ReturnType<typeof useColors> }) {
+function ConfidenceBar({ confidence, colors: c, label }: { confidence: number; colors: ReturnType<typeof useColors>; label: string }) {
   const pct = Math.round(confidence * 100);
   const barColor = pct >= 75 ? c.success : pct >= 50 ? c.warning : c.destructive;
   return (
     <View>
       <View style={styles.confidenceRow}>
-        <Text style={[styles.label, { color: c.mutedForeground }]}>Confidence</Text>
+        <Text style={[styles.label, { color: c.mutedForeground }]}>{label}</Text>
         <Text style={[styles.confidenceValue, { color: barColor }]}>{pct}%</Text>
       </View>
       <View style={[styles.confidenceTrack, { backgroundColor: c.muted }]}>
@@ -78,6 +79,7 @@ function FieldRow({ label, value, colors: c }: { label: string; value: string; c
 export default function ChatPasteScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { t } = useTranslation();
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [rawText, setRawText] = useState("");
   const [senderHint, setSenderHint] = useState("");
@@ -123,7 +125,7 @@ export default function ChatPasteScreen() {
     try {
       await Share.share({ message: result.aiDraft });
     } catch {
-      Alert.alert("Copy failed", "Could not share the draft.");
+      Alert.alert(t("chat.copyFailed"), t("chat.copyFailedDesc"));
     }
   }
 
@@ -141,7 +143,7 @@ export default function ChatPasteScreen() {
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.headerTitle}>FlowForge</Text>
-            <Text style={styles.headerSubtitle}>Chat Analyst</Text>
+            <Text style={styles.headerSubtitle}>{t("chat.headerSubtitle")}</Text>
           </View>
           {(rawText.length > 0 || result) && (
             <Pressable
@@ -166,7 +168,7 @@ export default function ChatPasteScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>SOURCE</Text>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t("chat.source")}</Text>
           <View style={styles.channelRow}>
             {CHANNELS.map(({ id, label }) => {
               const active = channel === id;
@@ -203,7 +205,7 @@ export default function ChatPasteScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PASTE CHAT</Text>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t("chat.pasteChat")}</Text>
           <Pressable onPress={() => textRef.current?.focus()}>
             <View
               style={[
@@ -217,7 +219,7 @@ export default function ChatPasteScreen() {
                 value={rawText}
                 onChangeText={setRawText}
                 multiline
-                placeholder={"Paste your WhatsApp / iMessage chat export here...\n\nE.g.:\n[06/10/26, 10:22] Supplier: Hi, production is 85% done, ETA ex-factory 25 June."}
+                placeholder={t("chat.pastePlaceholder")}
                 placeholderTextColor={colors.mutedForeground}
                 textAlignVertical="top"
                 autoCapitalize="none"
@@ -226,7 +228,7 @@ export default function ChatPasteScreen() {
               />
               {rawText.length > 0 && (
                 <Text style={[styles.charCount, { color: colors.mutedForeground }]}>
-                  {rawText.length} chars
+                  {t("chat.charCount", { count: rawText.length })}
                 </Text>
               )}
             </View>
@@ -236,10 +238,10 @@ export default function ChatPasteScreen() {
         <View style={[styles.emailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.emailCardHeader}>
             <Feather name="mail" size={14} color={colors.primary} />
-            <Text style={[styles.emailCardTitle, { color: colors.foreground }]}>Forward to your inbox</Text>
+            <Text style={[styles.emailCardTitle, { color: colors.foreground }]}>{t("chat.forwardInbox")}</Text>
           </View>
           <Text style={[styles.emailCardBody, { color: colors.mutedForeground }]}>
-            Or forward supplier emails to your personal address — they land in the right thread automatically.
+            {t("chat.forwardDesc")}
           </Text>
           <View style={[styles.emailRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Text style={[styles.emailText, { color: colors.foreground }]} numberOfLines={1} ellipsizeMode="tail">
@@ -257,7 +259,7 @@ export default function ChatPasteScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-            SENDER HINT <Text style={{ fontWeight: "400" }}>(optional)</Text>
+            {t("chat.senderHint")} <Text style={{ fontWeight: "400" }}>{t("chat.senderHintOptional")}</Text>
           </Text>
           <View
             style={[
@@ -270,7 +272,7 @@ export default function ChatPasteScreen() {
               style={[styles.hintText, { color: colors.foreground }]}
               value={senderHint}
               onChangeText={setSenderHint}
-              placeholder="Supplier or contact name..."
+              placeholder={t("chat.senderPlaceholder")}
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="words"
               returnKeyType="done"
@@ -306,7 +308,7 @@ export default function ChatPasteScreen() {
                   { color: canAnalyze ? "#fff" : colors.mutedForeground },
                 ]}
               >
-                Analyze
+                {t("chat.analyze")}
               </Text>
             </>
           )}
@@ -319,7 +321,7 @@ export default function ChatPasteScreen() {
           >
             <Feather name="alert-circle" size={16} color={colors.destructive} />
             <Text style={[styles.errorText, { color: colors.destructive }]}>
-              {(error as Error)?.message ?? "Analysis failed. Please try again."}
+              {(error as Error)?.message ?? t("chat.analysisError")}
             </Text>
           </Animated.View>
         )}
@@ -352,21 +354,21 @@ export default function ChatPasteScreen() {
                     },
                   ]}
                 >
-                  {result.routingStatus === "routed" ? "Routed" : "Needs Review"}
+                  {result.routingStatus === "routed" ? t("chat.routed") : t("chat.needsReview")}
                 </Text>
               </View>
               {result.sender && (
                 <Text style={[styles.senderText, { color: colors.mutedForeground }]}>
-                  from {result.sender}
+                  {t("chat.from", { sender: result.sender })}
                 </Text>
               )}
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <ConfidenceBar confidence={result.confidence} colors={colors} />
+              <ConfidenceBar confidence={result.confidence} colors={colors} label={t("chat.confidence")} />
               {result.matchMethod && (
                 <Text style={[styles.matchMethod, { color: colors.mutedForeground }]}>
-                  Match: {result.matchMethod}
+                  {t("chat.match", { method: result.matchMethod })}
                 </Text>
               )}
             </View>
@@ -375,7 +377,7 @@ export default function ChatPasteScreen() {
               <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.cardHeader}>
                   <Feather name="package" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Matched Shipment</Text>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("chat.matchedShipment")}</Text>
                 </View>
                 <Text style={[styles.shipmentId, { color: colors.primary }]}>
                   ID #{result.shipmentId}
@@ -387,32 +389,32 @@ export default function ChatPasteScreen() {
               <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.cardHeader}>
                   <Feather name="layers" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Extracted Fields</Text>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("chat.extractedFields")}</Text>
                 </View>
                 <View style={[styles.fieldsDivider, { backgroundColor: colors.border }]} />
                 {result.extractedFields.eta && (
-                  <FieldRow label="ETA" value={result.extractedFields.eta} colors={colors} />
+                  <FieldRow label={t("chat.field.eta")} value={result.extractedFields.eta} colors={colors} />
                 )}
                 {result.extractedFields.quotePrice != null && (
                   <FieldRow
-                    label="Quote Price"
+                    label={t("chat.field.quotePrice")}
                     value={`$${result.extractedFields.quotePrice.toLocaleString()}`}
                     colors={colors}
                   />
                 )}
                 {result.extractedFields.productionPct != null && (
                   <FieldRow
-                    label="Production"
+                    label={t("chat.field.production")}
                     value={`${result.extractedFields.productionPct}%`}
                     colors={colors}
                   />
                 )}
                 {result.extractedFields.qcNote && (
-                  <FieldRow label="QC Note" value={result.extractedFields.qcNote} colors={colors} />
+                  <FieldRow label={t("chat.field.qcNote")} value={result.extractedFields.qcNote} colors={colors} />
                 )}
                 {result.extractedFields.statusUpdate && (
                   <FieldRow
-                    label="Status"
+                    label={t("chat.field.status")}
                     value={result.extractedFields.statusUpdate}
                     colors={colors}
                   />
@@ -444,7 +446,7 @@ export default function ChatPasteScreen() {
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeader}>
                     <Feather name="edit-3" size={15} color={colors.primary} />
-                    <Text style={[styles.cardTitle, { color: colors.foreground }]}>AI Draft Reply</Text>
+                    <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("chat.aiDraftReply")}</Text>
                   </View>
                   <Pressable
                     onPress={handleCopyDraft}

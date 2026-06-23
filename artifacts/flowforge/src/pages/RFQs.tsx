@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { useCopilotHint } from "@/lib/CopilotContext";
+import { useTranslation } from "react-i18next";
 import {
   useListRfqs,
   useCreateRfq,
@@ -37,12 +38,18 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { shortDate } from "@/lib/adapters";
+import { getDisplayLocale } from "@/lib/locale";
 
-const statusLabel: Record<string, string> = {
-  open:      "Open",
-  accepted:  "Accepted",
-  cancelled: "Cancelled",
-};
+function getStatusLabel(t: ReturnType<typeof useTranslation>["t"]): Record<string, string> {
+  return {
+    open:      t("rfqs.status.open"),
+    accepted:  t("rfqs.status.accepted"),
+    cancelled: t("rfqs.status.cancelled"),
+    quoted:    t("rfqs.status.quoted"),
+    awarded:   t("rfqs.status.awarded"),
+    closed:    t("rfqs.status.closed"),
+  };
+}
 
 const statusCls: Record<string, string> = {
   open:      "bg-blue-50 text-blue-700 border border-blue-100",
@@ -57,7 +64,7 @@ const quoteStatusCls: Record<string, string> = {
 };
 
 function usd(val: number) {
-  return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${val.toLocaleString(getDisplayLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function generateProformaPdf(data: {
@@ -81,7 +88,7 @@ function generateProformaPdf(data: {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(90, 100, 120);
-    doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 20, 36);
+    doc.text(`Generated: ${new Date().toLocaleDateString(getDisplayLocale(), { year: "numeric", month: "long", day: "numeric" })}`, 20, 36);
 
     doc.setDrawColor(229, 234, 240);
     doc.line(20, 40, 190, 40);
@@ -215,6 +222,7 @@ interface NewQuoteFormState {
 }
 
 export function RFQs() {
+  const { t } = useTranslation();
   useLocation();
   useCopilotHint("Ask about RFQ status or factory quote comparisons", [
     "Which RFQs are awaiting quotes?",
@@ -491,7 +499,7 @@ export function RFQs() {
         <NavSidebar counts={{ myOrders: null }}>
           <div className="px-3 py-2 border-t border-[#E5EAF0]">
             <div className="mb-1.5 px-2 flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">Requests for Quote</span>
+              <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">{t("rfqs.sidebarTitle")}</span>
               <button onClick={() => setShowNewRfq(true)} className="p-0.5 hover:bg-[#E5EAF0] rounded transition-colors">
                 <Plus className="w-3 h-3 text-[#5E687B]" />
               </button>
@@ -501,9 +509,9 @@ export function RFQs() {
                 {rfqs.length === 0 && (
                   <div className="text-center py-8 text-[#5E687B] text-xs">
                     <FileText className="w-6 h-6 mx-auto mb-2 opacity-40" />
-                    <p>No RFQs yet</p>
+                    <p>{t("rfqs.noRfqs")}</p>
                     <button onClick={() => setShowNewRfq(true)} className="mt-2 text-[#9000FF] font-semibold hover:underline">
-                      Create your first RFQ
+                      {t("rfqs.createFirst")}
                     </button>
                   </div>
                 )}
@@ -513,7 +521,7 @@ export function RFQs() {
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                       <span className="font-semibold text-[#212833] truncate text-xs">{rfq.product}</span>
                       <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${statusCls[rfq.status] ?? "bg-slate-100"}`}>
-                        {statusLabel[rfq.status] ?? rfq.status}
+                        {getStatusLabel(t)[rfq.status] ?? rfq.status}
                       </span>
                     </div>
                     <div className="text-[#5E687B] text-[10px]">
@@ -531,14 +539,14 @@ export function RFQs() {
           <div className="h-11 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-[#9000FF]" />
-              <span className="font-bold text-sm text-[#212833]">Requests for Quote</span>
+              <span className="font-bold text-sm text-[#212833]">{t("rfqs.sidebarTitle")}</span>
               {rfqs.length > 0 && (
-                <span className="text-[10px] bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full font-bold">{rfqs.filter(r => r.status === "open").length} open</span>
+                <span className="text-[10px] bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full font-bold">{rfqs.filter(r => r.status === "open").length} {t("rfqs.openBadge")}</span>
               )}
             </div>
             <Button size="sm" onClick={() => setShowNewRfq(true)}
               className="h-7 px-3 bg-[#9000FF] hover:bg-[#7200CC] text-white text-xs font-semibold">
-              <Plus className="w-3 h-3 mr-1" /> New RFQ
+              <Plus className="w-3 h-3 mr-1" /> {t("rfqs.newRfq")}
             </Button>
           </div>
 
@@ -547,10 +555,10 @@ export function RFQs() {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-[#5E687B]">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p className="font-semibold text-sm">No RFQ selected</p>
-                <p className="text-xs mt-1">Create a new RFQ to start collecting factory quotes</p>
+                <p className="font-semibold text-sm">{t("rfqs.noRfqSelected")}</p>
+                <p className="text-xs mt-1">{t("rfqs.noRfqSelectedDesc")}</p>
                 <Button size="sm" className="mt-4 bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={() => setShowNewRfq(true)}>
-                  <Plus className="w-3 h-3 mr-1" /> New RFQ
+                  <Plus className="w-3 h-3 mr-1" /> {t("rfqs.newRfq")}
                 </Button>
               </div>
             </div>
@@ -564,7 +572,7 @@ export function RFQs() {
                       <div className="flex items-center gap-2 mb-1">
                         <h2 className="text-lg font-bold text-[#212833] truncate">{selectedRfq.product}</h2>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusCls[selectedRfq.status]}`}>
-                          {statusLabel[selectedRfq.status]}
+                          {getStatusLabel(t)[selectedRfq.status]}
                         </span>
                       </div>
                       {selectedRfq.category && (
@@ -575,24 +583,24 @@ export function RFQs() {
                       {selectedRfq.status === "accepted" && (
                         <Button size="sm" variant="outline" onClick={() => handleDownloadProforma(selectedRfq)}
                           className="h-7 px-3 text-xs border-[#9000FF]/30 text-[#9000FF] hover:bg-[#9000FF]/5">
-                          <Download className="w-3 h-3 mr-1.5" /> Proforma PDF
+                          <Download className="w-3 h-3 mr-1.5" /> {t("rfqs.proformaPdf")}
                         </Button>
                       )}
                       {selectedRfq.status === "accepted" && selectedRfq.convertedShipmentId && (
                         <Button size="sm" variant="outline" onClick={() => navigate("/")}
                           className="h-7 px-3 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-                          <ArrowRight className="w-3 h-3 mr-1.5" /> View PO
+                          <ArrowRight className="w-3 h-3 mr-1.5" /> {t("rfqs.viewPo")}
                         </Button>
                       )}
                       {selectedRfq.status === "open" && (
                         <>
                           <Button size="sm" variant="outline" onClick={() => openSendEmail(selectedRfq)}
                             className="h-7 px-3 text-xs border-[#E5EAF0] text-[#5E687B] hover:bg-[#F0F2F5]">
-                            <Mail className="w-3 h-3 mr-1.5" /> Send RFQ
+                            <Mail className="w-3 h-3 mr-1.5" /> {t("rfqs.sendRfq")}
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => cancelRfq(selectedRfq.id)}
                             className="h-7 px-3 text-xs text-[#5E687B] hover:text-red-600 hover:bg-red-50">
-                            Cancel RFQ
+                            {t("rfqs.cancelRfq")}
                           </Button>
                         </>
                       )}
@@ -601,16 +609,16 @@ export function RFQs() {
 
                   <div className="grid grid-cols-4 gap-4 mt-4">
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Buyer</div>
+                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">{t("rfqs.buyer")}</div>
                       <div className="text-sm font-semibold text-[#212833]">{selectedRfq.buyerName}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Target Price</div>
-                      <div className="text-sm font-semibold text-[#212833]">{usd(selectedRfq.targetPriceUsd)} / unit</div>
+                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">{t("rfqs.targetPrice")}</div>
+                      <div className="text-sm font-semibold text-[#212833]">{usd(selectedRfq.targetPriceUsd)} {t("common.perUnit")}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Quantity</div>
-                      <div className="text-sm font-semibold text-[#212833]">{selectedRfq.quantity.toLocaleString()} units</div>
+                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">{t("rfqs.quantity")}</div>
+                      <div className="text-sm font-semibold text-[#212833]">{selectedRfq.quantity.toLocaleString()} {t("common.units")}</div>
                     </div>
                     <div>
                       <TooltipProvider>
@@ -621,7 +629,7 @@ export function RFQs() {
                             </div>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-[280px] text-left leading-snug">
-                            The date by which all factories must submit their quoted unit price. Factories contacted via this RFQ are typically expected to respond within 2–4 business days of receiving the request.
+                            {t("rfqs.deadlineTip")}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -637,13 +645,13 @@ export function RFQs() {
                 <div className="bg-white border border-[#E5EAF0] rounded-xl">
                   <div className="px-5 py-3 border-b border-[#E5EAF0] flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-sm text-[#212833]">Factory Quote Comparison</h3>
-                      <p className="text-[11px] text-[#5E687B] mt-0.5">Spread = target price − quoted unit price. Positive = below target.</p>
+                      <h3 className="font-bold text-sm text-[#212833]">{t("rfqs.quoteTable")}</h3>
+                      <p className="text-[11px] text-[#5E687B] mt-0.5">{t("rfqs.quoteTableDesc")}</p>
                     </div>
                     {selectedRfq.status === "open" && (
                       <Button size="sm" onClick={() => setShowAddQuote(true)}
                         className="h-7 px-3 text-xs bg-[#9000FF] hover:bg-[#7200CC] text-white">
-                        <Plus className="w-3 h-3 mr-1" /> Add Quote
+                        <Plus className="w-3 h-3 mr-1" /> {t("rfqs.addQuote")}
                       </Button>
                     )}
                   </div>
@@ -651,11 +659,11 @@ export function RFQs() {
                   {selectedRfq.quotes.length === 0 ? (
                     <div className="p-10 text-center text-[#5E687B]">
                       <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                      <p className="text-sm font-semibold mb-1">No quotes yet</p>
-                      <p className="text-xs">Add factory quotes as they come in. Usually 2–4 factories are contacted per RFQ.</p>
+                      <p className="text-sm font-semibold mb-1">{t("rfqs.noQuotes")}</p>
+                      <p className="text-xs">{t("rfqs.noQuotesDesc")}</p>
                       {selectedRfq.status === "open" && (
                         <Button size="sm" className="mt-3 bg-[#9000FF] hover:bg-[#7200CC] text-white text-xs" onClick={() => setShowAddQuote(true)}>
-                          <Plus className="w-3 h-3 mr-1" /> Add First Quote
+                          <Plus className="w-3 h-3 mr-1" /> {t("rfqs.addFirstQuote")}
                         </Button>
                       )}
                     </div>
@@ -664,13 +672,13 @@ export function RFQs() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-[#F0F2F5]">
-                            <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-5 py-3">Factory</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">Unit Price</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">Spread</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">Total (est.)</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">Lead Time</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">MOQ</th>
-                            <th className="text-center text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">Status</th>
+                            <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-5 py-3">{t("rfqs.colFactory")}</th>
+                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colUnitPrice")}</th>
+                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colSpread")}</th>
+                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colTotal")}</th>
+                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colLeadTime")}</th>
+                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colMoq")}</th>
+                            <th className="text-center text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colStatus")}</th>
                             <th className="px-4 py-3" />
                           </tr>
                         </thead>
@@ -716,7 +724,7 @@ export function RFQs() {
                                     <td className="px-5 py-3">
                                       <div className="flex items-center gap-2">
                                         {q.status === "accepted" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                        {isLowest && q.status !== "accepted" && <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/10 px-1.5 rounded">LOWEST</span>}
+                                        {isLowest && q.status !== "accepted" && <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/10 px-1.5 rounded">{t("rfqs.badgeLowest")}</span>}
                                         <div>
                                           <div className="font-semibold text-[#212833]">{q.factoryName}</div>
                                           <div className="text-[10px] text-[#5E687B]">{q.country}</div>
@@ -741,7 +749,7 @@ export function RFQs() {
                                         {selectedRfq.status === "open" && q.status !== "accepted" && (
                                           <button onClick={() => openConvert(q.id)}
                                             className="px-2 py-1 text-[10px] font-bold bg-[#9000FF] text-white rounded hover:bg-[#7200CC] whitespace-nowrap transition-colors">
-                                            Use this quote
+                                            {t("rfqs.useThisQuote")}
                                           </button>
                                         )}
                                         {selectedRfq.status === "open" && (
@@ -808,7 +816,7 @@ export function RFQs() {
       <Dialog open={showNewRfq} onOpenChange={open => { if (!open) { setShowNewRfq(false); setNewRfqError(null); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>New Request for Quote</DialogTitle>
+            <DialogTitle>{t("rfqs.dialogNewTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             {newRfqError && (
@@ -818,19 +826,19 @@ export function RFQs() {
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Product *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldProduct")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 focus:border-[#9000FF]/40"
                   placeholder="e.g. Stainless Serving Fork — Brushed Nickel"
                   value={newRfqForm.product} onChange={e => setNewRfqForm(f => ({ ...f, product: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Category</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldCategory")}</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   placeholder="e.g. Kitchenware"
                   value={newRfqForm.category} onChange={e => setNewRfqForm(f => ({ ...f, category: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Buyer *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldBuyer")} *</label>
                 <Popover open={buyerComboboxOpen} onOpenChange={setBuyerComboboxOpen}>
                   <PopoverTrigger asChild>
                     <button
@@ -890,13 +898,13 @@ export function RFQs() {
                 </Popover>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Target Price (USD / unit) *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldTargetPrice")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   placeholder="0.00" type="number" step="0.01"
                   value={newRfqForm.targetPriceUsd} onChange={e => setNewRfqForm(f => ({ ...f, targetPriceUsd: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Quantity *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldQuantity")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   placeholder="e.g. 5000" type="number"
                   value={newRfqForm.quantity} onChange={e => setNewRfqForm(f => ({ ...f, quantity: e.target.value }))} />
@@ -906,11 +914,11 @@ export function RFQs() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <label className="inline-flex items-center gap-1 text-xs font-semibold text-[#5E687B] mb-1 cursor-default">
-                        Quote Deadline * <Info className="w-3 h-3 text-[#5E687B]/60" />
+                        {t("rfqs.fieldDeadline")} * <Info className="w-3 h-3 text-[#5E687B]/60" />
                       </label>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-[280px] text-left leading-snug">
-                      The date by which all factories must submit their quoted unit price. Factories contacted via this RFQ are typically expected to respond within 2–4 business days of receiving the request.
+                      {t("rfqs.deadlineTip")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -919,7 +927,7 @@ export function RFQs() {
                   value={newRfqForm.deadline} onChange={e => setNewRfqForm(f => ({ ...f, deadline: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldNotes")}</label>
                 <textarea className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 resize-none"
                   rows={2} placeholder="Any special requirements or notes for factories..."
                   value={newRfqForm.notes} onChange={e => setNewRfqForm(f => ({ ...f, notes: e.target.value }))} />
@@ -927,10 +935,10 @@ export function RFQs() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => { setShowNewRfq(false); setNewRfqError(null); }}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowNewRfq(false); setNewRfqError(null); }}>{t("common.cancel")}</Button>
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitNewRfq}
               disabled={createRfqMutation.isPending}>
-              {createRfqMutation.isPending ? "Creating…" : "Create RFQ"}
+              {createRfqMutation.isPending ? t("common.creating") : t("rfqs.createRfq")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -940,24 +948,24 @@ export function RFQs() {
       <Dialog open={showAddQuote} onOpenChange={open => { if (!open) setShowAddQuote(false); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Factory Quote</DialogTitle>
+            <DialogTitle>{t("rfqs.dialogAddQuoteTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Factory Name *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldFactoryName")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   placeholder="e.g. Guangzhou Metalworks"
                   value={newQuoteForm.factoryName} onChange={e => setNewQuoteForm(f => ({ ...f, factoryName: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Country</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldCountry")}</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   placeholder="CN"
                   value={newQuoteForm.country} onChange={e => setNewQuoteForm(f => ({ ...f, country: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Link to Supplier (optional)</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldSupplierLink")}</label>
                 <select className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 bg-white"
                   value={newQuoteForm.supplierId} onChange={e => setNewQuoteForm(f => ({ ...f, supplierId: e.target.value }))}>
                   <option value="">— None —</option>
@@ -965,25 +973,25 @@ export function RFQs() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Unit Price (USD) *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldUnitPrice")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   type="number" step="0.01" placeholder="0.00"
                   value={newQuoteForm.unitPriceUsd} onChange={e => setNewQuoteForm(f => ({ ...f, unitPriceUsd: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Lead Time (days) *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldLeadTime")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   type="number" placeholder="e.g. 45"
                   value={newQuoteForm.leadTimeDays} onChange={e => setNewQuoteForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">MOQ *</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldMoq")} *</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   type="number" placeholder="e.g. 1000"
                   value={newQuoteForm.moq} onChange={e => setNewQuoteForm(f => ({ ...f, moq: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldNotes")}</label>
                 <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                   placeholder="Any conditions, validity, remarks..."
                   value={newQuoteForm.notes} onChange={e => setNewQuoteForm(f => ({ ...f, notes: e.target.value }))} />
@@ -991,10 +999,10 @@ export function RFQs() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setShowAddQuote(false)}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowAddQuote(false)}>{t("common.cancel")}</Button>
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitAddQuote}
               disabled={addQuoteMutation.isPending}>
-              {addQuoteMutation.isPending ? "Adding…" : "Add Quote"}
+              {addQuoteMutation.isPending ? t("common.adding") : t("rfqs.addQuote")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1004,7 +1012,7 @@ export function RFQs() {
       <Dialog open={showConvert} onOpenChange={open => { if (!open) setShowConvert(false); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Convert RFQ to PO</DialogTitle>
+            <DialogTitle>{t("rfqs.dialogConvertTitle")}</DialogTitle>
           </DialogHeader>
           <div className="py-1">
             {(() => {
@@ -1012,7 +1020,7 @@ export function RFQs() {
               if (!q) return null;
               return (
                 <div className="mb-4 p-3 bg-[#9000FF]/5 border border-[#9000FF]/15 rounded-lg">
-                  <div className="text-xs font-bold text-[#9000FF] mb-1">Winning Quote</div>
+                  <div className="text-xs font-bold text-[#9000FF] mb-1">{t("rfqs.winningQuote")}</div>
                   <div className="font-semibold text-sm text-[#212833]">{q.factoryName}</div>
                   <div className="text-xs text-[#5E687B] mt-0.5">
                     {usd(q.unitPriceUsd)} / unit · {q.leadTimeDays}d lead time · MOQ {q.moq.toLocaleString()}
@@ -1031,13 +1039,13 @@ export function RFQs() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Supplier PO Number *</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldPoNumber")} *</label>
                   <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                     placeholder="e.g. PO-2026-0201S"
                     value={convertForm.poNumber} onChange={e => setConvertForm(f => ({ ...f, poNumber: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Assign Supplier *</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldAssignSupplier")} *</label>
                   <select className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 bg-white"
                     value={convertForm.supplierId} onChange={e => setConvertForm(f => ({ ...f, supplierId: e.target.value }))}>
                     <option value="">— Select supplier —</option>
@@ -1045,25 +1053,25 @@ export function RFQs() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Due Date *</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldDueDate")} *</label>
                   <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                     type="date"
                     value={convertForm.dueDate} onChange={e => setConvertForm(f => ({ ...f, dueDate: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Ex-Factory Date *</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldExFactory")} *</label>
                   <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                     type="date"
                     value={convertForm.exFactoryDate} onChange={e => setConvertForm(f => ({ ...f, exFactoryDate: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Destination *</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldDestination")} *</label>
                   <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                     placeholder="e.g. Los Angeles, CA"
                     value={convertForm.destination} onChange={e => setConvertForm(f => ({ ...f, destination: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Via</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldVia")}</label>
                   <select className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 bg-white"
                     value={convertForm.via} onChange={e => setConvertForm(f => ({ ...f, via: e.target.value }))}>
                     <option value="OCEAN">Ocean</option>
@@ -1073,7 +1081,7 @@ export function RFQs() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">Deposit %</label>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldDeposit")}</label>
                   <div className="flex items-center gap-3">
                     {[20, 30, 40, 50].map(pct => (
                       <button key={pct} onClick={() => setConvertForm(f => ({ ...f, depositPct: String(pct) }))}
@@ -1090,10 +1098,10 @@ export function RFQs() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setShowConvert(false)}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowConvert(false)}>{t("common.cancel")}</Button>
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitConvert}
               disabled={convertMutation.isPending}>
-              {convertMutation.isPending ? "Creating PO…" : "Create PO"}
+              {convertMutation.isPending ? t("common.creating") : t("rfqs.createPo")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1104,7 +1112,7 @@ export function RFQs() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#9000FF]" /> Send RFQ via Email
+              <Mail className="w-4 h-4 text-[#9000FF]" /> {t("rfqs.dialogSendEmailTitle")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -1114,7 +1122,7 @@ export function RFQs() {
               </div>
             )}
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Recipients *</label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldRecipients")} *</label>
               <input
                 className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                 placeholder="factory@example.com, another@example.com"
@@ -1124,7 +1132,7 @@ export function RFQs() {
               <p className="text-[10px] text-[#9BA5B3] mt-1">Separate multiple addresses with commas.</p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Subject *</label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldSubject")} *</label>
               <input
                 className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
                 value={sendEmailForm.subject}
@@ -1132,7 +1140,7 @@ export function RFQs() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Message *</label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldMessage")} *</label>
               <textarea
                 className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 resize-none font-mono"
                 rows={10}
@@ -1142,10 +1150,10 @@ export function RFQs() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => { setShowSendEmail(false); setSendEmailError(null); }}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowSendEmail(false); setSendEmailError(null); }}>{t("common.cancel")}</Button>
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitSendEmail}
               disabled={sendEmailMutation.isPending}>
-              {sendEmailMutation.isPending ? "Sending…" : "Send Email"}
+              {sendEmailMutation.isPending ? t("rfqs.sending") : t("common.send")}
             </Button>
           </DialogFooter>
         </DialogContent>

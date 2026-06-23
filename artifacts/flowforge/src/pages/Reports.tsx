@@ -31,6 +31,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { shortDate } from "@/lib/adapters";
+import { getDisplayLocale } from "@/lib/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -175,7 +176,7 @@ function FinanceCardContent({
       .map(([key, total]) => {
         const [y, m] = key.split("-");
         const label = new Date(Number(y), Number(m) - 1, 1)
-          .toLocaleString("en-US", { month: "short", year: "2-digit" });
+          .toLocaleString(getDisplayLocale(), { month: "short", year: "2-digit" });
         return { name: label, total };
       });
   }, [allPayments]);
@@ -1113,7 +1114,7 @@ function TasksCardContent({ tasks, shipments }: { tasks: Task[]; shipments: Ship
 
 // ─── DateRangePicker ──────────────────────────────────────────────────────────
 function formatDateShort(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString(getDisplayLocale(), { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 const PRESETS = [
@@ -1519,7 +1520,7 @@ function bucketKey(iso: string, groupBy: GroupBy): string {
 function bucketLabel(key: string, groupBy: GroupBy): string {
   if (groupBy === "quarter") return key; // e.g. "2026-Q2"
   const [y, m] = key.split("-");
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-US", { month: "short", year: "2-digit" });
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleString(getDisplayLocale(), { month: "short", year: "2-digit" });
 }
 
 interface SpreadBucket {

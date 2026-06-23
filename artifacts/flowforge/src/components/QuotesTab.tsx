@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { useCreateFactoryQuote, useSelectFactoryQuote } from "@workspace/api-client-react";
 import type { FactoryQuote } from "@workspace/api-client-react";
+import { getDisplayLocale } from "@/lib/locale";
+import { useTranslation } from "react-i18next";
 
 interface QuotesTabProps {
   shipmentId: number;
@@ -51,10 +53,11 @@ const COUNTRY_OPTIONS = [
 ];
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat(getDisplayLocale(), { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
 }
 
 export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQuotesChange }: QuotesTabProps) {
+  const { t } = useTranslation();
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<AddQuoteForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -83,10 +86,10 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
     const moq = parseInt(form.moq, 10);
     const leadDays = parseInt(form.leadDays, 10);
 
-    if (!form.factory.trim()) { setFormError("Factory / supplier name is required."); return; }
-    if (isNaN(unitPrice) || unitPrice <= 0) { setFormError("Unit cost must be a positive number."); return; }
-    if (isNaN(moq) || moq <= 0) { setFormError("MOQ must be a positive integer."); return; }
-    if (isNaN(leadDays) || leadDays <= 0) { setFormError("Lead time must be a positive integer."); return; }
+    if (!form.factory.trim()) { setFormError(t("quotesTab.errFactory")); return; }
+    if (isNaN(unitPrice) || unitPrice <= 0) { setFormError(t("quotesTab.errUnitCost")); return; }
+    if (isNaN(moq) || moq <= 0) { setFormError(t("quotesTab.errMoq")); return; }
+    if (isNaN(leadDays) || leadDays <= 0) { setFormError(t("quotesTab.errLeadTime")); return; }
 
     createMutation.mutate(
       {
@@ -107,7 +110,7 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
           setShowAdd(false);
           setForm(EMPTY_FORM);
         },
-        onError: () => setFormError("Failed to save quote. Please try again."),
+        onError: () => setFormError(t("quotesTab.errSaveFailed")),
       },
     );
   };
@@ -119,24 +122,24 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
     return (
       <div className="pt-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-bold text-[#212833] uppercase tracking-wider">Factory Quotes</span>
+          <span className="text-[11px] font-bold text-[#212833] uppercase tracking-wider">{t("quotesTab.sectionTitle")}</span>
           <Button
             size="sm"
             onClick={() => setShowAdd(true)}
             className="h-7 text-[11px] gap-1 bg-[#9000FF] hover:bg-[#7A00D9] text-white">
-            <Plus className="w-3 h-3" /> Add Quote
+            <Plus className="w-3 h-3" /> {t("quotesTab.addQuote")}
           </Button>
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-[#E5EAF0] rounded-xl bg-[#FAFBFC]">
           <Building2 className="w-8 h-8 text-[#D6E3EB] mb-2" />
-          <p className="text-xs font-medium text-[#5E687B] mb-1">No quotes yet</p>
-          <p className="text-[11px] text-[#9E9FAE] mb-3">Add factory quotes to compare unit costs, MOQ, and lead times before committing.</p>
+          <p className="text-xs font-medium text-[#5E687B] mb-1">{t("quotesTab.noQuotesYet")}</p>
+          <p className="text-[11px] text-[#9E9FAE] mb-3">{t("quotesTab.noQuotesDesc")}</p>
           <Button
             size="sm"
             variant="outline"
             onClick={() => setShowAdd(true)}
             className="h-7 text-[11px] gap-1 border-[#9000FF]/30 text-[#9000FF] hover:bg-[#9000FF]/5">
-            <Plus className="w-3 h-3" /> Add first quote
+            <Plus className="w-3 h-3" /> {t("quotesTab.addFirstQuote")}
           </Button>
         </div>
         <AddQuoteDialog
@@ -159,11 +162,11 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
     <div className="pt-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold text-[#212833] uppercase tracking-wider">Factory Quotes</span>
+          <span className="text-[11px] font-bold text-[#212833] uppercase tracking-wider">{t("quotesTab.sectionTitle")}</span>
           <span className="text-[10px] bg-[#F0F4F8] border border-[#E5EAF0] px-1.5 py-0.5 rounded text-[#5E687B]">{quotes.length}</span>
           {isFactoryQuotesStage && (
             <span className="text-[9px] font-semibold bg-[#9000FF]/10 text-[#9000FF] px-1.5 py-0.5 rounded-full border border-[#9000FF]/20">
-              Action required
+              {t("quotesTab.actionRequired")}
             </span>
           )}
         </div>
@@ -171,7 +174,7 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
           size="sm"
           onClick={() => setShowAdd(true)}
           className="h-7 text-[11px] gap-1 bg-[#9000FF] hover:bg-[#7A00D9] text-white">
-          <Plus className="w-3 h-3" /> Add Quote
+          <Plus className="w-3 h-3" /> {t("quotesTab.addQuote")}
         </Button>
       </div>
 
@@ -181,11 +184,11 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
           <table className="w-full text-[11px]" style={{ minWidth: 420 }}>
             <thead>
               <tr className="bg-[#FAFBFC] border-b border-[#E5EAF0]">
-                <th className="text-left px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-32">Factory</th>
-                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Unit Cost</th>
-                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">MOQ</th>
-                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Lead Time</th>
-                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Valid Until</th>
+                <th className="text-left px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-32">{t("quotesTab.colFactory")}</th>
+                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("quotesTab.colUnitCost")}</th>
+                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("quotesTab.colMoq")}</th>
+                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("quotesTab.colLeadTime")}</th>
+                <th className="text-right px-3 py-2 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("quotesTab.colValidUntil")}</th>
                 <th className="px-3 py-2 w-20" />
               </tr>
             </thead>
@@ -215,7 +218,7 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
                       <div className={`font-bold ${isCheapest ? "text-emerald-600" : "text-[#212833]"}`}>
                         {fmt(q.unitPrice)}
                       </div>
-                      {isCheapest && <div className="text-[9px] text-emerald-500 font-semibold">Best price</div>}
+                      {isCheapest && <div className="text-[9px] text-emerald-500 font-semibold">{t("quotesTab.bestPrice")}</div>}
                     </td>
                     <td className="px-3 py-2.5 text-right text-[#5E687B]">
                       {q.moq.toLocaleString()}
@@ -224,22 +227,22 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
                       <div className={`font-medium ${isFastest ? "text-emerald-600" : "text-[#5E687B]"}`}>
                         {q.leadDays}d
                       </div>
-                      {isFastest && <div className="text-[9px] text-emerald-500 font-semibold">Fastest</div>}
+                      {isFastest && <div className="text-[9px] text-emerald-500 font-semibold">{t("quotesTab.fastest")}</div>}
                     </td>
                     <td className="px-3 py-2.5 text-right text-[#9E9FAE]">
-                      {q.validityDate ? new Date(q.validityDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                      {q.validityDate ? new Date(q.validityDate).toLocaleDateString(getDisplayLocale(), { month: "short", day: "numeric" }) : "—"}
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       {q.selected ? (
                         <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/10 px-2 py-1 rounded-full border border-[#9000FF]/20">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> Selected
+                          <CheckCircle2 className="w-2.5 h-2.5" /> {t("quotesTab.selected")}
                         </span>
                       ) : (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSelect(q.id); }}
                           disabled={selectMutation.isPending}
                           className="text-[9px] font-semibold text-[#5E687B] border border-[#E5EAF0] px-2 py-1 rounded-full hover:border-[#9000FF]/30 hover:text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors disabled:opacity-50">
-                          Select
+                          {t("quotesTab.select")}
                         </button>
                       )}
                     </td>
@@ -277,14 +280,14 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
             </div>
             {quotes[0].selected ? (
               <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/10 px-2 py-1 rounded-full border border-[#9000FF]/20 shrink-0">
-                <CheckCircle2 className="w-2.5 h-2.5" /> Selected
+                <CheckCircle2 className="w-2.5 h-2.5" /> {t("quotesTab.selected")}
               </span>
             ) : (
               <button
                 onClick={(e) => { e.stopPropagation(); handleSelect(quotes[0].id); }}
                 disabled={selectMutation.isPending}
                 className="text-[10px] font-semibold text-[#9000FF] border border-[#9000FF]/30 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/5 transition-colors disabled:opacity-50 shrink-0">
-                Select this quote
+                {t("quotesTab.selectThisQuote")}
               </button>
             )}
           </div>
@@ -292,23 +295,23 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
             <div className="bg-white rounded-lg border border-[#E5EAF0] p-2 text-center">
               <DollarSign className="w-3 h-3 text-[#9E9FAE] mx-auto mb-0.5" />
               <div className="text-xs font-bold text-[#212833]">{fmt(quotes[0].unitPrice)}</div>
-              <div className="text-[9px] text-[#9E9FAE]">Unit Cost</div>
+              <div className="text-[9px] text-[#9E9FAE]">{t("quotesTab.unitCostLabel")}</div>
             </div>
             <div className="bg-white rounded-lg border border-[#E5EAF0] p-2 text-center">
               <Package className="w-3 h-3 text-[#9E9FAE] mx-auto mb-0.5" />
               <div className="text-xs font-bold text-[#212833]">{quotes[0].moq.toLocaleString()}</div>
-              <div className="text-[9px] text-[#9E9FAE]">MOQ</div>
+              <div className="text-[9px] text-[#9E9FAE]">{t("quotesTab.moqLabel")}</div>
             </div>
             <div className="bg-white rounded-lg border border-[#E5EAF0] p-2 text-center">
               <Clock className="w-3 h-3 text-[#9E9FAE] mx-auto mb-0.5" />
               <div className="text-xs font-bold text-[#212833]">{quotes[0].leadDays}d</div>
-              <div className="text-[9px] text-[#9E9FAE]">Lead Time</div>
+              <div className="text-[9px] text-[#9E9FAE]">{t("quotesTab.leadTimeLabel")}</div>
             </div>
           </div>
           {quotes[0].validityDate && (
             <div className="flex items-center gap-1 mt-2 text-[10px] text-[#9E9FAE]">
               <CalendarDays className="w-3 h-3" />
-              Valid until {new Date(quotes[0].validityDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {t("quotesTab.validUntil", { date: new Date(quotes[0].validityDate).toLocaleDateString(getDisplayLocale(), { month: "short", day: "numeric", year: "numeric" }) })}
             </div>
           )}
           {quotes[0].notes && (
@@ -346,6 +349,7 @@ interface AddQuoteDialogProps {
 }
 
 function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading, supplierNames }: AddQuoteDialogProps) {
+  const { t } = useTranslation();
   const set = (field: keyof AddQuoteForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }));
 
@@ -353,19 +357,19 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
     <Dialog open={open} onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-sm font-bold text-[#212833]">Add Factory Quote</DialogTitle>
+          <DialogTitle className="text-sm font-bold text-[#212833]">{t("quotesTab.dialogTitle")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 py-1">
           <div>
             <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-              Factory / Supplier <span className="text-red-500">*</span>
+              {t("quotesTab.labelFactory")} <span className="text-red-500">*</span>
             </label>
             <input
               value={form.factory}
               onChange={set("factory")}
               list="quote-supplier-list"
-              placeholder="e.g. Guangzhou Metalworks"
+              placeholder={t("quotesTab.placeholderFactory")}
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"
             />
             <datalist id="quote-supplier-list">
@@ -374,7 +378,7 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Country</label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("quotesTab.labelCountry")}</label>
             <select
               value={form.country}
               onChange={set("country")}
@@ -388,7 +392,7 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                Unit Cost (USD) <span className="text-red-500">*</span>
+                {t("quotesTab.labelUnitCost")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -402,7 +406,7 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
             </div>
             <div>
               <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                MOQ (units) <span className="text-red-500">*</span>
+                {t("quotesTab.labelMoq")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -419,7 +423,7 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                Lead Time (days) <span className="text-red-500">*</span>
+                {t("quotesTab.labelLeadTime")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -432,7 +436,7 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#5E687B] mb-1">Valid Until</label>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("quotesTab.labelValidUntil")}</label>
               <input
                 type="date"
                 value={form.validityDate}
@@ -443,11 +447,13 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#5E687B] mb-1">Notes <span className="text-[#9E9FAE] font-normal">(optional)</span></label>
+            <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+              {t("quotesTab.labelNotes")} <span className="text-[#9E9FAE] font-normal">{t("quotesTab.optional")}</span>
+            </label>
             <textarea
               value={form.notes}
               onChange={set("notes")}
-              placeholder="Any additional context, conditions, or remarks…"
+              placeholder={t("quotesTab.placeholderNotes")}
               rows={2}
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors resize-none"
             />
@@ -462,14 +468,14 @@ function AddQuoteDialog({ open, onClose, form, setForm, onSubmit, error, loading
 
         <DialogFooter className="gap-2">
           <Button variant="outline" size="sm" onClick={onClose} disabled={loading} className="text-xs">
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             size="sm"
             onClick={onSubmit}
             disabled={loading}
             className="text-xs bg-[#9000FF] hover:bg-[#7A00D9] text-white">
-            {loading ? "Saving…" : "Add Quote"}
+            {loading ? t("common.saving") : t("quotesTab.addQuote")}
           </Button>
         </DialogFooter>
       </DialogContent>

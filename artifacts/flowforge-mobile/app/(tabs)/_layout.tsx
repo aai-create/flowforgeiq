@@ -2,11 +2,13 @@ import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { useColors } from "@/hooks/useColors";
 
 export default function TabLayout() {
   const colors = useColors();
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -31,7 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="documents"
         options={{
-          title: "Documents",
+          title: t("tabs.documents"),
           tabBarIcon: ({ color, size }) => (
             <Feather name="file-text" size={size} color={color} />
           ),
@@ -40,9 +42,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: "Chat",
+          title: t("tabs.chat"),
           tabBarIcon: ({ color, size }) => (
             <Feather name="message-circle" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: t("tabs.settings"),
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="settings" size={size} color={color} />
           ),
         }}
       />

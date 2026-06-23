@@ -1,6 +1,8 @@
 import React from "react";
 import { useListShipmentStageEvents } from "@workspace/api-client-react";
 import { Clock, ChevronRight, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getDisplayLocale } from "@/lib/locale";
 
 interface StageHistoryProps {
   shipmentId: number;
@@ -8,6 +10,7 @@ interface StageHistoryProps {
 }
 
 export function StageHistory({ shipmentId, stageLabels }: StageHistoryProps) {
+  const { t } = useTranslation();
   const { data: events, isLoading } = useListShipmentStageEvents(shipmentId);
 
   if (isLoading) {
@@ -21,10 +24,12 @@ export function StageHistory({ shipmentId, stageLabels }: StageHistoryProps) {
   if (!events || events.length === 0) {
     return (
       <div className="py-4 text-center text-[#9E9FAE] text-[11px]">
-        No stage changes recorded yet.
+        {t("orders.noStageChanges")}
       </div>
     );
   }
+
+  const locale = getDisplayLocale();
 
   return (
     <div className="space-y-2">
@@ -32,8 +37,8 @@ export function StageHistory({ shipmentId, stageLabels }: StageHistoryProps) {
         const fromLabel = stageLabels[ev.fromStageId] ?? ev.fromStageId;
         const toLabel = stageLabels[ev.toStageId] ?? ev.toStageId;
         const date = new Date(ev.createdAt);
-        const formatted = date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-          " · " + date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        const formatted = date.toLocaleDateString(locale, { month: "short", day: "numeric" }) +
+          " · " + date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
         return (
           <div key={ev.id} className="bg-white border border-[#E5EAF0] rounded-lg p-2.5 flex flex-col gap-1">
             <div className="flex items-center gap-1.5 text-[11px]">

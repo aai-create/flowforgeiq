@@ -28,9 +28,10 @@ import {
   type ExtractedLineItem,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useTranslation } from "react-i18next";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale === "en" ? "en-US" : locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -43,36 +44,11 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  extracted: { label: "Extracted", color: "#22c55e" },
-  processing: { label: "Processing", color: "#f59e0b" },
-  failed: { label: "Failed", color: "#e63946" },
-  unmatched: { label: "Unmatched", color: "#596a7c" },
-};
-
 const SEVERITY_COLORS: Record<string, string> = {
   high: "#e63946",
   medium: "#f59e0b",
   low: "#596a7c",
 };
-
-const EDITABLE_FIELDS: { key: string; label: string }[] = [
-  { key: "poNumber", label: "PO Number" },
-  { key: "supplier", label: "Supplier" },
-  { key: "buyer", label: "Buyer" },
-  { key: "invoiceNumber", label: "Invoice Number" },
-  { key: "invoiceDate", label: "Invoice Date" },
-  { key: "currency", label: "Currency" },
-  { key: "totalAmount", label: "Total Amount" },
-  { key: "incoterms", label: "Incoterms" },
-  { key: "paymentTerms", label: "Payment Terms" },
-  { key: "etd", label: "ETD" },
-  { key: "eta", label: "ETA" },
-  { key: "portOfLoading", label: "Port of Loading" },
-  { key: "portOfDischarge", label: "Port of Discharge" },
-  { key: "documentType", label: "Document Type" },
-  { key: "qcResult", label: "QC Result" },
-];
 
 interface EditFieldModalProps {
   visible: boolean;
@@ -95,6 +71,7 @@ function EditFieldModal({
   onSave,
   isSaving,
 }: EditFieldModalProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(originalValue);
 
   const handleSave = useCallback(() => {
@@ -115,11 +92,11 @@ function EditFieldModal({
         <Pressable style={[styles.modalSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
           <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-            Edit {fieldLabel}
+            {t("docs.editFieldTitle", { field: fieldLabel })}
           </Text>
           {originalValue ? (
             <Text style={[styles.modalOriginal, { color: colors.mutedForeground }]}>
-              Original: {originalValue}
+              {t("docs.originalValue", { value: originalValue })}
             </Text>
           ) : null}
           <View style={[styles.editInput, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -129,7 +106,7 @@ function EditFieldModal({
               onChangeText={setValue}
               multiline={fieldKey === "transcriptSummary" || fieldKey === "qcResult"}
               autoFocus
-              placeholder={`Enter corrected ${fieldLabel.toLowerCase()}…`}
+              placeholder={t("docs.enterCorrected", { field: fieldLabel.toLowerCase() })}
               placeholderTextColor={colors.mutedForeground}
               selectTextOnFocus
             />
@@ -139,7 +116,7 @@ function EditFieldModal({
               onPress={onClose}
               style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: colors.border }]}
             >
-              <Text style={[styles.modalBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+              <Text style={[styles.modalBtnText, { color: colors.mutedForeground }]}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
@@ -154,7 +131,7 @@ function EditFieldModal({
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={[styles.modalBtnText, { color: value.trim() ? "#fff" : colors.mutedForeground }]}>
-                  Save Correction
+                  {t("docs.saveCorrection")}
                 </Text>
               )}
             </Pressable>
@@ -182,6 +159,7 @@ function POPickerModal({
   onSelect,
   isLinking,
 }: POPickerModalProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const { data: shipments, isLoading } = useListShipments({ query: { enabled: visible } as any });
 
@@ -201,7 +179,7 @@ function POPickerModal({
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={[styles.poSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.modalTitle, { color: colors.foreground }]}>Link to Shipment</Text>
+          <Text style={[styles.modalTitle, { color: colors.foreground }]}>{t("docs.linkToShipment")}</Text>
 
           <View style={[styles.poSearch, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Feather name="search" size={14} color={colors.mutedForeground} />
@@ -209,7 +187,7 @@ function POPickerModal({
               style={[styles.poSearchText, { color: colors.foreground }]}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search PO number, supplier, product…"
+              placeholder={t("docs.searchPO")}
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="none"
               autoCorrect={false}
@@ -222,7 +200,7 @@ function POPickerModal({
               style={[styles.poUnlinkBtn, { borderColor: colors.destructive + "50", backgroundColor: colors.destructive + "10" }]}
             >
               <Feather name="link-2" size={14} color={colors.destructive} />
-              <Text style={[styles.poUnlinkText, { color: colors.destructive }]}>Remove shipment link</Text>
+              <Text style={[styles.poUnlinkText, { color: colors.destructive }]}>{t("docs.removeShipmentLink")}</Text>
             </Pressable>
           )}
 
@@ -273,7 +251,7 @@ function POPickerModal({
               ListEmptyComponent={() => (
                 <View style={styles.poEmpty}>
                   <Text style={[styles.poEmptyText, { color: colors.mutedForeground }]}>
-                    No shipments match your search
+                    {t("docs.noShipmentsMatch")}
                   </Text>
                 </View>
               )}
@@ -292,6 +270,7 @@ export default function DocumentDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { t, i18n } = useTranslation();
 
   const { data: doc, isLoading, isError, refetch } = useGetDocument(docId);
 
@@ -340,7 +319,7 @@ export default function DocumentDetailScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         },
         onError: () => {
-          Alert.alert("Save failed", "Could not save correction. Please try again.");
+          Alert.alert(t("docs.saveFailed"), t("docs.saveFailedDesc"));
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         },
       }
@@ -357,12 +336,37 @@ export default function DocumentDetailScreen() {
           refetch();
         },
         onError: () => {
-          Alert.alert("Link failed", "Could not update shipment link. Please try again.");
+          Alert.alert(t("docs.linkFailed"), t("docs.linkFailedDesc"));
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         },
       }
     );
   }
+
+  const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+    extracted: { label: t("documents.status.extracted"), color: "#22c55e" },
+    processing: { label: t("documents.status.processing"), color: "#f59e0b" },
+    failed: { label: t("documents.status.failed"), color: "#e63946" },
+    unmatched: { label: t("documents.status.unmatched"), color: "#596a7c" },
+  };
+
+  const EDITABLE_FIELDS: { key: string; label: string }[] = [
+    { key: "poNumber", label: t("docs.field_poNumber") },
+    { key: "supplier", label: t("docs.field_supplier") },
+    { key: "buyer", label: t("docs.field_buyer") },
+    { key: "invoiceNumber", label: t("docs.field_invoiceNumber") },
+    { key: "invoiceDate", label: t("docs.field_invoiceDate") },
+    { key: "currency", label: t("docs.field_currency") },
+    { key: "totalAmount", label: t("docs.field_totalAmount") },
+    { key: "incoterms", label: t("docs.field_incoterms") },
+    { key: "paymentTerms", label: t("docs.field_paymentTerms") },
+    { key: "etd", label: t("docs.field_etd") },
+    { key: "eta", label: t("docs.field_eta") },
+    { key: "portOfLoading", label: t("docs.field_portOfLoading") },
+    { key: "portOfDischarge", label: t("docs.field_portOfDischarge") },
+    { key: "documentType", label: t("docs.field_documentType") },
+    { key: "qcResult", label: t("docs.field_qcResult") },
+  ];
 
   const statusCfg = doc ? (STATUS_CONFIG[doc.status] ?? { label: doc.status, color: "#596a7c" }) : null;
 
@@ -370,7 +374,7 @@ export default function DocumentDetailScreen() {
     return (
       <View style={[styles.root, styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Loading document…</Text>
+        <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>{t("docs.loadingDocument")}</Text>
       </View>
     );
   }
@@ -379,12 +383,12 @@ export default function DocumentDetailScreen() {
     return (
       <View style={[styles.root, styles.center, { backgroundColor: colors.background }]}>
         <Feather name="alert-circle" size={32} color={colors.destructive} />
-        <Text style={[styles.errorTitle, { color: colors.foreground }]}>Document not found</Text>
+        <Text style={[styles.errorTitle, { color: colors.foreground }]}>{t("docs.notFound")}</Text>
         <Pressable
           onPress={() => router.back()}
           style={[styles.backBtn, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.backBtnText}>Go Back</Text>
+          <Text style={styles.backBtnText}>{t("common.goBack")}</Text>
         </Pressable>
       </View>
     );
@@ -429,7 +433,7 @@ export default function DocumentDetailScreen() {
             </View>
           )}
           <Text style={[styles.metaDate, { color: colors.mutedForeground }]}>
-            {formatDate(doc.createdAt)}
+            {formatDate(doc.createdAt, i18n.language)}
           </Text>
         </Animated.View>
 
@@ -440,7 +444,7 @@ export default function DocumentDetailScreen() {
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardHeaderLeft}>
               <Feather name="package" size={15} color={colors.primary} />
-              <Text style={[styles.cardTitle, { color: colors.foreground }]}>Shipment Link</Text>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("docs.shipmentLink")}</Text>
             </View>
             <Pressable
               onPress={() => {
@@ -452,7 +456,7 @@ export default function DocumentDetailScreen() {
             >
               <Feather name="link" size={13} color={colors.primary} />
               <Text style={[styles.linkBtnText, { color: colors.primary }]}>
-                {doc.shipmentId != null ? "Change" : "Link PO"}
+                {doc.shipmentId != null ? t("docs.change") : t("docs.linkPo")}
               </Text>
             </Pressable>
           </View>
@@ -460,12 +464,12 @@ export default function DocumentDetailScreen() {
             <View style={[styles.linkedShipment, { backgroundColor: colors.accent }]}>
               <Feather name="check-circle" size={16} color={colors.primary} />
               <Text style={[styles.linkedText, { color: colors.primary }]}>
-                Shipment #{doc.shipmentId}
+                {t("docs.shipmentNumber", { id: doc.shipmentId })}
               </Text>
             </View>
           ) : (
             <Text style={[styles.noLink, { color: colors.mutedForeground }]}>
-              Not linked to a shipment
+              {t("docs.notLinked")}
             </Text>
           )}
         </Animated.View>
@@ -479,7 +483,7 @@ export default function DocumentDetailScreen() {
               >
                 <View style={styles.cardHeaderLeft}>
                   <Feather name="activity" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Extraction Quality</Text>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("docs.extractionQuality")}</Text>
                 </View>
                 <View style={styles.confRow}>
                   <Text style={[styles.confPct, { color: colors.foreground }]}>
@@ -503,7 +507,7 @@ export default function DocumentDetailScreen() {
                   </View>
                 </View>
                 <Text style={[styles.extractionStatus, { color: colors.mutedForeground }]}>
-                  Status: {doc.extraction.status}
+                  {t("docs.extractionStatus", { status: doc.extraction.status })}
                   {doc.extraction.errorMessage ? ` · ${doc.extraction.errorMessage}` : ""}
                 </Text>
               </Animated.View>
@@ -516,9 +520,9 @@ export default function DocumentDetailScreen() {
               >
                 <View style={styles.cardHeaderLeft}>
                   <Feather name="layers" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Extracted Fields</Text>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("docs.extractedFields")}</Text>
                   <Text style={[styles.cardHint, { color: colors.mutedForeground }]}>
-                    Tap to correct
+                    {t("docs.tapToCorrect")}
                   </Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -571,7 +575,7 @@ export default function DocumentDetailScreen() {
                 <View style={styles.cardHeaderLeft}>
                   <Feather name="list" size={15} color={colors.primary} />
                   <Text style={[styles.cardTitle, { color: colors.foreground }]}>
-                    Line Items ({lineItems.length})
+                    {t("docs.lineItems")} ({lineItems.length})
                   </Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -589,12 +593,12 @@ export default function DocumentDetailScreen() {
                     <View style={styles.lineMetaRow}>
                       {item.quantity != null && (
                         <Text style={[styles.lineMeta, { color: colors.mutedForeground }]}>
-                          Qty: {item.quantity}{item.unit ? ` ${item.unit}` : ""}
+                          {t("docs.lineItemQty", { qty: item.quantity, unit: item.unit ? ` ${item.unit}` : "" })}
                         </Text>
                       )}
                       {item.unitPrice != null && (
                         <Text style={[styles.lineMeta, { color: colors.mutedForeground }]}>
-                          Unit: ${item.unitPrice.toFixed(2)}
+                          {t("docs.lineItemUnit", { price: item.unitPrice.toFixed(2) })}
                         </Text>
                       )}
                       {item.totalPrice != null && (
@@ -616,7 +620,7 @@ export default function DocumentDetailScreen() {
                 <View style={styles.cardHeaderLeft}>
                   <Feather name="alert-triangle" size={15} color={colors.warning} />
                   <Text style={[styles.cardTitle, { color: colors.foreground }]}>
-                    Reconciliation Findings ({findings.length})
+                    {t("docs.reconciliationFindings", { count: findings.length })}
                   </Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -643,7 +647,7 @@ export default function DocumentDetailScreen() {
                           </Text>
                         </View>
                         <Text style={[styles.findingType, { color: colors.foreground }]}>
-                          {f.type ?? "mismatch"}
+                          {f.type ?? t("docs.mismatch")}
                         </Text>
                         {f.field != null && (
                           <Text style={[styles.findingField, { color: colors.mutedForeground }]}>
@@ -655,12 +659,12 @@ export default function DocumentDetailScreen() {
                         <View style={styles.findingValues}>
                           {f.expected != null && (
                             <Text style={[styles.findingVal, { color: colors.mutedForeground }]}>
-                              Expected: <Text style={{ color: colors.success }}>{f.expected}</Text>
+                              {t("docs.expected")}: <Text style={{ color: colors.success }}>{f.expected}</Text>
                             </Text>
                           )}
                           {f.actual != null && (
                             <Text style={[styles.findingVal, { color: colors.mutedForeground }]}>
-                              Actual: <Text style={{ color: sevColor }}>{f.actual}</Text>
+                              {t("docs.actual")}: <Text style={{ color: sevColor }}>{f.actual}</Text>
                             </Text>
                           )}
                         </View>
@@ -678,7 +682,7 @@ export default function DocumentDetailScreen() {
               >
                 <View style={styles.cardHeaderLeft}>
                   <Feather name="file-text" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Transcript</Text>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("docs.transcript")}</Text>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <Text style={[styles.transcript, { color: colors.mutedForeground }]}>
@@ -693,7 +697,7 @@ export default function DocumentDetailScreen() {
           <View style={[styles.card, styles.noExtraction, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="hourglass-outline" size={28} color={colors.mutedForeground} />
             <Text style={[styles.noExtractionText, { color: colors.mutedForeground }]}>
-              Extraction not yet available
+              {t("docs.extractionNotAvailable")}
             </Text>
           </View>
         )}
