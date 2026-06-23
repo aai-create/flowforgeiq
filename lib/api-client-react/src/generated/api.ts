@@ -43,6 +43,10 @@ import type {
   ExtractionCorrectionInput,
   FactoryQuote,
   FactoryQuoteCreate,
+  FocusItemUpdate,
+  FocusItemUpdateResponse,
+  FocusListResponse,
+  FocusSuggestionsResponse,
   GetMyProfile200,
   GmailOAuthCallbackParams,
   GmailStatus,
@@ -2951,6 +2955,225 @@ export const useTestGmailSend = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getTestGmailSendMutationOptions(options));
+    }
+
+export const getListFocusItemsUrl = () => {
+
+
+
+
+  return `/api/focus`
+}
+
+/**
+ * @summary Get merged Today's Focus list (DB tasks + auto-generated urgency items)
+ */
+export const listFocusItems = async ( options?: RequestInit): Promise<FocusListResponse> => {
+
+  return customFetch<FocusListResponse>(getListFocusItemsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFocusItemsQueryKey = () => {
+    return [
+    `/api/focus`
+    ] as const;
+    }
+
+
+export const getListFocusItemsQueryOptions = <TData = Awaited<ReturnType<typeof listFocusItems>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFocusItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFocusItemsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFocusItems>>> = ({ signal }) => listFocusItems({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFocusItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFocusItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listFocusItems>>>
+export type ListFocusItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get merged Today's Focus list (DB tasks + auto-generated urgency items)
+ */
+
+export function useListFocusItems<TData = Awaited<ReturnType<typeof listFocusItems>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFocusItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFocusItemsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateFocusItemUrl = (id: string,) => {
+
+
+
+
+  return `/api/focus/${id}`
+}
+
+/**
+ * @summary Toggle done for a DB-backed focus item
+ */
+export const updateFocusItem = async (id: string,
+    focusItemUpdate: FocusItemUpdate, options?: RequestInit): Promise<FocusItemUpdateResponse> => {
+
+  return customFetch<FocusItemUpdateResponse>(getUpdateFocusItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      focusItemUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateFocusItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFocusItem>>, TError,{id: string;data: BodyType<FocusItemUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFocusItem>>, TError,{id: string;data: BodyType<FocusItemUpdate>}, TContext> => {
+
+const mutationKey = ['updateFocusItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFocusItem>>, {id: string;data: BodyType<FocusItemUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFocusItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFocusItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateFocusItem>>>
+    export type UpdateFocusItemMutationBody = BodyType<FocusItemUpdate>
+    export type UpdateFocusItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Toggle done for a DB-backed focus item
+ */
+export const useUpdateFocusItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFocusItem>>, TError,{id: string;data: BodyType<FocusItemUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFocusItem>>,
+        TError,
+        {id: string;data: BodyType<FocusItemUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateFocusItemMutationOptions(options));
+    }
+
+export const getGetFocusSuggestionsUrl = () => {
+
+
+
+
+  return `/api/focus/suggestions`
+}
+
+/**
+ * @summary Get AI-generated action suggestions based on live shipment data
+ */
+export const getFocusSuggestions = async ( options?: RequestInit): Promise<FocusSuggestionsResponse> => {
+
+  return customFetch<FocusSuggestionsResponse>(getGetFocusSuggestionsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetFocusSuggestionsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getFocusSuggestions>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getFocusSuggestions>>, TError,void, TContext> => {
+
+const mutationKey = ['getFocusSuggestions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getFocusSuggestions>>, void> = () => {
+
+
+          return  getFocusSuggestions(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetFocusSuggestionsMutationResult = NonNullable<Awaited<ReturnType<typeof getFocusSuggestions>>>
+
+    export type GetFocusSuggestionsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Get AI-generated action suggestions based on live shipment data
+ */
+export const useGetFocusSuggestions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getFocusSuggestions>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getFocusSuggestions>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGetFocusSuggestionsMutationOptions(options));
     }
 
 export const getListTasksUrl = () => {

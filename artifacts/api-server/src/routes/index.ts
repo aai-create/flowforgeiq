@@ -16,6 +16,7 @@ import settingsRouter from "./settings";
 import integrationsRouter from "./integrations";
 import rfqsRouter from "./rfqs";
 import teamRouter from "./team";
+import focusRouter from "./focus";
 
 const router: IRouter = Router();
 
@@ -39,6 +40,7 @@ protectedRouter.use(tasksRouter);
 protectedRouter.use(documentsRouter);
 protectedRouter.use(predictionsRouter);
 protectedRouter.use(copilotRouter);
+protectedRouter.use(focusRouter);
 protectedRouter.use(settingsRouter);
 protectedRouter.use(integrationsRouter);
 protectedRouter.use(rfqsRouter);
