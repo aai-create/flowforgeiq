@@ -1459,7 +1459,16 @@ export const GetCopilotSummaryResponse = zod.object({
   "actionType": zod.string(),
   "avgEditDistance": zod.number().describe('Average normalized edit distance (0–1) across approved edits for this action type'),
   "sampleCount": zod.number().describe('Number of user-edited proposals used in this average')
-})).optional().describe('Per-action-type average edit distance, reflecting how much users tend to modify AI drafts')
+})).optional().describe('Per-action-type average edit distance, reflecting how much users tend to modify AI drafts'),
+  "draftQualityTrend": zod.array(zod.object({
+  "actionType": zod.string(),
+  "isConverging": zod.boolean().describe('True when edit distance is trending downward over the last 5+ edits (negative linear-regression slope)'),
+  "weeks": zod.array(zod.object({
+  "weekLabel": zod.string().describe('ISO week label e.g. \'2026-W20\''),
+  "avgEditDistance": zod.number(),
+  "sampleCount": zod.number()
+})).describe('Weekly bucketed avg edit distance, chronologically sorted')
+})).optional().describe('Weekly-bucketed edit-distance trend per action type, used to show improvement over time')
 })
 
 

@@ -12,12 +12,13 @@ import {
   type CopilotProposal,
   type AutonomyPolicy,
   type CopilotDraftQualityEntry,
+  type CopilotDraftQualityTrendEntry,
 } from "@workspace/api-client-react";
 import {
   Sparkles, CheckCircle2, XCircle, Clock, Edit3, Send, RefreshCw,
   AlertCircle, Zap, MessageCircle, Mail, DollarSign, FileText,
   ArrowUpRight, Settings, ChevronDown, ChevronRight, X, RotateCcw,
-  BrainCircuit, Shield, Bot, Play, Eye, ThumbsUp, TrendingUp, BarChart2,
+  BrainCircuit, Shield, Bot, Play, Eye, ThumbsUp, TrendingUp, TrendingDown, BarChart2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,8 +108,60 @@ function getPayload(p: CopilotProposal): Record<string, unknown> {
   return active;
 }
 
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+function Sparkline({ values, width = 80, height = 28 }: { values: number[]; width?: number; height?: number }) {
+  if (values.length < 2) {
+    return (
+      <svg width={width} height={height} className="shrink-0">
+        <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke="#E5EAF0" strokeWidth={1.5} strokeDasharray="3 2" />
+      </svg>
+    );
+  }
+
+  const pad = 3;
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 0.001;
+
+  const pts = values.map((v, i) => {
+    const x = pad + (i / (values.length - 1)) * (width - pad * 2);
+    const y = pad + (1 - (v - minV) / range) * (height - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
+  const polyline = pts.join(" ");
+
+  // Area fill path
+  const firstX = pad;
+  const lastX = (width - pad).toFixed(1);
+  const bottomY = (height - pad).toFixed(1);
+  const areaPath = `M ${firstX},${height - pad} L ${pts.join(" L ")} L ${lastX},${bottomY} Z`;
+
+  const isDecreasing = values[values.length - 1] < values[0];
+  const strokeColor = isDecreasing ? "#10b981" : "#f59e0b";
+  const fillColor = isDecreasing ? "#10b98120" : "#f59e0b18";
+
+  return (
+    <svg width={width} height={height} className="shrink-0 overflow-visible">
+      <path d={areaPath} fill={fillColor} />
+      <polyline points={polyline} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      {/* Last point dot */}
+      {(() => {
+        const [lx, ly] = pts[pts.length - 1].split(",").map(Number);
+        return <circle cx={lx} cy={ly} r={2} fill={strokeColor} />;
+      })()}
+    </svg>
+  );
+}
+
 // ─── Draft Quality Panel ──────────────────────────────────────────────────────
-function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] }) {
+function DraftQualityPanel({
+  entries,
+  trend,
+}: {
+  entries: CopilotDraftQualityEntry[];
+  trend: CopilotDraftQualityTrendEntry[];
+}) {
   if (entries.length === 0) {
     return (
       <div className="text-center py-6">
@@ -121,6 +174,10 @@ function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] })
 
   const total = entries.reduce((s, e) => s + e.sampleCount, 0);
   const overallAvg = entries.reduce((s, e) => s + e.avgEditDistance * e.sampleCount, 0) / total;
+  const convergingCount = trend.filter(t => t.isConverging).length;
+
+  // Build a lookup from actionType → trend entry for quick access
+  const trendMap = new Map(trend.map(t => [t.actionType, t]));
 
   return (
     <div className="space-y-3">
@@ -135,6 +192,14 @@ function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] })
             Overall avg change: <span className={`font-bold ${editDistanceColor(overallAvg)}`}>{Math.round(overallAvg * 100)}%</span>
             {" · "}{editDistanceLabel(overallAvg)} — copilot uses these to guide future drafts
           </div>
+          {convergingCount > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <TrendingDown size={9} className="text-emerald-500" />
+              <span className="text-[9px] text-emerald-600 font-semibold">
+                {convergingCount} action type{convergingCount > 1 ? "s" : ""} converging toward your style
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -143,18 +208,26 @@ function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] })
         {entries.map(entry => {
           const pct = Math.round(entry.avgEditDistance * 100);
           const barWidth = Math.max(4, pct);
+          const trendEntry = trendMap.get(entry.actionType);
+          const sparkValues = trendEntry?.weeks.map(w => w.avgEditDistance) ?? [];
+
           return (
             <div key={entry.actionType} className="bg-white border border-[#E5EAF0] rounded-xl px-3 py-2.5">
               <div className="flex items-center gap-2 mb-1.5">
                 {actionTypeIcon(entry.actionType, 11)}
                 <span className="text-[11px] font-semibold text-[#212833]">{actionTypeLabel(entry.actionType)}</span>
+                {trendEntry?.isConverging && (
+                  <span className="flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full">
+                    <TrendingDown size={8} /> Converging
+                  </span>
+                )}
                 <span className={`ml-auto text-[10px] font-bold ${editDistanceColor(entry.avgEditDistance)}`}>
                   {pct}% avg change
                 </span>
               </div>
 
               {/* Progress bar */}
-              <div className="h-1.5 bg-[#F0F4F8] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-[#F0F4F8] rounded-full overflow-hidden mb-2">
                 <div
                   className={`h-full rounded-full transition-all ${
                     entry.avgEditDistance < 0.2
@@ -167,7 +240,28 @@ function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] })
                 />
               </div>
 
-              <div className="flex items-center justify-between mt-1">
+              {/* Sparkline row */}
+              {sparkValues.length > 0 && (
+                <div className="flex items-center gap-2 mt-1.5 mb-1">
+                  <span className="text-[8px] text-[#9E9FAE] shrink-0">week-over-week</span>
+                  <Sparkline values={sparkValues} width={100} height={22} />
+                  <div className="flex-1 min-w-0 text-right">
+                    {trendEntry && trendEntry.weeks.length >= 2 && (() => {
+                      const first = trendEntry.weeks[0].avgEditDistance;
+                      const last = trendEntry.weeks[trendEntry.weeks.length - 1].avgEditDistance;
+                      const delta = Math.round((last - first) * 100);
+                      if (delta === 0) return null;
+                      return (
+                        <span className={`text-[9px] font-semibold ${delta < 0 ? "text-emerald-600" : "text-amber-500"}`}>
+                          {delta > 0 ? "+" : ""}{delta}pp
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
                 <span className="text-[9px] text-[#9E9FAE]">{editDistanceLabel(entry.avgEditDistance)}</span>
                 <span className="text-[9px] text-[#9E9FAE]">{entry.sampleCount} sample{entry.sampleCount > 1 ? "s" : ""}</span>
               </div>
@@ -176,8 +270,22 @@ function DraftQualityPanel({ entries }: { entries: CopilotDraftQualityEntry[] })
         })}
       </div>
 
+      {/* Week labels legend */}
+      {trend.some(t => t.weeks.length >= 2) && (
+        <div className="flex items-center gap-3 px-2">
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-0.5 bg-emerald-400 rounded" />
+            <span className="text-[8px] text-[#9E9FAE]">Improving (↓ edits needed)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-0.5 bg-amber-400 rounded" />
+            <span className="text-[8px] text-[#9E9FAE]">Still learning</span>
+          </div>
+        </div>
+      )}
+
       <p className="text-[9px] text-[#9E9FAE] text-center leading-relaxed px-2">
-        Higher % = you changed the AI draft more. The copilot injects your past edits as examples when generating similar drafts.
+        Higher % = you changed the AI draft more. The copilot injects your past edits as examples when generating new drafts.
       </p>
     </div>
   );
@@ -604,6 +712,7 @@ export function CopilotQueue() {
   const autoRan = proposals.filter(p => p.status === "auto_executed").length;
 
   const draftQuality: CopilotDraftQualityEntry[] = summary?.draftQuality ?? [];
+  const draftQualityTrend: CopilotDraftQualityTrendEntry[] = summary?.draftQualityTrend ?? [];
   const totalEdits = draftQuality.reduce((s, e) => s + e.sampleCount, 0);
 
   function handleApprove(id: number) {
@@ -883,7 +992,7 @@ export function CopilotQueue() {
               <p className="text-[10px] text-[#5E687B] mb-4 leading-relaxed">
                 Tracks how much you edit AI drafts per action type. Higher = bigger gap between AI suggestion and your preference. The copilot uses your past edits as examples when generating new drafts.
               </p>
-              <DraftQualityPanel entries={draftQuality} />
+              <DraftQualityPanel entries={draftQuality} trend={draftQualityTrend} />
             </div>
           </div>
         )}

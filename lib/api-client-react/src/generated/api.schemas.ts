@@ -843,6 +843,21 @@ export interface CopilotDraftQualityEntry {
   sampleCount: number;
 }
 
+export interface CopilotDraftQualityWeekBucket {
+  /** ISO week label e.g. '2026-W20' */
+  weekLabel: string;
+  avgEditDistance: number;
+  sampleCount: number;
+}
+
+export interface CopilotDraftQualityTrendEntry {
+  actionType: string;
+  /** True when edit distance is trending downward over the last 5+ edits (negative linear-regression slope) */
+  isConverging: boolean;
+  /** Weekly bucketed avg edit distance, chronologically sorted */
+  weeks: CopilotDraftQualityWeekBucket[];
+}
+
 export interface CopilotSummary {
   pending: number;
   autoExecuted: number;
@@ -853,6 +868,8 @@ export interface CopilotSummary {
   recentActions?: CopilotProposal[];
   /** Per-action-type average edit distance, reflecting how much users tend to modify AI drafts */
   draftQuality?: CopilotDraftQualityEntry[];
+  /** Weekly-bucketed edit-distance trend per action type, used to show improvement over time */
+  draftQualityTrend?: CopilotDraftQualityTrendEntry[];
 }
 
 export interface AutonomyPolicy {

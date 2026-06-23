@@ -2339,6 +2339,25 @@ components:
         avgEditDistance:  { type: number, description: "Average normalized edit distance (0–1) across approved edits for this action type" }
         sampleCount:      { type: integer, description: "Number of user-edited proposals used in this average" }
 
+    CopilotDraftQualityWeekBucket:
+      type: object
+      required: [weekLabel, avgEditDistance, sampleCount]
+      properties:
+        weekLabel:        { type: string, description: "ISO week label e.g. '2026-W20'" }
+        avgEditDistance:  { type: number }
+        sampleCount:      { type: integer }
+
+    CopilotDraftQualityTrendEntry:
+      type: object
+      required: [actionType, weeks, isConverging]
+      properties:
+        actionType:   { type: string }
+        isConverging: { type: boolean, description: "True when edit distance is trending downward over the last 5+ edits (negative linear-regression slope)" }
+        weeks:
+          type: array
+          description: "Weekly bucketed avg edit distance, chronologically sorted"
+          items: { $ref: "#/components/schemas/CopilotDraftQualityWeekBucket" }
+
     CopilotSummary:
       type: object
       required: [pending, autoExecuted, snoozed, rejected, watched]
@@ -2358,6 +2377,10 @@ components:
           type: array
           description: "Per-action-type average edit distance, reflecting how much users tend to modify AI drafts"
           items: { $ref: "#/components/schemas/CopilotDraftQualityEntry" }
+        draftQualityTrend:
+          type: array
+          description: "Weekly-bucketed edit-distance trend per action type, used to show improvement over time"
+          items: { $ref: "#/components/schemas/CopilotDraftQualityTrendEntry" }
 
     AutonomyPolicy:
       type: object

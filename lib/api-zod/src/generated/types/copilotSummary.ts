@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CopilotDraftQualityEntry } from './copilotDraftQualityEntry';
+import type { CopilotDraftQualityTrendEntry } from './copilotDraftQualityTrendEntry';
 import type { CopilotProposal } from './copilotProposal';
 
 export interface CopilotSummary {
@@ -18,4 +19,6 @@ export interface CopilotSummary {
   recentActions?: CopilotProposal[];
   /** Per-action-type average edit distance, reflecting how much users tend to modify AI drafts */
   draftQuality?: CopilotDraftQualityEntry[];
+  /** Weekly-bucketed edit-distance trend per action type, used to show improvement over time */
+  draftQualityTrend?: CopilotDraftQualityTrendEntry[];
 }

@@ -21,6 +21,8 @@ export * from './chatIngestResultRoutingStatus';
 export * from './connectGmail200';
 export * from './contributingSignal';
 export * from './copilotDraftQualityEntry';
+export * from './copilotDraftQualityTrendEntry';
+export * from './copilotDraftQualityWeekBucket';
 export * from './copilotProposal';
 export * from './copilotProposalAuditTrailItem';
 export * from './copilotProposalEditedPayload';

@@ -209,11 +209,70 @@ router.get("/copilot/summary", async (req, res) => {
     );
   }
 
+  // ── Draft-quality trend (weekly buckets) ──────────────────────────────────
+  function isoWeekLabel(date: Date): string {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+  }
+
+  const trendByType: Record<string, Array<{ week: string; dist: number; ts: number }>> = {};
+  for (const p of editedProposals) {
+    const at = p.actionType;
+    if (!trendByType[at]) trendByType[at] = [];
+    const ts = new Date(p.createdAt).getTime();
+    trendByType[at].push({ week: isoWeekLabel(new Date(p.createdAt)), dist: p.editDistance as number, ts });
+  }
+
+  const draftQualityTrend = Object.entries(trendByType).map(([actionType, rawEntries]) => {
+    const sorted = [...rawEntries].sort((a, b) => a.ts - b.ts);
+
+    const weekMap = new Map<string, number[]>();
+    for (const e of sorted) {
+      if (!weekMap.has(e.week)) weekMap.set(e.week, []);
+      weekMap.get(e.week)!.push(e.dist);
+    }
+
+    const weeks = Array.from(weekMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([weekLabel, dists]) => ({
+        weekLabel,
+        avgEditDistance: dists.reduce((a, b) => a + b, 0) / dists.length,
+        sampleCount: dists.length,
+      }));
+
+    // "Converging" = negative slope over the last 5+ individual samples
+    let isConverging = false;
+    if (sorted.length >= 5) {
+      const last = sorted.slice(-5);
+      const n = last.length;
+      const sumX = last.reduce((s, _, i) => s + i, 0);
+      const sumY = last.reduce((s, e) => s + e.dist, 0);
+      const sumXY = last.reduce((s, e, i) => s + i * e.dist, 0);
+      const sumX2 = last.reduce((s, _, i) => s + i * i, 0);
+      const denom = n * sumX2 - sumX * sumX;
+      const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+      isConverging = slope < 0;
+    }
+
+    return { actionType, weeks, isConverging };
+  });
+
+  // Add converging highlight to summary
+  const convergingTypes = draftQualityTrend.filter(t => t.isConverging);
+  if (convergingTypes.length > 0) {
+    const names = convergingTypes.map(t => actionLabel(t.actionType)).join(", ");
+    highlights.push(`Copilot is converging on your style for: ${names} — edit distance is decreasing`);
+  }
+
   const recentActions = allProposals
     .filter(p => p.status === "auto_executed" || p.status === "approved")
     .slice(0, 5);
 
-  res.json({ pending, autoExecuted, snoozed, rejected, watched, highlights, recentActions, draftQuality });
+  res.json({ pending, autoExecuted, snoozed, rejected, watched, highlights, recentActions, draftQuality, draftQualityTrend });
 });
 
 // ─── Autonomy policies ────────────────────────────────────────────────────────
