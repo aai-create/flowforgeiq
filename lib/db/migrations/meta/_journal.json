@@ -22,6 +22,13 @@
       "when": 1782248388086,
       "tag": "0002_third_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782249178575,
+      "tag": "0003_optimal_lyja",
+      "breakpoints": true
     }
   ]
 }

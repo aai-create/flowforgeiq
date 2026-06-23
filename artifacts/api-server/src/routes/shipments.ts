@@ -12,6 +12,7 @@ import {
   teamUsersTable,
   stagesTable,
   tasksTable,
+  buyersTable,
 } from "@workspace/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
@@ -184,6 +185,24 @@ async function getOrCreateDeal(
   return created!.id;
 }
 
+async function resolveOrCreateBuyer(customerName: string, orgId: number): Promise<number> {
+  // Use ON CONFLICT DO NOTHING so concurrent inserts don't cause unique violations,
+  // then re-select the row that won the race.
+  const [inserted] = await db
+    .insert(buyersTable)
+    .values({ name: customerName, orgId })
+    .onConflictDoNothing()
+    .returning({ id: buyersTable.id });
+  if (inserted) return inserted.id;
+  const [existing] = await db
+    .select({ id: buyersTable.id })
+    .from(buyersTable)
+    .where(and(eq(buyersTable.name, customerName), eq(buyersTable.orgId, orgId)))
+    .limit(1);
+  if (!existing) throw new Error(`Failed to resolve or create buyer for customerName="${customerName}" orgId=${orgId}`);
+  return existing.id;
+}
+
 async function consumeNextSeq(orgId: number): Promise<number> {
   const [cfg] = await db.select().from(poNumberingConfigTable).where(eq(poNumberingConfigTable.orgId, orgId)).limit(1);
   if (!cfg) return 1;
@@ -238,6 +257,11 @@ router.post("/shipments", async (req, res) => {
     throw err;
   }
 
+  // Resolve buyerId from buyers table — throws on genuine DB errors (propagates as 500)
+  const buyerId = await resolveOrCreateBuyer(shipmentFields.customerName, orgId);
+  await db.update(shipmentsTable).set({ buyerId }).where(eq(shipmentsTable.id, row.id));
+  row = { ...row, buyerId };
+
   if (buyerPoNumber && buyerPoNumber.trim()) {
     try {
       const bup = (parsed as typeof parsed & { buyerUnitPrice?: number }).buyerUnitPrice;
@@ -289,7 +313,13 @@ router.patch("/shipments/:id", async (req, res) => {
     if (!supplierCheck) { res.status(400).json({ error: "Supplier not found" }); return; }
   }
 
-  await db.update(shipmentsTable).set(input).where(and(eq(shipmentsTable.id, id), eq(shipmentsTable.orgId, orgId)));
+  // Keep buyerId in sync when customerName changes — throws on genuine DB errors (propagates as 500)
+  const updateSet: typeof input & { buyerId?: number } = { ...input };
+  if (input.customerName !== undefined) {
+    updateSet.buyerId = await resolveOrCreateBuyer(input.customerName, orgId);
+  }
+
+  await db.update(shipmentsTable).set(updateSet).where(and(eq(shipmentsTable.id, id), eq(shipmentsTable.orgId, orgId)));
   const out = await loadShipment(id, orgId);
   if (!out) {
     res.status(404).json({ error: "Not found" });
