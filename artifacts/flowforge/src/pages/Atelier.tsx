@@ -273,7 +273,7 @@ export function Atelier() {
 
   const { data: allMessages = [] } = useListMessages();
   const { data: allDocuments = [] } = useListDocuments();
-  const [customerFilter, setCustomerFilter] = useState<string | null>(null);
+  const [customerFilter, setCustomerFilter] = useState<number | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
   const [poSearch, setPoSearch] = useState("");
@@ -592,10 +592,18 @@ export function Atelier() {
   };
 
   const CUSTOMERS = (() => {
-    const counts = new Map<string, number>();
-    for (const s of shipments) counts.set(s.customer, (counts.get(s.customer) ?? 0) + 1);
-    return Array.from(counts.entries()).map(([name, count], i) => ({ id: `c${i + 1}`, name, count }));
+    const map = new Map<string, { buyerId: number | null; name: string; count: number }>();
+    for (const s of shipments) {
+      const key = s.buyerId != null ? `id:${s.buyerId}` : `name:${s.customer}`;
+      const existing = map.get(key);
+      if (existing) existing.count++;
+      else map.set(key, { buyerId: s.buyerId, name: s.customer, count: 1 });
+    }
+    return Array.from(map.values());
   })();
+  const customerFilterName = customerFilter !== null
+    ? (CUSTOMERS.find(c => c.buyerId === customerFilter)?.name ?? null)
+    : null;
 
   const SUPPLIERS = (() => {
     const counts = new Map<string, number>();
@@ -604,7 +612,11 @@ export function Atelier() {
   })();
 
   const visibleShipments = shipments.filter(s => {
-    if (customerFilter && s.customer !== customerFilter) return false;
+    if (customerFilter !== null) {
+      const matches = s.buyerId === customerFilter ||
+        (s.buyerId === null && customerFilterName !== null && s.customer === customerFilterName);
+      if (!matches) return false;
+    }
     if (supplierFilter && s.supplier !== supplierFilter) return false;
     if (statusFilter !== "all" && s.status !== statusFilter) return false;
     if (poSearch.trim()) {
@@ -721,8 +733,8 @@ export function Atelier() {
                   </div>
                   <div className="space-y-0.5 mb-3">
                     {CUSTOMERS.map(c => (
-                      <button key={c.id} onClick={() => setCustomerFilter(customerFilter === c.name ? null : c.name)}
-                        className={`w-full flex items-center justify-between px-2 h-7 rounded-md transition-colors ${customerFilter === c.name ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
+                      <button key={c.buyerId ?? `name:${c.name}`} onClick={() => setCustomerFilter(customerFilter === c.buyerId ? null : c.buyerId)}
+                        className={`w-full flex items-center justify-between px-2 h-7 rounded-md transition-colors ${customerFilter === c.buyerId ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
                         <span className="flex items-center gap-1.5 truncate">
                           <Hash className="w-3 h-3 opacity-50 shrink-0" />
                           <span className="truncate text-xs">{c.name}</span>
@@ -1904,7 +1916,7 @@ export function Atelier() {
               list="buyer-options-new" placeholder="e.g. Marlowe & Sons"
               className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
             <datalist id="buyer-options-new">
-              {CUSTOMERS.map(c => <option key={c.id} value={c.name}/>)}
+              {CUSTOMERS.map(c => <option key={c.buyerId ?? `name:${c.name}`} value={c.name}/>)}
             </datalist>
           </div>
 

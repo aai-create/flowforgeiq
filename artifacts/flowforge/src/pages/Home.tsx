@@ -1860,7 +1860,7 @@ export default function Home() {
   });
   const [customerFilter, setCustomerFilter] = useState<string|null>(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
-    if (initParams.has("customer")) return null; // deep-link effect will set it
+    if (initParams.has("buyerId")) return null; // deep-link effect will set it
     return null;
   });
   const [flaggedFilter, setFlaggedFilter] = useState(false);
@@ -1977,7 +1977,7 @@ export default function Home() {
     const params = new URLSearchParams(initialSearchRef.current);
     const supplierParam = params.get("supplier");
     const shipmentParam = params.get("shipment");
-    const customerParam = params.get("customer");
+    const customerParam = params.get("buyerId");
     const tabParam = params.get("tab");
     if (!supplierParam && !shipmentParam && !customerParam && !tabParam) return;
     urlParamsApplied.current = true;
@@ -2040,15 +2040,15 @@ export default function Home() {
     navigate(`?${params.toString()}`, { replace: true });
   }, [supplierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep ?customer= in sync with customerFilter.
+  // Keep ?buyerId= in sync with customerFilter.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (!urlParamsApplied.current && params.has("customer")) return;
-    if (params.get("customer") === customerFilter) return;
+    if (!urlParamsApplied.current && params.has("buyerId")) return;
+    if (params.get("buyerId") === customerFilter) return;
     if (customerFilter) {
-      params.set("customer", customerFilter);
+      params.set("buyerId", customerFilter);
     } else {
-      params.delete("customer");
+      params.delete("buyerId");
     }
     navigate(`?${params.toString()}`, { replace: true });
   }, [customerFilter]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2160,9 +2160,13 @@ export default function Home() {
 
   const customerShipmentIds = useMemo(() => {
     if (!customerFilter) return null;
+    const filterId = Number(customerFilter);
+    const buyerName = shipments.find(s => s.buyerId === filterId)?.customer ?? null;
     const ids = new Set<string>();
     for (const s of shipments) {
-      if (s.customer === customerFilter) ids.add(s.id);
+      if (s.buyerId === filterId || (s.buyerId === null && buyerName !== null && s.customer === buyerName)) {
+        ids.add(s.id);
+      }
     }
     return ids;
   }, [customerFilter, shipments]);
@@ -2851,7 +2855,9 @@ export default function Home() {
                   className="flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 bg-[#9000FF]/10 text-[#9000FF] hover:bg-[#9000FF]/20 transition-colors"
                 >
                   <ChevronLeft className="w-2.5 h-2.5"/>
-                  <span className="max-w-[100px] truncate">{customerFilter}</span>
+                  <span className="max-w-[100px] truncate">
+                    {shipments.find(s => s.buyerId === Number(customerFilter))?.customer ?? customerFilter}
+                  </span>
                 </button>
               )}
 

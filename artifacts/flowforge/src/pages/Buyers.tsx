@@ -366,7 +366,7 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B]">Recent Messages</div>
                   <button
-                    onClick={() => navigate(`/inbox?customer=${encodeURIComponent(buyer.name)}`)}
+                    onClick={() => navigate(`/inbox?buyerId=${buyer.id}`)}
                     className="flex items-center gap-1 text-[10px] font-semibold text-[#9000FF] hover:text-[#7000CC] transition-colors"
                   >
                     View all in Inbox

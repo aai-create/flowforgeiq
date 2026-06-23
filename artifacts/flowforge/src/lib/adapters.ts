@@ -42,6 +42,7 @@ export interface UiShipment {
   supplier: string;
   supplierId: number;
   customer: string;
+  buyerId: number | null;
   status: UiShipmentStatus;
   currentStageId: string;
   currentStage: string; // label, for Atelier
@@ -118,6 +119,7 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     supplier: s.supplierName,
     supplierId: s.supplierId,
     customer: s.customerName,
+    buyerId: s.buyerId ?? null,
     status: (s.status as UiShipmentStatus),
     currentStageId: s.currentStageId,
     currentStage: labelById.get(s.currentStageId) ?? s.currentStageId,
