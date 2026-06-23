@@ -89,6 +89,22 @@ export interface StageOrderInput {
   stageIds: string[];
 }
 
+export interface BuyerSummary {
+  id: number;
+  name: string;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  region?: string | null;
+}
+
+export interface BuyerUpdate {
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  region?: string | null;
+}
+
 export interface SupplierSummary {
   id: number;
   name: string;

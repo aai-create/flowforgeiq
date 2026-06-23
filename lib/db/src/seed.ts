@@ -4,6 +4,7 @@ import {
   organizationsTable,
   stagesTable,
   suppliersTable,
+  buyersTable,
   dealsTable,
   dealShipmentsTable,
   shipmentsTable,
@@ -97,7 +98,7 @@ async function main() {
   await db.execute(sql`
     TRUNCATE TABLE
       tasks, messages, factory_quotes, payments, deal_shipments, shipments,
-      deals, suppliers, stages, rfqs, rfq_quotes, copilot_proposals,
+      deals, suppliers, buyers, stages, rfqs, rfq_quotes, copilot_proposals,
       autonomy_policies, shipment_predictions, stage_events, buyer_emails,
       gmail_credentials, po_numbering_config, extraction_corrections, extractions,
       documents, team_invitations, team_users, organizations
@@ -125,6 +126,15 @@ async function main() {
     })))
     .returning();
   const supplierByName = new Map(insertedSuppliers.map(s => [s.name, s.id]));
+
+  console.log("Inserting buyers...");
+  const buyerNames = Array.from(new Set(data.shipments.map(s => s.customerName).filter(Boolean)));
+  const insertedBuyers = await db
+    .insert(buyersTable)
+    .values(buyerNames.map(name => ({ name, orgId: DEFAULT_ORG_ID })))
+    .returning();
+  const buyerByName = new Map(insertedBuyers.map(b => [b.name, b.id]));
+  void buyerByName;
 
   console.log("Inserting deals...");
   const dealIdMap = new Map<string, number>();

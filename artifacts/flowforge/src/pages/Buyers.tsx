@@ -3,13 +3,17 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListShipments,
   useListStages,
   useListMessages,
   useGetRiskRadar,
+  useListBuyers,
+  useUpdateBuyer,
+  getListBuyersQueryKey,
 } from "@workspace/api-client-react";
-import type { Shipment, Stage } from "@workspace/api-client-react";
+import type { Shipment, Stage, BuyerSummary } from "@workspace/api-client-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -30,8 +34,7 @@ const statusCls = (status: string) =>
 type SortCol = "name" | "activePOs" | "atRisk" | "spend" | "onTime";
 type SortDir = "asc" | "desc";
 
-interface BuyerSummary {
-  name: string;
+interface BuyerWithStats extends BuyerSummary {
   activePOs: number;
   atRiskCount: number;
   totalSpendUsd: number;
@@ -40,37 +43,23 @@ interface BuyerSummary {
   shipments: Shipment[];
 }
 
-interface BuyerContact {
-  contactName: string;
-  email: string;
-  phone: string;
-  region: string;
-}
-
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
-function buildBuyers(shipments: Shipment[]): BuyerSummary[] {
-  const map = new Map<string, Shipment[]>();
-  for (const s of shipments) {
-    if (!s.customerName) continue;
-    if (!map.has(s.customerName)) map.set(s.customerName, []);
-    map.get(s.customerName)!.push(s);
-  }
-  return Array.from(map.entries())
-    .map(([name, all]) => {
-      const active = all.filter(s => s.status !== "delivered");
-      const atRisk = active.filter(s => s.status === "delayed" || s.status === "at-risk");
-      const shipmentSpend = (s: Shipment) =>
-        s.payments.reduce((acc, p) => acc + p.amountUsd, 0);
-      const totalSpendUsd = all.reduce((sum, s) => sum + shipmentSpend(s), 0);
-      const onCount = all.filter(s => s.status === "on-track").length;
-      const onTimePct = all.length > 0 ? Math.round((onCount / all.length) * 100) : null;
-      const spendThisYearUsd = all
-        .filter(s => new Date(s.dueDate).getUTCFullYear() === CURRENT_YEAR)
-        .reduce((sum, s) => sum + shipmentSpend(s), 0);
-      return { name, activePOs: active.length, atRiskCount: atRisk.length, totalSpendUsd, onTimePct, spendThisYearUsd, shipments: all };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+function buildBuyerStats(buyers: BuyerSummary[], shipments: Shipment[]): BuyerWithStats[] {
+  return buyers.map(buyer => {
+    const all = shipments.filter(s => s.customerName === buyer.name);
+    const active = all.filter(s => s.status !== "delivered");
+    const atRisk = active.filter(s => s.status === "delayed" || s.status === "at-risk");
+    const shipmentSpend = (s: Shipment) =>
+      s.payments.reduce((acc, p) => acc + p.amountUsd, 0);
+    const totalSpendUsd = all.reduce((sum, s) => sum + shipmentSpend(s), 0);
+    const onCount = all.filter(s => s.status === "on-track").length;
+    const onTimePct = all.length > 0 ? Math.round((onCount / all.length) * 100) : null;
+    const spendThisYearUsd = all
+      .filter(s => new Date(s.dueDate).getUTCFullYear() === CURRENT_YEAR)
+      .reduce((sum, s) => sum + shipmentSpend(s), 0);
+    return { ...buyer, activePOs: active.length, atRiskCount: atRisk.length, totalSpendUsd, onTimePct, spendThisYearUsd, shipments: all };
+  });
 }
 
 function fmtUsd(val: number): string {
@@ -159,14 +148,13 @@ function EditableField({ label, value, icon: Icon, placeholder, type = "text", o
 // Buyer detail panel
 // ---------------------------------------------------------------------------
 interface DetailPanelProps {
-  buyer: BuyerSummary;
-  contact: BuyerContact;
+  buyer: BuyerWithStats;
   stages: Stage[];
   onClose: () => void;
-  onContactChange: (field: keyof BuyerContact, value: string) => void;
+  onFieldSave: (field: "contactName" | "email" | "phone" | "region", value: string) => void;
 }
 
-function BuyerDetailPanel({ buyer, contact, stages, onClose, onContactChange }: DetailPanelProps) {
+function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelProps) {
   const [, navigate] = useLocation();
   const { data: messagesData } = useListMessages();
   const now = useMemo(() => new Date(), []);
@@ -262,39 +250,39 @@ function BuyerDetailPanel({ buyer, contact, stages, onClose, onContactChange }: 
 
           <Separator />
 
-          {/* Contact details — editable inline */}
+          {/* Contact details — editable inline, persisted via API */}
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-3">Contact Details</div>
             <div className="space-y-3">
               <EditableField
                 label="Contact Name"
-                value={contact.contactName}
+                value={buyer.contactName ?? ""}
                 icon={User}
                 placeholder="Add contact name"
-                onSave={v => onContactChange("contactName", v)}
+                onSave={v => onFieldSave("contactName", v)}
               />
               <EditableField
                 label="Email"
-                value={contact.email}
+                value={buyer.email ?? ""}
                 icon={Mail}
                 placeholder="Add email address"
                 type="email"
-                onSave={v => onContactChange("email", v)}
+                onSave={v => onFieldSave("email", v)}
               />
               <EditableField
                 label="Phone"
-                value={contact.phone}
+                value={buyer.phone ?? ""}
                 icon={Phone}
                 placeholder="Add phone number"
                 type="tel"
-                onSave={v => onContactChange("phone", v)}
+                onSave={v => onFieldSave("phone", v)}
               />
               <EditableField
                 label="Region"
-                value={contact.region}
+                value={buyer.region ?? ""}
                 icon={Globe}
                 placeholder="e.g. North America"
-                onSave={v => onContactChange("region", v)}
+                onSave={v => onFieldSave("region", v)}
               />
             </div>
           </div>
@@ -413,8 +401,6 @@ function BuyerDetailPanel({ buyer, contact, stages, onClose, onContactChange }: 
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
-const EMPTY_CONTACT: BuyerContact = { contactName: "", email: "", phone: "", region: "" };
-
 export function Buyers() {
   useCopilotHint("Browse buyers and their active orders", [
     "Which buyer has the most at-risk orders?",
@@ -422,18 +408,27 @@ export function Buyers() {
     "Which buyers have delayed shipments?",
   ]);
 
+  const queryClient = useQueryClient();
+  const { data: buyersData } = useListBuyers();
   const { data: shipmentsData } = useListShipments();
   const { data: stagesData } = useListStages();
   const { data: radarData } = useGetRiskRadar();
+  const updateBuyer = useUpdateBuyer({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListBuyersQueryKey() });
+      },
+    },
+  });
 
+  const rawBuyers: BuyerSummary[] = buyersData ?? [];
   const shipments: Shipment[] = shipmentsData ?? [];
   const stages: Stage[] = stagesData ?? [];
 
-  const buyers = useMemo(() => buildBuyers(shipments), [shipments]);
+  const buyers = useMemo(() => buildBuyerStats(rawBuyers, shipments), [rawBuyers, shipments]);
 
   const [search, setSearch] = useState("");
-  const [selectedName, setSelectedName] = useState<string | null>(null);
-  const [contacts, setContacts] = useState<Record<string, BuyerContact>>({});
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -460,13 +455,10 @@ export function Buyers() {
     });
   }, [buyers, search, sortCol, sortDir]);
 
-  const selectedBuyer = buyers.find(b => b.name === selectedName) ?? null;
+  const selectedBuyer = buyers.find(b => b.id === selectedId) ?? null;
 
-  function updateContact(buyerName: string, field: keyof BuyerContact, value: string) {
-    setContacts(prev => ({
-      ...prev,
-      [buyerName]: { ...(prev[buyerName] ?? EMPTY_CONTACT), [field]: value },
-    }));
+  function handleFieldSave(buyerId: number, field: "contactName" | "email" | "phone" | "region", value: string) {
+    updateBuyer.mutate({ id: buyerId, data: { [field]: value || null } });
   }
 
   function SortableHeader({ label, col }: { label: string; col: SortCol }) {
@@ -547,11 +539,11 @@ export function Buyers() {
                         </div>
                       ) : (
                         filtered.map(b => {
-                          const isSelected = selectedName === b.name;
+                          const isSelected = selectedId === b.id;
                           return (
                             <div
-                              key={b.name}
-                              onClick={() => setSelectedName(isSelected ? null : b.name)}
+                              key={b.id}
+                              onClick={() => setSelectedId(isSelected ? null : b.id)}
                               className={`grid grid-cols-[2fr_1fr_1fr_1.2fr_1fr_auto] px-5 py-3 border-b border-[#F0F4F8] cursor-pointer transition-colors ${
                                 isSelected
                                   ? "bg-[#9000FF]/5 border-l-2 border-l-[#9000FF]"
@@ -633,10 +625,9 @@ export function Buyers() {
                 {selectedBuyer && (
                   <BuyerDetailPanel
                     buyer={selectedBuyer}
-                    contact={contacts[selectedBuyer.name] ?? EMPTY_CONTACT}
                     stages={stages}
-                    onClose={() => setSelectedName(null)}
-                    onContactChange={(field, value) => updateContact(selectedBuyer.name, field, value)}
+                    onClose={() => setSelectedId(null)}
+                    onFieldSave={(field, value) => handleFieldSave(selectedBuyer.id, field, value)}
                   />
                 )}
               </div>

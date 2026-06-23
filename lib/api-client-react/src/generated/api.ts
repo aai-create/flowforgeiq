@@ -24,6 +24,8 @@ import type {
   AcceptInviteBody,
   AutonomyPolicy,
   AutonomyPolicyInput,
+  BuyerSummary,
+  BuyerUpdate,
   ChatIngestInput,
   ChatIngestResult,
   ConnectGmail200,
@@ -539,6 +541,149 @@ export const useDeleteStage = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteStageMutationOptions(options));
+    }
+
+export const getListBuyersUrl = () => {
+
+
+
+
+  return `/api/buyers`
+}
+
+export const listBuyers = async ( options?: RequestInit): Promise<BuyerSummary[]> => {
+
+  return customFetch<BuyerSummary[]>(getListBuyersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBuyersQueryKey = () => {
+    return [
+    `/api/buyers`
+    ] as const;
+    }
+
+
+export const getListBuyersQueryOptions = <TData = Awaited<ReturnType<typeof listBuyers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuyers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBuyersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBuyers>>> = ({ signal }) => listBuyers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBuyers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBuyersQueryResult = NonNullable<Awaited<ReturnType<typeof listBuyers>>>
+export type ListBuyersQueryError = ErrorType<unknown>
+
+
+
+export function useListBuyers<TData = Awaited<ReturnType<typeof listBuyers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuyers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBuyersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateBuyerUrl = (id: number,) => {
+
+
+
+
+  return `/api/buyers/${id}`
+}
+
+/**
+ * @summary Update buyer contact fields
+ */
+export const updateBuyer = async (id: number,
+    buyerUpdate: BuyerUpdate, options?: RequestInit): Promise<BuyerSummary> => {
+
+  return customFetch<BuyerSummary>(getUpdateBuyerUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      buyerUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateBuyerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBuyer>>, TError,{id: number;data: BodyType<BuyerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBuyer>>, TError,{id: number;data: BodyType<BuyerUpdate>}, TContext> => {
+
+const mutationKey = ['updateBuyer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBuyer>>, {id: number;data: BodyType<BuyerUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBuyer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBuyerMutationResult = NonNullable<Awaited<ReturnType<typeof updateBuyer>>>
+    export type UpdateBuyerMutationBody = BodyType<BuyerUpdate>
+    export type UpdateBuyerMutationError = ErrorType<void>
+
+    /**
+ * @summary Update buyer contact fields
+ */
+export const useUpdateBuyer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBuyer>>, TError,{id: number;data: BodyType<BuyerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBuyer>>,
+        TError,
+        {id: number;data: BodyType<BuyerUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateBuyerMutationOptions(options));
     }
 
 export const getListSuppliersUrl = () => {

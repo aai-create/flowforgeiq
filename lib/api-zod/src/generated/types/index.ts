@@ -11,6 +11,8 @@ export * from './acceptInviteBody';
 export * from './accuracyBucket';
 export * from './autonomyPolicy';
 export * from './autonomyPolicyInput';
+export * from './buyerSummary';
+export * from './buyerUpdate';
 export * from './chatExtractedFields';
 export * from './chatIngestInput';
 export * from './chatIngestInputChannel';

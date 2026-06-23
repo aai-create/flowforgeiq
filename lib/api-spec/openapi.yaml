@@ -10,6 +10,7 @@ servers:
 tags:
   - name: health
   - name: stages
+  - name: buyers
   - name: suppliers
   - name: shipments
   - name: payments
@@ -125,6 +126,43 @@ paths:
           description: Admin required
         "409":
           description: Cannot delete — shipments currently at this stage
+
+  /buyers:
+    get:
+      operationId: listBuyers
+      tags: [buyers]
+      responses:
+        "200":
+          description: Buyers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BuyerSummary" }
+
+  /buyers/{id}:
+    patch:
+      operationId: updateBuyer
+      tags: [buyers]
+      summary: Update buyer contact fields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BuyerUpdate" }
+      responses:
+        "200":
+          description: Updated buyer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BuyerSummary" }
+        "404":
+          description: Buyer not found
 
   /suppliers:
     get:
@@ -1597,6 +1635,25 @@ components:
         stageIds:
           type: array
           items: { type: string }
+
+    BuyerSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:          { type: integer }
+        name:        { type: string }
+        contactName: { type: string, nullable: true }
+        email:       { type: string, nullable: true }
+        phone:       { type: string, nullable: true }
+        region:      { type: string, nullable: true }
+
+    BuyerUpdate:
+      type: object
+      properties:
+        contactName: { type: string, nullable: true }
+        email:       { type: string, nullable: true }
+        phone:       { type: string, nullable: true }
+        region:      { type: string, nullable: true }
 
     SupplierSummary:
       type: object

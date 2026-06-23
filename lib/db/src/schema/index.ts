@@ -13,6 +13,7 @@ export * from "./copilot";
 export * from "./stage_events";
 export * from "./po_numbering_config";
 export * from "./deal_shipments";
+export * from "./buyers";
 export * from "./buyer_emails";
 export * from "./gmail_credentials";
 export * from "./rfqs";

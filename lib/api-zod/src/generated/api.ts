@@ -72,6 +72,41 @@ export const DeleteStageParams = zod.object({
 })
 
 
+export const ListBuyersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "contactName": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "region": zod.string().nullish()
+})
+export const ListBuyersResponse = zod.array(ListBuyersResponseItem)
+
+
+/**
+ * @summary Update buyer contact fields
+ */
+export const UpdateBuyerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBuyerBody = zod.object({
+  "contactName": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "region": zod.string().nullish()
+})
+
+export const UpdateBuyerResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "contactName": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "region": zod.string().nullish()
+})
+
+
 export const ListSuppliersResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
