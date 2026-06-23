@@ -4,6 +4,7 @@ import { useQueries } from "@tanstack/react-query";
 import {
   Bell, Mail, MessageCircle, MessageSquare, FileText,
   DollarSign, ArrowRight, Inbox, X, FileSpreadsheet,
+  Clock, AlertCircle,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +21,7 @@ import { relativeAge } from "@/lib/adapters";
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type NotifType = "message" | "document" | "payment" | "stage";
+type NotifType = "message" | "document" | "payment" | "stage" | "payment-due" | "payment-overdue";
 
 interface NotificationItem {
   id: string;
@@ -79,9 +80,11 @@ function ChannelIcon({ channel, size = 14 }: { channel: string; size?: number })
 // Icon container colour per type
 // ─────────────────────────────────────────────────────────────────────────────
 function notifBg(type: NotifType): string {
-  if (type === "message")  return "bg-blue-50";
-  if (type === "document") return "bg-violet-50";
-  if (type === "payment")  return "bg-emerald-50";
+  if (type === "message")          return "bg-blue-50";
+  if (type === "document")         return "bg-violet-50";
+  if (type === "payment")          return "bg-emerald-50";
+  if (type === "payment-due")      return "bg-amber-50";
+  if (type === "payment-overdue")  return "bg-red-50";
   return "bg-amber-50";
 }
 
@@ -92,6 +95,10 @@ function NotifIconInner({ item }: { item: NotificationItem }) {
     return <FileText size={14} className="text-violet-600" />;
   if (item.type === "payment")
     return <DollarSign size={14} className="text-emerald-600" />;
+  if (item.type === "payment-due")
+    return <Clock size={14} className="text-amber-600" />;
+  if (item.type === "payment-overdue")
+    return <AlertCircle size={14} className="text-red-600" />;
   return <ArrowRight size={14} className="text-amber-600" />;
 }
 
@@ -222,8 +229,53 @@ function useNotifications(): NotificationItem[] {
       }
     }
 
-    // Sort newest first, cap at 30
-    items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // ── 5. Payment due-date alerts (due soon or overdue) ─────────────────────
+    const dueSoonWindow = now + 7 * DAY;
+    for (const ship of shipments) {
+      for (const pmt of ship.payments) {
+        if (pmt.paidAt) continue; // already paid — skip
+        const dueMs = new Date(pmt.dueDate).getTime();
+
+        if (dueMs < now) {
+          // Overdue
+          const daysOverdue = Math.ceil((now - dueMs) / DAY);
+          const label = daysOverdue === 1 ? "1 day ago" : `${daysOverdue} days ago`;
+          items.push({
+            id: `pmt-overdue-${pmt.id}`,
+            type: "payment-overdue",
+            title: `Overdue — $${pmt.amountUsd.toLocaleString()} was due ${label}`,
+            subtitle: `${ship.poNumber} · ${ship.supplierName}`,
+            timestamp: pmt.dueDate,
+            href: `/orders?shipment=${ship.id}`,
+          });
+        } else if (dueMs <= dueSoonWindow) {
+          // Due within 7 days
+          const daysLeft = Math.ceil((dueMs - now) / DAY);
+          const label = daysLeft === 0 ? "today" : daysLeft === 1 ? "tomorrow" : `in ${daysLeft} days`;
+          items.push({
+            id: `pmt-due-${pmt.id}`,
+            type: "payment-due",
+            title: `Balance due ${label} — $${pmt.amountUsd.toLocaleString()}`,
+            subtitle: `${ship.poNumber} · ${ship.supplierName}`,
+            timestamp: pmt.dueDate,
+            href: `/orders?shipment=${ship.id}`,
+          });
+        }
+      }
+    }
+
+    // Sort: overdue first, then due-soon, then the rest newest-first
+    const urgencyScore = (item: NotificationItem): number => {
+      if (item.type === "payment-overdue") return 2;
+      if (item.type === "payment-due")     return 1;
+      return 0;
+    };
+    items.sort((a, b) => {
+      const ua = urgencyScore(a);
+      const ub = urgencyScore(b);
+      if (ua !== ub) return ub - ua;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
     return items.slice(0, 30);
   }, [messages, documents, shipments, stages, stageEventResults]);
 }
@@ -277,7 +329,7 @@ export function NotificationsBell() {
   const notifications = useNotifications();
 
   const newCount = notifications.filter(
-    n => new Date(n.timestamp).getTime() > lastOpened.getTime(),
+    n => n.type === "payment-overdue" || new Date(n.timestamp).getTime() > lastOpened.getTime(),
   ).length;
 
   // Sync lastOpened across tabs via BroadcastChannel
@@ -371,7 +423,10 @@ export function NotificationsBell() {
                 <NotifRow
                   key={item.id}
                   item={item}
-                  isNew={new Date(item.timestamp).getTime() > lastOpened.getTime()}
+                  isNew={
+                    item.type === "payment-overdue" ||
+                    new Date(item.timestamp).getTime() > lastOpened.getTime()
+                  }
                   onClick={() => handleRowClick(item.href)}
                 />
               ))}
