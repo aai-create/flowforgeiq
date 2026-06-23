@@ -276,6 +276,21 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
 
                     {isSelected && (
                       <div className="mt-4 pt-4 border-t border-[#E5EAF0]">
+                        <nav aria-label="breadcrumb" className="flex items-center gap-1 mb-3">
+                          <button
+                            onClick={e => { e.stopPropagation(); navigate("/risk-radar"); }}
+                            className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
+                          >
+                            Risk Radar
+                          </button>
+                          <span className="text-[#C0C8D4] text-xs select-none">/</span>
+                          <button
+                            onClick={e => { e.stopPropagation(); navigate(`/inbox?shipment=${item.shipmentId}&from=risk-radar`); }}
+                            className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
+                          >
+                            {item.poNumber}
+                          </button>
+                        </nav>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2 flex items-center gap-1">
