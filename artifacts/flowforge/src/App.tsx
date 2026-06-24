@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CopilotProvider } from "@/lib/CopilotContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import { CalendarPage } from "@/pages/CalendarPage";
 import { Atelier } from "@/pages/Atelier";
 import { RFQs } from "@/pages/RFQs";
 import { RiskRadar } from "@/pages/RiskRadar";
@@ -191,6 +192,7 @@ function Router() {
         </>
       )} />
       <Route path="/inbox" component={() => <ProtectedRoute component={Home} />} />
+      <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
       <Route path="/orders" component={() => <ProtectedRoute component={Atelier} />} />
       <Route path="/command" component={() => <ProtectedRoute component={Atelier} />} />
       <Route path="/rfqs" component={() => <ProtectedRoute component={RFQs} />} />

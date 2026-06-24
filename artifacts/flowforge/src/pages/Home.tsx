@@ -112,7 +112,7 @@ function CollapsibleSection({
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type ActiveView = "inbox" | "calendar" | "import" | "copilot" | "needs-review" | "settings";
+type ActiveView = "inbox" | "import" | "copilot" | "needs-review" | "settings";
 type Channel    = "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -417,7 +417,7 @@ function TaskList({ tasks, onOpenMessage, onDismiss, onClose }: { tasks: Task[];
 // ─────────────────────────────────────────────────────────────────────────────
 // Calendar View  (P2)
 // ─────────────────────────────────────────────────────────────────────────────
-function CalendarView({ shipments }: { shipments: Shipment[] }) {
+export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
   const [viewMonth, setViewMonth] = useState(4); // 4=May, 5=Jun
   const [selectedDay, setSelectedDay] = useState<number|null>(null);
   const monthName = viewMonth === 4 ? "May 2026" : "June 2026";
@@ -2505,9 +2505,6 @@ export default function Home() {
 
         {/* ── PERSISTENT LEFT FILTER PANEL ── */}
         <NavSidebar
-          onCalendarClick={() => setActiveView("calendar")}
-          onInboxClick={() => setActiveView("inbox")}
-          isCalendarActive={activeView === "calendar"}
           counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
         >
           <div className="flex-1 overflow-y-auto" />
@@ -2530,7 +2527,6 @@ export default function Home() {
               ? (selectedShipmentId
                   ? (shipments.find(s => s.id === selectedShipmentId)?.po ?? "Inbox")
                   : supplierFilter ?? (channelFilter !== "all" ? channelFilter[0].toUpperCase() + channelFilter.slice(1) : "Inbox"))
-              : activeView === "calendar" ? "Calendar"
               : activeView === "copilot"  ? "Copilot Queue"
               : "Doc Intelligence"
           }
@@ -2799,7 +2795,6 @@ export default function Home() {
 
           {/* ── FULL-PAGE VIEWS ── */}
           {activeView==="copilot"&&<CopilotQueue/>}
-          {activeView==="calendar"&&<CalendarView shipments={shipments}/>}
           {activeView==="import"&&<DocumentIntake onDone={()=>setActiveView("inbox")}/>}
           {activeView==="needs-review"&&(
             <div className="flex-1 flex flex-col overflow-hidden">

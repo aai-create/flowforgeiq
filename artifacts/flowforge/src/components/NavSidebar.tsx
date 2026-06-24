@@ -7,9 +7,6 @@ import i18n from "@/i18n";
 
 interface NavSidebarProps {
   showBrand?: boolean;
-  onCalendarClick?: () => void;
-  onInboxClick?: () => void;
-  isCalendarActive?: boolean;
   counts?: {
     myOrders?: number | null;
     inbox?: number | null;
@@ -26,13 +23,10 @@ const LANG_OPTIONS = [
 
 export function NavSidebar({
   showBrand = true,
-  onCalendarClick,
-  onInboxClick,
-  isCalendarActive = false,
   counts = {},
   children,
 }: NavSidebarProps) {
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { t, i18n: i18nHook } = useTranslation();
@@ -40,7 +34,7 @@ export function NavSidebar({
   const navItems = [
     { id: "inbox",     icon: Inbox,        to: "/inbox",       count: counts.inbox     ?? null },
     { id: "myOrders",  icon: LayoutGrid,   to: "/orders",      count: counts.myOrders  ?? null },
-    { id: "calendar",  icon: Calendar,     to: "/inbox",       count: null              },
+    { id: "calendar",  icon: Calendar,     to: "/calendar",    count: null              },
     { id: "rfqs",      icon: FileQuestion, to: "/rfqs",        count: null              },
     { id: "riskRadar", icon: ShieldAlert,  to: "/risk-radar",  count: counts.riskRadar ?? null },
     { id: "reports",   icon: BarChart3,    to: "/reports",     count: null              },
@@ -51,8 +45,6 @@ export function NavSidebar({
   ];
 
   function isActive(id: string, to: string) {
-    if (id === "calendar") return isCalendarActive;
-    if (id === "inbox" && isCalendarActive) return false;
     if (id === "inbox") return location === to || location === "/";
     if (id === "myOrders") return location === to || location === "/command";
     return location === to;
@@ -90,27 +82,10 @@ export function NavSidebar({
         {navItems.map(({ id, icon: Icon, to, count }) => {
           const active = isActive(id, to);
 
-          if (id === "calendar") {
-            return (
-              <button
-                key={id}
-                onClick={() => { if (onCalendarClick) { onCalendarClick(); } else { navigate(to); } }}
-                aria-pressed={isCalendarActive}
-                className={itemClassName(active)}
-              >
-                <span className="flex items-center gap-2">
-                  <Icon className={`w-4 h-4 shrink-0 ${active ? "text-[#9000FF]" : ""}`} />
-                  {t(`nav.${id}`)}
-                </span>
-              </button>
-            );
-          }
-
           return (
             <Link
               key={id}
               href={to}
-              onClick={id === "inbox" ? onInboxClick : undefined}
               aria-current={active ? "page" : undefined}
               className={itemClassName(active)}
             >
