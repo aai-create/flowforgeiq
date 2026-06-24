@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
+import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
@@ -775,6 +776,8 @@ export function Atelier() {
         </NavSidebar>
 
         <div className="flex-1 flex flex-col overflow-hidden">
+
+        <GlobalHeader breadcrumb="My Orders" />
 
         <div className="flex-1 flex overflow-hidden">
 

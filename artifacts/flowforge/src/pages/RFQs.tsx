@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { AICopilotBar } from "@/components/AICopilotBar";
+import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { useTranslation } from "react-i18next";
 import {
@@ -535,6 +536,7 @@ export function RFQs() {
         </NavSidebar>
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          <GlobalHeader breadcrumb="RFQs" />
           {/* Header */}
           <div className="h-11 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
             <div className="flex items-center gap-2">
