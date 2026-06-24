@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useUser } from "@clerk/react";
 import { useLocation } from "wouter";
 import {
   Sparkles, Search, Bell, Clipboard, ChevronLeft,
@@ -125,6 +126,7 @@ export function GlobalHeader({
   onOpenMessage,
   breadcrumbSegments = [],
 }: GlobalHeaderProps) {
+  const { user } = useUser();
   const [, navigate] = useLocation();
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,8 +262,23 @@ export function GlobalHeader({
             )}
           </button>
           <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
-          <div className="w-7 h-7 rounded-md border border-[#E5EAF0] bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-xs font-bold cursor-pointer">
-            AX
+          <div className="w-7 h-7 rounded-md border border-[#E5EAF0] overflow-hidden flex items-center justify-center cursor-pointer shrink-0">
+            {user?.imageUrl ? (
+              <img
+                src={user.imageUrl}
+                alt={user.fullName ?? "Avatar"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-[#9000FF] to-[#6000FF] flex items-center justify-center text-white text-xs font-bold">
+                {user
+                  ? [user.firstName, user.lastName]
+                      .filter(Boolean)
+                      .map(n => n![0].toUpperCase())
+                      .join("") || "?"
+                  : "…"}
+              </div>
+            )}
           </div>
         </div>
       </div>
