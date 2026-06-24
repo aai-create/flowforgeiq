@@ -104,7 +104,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     steps: [
       { text: "Messages are listed on the left, grouped by recency. Click any message to open it in the reading pane." },
       { text: "The right panel shows the matched shipment's stage tracker, payments, spread, and supplier contact details." },
-      { text: "Use the sidebar filters to narrow by channel (Email, WhatsApp, WeChat, iMessage, SMS), supplier, or PO number." },
+      { text: "Use the filter bar above the message list to narrow by Supplier, PO, or Channel — each is a dropdown pill. Active filters show their selection in the pill label; click the × to clear one. The Flagged toggle works independently alongside any active filter." },
       { text: "The search bar in the header matches on sender name, message content, supplier PO number, and buyer PO number." },
       { text: 'The AI draft is pre-populated in the compose area. Edit it or send as-is — sending advances the stage and clears related tasks.' },
       { text: 'Forwarded chat messages show a teal "Fwd chat" badge and include an expandable transcript view so you can see the original conversation.' },
@@ -142,7 +142,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       { text: "Optionally add a reference number (e.g. wire transfer ID) and select a payment method (Wire, Credit, or Other)." },
       { text: 'Click "Confirm" — the chip turns green and the spread calculation updates to reflect the new outlay.' },
       { text: 'To reverse a payment, click "Undo" on a paid chip. This clears the paid status and removes the reference data.' },
-      { text: "The Calendar view in the Inbox shows all upcoming payment due dates across every shipment on a monthly grid." },
+      { text: "The Calendar view shows upcoming payment due dates and ex-factory dates for all your live shipments on a monthly grid. Click any event card or pill to jump directly to that PO in My Orders." },
     ],
     screenshot: "payments.png",
     keywords: ["payment", "deposit", "balance", "paid", "mark paid", "wire", "reference", "due date", "spread"],
