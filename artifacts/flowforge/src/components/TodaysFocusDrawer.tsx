@@ -105,7 +105,7 @@ export function AIDrawer({ open, onClose, initialTab = "focus" }: AIDrawerProps)
   };
 
   const goToShipment = (shipmentId: number) => {
-    setLocation(`/inbox?shipment=${shipmentId}`);
+    setLocation(`/?shipment=${shipmentId}`);
     onClose();
   };
 

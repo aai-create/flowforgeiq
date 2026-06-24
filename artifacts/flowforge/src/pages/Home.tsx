@@ -1972,13 +1972,15 @@ export default function Home() {
   const urlParamsApplied = useRef(false);
   useEffect(() => {
     if (urlParamsApplied.current || !messages.length) return;
+    // Always mark applied once messages are loaded, even with no params, so the
+    // mid-session reactive effect (below) can run for later programmatic navigations.
+    urlParamsApplied.current = true;
     const params = new URLSearchParams(initialSearchRef.current);
     const supplierParam = params.get("supplier");
     const shipmentParam = params.get("shipment");
     const customerParam = params.get("buyerId");
     const tabParam = params.get("tab");
     if (!supplierParam && !shipmentParam && !customerParam && !tabParam) return;
-    urlParamsApplied.current = true;
     setActiveView("inbox");
     if (tabParam && (["docs", "risk", "copilot"] as string[]).includes(tabParam)) {
       setSectionOpen(prev => ({ ...prev, [tabParam]: true }));
@@ -2005,6 +2007,31 @@ export default function Home() {
       if (first) setActiveMessageId(first.id);
     }
   }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle programmatic ?shipment= navigation after initial load (e.g. from AI drawer Today's Focus).
+  // urlParamsApplied.current is guaranteed true once messages load (see effect above), so this
+  // effect can safely react to any mid-session URL change without racing the initial deep-link pass.
+  // Re-entrancy from the bidirectional URL-sync effect is prevented by the `uiId === selectedShipmentId`
+  // guard: the URL-sync writes `?shipment=` when selectedShipmentId changes, but at that point the
+  // uiId derived from the param already matches selectedShipmentId so we skip.
+  // Back-navigation is clean because the URL-sync always uses replace:true — the drawer's push entry
+  // is never duplicated, so pressing back returns the user to their pre-drawer location.
+  useEffect(() => {
+    if (!urlParamsApplied.current) return;
+    if (!messages.length) return;
+    const params = new URLSearchParams(search);
+    const shipmentParam = params.get("shipment");
+    if (!shipmentParam) return;
+    const uiId = `s${shipmentParam}`;
+    if (uiId === selectedShipmentId) return; // already showing; also stops URL-sync re-entrancy
+    setActiveView("inbox");
+    setSelectedShipmentId(uiId);
+    setChannelFilter("all");
+    setSupplierFilter(null);
+    setCustomerFilter(null);
+    const first = messages.find(m => m.shipmentId === uiId);
+    if (first) setActiveMessageId(first.id);
+  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // (rightTab URL sync removed — sections use sectionOpen state)
 
