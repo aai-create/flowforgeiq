@@ -2202,6 +2202,17 @@ export default function Home() {
     return true;
   });
 
+  useEffect(() => {
+    const activeIsVisible = visibleMessages.some(m => m.id === activeMessageId);
+    if (!activeIsVisible) {
+      if (visibleMessages.length > 0) {
+        setActiveMessageId(visibleMessages[0].id);
+      } else if (activeMessageId !== "__cleared__") {
+        setActiveMessageId("__cleared__");
+      }
+    }
+  }, [visibleMessages, activeMessageId]);
+
   const openMessage = (id: string) => {
     setActiveMessageId(id); setActiveView("inbox");
     if (readTimerRef.current) clearTimeout(readTimerRef.current);
@@ -2956,12 +2967,12 @@ export default function Home() {
             {/* Col B — Thread detail */}
             <ResizablePanel defaultSize={62} minSize={30} className="bg-white flex flex-col min-w-0 border-l border-[#E5EAF0]">
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Cleared pane — shown after deleting the active message */}
+              {/* Cleared pane — shown when no message is active (filter with no results, or after deleting) */}
               {activeMessageId === "__cleared__" && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center text-[#9E9FAE]">
-                  <Trash2 size={28} className="mb-3 opacity-30"/>
-                  <p className="text-sm font-semibold text-[#5E687B]">Message deleted</p>
-                  <p className="text-xs mt-1">Select another message from the list</p>
+                  <Inbox size={28} className="mb-3 opacity-30"/>
+                  <p className="text-sm font-semibold text-[#5E687B]">Nothing to show</p>
+                  <p className="text-xs mt-1">Adjust your filters or select a message</p>
                 </div>
               )}
               {/* Compose panel (replaces normal detail when open) */}
