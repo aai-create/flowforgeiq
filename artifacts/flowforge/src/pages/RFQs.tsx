@@ -814,7 +814,7 @@ export function RFQs() {
 
       {/* New RFQ Modal */}
       <Dialog open={showNewRfq} onOpenChange={open => { if (!open) { setShowNewRfq(false); setNewRfqError(null); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{t("rfqs.dialogNewTitle")}</DialogTitle>
           </DialogHeader>
@@ -946,7 +946,7 @@ export function RFQs() {
 
       {/* Add Quote Modal */}
       <Dialog open={showAddQuote} onOpenChange={open => { if (!open) setShowAddQuote(false); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{t("rfqs.dialogAddQuoteTitle")}</DialogTitle>
           </DialogHeader>
@@ -1010,7 +1010,7 @@ export function RFQs() {
 
       {/* Convert to PO Modal */}
       <Dialog open={showConvert} onOpenChange={open => { if (!open) setShowConvert(false); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{t("rfqs.dialogConvertTitle")}</DialogTitle>
           </DialogHeader>
@@ -1109,7 +1109,7 @@ export function RFQs() {
 
       {/* Send RFQ Email Modal */}
       <Dialog open={showSendEmail} onOpenChange={open => { if (!open) { setShowSendEmail(false); setSendEmailError(null); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-[#9000FF]" /> {t("rfqs.dialogSendEmailTitle")}
