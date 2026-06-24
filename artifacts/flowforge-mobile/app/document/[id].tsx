@@ -19,6 +19,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  getListShipmentsQueryKey,
   useGetDocument,
   useListShipments,
   useSaveExtractionCorrection,
@@ -161,7 +162,7 @@ function POPickerModal({
 }: POPickerModalProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const { data: shipments, isLoading } = useListShipments({ query: { enabled: visible } as any });
+  const { data: shipments, isLoading } = useListShipments(undefined, { query: { queryKey: getListShipmentsQueryKey(), enabled: visible } });
 
   const filtered = (shipments ?? []).filter((s) => {
     const q = query.toLowerCase();

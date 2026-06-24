@@ -9,6 +9,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import type { Message, DocumentWithExtraction, FactoryQuote, SupplierSummary, DealWithSpread } from "@workspace/api-client-react";
 import type { UiShipment, UiStage } from "@/lib/adapters";
 import { shortDate } from "@/lib/adapters";
+import { getDisplayLocale } from "@/lib/locale";
 import {
   X, MessageCircle, FileText, DollarSign, Clock, MapPin,
   CheckCircle2, AlertCircle, CreditCard, MoreHorizontal,

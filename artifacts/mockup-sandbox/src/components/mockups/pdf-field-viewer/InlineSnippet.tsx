@@ -77,7 +77,7 @@ function PdfSnippetCard({ snippet, label, inferred }: {
             {/* The highlighted line — the actual extracted text */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 flex items-center gap-2 mb-3">
               <div className="w-1 h-full rounded self-stretch bg-amber-400 shrink-0" style={{ minHeight: 24 }} />
-              <HighlightedText text={snippet.text} highlight={snippet.highlight} />
+              <HighlightedText text={snippet.text} highlight={snippet.highlight as [number, number]} />
             </div>
 
             {/* Filler lines below */}
