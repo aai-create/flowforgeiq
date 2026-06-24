@@ -391,7 +391,7 @@ function QuotePanel({ quotes, shipmentId, onSelect }: { quotes: FactoryQuote[]; 
 function TaskList({ tasks, onOpenMessage, onDismiss, onClose }: { tasks: Task[]; onOpenMessage: (id: string) => void; onDismiss: (id: string) => void; onClose: () => void }) {
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
-      <div className="px-3 pt-3 pb-1"><div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-2 flex items-center gap-1"><Zap size={9} className="text-[#9000FF]"/>AI-generated from email analysis</div></div>
+      <div className="px-3 pt-3 pb-1"><div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2 flex items-center gap-1"><Zap size={9} className="text-[#9000FF]"/>AI-generated from email analysis</div></div>
       {tasks.length===0 ? (
         <div className="flex flex-col items-center justify-center py-6 gap-2 text-[#5E687B]"><CheckCircle2 size={22} className="text-emerald-400"/><p className="text-xs font-medium">All clear — inbox is clean</p></div>
       ) : tasks.map((task,i) => (
@@ -507,7 +507,7 @@ export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
         </div>
         {/* Summary stats */}
         <div className="p-3 border-t border-[#E5EAF0]">
-          <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">This Month</div>
+          <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">This Month</div>
           <div className="grid grid-cols-2 gap-2">
             {[{label:"Payments due", value: eventsThisMonth.filter(e=>e.type==="payment").length, cls:"text-amber-600"},{label:"Ex-factory", value:eventsThisMonth.filter(e=>e.type==="exfactory").length, cls:"text-[#9000FF]"}].map(s=>(
               <div key={s.label} className="bg-white rounded-lg border border-[#E5EAF0] p-2 text-center shadow-sm">
@@ -593,7 +593,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
           <div>
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#212833] mb-1">Map your columns</h2><p className="text-sm text-[#5E687B]">We detected your spreadsheet. Confirm the column mapping below.</p></div>
             <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="grid grid-cols-3 bg-[#F0F4F8] px-4 py-2.5 text-[11px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0]">
+              <div className="grid grid-cols-3 bg-[#F0F4F8] px-4 py-2.5 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0]">
                 <span>Your Column</span><span>Maps to</span><span>Confidence</span>
               </div>
               {IMPORT_COLUMNS.map(col=>(
@@ -620,7 +620,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#212833] mb-1">Preview import</h2><p className="text-sm text-[#5E687B]">5 POs detected from your spreadsheet. Review before importing.</p></div>
             <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm mb-6 overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-[#F0F4F8]"><tr>{["PO","Product","Supplier","Cost","Margin","Ex-Factory","Status"].map(h=><th key={h} className="px-3 py-2.5 text-left text-[11px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0] whitespace-nowrap">{h}</th>)}</tr></thead>
+                <thead className="bg-[#F0F4F8]"><tr>{["PO","Product","Supplier","Cost","Margin","Ex-Factory","Status"].map(h=><th key={h} className="px-3 py-2.5 text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0] whitespace-nowrap">{h}</th>)}</tr></thead>
                 <tbody>
                   {[["PO-0142","Stainless Fork","Guangzhou Metalworks","$0.88","28%","May 17","At Risk"],["PO-0157","LED Cabinet Light","Shenzhen LEDPro","$4.20","31%","May 18","Delayed"],["PO-0160","Oak Flooring","Hangzhou Timber","$18.50","34%","May 22","On Track"],["PO-0165","Chrome Hanger","Tianjin Wire Works","$2.70","25%","Jun 02","At Risk"],["PO-0168","Grid Panel","Guangzhou Metalworks","$6.10","34%","Jun 10","On Track"]].map((row,i)=>(
                     <tr key={i} className="border-b border-[#E5EAF0] last:border-b-0 hover:bg-[#FAFBFC]">
@@ -1062,7 +1062,7 @@ function TemplatePicker({ stageId, onPick }: { stageId: string; onPick: (body: s
     <div className="mb-2 border border-[#9000FF]/20 rounded-lg overflow-hidden bg-[#FAFBFF]">
       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#9000FF]/10 bg-[#9000FF]/5">
         <Wand2 size={10} className="text-[#9000FF]"/>
-        <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">{t("home.templatesForStage")}</span>
+        <span className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider">{t("home.templatesForStage")}</span>
       </div>
       <div className="flex flex-col divide-y divide-[#E5EAF0]">
         {templates.map(tpl=>(
@@ -1126,7 +1126,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {/* To */}
         <div className="flex items-start gap-2">
-          <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider w-14 pt-2 shrink-0">To</span>
+          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-14 pt-2 shrink-0">To</span>
           <div className="flex-1 flex items-center gap-2 bg-[#F0F4F8] border border-[#E5EAF0] rounded-lg px-2.5 py-1.5">
             <span className="text-[11px] text-[#212833] font-medium truncate">{recipient}</span>
             <span className="ml-auto text-[11px] text-[#9E9FAE] shrink-0">{shipment.supplier}</span>
@@ -1135,7 +1135,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
 
         {/* Channel */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Via</span>
+          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Via</span>
           <div className="flex gap-1.5">
             {(["gmail", "whatsapp"] as ComposeChannel[]).map(ch => (
               <button
@@ -1157,7 +1157,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
         {/* Subject (only for email) */}
         {channel === "gmail" && (
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Subject</span>
+            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Subject</span>
             <input
               value={subject}
               onChange={e => setSubject(e.target.value)}
@@ -1175,7 +1175,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
               className="w-full flex items-center gap-1.5 px-3 py-1.5 text-left hover:bg-[#9000FF]/5 transition-colors"
             >
               <Wand2 size={10} className="text-[#9000FF]"/>
-              <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider flex-1">Stage templates — {shipment.currentStage}</span>
+              <span className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider flex-1">Stage templates — {shipment.currentStage}</span>
               {templateOpen ? <ChevronUp size={10} className="text-[#9000FF]"/> : <ChevronDown size={10} className="text-[#9000FF]"/>}
             </button>
             {templateOpen && (
@@ -1198,7 +1198,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
         {/* Body */}
         <div className="flex-1 flex flex-col min-h-[140px]">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">Message</span>
+            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Message</span>
             {body !== defaultBody && defaultBody && (
               <button onClick={() => setBody(defaultBody)} className="text-[11px] text-[#9000FF] hover:underline flex items-center gap-0.5">
                 <Sparkles size={8}/>Reset draft
@@ -1271,7 +1271,7 @@ function SearchResults({ query, messages, shipments, onOpen }: { query: string; 
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5EAF0] rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] z-50 mx-6 overflow-hidden max-h-[280px] overflow-y-auto">
       <div className="px-3 py-2 border-b border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between">
-        <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">{matched.length} result{matched.length!==1?"s":""} for "{query}"</span>
+        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{matched.length} result{matched.length!==1?"s":""} for "{query}"</span>
         <span className="text-[11px] text-[#9E9FAE]">messages</span>
       </div>
       {matched.length===0 ? (
@@ -2468,7 +2468,7 @@ export default function Home() {
   const isError = stagesError || shipmentsError || messagesError || tasksError;
   if (isLoading || isError || shipments.length === 0) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{fontFamily:"Inter,sans-serif"}}>
+      <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{ fontFamily: "Inter, sans-serif" }}>
         {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
         <div className="flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
@@ -2496,7 +2496,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{fontFamily:"Inter,sans-serif",fontSize:13}}>
+    <div className="flex h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
       {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
       {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
 
@@ -2620,7 +2620,7 @@ export default function Home() {
                     {/* Extracted fields */}
                     {pasteChatResult.extractedFields&&Object.values(pasteChatResult.extractedFields).some(v=>v!=null)&&(
                       <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3">
-                        <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Extracted fields</div>
+                        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Extracted fields</div>
                         <div className="space-y-1 text-[11px]">
                           {pasteChatResult.extractedFields.eta&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">ETA:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.eta}</span></div>}
                           {pasteChatResult.extractedFields.quotePrice!=null&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">Quote:</span><span className="text-[#212833]">${pasteChatResult.extractedFields.quotePrice}</span></div>}
@@ -2634,7 +2634,7 @@ export default function Home() {
                     {/* AI draft */}
                     {pasteChatResult.aiDraft&&(
                       <div className="bg-[#9000FF]/[0.03] border border-[#9000FF]/10 rounded-xl p-3">
-                        <div className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Sparkles size={9}/>AI draft reply</div>
+                        <div className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider mb-1.5 flex items-center gap-1"><Sparkles size={9}/>AI draft reply</div>
                         <p className="text-xs text-[#212833] leading-relaxed">{pasteChatResult.aiDraft}</p>
                       </div>
                     )}
@@ -3001,7 +3001,7 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                        <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
                         <button
                           type="button"
                           onClick={e => copyPo(activeShipment.po, e)}
@@ -3012,7 +3012,7 @@ export default function Home() {
                             ? <Check size={9} className="text-emerald-500 shrink-0" />
                             : <Copy size={9} className="opacity-0 group-hover/spo:opacity-50 shrink-0 transition-opacity" />}
                         </button>
-                        <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer PO</span>
+                        <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer PO</span>
                         {activeShipment.buyerPoNumbers && activeShipment.buyerPoNumbers.length > 0 ? (
                           <>
                             {activeShipment.buyerPoNumbers.map(bpo => (
@@ -3049,7 +3049,7 @@ export default function Home() {
                       <div className="text-[11px] text-[#5E687B]">{activeShipment.product}</div>
                     </div>
                     <div className="flex items-start gap-1.5 shrink-0">
-                      <div className="text-right"><div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
+                      <div className="text-right"><div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
                       <button onClick={()=>setShipmentContextExpanded(v=>!v)} className="p-1 rounded hover:bg-[#E5EAF0] text-[#5E687B] transition-colors mt-0.5" title={shipmentContextExpanded?"Collapse details":"Expand details"}>
                         {shipmentContextExpanded?<ChevronUp size={11}/>:<ChevronDown size={11}/>}
                       </button>
@@ -3213,7 +3213,7 @@ export default function Home() {
                   </div>
                   {/* Your Spread row */}
                   <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                    <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
                       <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
                       {!editingBuyerPrice && (
                         <button
@@ -3314,7 +3314,7 @@ export default function Home() {
                   {/* Supplier contact email */}
                   {activeSupplier ? (
                     <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                      <div className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
                         <Mail size={8}/>Supplier Contact
                       </div>
                       {editingEmail ? (
@@ -3426,7 +3426,7 @@ export default function Home() {
                   <div className="bg-gradient-to-r from-[#9000FF]/8 to-transparent px-3.5 py-2.5 flex items-center gap-1.5">
                     <Wand2 size={12} className="text-[#9000FF] shrink-0"/>
                     <Zap size={8} className="text-[#9000FF] shrink-0"/>
-                    <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">AI Suggested Action</span>
+                    <span className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider">AI Suggested Action</span>
                   </div>
 
                   {/* AI action content — only shown when a suggestion exists for this message */}
@@ -3559,12 +3559,12 @@ export default function Home() {
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                   <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                    <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
                     <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceDialogShipment.currentStageId}</span>
                   </div>
                   <ChevronRight size={20} className="text-[#9000FF] shrink-0" />
                   <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                    <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
+                    <span className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider">Next</span>
                     <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
                   </div>
                 </div>

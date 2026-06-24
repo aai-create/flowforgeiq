@@ -585,7 +585,7 @@ export function Atelier() {
                 onClick={() => setFiltersOpen(o => !o)}
                 className="w-full px-2 mb-1 flex items-center justify-between group hover:bg-[#E5EAF0] rounded-md py-1 transition-colors"
               >
-                <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
                   <Filter className="w-3 h-3" /> Filters
                   {(customerFilter || supplierFilter) && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0" />}
                 </span>
@@ -597,7 +597,7 @@ export function Atelier() {
               {filtersOpen && (
                 <div className="mt-1">
                   <div className="mb-1 px-2">
-                    <span className="text-xs font-semibold tracking-wider text-[#9E9FAE] uppercase">Suppliers</span>
+                    <span className="text-[10px] font-bold tracking-wider text-[#9E9FAE] uppercase">Suppliers</span>
                   </div>
                   <div className="space-y-0.5 mb-3">
                     {SUPPLIERS.map(s => (
@@ -619,7 +619,7 @@ export function Atelier() {
                   </div>
 
                   <div className="mb-1 px-2">
-                    <span className="text-xs font-semibold tracking-wider text-[#9E9FAE] uppercase">Buyers</span>
+                    <span className="text-[10px] font-bold tracking-wider text-[#9E9FAE] uppercase">Buyers</span>
                   </div>
                   <div className="space-y-0.5 mb-3">
                     {CUSTOMERS.map(c => (
@@ -728,7 +728,7 @@ export function Atelier() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.supplierPoLabel")}</span>
+                            <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.supplierPoLabel")}</span>
                             <button
                               type="button"
                               onClick={e => copyPo(shipment.po, e)}
@@ -739,7 +739,7 @@ export function Atelier() {
                                 ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                 : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
                             </button>
-                            <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">{t("orders.buyerPoLabel")}</span>
+                            <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">{t("orders.buyerPoLabel")}</span>
                             {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
                               <>
                                 {shipment.buyerPoNumbers.map((bpo) => (
@@ -845,7 +845,7 @@ export function Atelier() {
 
                     {/* Stage tracker header */}
                     <div className="flex items-center justify-between mb-1 mt-1">
-                      <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.stageTracker")}</span>
+                      <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.stageTracker")}</span>
                       <Popover>
                         <PopoverTrigger asChild>
                           <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -960,7 +960,7 @@ export function Atelier() {
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5 mb-2">
                           <Clock className="w-3 h-3 text-[#9000FF]" />
-                          <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">Stage History</span>
+                          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Stage History</span>
                         </div>
                         <StageHistory
                           shipmentId={shipment.shipmentId}
@@ -973,7 +973,7 @@ export function Atelier() {
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1"><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
+                          <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1"><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
                           <button type="button"
                             onClick={() => setLinkPanelShipmentId(linkPanelShipmentId === shipment.shipmentId ? null : shipment.shipmentId)}
                             className="text-[11px] font-semibold text-[#9000FF] hover:underline">
@@ -1022,7 +1022,7 @@ export function Atelier() {
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
                             <DollarSign className="w-2.5 h-2.5"/>Buyer Price
                           </span>
                           <button type="button"
@@ -1104,7 +1104,7 @@ export function Atelier() {
                     {isActive && markPaidForm?.shipmentId === shipment.id && (
                       <div className="mt-2 p-2.5 bg-white border border-[#9000FF]/20 rounded-lg shadow-sm space-y-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">{t("orders.recordPayment", { label: shipment.payments[markPaidForm.paymentIdx].label })}</p>
+                          <p className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider">{t("orders.recordPayment", { label: shipment.payments[markPaidForm.paymentIdx].label })}</p>
                           <button type="button" onClick={() => setMarkPaidForm(null)} className="text-[#9E9FAE] hover:text-[#212833]"><X className="w-3 h-3"/></button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -1273,7 +1273,7 @@ export function Atelier() {
                               return (
                                 <div>
                                   <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.recentThreads")}</span>
+                                    <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.recentThreads")}</span>
                                     <span className="text-[11px] text-[#C0C8D4]">{msgs.length} of {allMessages.filter((m: Message) => m.shipmentId === shipment.shipmentId).length}</span>
                                   </div>
                                   {msgs.length === 0 ? (
@@ -1311,7 +1311,7 @@ export function Atelier() {
                               return (
                                 <div>
                                   <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.attachedDocuments")}</span>
+                                    <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.attachedDocuments")}</span>
                                     <span className="text-[11px] text-[#C0C8D4]">{docs.length} of {allDocuments.filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId).length}</span>
                                   </div>
                                   {docs.length === 0 ? (
@@ -1324,7 +1324,7 @@ export function Atelier() {
                                           <div className="flex-1 min-w-0">
                                             <p className="text-xs font-semibold text-[#212833] truncate">{doc.fileName}</p>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                              <span className="text-[11px] text-[#9E9FAE] uppercase">{doc.fileType}</span>
+                                              <span className="text-[10px] text-[#9E9FAE] uppercase">{doc.fileType}</span>
                                               <span className="text-[11px] text-[#C0C8D4]">·</span>
                                               <span className="text-[11px] text-[#9E9FAE]">{doc.sourceChannel}</span>
                                               <span className="text-[11px] text-[#C0C8D4]">·</span>
@@ -1346,7 +1346,7 @@ export function Atelier() {
                             {activeDetailTab === "quotes" && (
                               <div>
                                 <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                  <span className="text-[11px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.factoryQuotesTab")}</span>
+                                  <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.factoryQuotesTab")}</span>
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -1436,12 +1436,12 @@ export function Atelier() {
               </p>
               <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.stageCurrentLabel")}</span>
+                  <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.stageCurrentLabel")}</span>
                   <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceTarget.currentStageId}</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-[#9000FF] shrink-0" />
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[11px] font-bold text-[#9000FF] uppercase tracking-wider">{t("orders.stageNextLabel")}</span>
+                  <span className="text-[10px] font-bold text-[#9000FF] uppercase tracking-wider">{t("orders.stageNextLabel")}</span>
                   <span className="text-[12px] font-bold text-[#9000FF] text-center">{next?.label ?? "—"}</span>
                 </div>
               </div>
@@ -1546,7 +1546,7 @@ export function Atelier() {
           {/* PO Numbers — create mode: full form; edit mode: read-only display */}
           {editingShipmentId !== null ? (
           <div className="space-y-2 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-            <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbersReadOnly")}</span>
+            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbersReadOnly")}</span>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div>
                 <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.buyerPoLabel")}</label>
@@ -1563,7 +1563,7 @@ export function Atelier() {
           ) : (
           <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbers")}</span>
+              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbers")}</span>
               {/* Mode toggle */}
               <div className="flex items-center border border-[#E5EAF0] rounded-md overflow-hidden text-xs font-semibold">
                 <button type="button"
