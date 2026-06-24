@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { GlobalHeader } from "@/components/GlobalHeader";
+import { FilterDropdown, type FilterOption } from "@/components/FilterDropdown";
 import { PixelShip } from "@/components/PixelShip";
 import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
 import { useListFocusItems } from "@workspace/api-client-react";
@@ -1709,6 +1710,17 @@ function POEntityList({ shipments, stages, messages, onSelect }: {
 
 type ChannelId = "all" | "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 
+// Channel options used by both the dropdown filter and ChannelPickerView
+const CHANNEL_FILTER_OPTIONS: FilterOption[] = [
+  { id: "gmail",    label: "Gmail",     icon: <Mail    size={11} className="text-blue-500"    /> },
+  { id: "whatsapp", label: "WhatsApp",  icon: <MessageCircle size={11} className="text-emerald-500" /> },
+  { id: "wechat",   label: "WeChat",    icon: <MessageSquare size={11} className="text-teal-500"   /> },
+  { id: "imessage", label: "iMessage",  icon: <MessageCircle size={11} className="text-blue-400"   /> },
+  { id: "sms",      label: "SMS",       icon: <MessagesSquare size={11} className="text-slate-400"  /> },
+  { id: "sheets",   label: "Sheets",    icon: <FileSpreadsheet size={11} className="text-green-700" /> },
+  { id: "pdf",      label: "PDFs",      icon: <FileText size={11} className="text-red-400"    /> },
+];
+
 function ChannelPickerView({ messages, onSelect }: {
   messages: UiMessage[];
   onSelect: (ch: ChannelId) => void;
@@ -1847,27 +1859,36 @@ export default function Home() {
   const initialSearchRef = useRef(window.location.search);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string|null>(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
-    if (initParams.has("shipment")) return null; // deep-link effect will set it
+    // Read ?po= (filter-bar canonical) or legacy ?shipment= directly so deep-links and refreshes work
+    const shipmentParam = initParams.get("po") ?? initParams.get("shipment");
+    if (shipmentParam) return `s${shipmentParam}`;
     return sessionStorage.getItem("flowforge:selectedShipmentId");
   });
   const selectedShipmentPo = selectedShipmentId ? shipments.find(s => s.id === selectedShipmentId)?.po : undefined;
   const breadcrumbSegments = parseBreadcrumb(fromParam, selectedShipmentPo, selectedShipmentId);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
-    if (initParams.has("shipment") || initParams.has("supplier")) return "all";
+    // Read ?channel= directly — works alone or alongside supplier/PO params
+    const channelParam = initParams.get("channel");
+    const VALID_CHANNELS_LIST = ["gmail", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
+    if (channelParam && VALID_CHANNELS_LIST.includes(channelParam)) return channelParam as Channel;
+    // If other primary URL filters are present (no channel) start at "all" — don't bleed sessionStorage into a URL-driven deep-link
+    if (initParams.has("shipment") || initParams.has("po") || initParams.has("supplier") || initParams.has("buyerId")) return "all";
     const saved = sessionStorage.getItem("flowforge:channelFilter");
-    const VALID_CHANNELS = ["all", "gmail", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
-    return VALID_CHANNELS.includes(saved ?? "") ? (saved as Channel | "all") : "all";
+    const ALL_VALID = ["all", ...VALID_CHANNELS_LIST] as string[];
+    return ALL_VALID.includes(saved ?? "") ? (saved as Channel | "all") : "all";
   });
   const [supplierFilter, setSupplierFilter] = useState<string|null>(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
-    if (initParams.has("supplier")) return null; // deep-link effect will set it
+    // Read ?supplier= directly so supplier deep-links work without waiting for messages
+    const supplierParam = initParams.get("supplier");
+    if (supplierParam) return supplierParam;
     return sessionStorage.getItem("flowforge:supplierFilter");
   });
   const [customerFilter, setCustomerFilter] = useState<string|null>(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
-    if (initParams.has("buyerId")) return null; // deep-link effect will set it
-    return null;
+    // Read ?buyerId= directly
+    return initParams.get("buyerId") ?? null;
   });
   const [flaggedFilter, setFlaggedFilter] = useState(false);
   const [leftPanelMode, setLeftPanelMode] = useState<"all" | "suppliers" | "pos" | "channels">("all");
@@ -1976,43 +1997,42 @@ export default function Home() {
     urlParamsApplied.current = true;
     const params = new URLSearchParams(initialSearchRef.current);
     const supplierParam = params.get("supplier");
-    const shipmentParam = params.get("shipment");
+    // Support both legacy ?shipment= (AI drawer, Reports) and new ?po= (filter bar)
+    const shipmentParam = params.get("po") ?? params.get("shipment");
     const customerParam = params.get("buyerId");
     const tabParam = params.get("tab");
-    if (!supplierParam && !shipmentParam && !customerParam && !tabParam) return;
+    const channelParam = params.get("channel");
+    const VALID_CH = ["gmail", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
+    if (!supplierParam && !shipmentParam && !customerParam && !tabParam && !channelParam) return;
+    // All filter state (selectedShipmentId, supplierFilter, channelFilter, customerFilter) is already
+    // hydrated from the URL in their respective useState initialisers. This effect only needs to:
+    // 1. Set activeView to inbox
+    // 2. Open a tab section if ?tab= is present
+    // 3. Auto-open the first matching message
     setActiveView("inbox");
     if (tabParam && (["docs", "risk", "copilot"] as string[]).includes(tabParam)) {
       setSectionOpen(prev => ({ ...prev, [tabParam]: true }));
     }
+    // Auto-open message: PO takes precedence, then supplier, then channel
     if (shipmentParam) {
       const uiId = `s${shipmentParam}`;
-      setSelectedShipmentId(uiId);
-      setChannelFilter("all");
-      setSupplierFilter(null);
-      setCustomerFilter(null);
       const first = messages.find(m => m.shipmentId === uiId);
       if (first) setActiveMessageId(first.id);
       else setActiveMessageId("__cleared__");
-    } else if (customerParam) {
-      setCustomerFilter(customerParam);
-      setSupplierFilter(null);
-      setSelectedShipmentId(null);
-      setChannelFilter("all");
     } else if (supplierParam) {
-      setSupplierFilter(supplierParam);
-      setSelectedShipmentId(null);
-      setChannelFilter("all");
-      setCustomerFilter(null);
       const first = messages.find(m => m.supplierId === supplierParam);
+      if (first) setActiveMessageId(first.id);
+    } else if (channelParam && VALID_CH.includes(channelParam)) {
+      const first = messages.find(m => m.channel === channelParam);
       if (first) setActiveMessageId(first.id);
     }
   }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle programmatic ?shipment= navigation after initial load (e.g. from AI drawer Today's Focus).
+  // Handle programmatic ?shipment= or ?po= navigation after initial load (e.g. from AI drawer Today's Focus).
   // urlParamsApplied.current is guaranteed true once messages load (see effect above), so this
   // effect can safely react to any mid-session URL change without racing the initial deep-link pass.
   // Re-entrancy from the bidirectional URL-sync effect is prevented by the `uiId === selectedShipmentId`
-  // guard: the URL-sync writes `?shipment=` when selectedShipmentId changes, but at that point the
+  // guard: the URL-sync writes `?po=` when selectedShipmentId changes, but at that point the
   // uiId derived from the param already matches selectedShipmentId so we skip.
   // Back-navigation is clean because the URL-sync always uses replace:true — the drawer's push entry
   // is never duplicated, so pressing back returns the user to their pre-drawer location.
@@ -2020,7 +2040,8 @@ export default function Home() {
     if (!urlParamsApplied.current) return;
     if (!messages.length) return;
     const params = new URLSearchParams(search);
-    const shipmentParam = params.get("shipment");
+    // Support both legacy ?shipment= (AI drawer, Reports, Suppliers page) and new ?po= (filter bar)
+    const shipmentParam = params.get("shipment") ?? params.get("po");
     if (!shipmentParam) return;
     const uiId = `s${shipmentParam}`;
     if (uiId === selectedShipmentId) return; // already showing; also stops URL-sync re-entrancy
@@ -2036,18 +2057,23 @@ export default function Home() {
 
   // (rightTab URL sync removed — sections use sectionOpen state)
 
-  // Keep ?shipment= in sync with selectedShipmentId. Guard against running
-  // before the deep-link effect has had a chance to consume any pending URL
+  // Keep ?po= in sync with selectedShipmentId. Uses ?po= as the canonical filter-bar param;
+  // legacy ?shipment= links (AI drawer, Reports, Suppliers) are still read on navigate but the
+  // URL is canonicalized to ?po= so refreshes and shared links always use the new form.
+  // Guard against running before the deep-link effect has had a chance to consume any pending URL
   // params (urlParamsApplied stays false until messages load and params are read).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (!urlParamsApplied.current && (params.has("shipment") || params.has("supplier"))) return;
+    if (!urlParamsApplied.current && (params.has("shipment") || params.has("po") || params.has("supplier"))) return;
     // selectedShipmentId is "s{numericId}" — strip prefix for the URL.
     const numericId = selectedShipmentId ? selectedShipmentId.replace(/^s/, "") : null;
-    if (params.get("shipment") === numericId) return;
+    const currentPo = params.get("po");
+    if (currentPo === numericId) return;
     if (numericId) {
-      params.set("shipment", numericId);
+      params.set("po", numericId);
+      params.delete("shipment"); // canonicalize — remove legacy param if present
     } else {
+      params.delete("po");
       params.delete("shipment");
     }
     navigate(`?${params.toString()}`, { replace: true });
@@ -2065,6 +2091,21 @@ export default function Home() {
     }
     navigate(`?${params.toString()}`, { replace: true });
   }, [supplierFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep ?channel= in sync with channelFilter.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!urlParamsApplied.current) return;
+    const urlChannel = params.get("channel");
+    const activeChannel = channelFilter !== "all" ? channelFilter : null;
+    if (urlChannel === activeChannel) return;
+    if (activeChannel) {
+      params.set("channel", activeChannel);
+    } else {
+      params.delete("channel");
+    }
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [channelFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep ?buyerId= in sync with customerFilter.
   useEffect(() => {
@@ -2697,9 +2738,9 @@ export default function Home() {
           {/* ── INBOX FILTER ROW ── */}
           {(activeView==="inbox"||activeView==="needs-review")&&(
             <div className="shrink-0 bg-white border-b border-[#E5EAF0] flex items-center gap-1 px-3 overflow-x-auto" style={{height:38}}>
-              {/* All */}
+              {/* All — resets all filters */}
               {(()=>{
-                const active = activeView==="inbox" && leftPanelMode==="all" && !flaggedFilter;
+                const active = activeView==="inbox" && !supplierFilter && !selectedShipmentId && channelFilter==="all" && !flaggedFilter && !customerFilter;
                 return (
                   <button
                     onClick={()=>{ urlParamsApplied.current=true; setActiveView("inbox"); setLeftPanelMode("all"); setChannelFilter("all"); setSupplierFilter(null); setCustomerFilter(null); setSelectedShipmentId(null); setFlaggedFilter(false); }}
@@ -2710,56 +2751,73 @@ export default function Home() {
                 );
               })()}
 
-              {/* Suppliers */}
-              {(()=>{
-                const isMode = leftPanelMode==="suppliers" && activeView==="inbox";
-                const hasFilter = !!supplierFilter;
-                const active = isMode||hasFilter;
-                return (
-                  <button
-                    onClick={()=>{ setActiveView("inbox"); if(hasFilter){setSupplierFilter(null);setLeftPanelMode("suppliers");}else if(isMode){setLeftPanelMode("all");}else{setLeftPanelMode("suppliers");} }}
-                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
-                    {hasFilter?<><ChevronLeft className="w-2.5 h-2.5"/><span className="max-w-[80px] truncate">{supplierFilter}</span></>:<><Users className="w-2.5 h-2.5"/>Suppliers</>}
-                  </button>
-                );
-              })()}
+              {/* Suppliers dropdown — independent; does not clear PO/channel/flagged */}
+              <FilterDropdown
+                label="Suppliers"
+                icon={<Users className="w-2.5 h-2.5" />}
+                options={SUPPLIERS.map(s => ({ id: s.id, label: s.label, count: s.count }))}
+                value={supplierFilter}
+                onSelect={(id) => {
+                  urlParamsApplied.current = true;
+                  setActiveView("inbox");
+                  setSupplierFilter(id);
+                  if (id) {
+                    const first = messages.find(m => m.supplierId === id || m.sender === id);
+                    if (first) openMessage(first.id);
+                  }
+                }}
+                searchPlaceholder="Search suppliers…"
+              />
 
-              {/* Purchase Orders */}
-              {(()=>{
-                const isMode = leftPanelMode==="pos" && activeView==="inbox";
-                const hasFilter = !!selectedShipmentId;
-                const activePO = hasFilter ? shipments.find(s=>s.id===selectedShipmentId) : undefined;
-                const active = isMode||hasFilter;
-                return (
-                  <button
-                    onClick={()=>{ setActiveView("inbox"); if(hasFilter){setSelectedShipmentId(null);setLeftPanelMode("pos");}else if(isMode){setLeftPanelMode("all");}else{setLeftPanelMode("pos");} }}
-                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
-                    {hasFilter?<><ChevronLeft className="w-2.5 h-2.5"/><span className="max-w-[80px] truncate">{activePO?.po??"PO"}</span></>:<><Package className="w-2.5 h-2.5"/>POs</>}
-                  </button>
-                );
-              })()}
+              {/* POs dropdown — independent; does not clear supplier/channel/flagged */}
+              <FilterDropdown
+                label="POs"
+                icon={<Package className="w-2.5 h-2.5" />}
+                options={shipments.map(s => ({
+                  id: s.id,
+                  label: s.po,
+                  count: messages.filter(m => m.shipmentId === s.id).length,
+                }))}
+                value={selectedShipmentId}
+                onSelect={(id) => {
+                  urlParamsApplied.current = true;
+                  setActiveView("inbox");
+                  setSelectedShipmentId(id);
+                  if (id) {
+                    const first = messages.find(m => m.shipmentId === id);
+                    if (first) openMessage(first.id);
+                  }
+                }}
+                searchPlaceholder="Search POs…"
+              />
 
-              {/* Channels */}
-              {(()=>{
-                const isMode = leftPanelMode==="channels" && activeView==="inbox";
-                const hasFilter = channelFilter!=="all";
-                const active = isMode||hasFilter;
-                return (
-                  <button
-                    onClick={()=>{ setActiveView("inbox"); if(hasFilter){setChannelFilter("all");setLeftPanelMode("channels");}else if(isMode){setLeftPanelMode("all");}else{setLeftPanelMode("channels");} }}
-                    className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
-                    {hasFilter?<><ChevronLeft className="w-2.5 h-2.5"/><span className="capitalize">{channelFilter}</span></>:<><MessagesSquare className="w-2.5 h-2.5"/>Channels</>}
-                  </button>
-                );
-              })()}
+              {/* Channels dropdown — independent; does not clear supplier/PO/flagged */}
+              <FilterDropdown
+                label="Channels"
+                icon={<MessagesSquare className="w-2.5 h-2.5" />}
+                options={CHANNEL_FILTER_OPTIONS.filter(ch => messages.some(m => m.channel === ch.id)).map(ch => ({
+                  ...ch,
+                  count: messages.filter(m => m.channel === ch.id).length,
+                }))}
+                value={channelFilter !== "all" ? channelFilter : null}
+                onSelect={(id) => {
+                  urlParamsApplied.current = true;
+                  setActiveView("inbox");
+                  setChannelFilter((id ?? "all") as Channel | "all");
+                  if (id) {
+                    const first = messages.find(m => m.channel === id);
+                    if (first) openMessage(first.id);
+                  }
+                }}
+              />
 
-              {/* Flagged */}
+              {/* Flagged — independent toggle; does not clear supplier/PO/channel */}
               {(()=>{
                 const flaggedCount = messages.filter(m=>m.isFlagged).length;
                 const active = flaggedFilter && activeView==="inbox";
                 return (
                   <button
-                    onClick={()=>{ setActiveView("inbox"); setLeftPanelMode("all"); setFlaggedFilter(f=>!f); setChannelFilter("all"); setSelectedShipmentId(null); setSupplierFilter(null); setCustomerFilter(null); if(!flaggedFilter){const fm=messages.find(m=>m.isFlagged);if(fm)openMessage(fm.id);} }}
+                    onClick={()=>{ setActiveView("inbox"); setFlaggedFilter(f=>!f); if(!flaggedFilter){const fm=messages.find(m=>m.isFlagged);if(fm)openMessage(fm.id);} }}
                     className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-[#E5EAF0] text-[#212833] font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-[#E5EAF0] hover:text-[#212833]"}`}>
                     <Bookmark className="w-2.5 h-2.5"/>Flagged
                     {flaggedCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-[#9000FF] text-white":"bg-[#E5EAF0] text-[#5E687B]"}`}>{flaggedCount}</span>}
@@ -2767,25 +2825,25 @@ export default function Home() {
                 );
               })()}
 
-              {/* Buyer filter pill — visible only when customerFilter is active */}
+              {/* Buyer filter pill — visible only when customerFilter is active (deep-link) */}
               {customerFilter && (
                 <button
                   onClick={()=>setCustomerFilter(null)}
                   className="flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 bg-[#9000FF]/10 text-[#9000FF] hover:bg-[#9000FF]/20 transition-colors"
                 >
-                  <ChevronLeft className="w-2.5 h-2.5"/>
+                  <X className="w-2.5 h-2.5"/>
                   <span className="max-w-[100px] truncate">
                     {shipments.find(s => s.buyerId === Number(customerFilter))?.customer ?? customerFilter}
                   </span>
                 </button>
               )}
 
-              {/* Needs Review */}
+              {/* Needs Review — simple toggle */}
               {(()=>{
                 const active = activeView==="needs-review";
                 return (
                   <button
-                    onClick={()=>setActiveView("needs-review")}
+                    onClick={()=>setActiveView(active ? "inbox" : "needs-review")}
                     className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 transition-colors ${active?"bg-amber-100 text-amber-800 font-semibold":"bg-[#F0F4F8] text-[#5E687B] hover:bg-amber-50 hover:text-amber-700"}`}>
                     <AlertCircle className="w-2.5 h-2.5 text-amber-500"/>Needs Review
                     {needsReviewCount>0&&<span className={`text-[9px] font-bold px-1 rounded-full ${active?"bg-amber-500 text-white":"bg-amber-100 text-amber-700"}`}>{needsReviewCount}</span>}
