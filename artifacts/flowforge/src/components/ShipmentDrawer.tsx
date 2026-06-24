@@ -62,7 +62,6 @@ interface ShipmentDrawerProps {
   openAdvanceDialog: (shipment: UiShipment) => void;
   openEditPO: (shipment: UiShipment) => void;
   setShipments: React.Dispatch<React.SetStateAction<UiShipment[]>>;
-  setAiInput: React.Dispatch<React.SetStateAction<string>>;
   setShipmentQuotesMap: React.Dispatch<React.SetStateAction<Map<number, FactoryQuote[]>>>;
 
   onClose: () => void;
@@ -109,7 +108,6 @@ export function ShipmentDrawer({
   openAdvanceDialog,
   openEditPO,
   setShipments,
-  setAiInput,
   setShipmentQuotesMap,
   onClose,
 }: ShipmentDrawerProps) {
@@ -243,14 +241,6 @@ export function ShipmentDrawer({
                                   )
                                 );
                                 setMoreMenuOpen(false);
-                              },
-                            },
-                            {
-                              label: "Ask AI about this PO",
-                              action: () => {
-                                setAiInput(`Tell me about ${shipment.po}`);
-                                setMoreMenuOpen(false);
-                                onClose();
                               },
                             },
                             {

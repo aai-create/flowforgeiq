@@ -1,22 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AICopilotBar } from "@/components/AICopilotBar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, useListTasks, updateTask, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment } from "@workspace/api-client-react";
+import { useListShipments, useListStages, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
-import { adaptShipments, adaptStages, adaptTasks, shortDate, type UiShipment, type UiStage, type UiTask } from "@/lib/adapters";
+import { adaptShipments, adaptStages, shortDate, type UiShipment, type UiStage } from "@/lib/adapters";
 import { QuotesTab } from "@/components/QuotesTab";
 import {
-  Search, Bell, Plus, Inbox, LayoutGrid,
-  MessageCircle, Mail, FileText, CheckCircle2, Circle,
-  Sparkles, AlertCircle, Clock, ChevronRight, Hash, X,
-  Wand2, Send, Paperclip, MoreHorizontal, ChevronDown,
-  DollarSign, CreditCard, CalendarClock, ListTodo, Zap,
-  MapPin, Filter, SlidersHorizontal, Calendar, ShieldAlert, BarChart3, ArrowLeft, Upload,
+  Search, Plus,
+  MessageCircle, Mail, FileText, CheckCircle2, AlertCircle,
+  Sparkles, Clock, ChevronRight, Hash, X,
+  ChevronDown,
+  DollarSign, CreditCard,
+  MapPin, Filter, ShieldAlert, Upload, MoreHorizontal,
   HelpCircle, Link2, Copy, Check as CheckIcon, Archive, ArchiveRestore,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -96,44 +95,6 @@ const CUSTOMERS = [
   { id: "c4", name: "Marlowe & Sons",        count: 1 },
 ];
 
-interface Task {
-  id: string; title: string; source: string; sourceAge: string;
-  urgency: "high" | "medium" | "low"; done: boolean;
-}
-
-const INIT_TASKS: Task[] = [
-  { id: "t1", title: "Approve 2-day delay — Guangzhou Metalworks (PO-0142)",      source: "WhatsApp",  sourceAge: "2h ago",    urgency: "high",   done: false },
-  { id: "t2", title: "Balance payment overdue — PO-0142 ($8,960 due May 15)",    source: "Tracker",   sourceAge: "Today",     urgency: "high",   done: false },
-  { id: "t3", title: "Port congestion reply needed — Tianjin Wire Works (PO-0165)", source: "WhatsApp", sourceAge: "Yesterday", urgency: "high",   done: false },
-  { id: "t4", title: "Select factory quote — PO-0168 (Grid Panel Display)",       source: "Sheets",    sourceAge: "2d ago",    urgency: "medium", done: false },
-  { id: "t5", title: "Book QC inspection — Shenzhen LEDPro entering final assembly", source: "Gmail",  sourceAge: "Yesterday", urgency: "medium", done: false },
-  { id: "t6", title: "Arrange balance wire $21,700 — Hangzhou Timber (PO-0160)", source: "PDF / SGS", sourceAge: "Mon",       urgency: "medium", done: false },
-];
-
-// AI chat turns
-const CHAT: { role: "user" | "ai"; text: React.ReactNode }[] = [
-  { role: "user", text: "What's most urgent today?" },
-  {
-    role: "ai",
-    text: (
-      <span>
-        <span className="font-semibold text-[#212833]">3 high-priority items</span> need decisions before end of day.
-        <div className="mt-2 p-2 bg-[#FAFBFC] border border-[#E5EAF0] rounded-md space-y-1.5">
-          <div className="flex items-start gap-1.5">
-            <AlertCircle className="w-3 h-3 text-red-500 mt-0.5 shrink-0" />
-            <span className="text-[11px]"><span className="font-medium text-[#212833]">PO-0142</span> — balance $8,960 overdue + supplier requesting 2d delay</span>
-          </div>
-          <div className="flex items-start gap-1.5">
-            <AlertCircle className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
-            <span className="text-[11px]"><span className="font-medium text-[#212833]">PO-0165</span> — Tianjin port congestion, 4d delay needs approval</span>
-          </div>
-        </div>
-        <p className="mt-2 text-[12px]">Want me to draft replies for both?</p>
-      </span>
-    ),
-  },
-];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -142,12 +103,6 @@ const statusCls = (s: ShipmentStatus) =>
   : s === "delayed"  ? "bg-red-50 text-red-700 border border-red-100"
   : "bg-amber-50 text-amber-700 border border-amber-100";
 
-const urgencyDot = (u: Task["urgency"]) =>
-  u === "high" ? "bg-red-500" : u === "medium" ? "bg-amber-400" : "bg-[#C0C8D4]";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
   const q = query.trim();
@@ -177,21 +132,18 @@ export function Atelier() {
   ]);
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments({ includeArchived: true });
-  const { data: apiTasks }     = useListTasks();
   const { data: radarData }    = useGetRiskRadar();
   const { data: suppliersData } = useListSuppliers();
   const apiSuppliers = suppliersData ?? [];
   const [shipments, setShipments] = useState<UiShipment[]>([]);
   const [stages, setStages] = useState<UiStage[]>([]);
-  const [tasks, setTasks] = useState<UiTask[]>([]);
   useEffect(() => {
     if (!apiStages || !apiShipments) return;
     const adapted = adaptStages(apiStages);
     const ships = adaptShipments(apiShipments, adapted);
     setStages(adapted);
     setShipments(ships);
-    if (apiTasks) setTasks(adaptTasks(apiTasks, ships));
-  }, [apiStages, apiShipments, apiTasks]);
+  }, [apiStages, apiShipments]);
 
   const [advanceTarget, setAdvanceTarget] = useState<UiShipment | null>(null);
   const [advanceNote, setAdvanceNote] = useState("");
@@ -281,7 +233,6 @@ export function Atelier() {
   const { data: allMessages = [] } = useListMessages();
   const { data: allDocuments = [] } = useListDocuments();
   const [customerFilter, setCustomerFilter] = useState<number | null>(null);
-  const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
   const [poSearch, setPoSearch] = useState(() => new URLSearchParams(window.location.search).get("po") ?? "");
   const [copiedPo, setCopiedPo] = useState<string | null>(null);
@@ -292,8 +243,6 @@ export function Atelier() {
     setCopiedPo(text);
     setTimeout(() => setCopiedPo(null), 1500);
   };
-  const [aiMessages, setAiMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   // Mark-paid form (rendered inside ShipmentDrawer)
@@ -417,7 +366,7 @@ export function Atelier() {
   const [newPODragOver, setNewPODragOver] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [supplierFilter, setSupplierFilter] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createShipmentMutation = useCreateShipment();
@@ -569,49 +518,6 @@ export function Atelier() {
     }
   };
 
-  const sendMessage = async (overrideText?: string) => {
-    const text = (overrideText ?? aiInput).trim();
-    if (!text || aiLoading) return;
-    setAiMessages(prev => [...prev, { role: "user", text }]);
-    setAiInput("");
-    setAiLoading(true);
-    try {
-      const history = aiMessages.map(m => ({
-        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
-        content: m.text,
-      }));
-      const res = await fetch(`${import.meta.env.BASE_URL}api/copilot/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
-      });
-      if (!res.ok) throw new Error("AI request failed");
-      const data = await res.json() as { reply: string };
-      setAiMessages(prev => [...prev, { role: "ai", text: data.reply }]);
-    } catch {
-      setAiMessages(prev => [...prev, { role: "ai", text: t("orders.aiConnectError") }]);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleChipClick = (chip: string) => {
-    void sendMessage(chip);
-  };
-
-  const focusShipment = (shipmentId: string) => {
-    setActiveShipmentId(shipmentId);
-    document.getElementById(`shipment-${shipmentId}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  };
-
-  const toggleTask = (id: string) => {
-    const t = tasks.find(x => x.id === id);
-    if (!t) return;
-    const nextDone = !t.done;
-    setTasks(prev => prev.map(x => x.id === id ? { ...x, done: nextDone } : x));
-    updateTask(t.taskId, { done: nextDone }).catch(() => {});
-  };
-
   const CUSTOMERS = (() => {
     const map = new Map<string, { buyerId: number | null; name: string; count: number }>();
     for (const s of shipments) {
@@ -655,9 +561,6 @@ export function Atelier() {
   });
   const archivedCount = shipments.filter(s => s.archivedAt != null).length;
 
-  const highCount  = tasks.filter(t => t.urgency === "high"   && !t.done).length;
-  const doneCount  = tasks.filter(t => t.done).length;
-
   return (
     <>
     {toast && (
@@ -677,46 +580,7 @@ export function Atelier() {
           <ScrollArea className="flex-1">
             <div className="px-3 pb-3">
 
-              {/* Today's Focus — top of sidebar */}
-              <div className="px-2 mb-2 flex items-center justify-between">
-                <span className="text-xs font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
-                  <Zap className="w-3 h-3 text-[#9000FF]" /> Today's Focus
-                </span>
-                {doneCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-emerald-500 font-medium">
-                    <CheckCircle2 className="w-3 h-3" />{doneCount}/{tasks.length}
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-1 mb-4">
-                {tasks.map(task => (
-                  <div key={task.id}
-                    onClick={() => focusShipment(task.shipmentId)}
-                    className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white hover:shadow-sm border border-transparent hover:border-[#9000FF]/20 cursor-pointer transition-all ${task.done ? "opacity-50" : ""} ${activeShipmentId === task.shipmentId ? "bg-white border-[#9000FF]/20 shadow-sm" : ""}`}>
-                    <button onClick={e => { e.stopPropagation(); toggleTask(task.id); }}
-                      className={`mt-0.5 shrink-0 transition-colors ${task.done ? "text-[#9000FF]" : "text-[#D6E3EB] hover:text-[#9000FF]"}`}>
-                      {task.done ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${urgencyDot(task.urgency)}`} />
-                        <p className={`text-[12px] font-medium text-[#212833] leading-snug line-clamp-2 ${task.done ? "line-through text-[#5E687B]" : ""}`}>{task.title}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-[#5E687B] pl-3">
-                        <CalendarClock className="w-2.5 h-2.5" />
-                        <span>{task.source}</span>
-                        <span className="opacity-40">·</span>
-                        <span className={task.urgency === "high" && !task.done ? "text-red-500 font-semibold" : ""}>{task.sourceAge}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Separator className="mb-3" />
-
-              {/* Filters — collapsible, collapsed by default */}
+              {/* Filters — collapsible */}
               <button
                 onClick={() => setFiltersOpen(o => !o)}
                 className="w-full px-2 mb-1 flex items-center justify-between group hover:bg-[#E5EAF0] rounded-md py-1 transition-colors"
@@ -1363,7 +1227,6 @@ export function Atelier() {
                                   { label: t("orders.menuEditPo"), action: () => { openEditPO(shipment); setMoreMenuId(null); }, danger: false },
                                   { label: t("orders.menuMarkAtRisk"), action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "at-risk" as const } : s)); setMoreMenuId(null); }, danger: false },
                                   { label: t("orders.menuMarkOnTrack"), action: () => { setShipments(prev => prev.map(s => s.id === shipment.id ? { ...s, status: "on-track" as const } : s)); setMoreMenuId(null); }, danger: false },
-                                  { label: t("orders.menuAskAi"), action: () => { setAiInput(`Tell me about ${shipment.po}`); setMoreMenuId(null); }, danger: false },
                                   { label: t("orders.menuCopyPo"), action: () => { navigator.clipboard.writeText(shipment.po); setMoreMenuId(null); }, danger: false },
                                 ].map(({ label, action, danger }) => (
                                   <button key={label} onClick={action}
@@ -1520,131 +1383,6 @@ export function Atelier() {
           </ScrollArea>
         </div>
 
-        {/* RIGHT PANE — FlowForgeIQ AI */}
-        <div className="w-[340px] bg-white border-l border-[#E5EAF0] flex flex-col shrink-0">
-          <div className="h-12 border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 bg-[#FAFBFC]">
-            <div className="flex items-center gap-2 text-[#9000FF]">
-              <Sparkles className="w-4 h-4" />
-              <span className="font-semibold text-sm">FlowForgeIQ AI</span>
-            </div>
-            <button className="h-7 w-7 flex items-center justify-center rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors">
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-          </div>
-
-          <ScrollArea className="flex-1 bg-gradient-to-b from-[#FAFBFC] to-white">
-            <div className="p-4 space-y-4">
-
-              {/* Briefing card */}
-              <div className="bg-white border border-[#E5EAF0] shadow-sm rounded-xl p-3.5 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#9000FF] rounded-l-xl" />
-                <div className="flex items-center gap-2 mb-2">
-                  <Wand2 className="w-3.5 h-3.5 text-[#9000FF]" />
-                  <span className="text-xs font-bold text-[#212833] uppercase tracking-wider">Daily Briefing — May 15</span>
-                </div>
-                <p className="text-[12px] text-[#5E687B] leading-relaxed">
-                  <span className="font-semibold text-red-500">2 overdue items</span> across 5 active POs.{" "}
-                  <span className="font-medium text-[#212833]">PO-0142</span> balance of $8,960 missed its due date and Guangzhou is requesting a delay.{" "}
-                  <span className="font-medium text-[#212833]">PO-0160</span> QC has passed — balance wire of $21,700 needed to release the container.
-                </p>
-                <div className="mt-2.5 flex gap-2">
-                  <button onClick={() => handleChipClick("Draft all replies for overdue POs")} className="text-[11px] bg-[#9000FF] text-white px-2.5 py-1 rounded-full font-semibold hover:bg-[#7A00D9] transition-colors">
-                    Draft all replies
-                  </button>
-                  <button onClick={() => handleChipClick("Show payment plan for all active POs")} className="text-[11px] bg-[#F0F4F8] text-[#5E687B] px-2.5 py-1 rounded-full font-medium hover:bg-[#E5EAF0] transition-colors">
-                    Show payment plan
-                  </button>
-                </div>
-              </div>
-
-              {/* Chat history */}
-              {CHAT.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.role === "ai" && (
-                    <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0 mt-1 mr-2">
-                      <Sparkles className="w-3 h-3 text-[#9000FF]" />
-                    </div>
-                  )}
-                  <div className={`max-w-[88%] px-3 py-2.5 rounded-2xl text-[12px] leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-[#F0F4F8] text-[#212833] rounded-tr-sm"
-                      : "bg-white border border-[#E5EAF0] shadow-sm text-[#212833] rounded-tl-sm"
-                  }`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-
-              {/* Additional messages */}
-              {aiMessages.map((msg, i) => (
-                <div key={`extra-${i}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.role === "ai" && (
-                    <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0 mt-1 mr-2">
-                      <Sparkles className="w-3 h-3 text-[#9000FF]" />
-                    </div>
-                  )}
-                  <div className={`max-w-[88%] px-3 py-2.5 rounded-2xl text-[12px] leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-[#F0F4F8] text-[#212833] rounded-tr-sm"
-                      : "bg-white border border-[#E5EAF0] shadow-sm text-[#212833] rounded-tl-sm"
-                  }`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-
-              {/* Loading bubble */}
-              {aiLoading && (
-                <div className="flex justify-start">
-                  <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0 mt-1 mr-2">
-                    <Sparkles className="w-3 h-3 text-[#9000FF]" />
-                  </div>
-                  <div className="bg-white border border-[#E5EAF0] shadow-sm px-3 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"0ms"}} />
-                    <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"150ms"}} />
-                    <span className="w-1.5 h-1.5 bg-[#9000FF]/40 rounded-full animate-bounce" style={{animationDelay:"300ms"}} />
-                  </div>
-                </div>
-              )}
-
-              {/* Action chips */}
-              {!aiLoading && (
-                <div className="flex flex-wrap gap-2 ml-8">
-                  {["Draft reply to Guangzhou", "Approve Tianjin delay", "Initiate wire $21,700", "Show PO-0168 quotes"].map(c => (
-                    <button key={c} onClick={() => handleChipClick(c)} className="text-[11px] bg-[#9000FF]/8 text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/15 transition-colors font-semibold">
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          {/* AI input */}
-          <div className="p-3 bg-white border-t border-[#E5EAF0]">
-            <div className="flex items-center bg-[#F0F4F8] rounded-xl border border-transparent focus-within:border-[#9000FF]/30 focus-within:bg-white transition-colors">
-              <button className="h-9 w-9 flex items-center justify-center shrink-0 text-[#5E687B] hover:text-[#212833]">
-                <Paperclip className="w-4 h-4" />
-              </button>
-              <input type="text" value={aiInput} onChange={e => setAiInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") void sendMessage(); }}
-                disabled={aiLoading}
-                placeholder={t("orders.aiPlaceholder")}
-                className="flex-1 bg-transparent text-xs h-10 focus:outline-none placeholder:text-[#A0ABB8] disabled:opacity-60" />
-              <button onClick={() => void sendMessage()} disabled={aiLoading || !aiInput.trim()} className={`h-7 w-7 rounded-lg mr-1 shrink-0 flex items-center justify-center transition-colors ${aiInput.trim() && !aiLoading ? "bg-[#9000FF] hover:bg-[#7A00D9]" : "bg-[#E5EAF0]"}`}>
-                {aiLoading
-                  ? <span className="w-3 h-3 border-2 border-[#9000FF]/30 border-t-[#9000FF] rounded-full animate-spin" />
-                  : <Send className={`w-3.5 h-3.5 ${aiInput.trim() ? "text-white" : "text-[#9E9FAE]"}`} />
-                }
-              </button>
-            </div>
-            <div className="mt-1.5 text-center">
-              <span className="text-[11px] text-[#A0ABB8]">
-                Press <kbd className="font-mono bg-[#F0F4F8] px-1 rounded border border-[#E5EAF0]">⌘</kbd> + <kbd className="font-mono bg-[#F0F4F8] px-1 rounded border border-[#E5EAF0]">K</kbd> to open command bar
-              </span>
-            </div>
-          </div>
-        </div>
         </div>
 
         </div>
@@ -1678,7 +1416,6 @@ export function Atelier() {
       openAdvanceDialog={openAdvanceDialog}
       openEditPO={openEditPO}
       setShipments={setShipments}
-      setAiInput={setAiInput}
       setShipmentQuotesMap={setShipmentQuotesMap}
       onClose={() => setActiveShipmentId(null)}
     />
