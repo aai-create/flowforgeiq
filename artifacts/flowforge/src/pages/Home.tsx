@@ -3,6 +3,9 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { GlobalHeader } from "@/components/GlobalHeader";
+import { PixelShip } from "@/components/PixelShip";
+import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
+import { useListFocusItems } from "@workspace/api-client-react";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSearch, useLocation } from "wouter";
@@ -2884,6 +2887,17 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto">
+                {visibleMessages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full py-12 px-6 text-center select-none">
+                    <PixelShip />
+                    <p className="mt-5 text-[13px] font-semibold text-[#212833]">No messages here!</p>
+                    <p className="mt-1 text-[11px] text-[#9E9FAE]">
+                      {(selectedShipmentId || supplierFilter || channelFilter !== "all" || flaggedFilter)
+                        ? "Try a different filter"
+                        : "Compose a message to get started"}
+                    </p>
+                  </div>
+                )}
                 {visibleMessages.map(msg=>{
                   const replied=repliedIds.has(msg.id);
                   return (
