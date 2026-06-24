@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useRef, useState, useEff
 
 const MAX_HISTORY = 10;
 
+export type ConversationTurn = { role: "user" | "assistant"; content: string };
+
 interface CopilotContextValue {
   contextHint: string;
   setContextHint: (hint: string) => void;
@@ -12,6 +14,17 @@ interface CopilotContextValue {
   addToHistory: (query: string) => void;
   isOpen: boolean;
   setOpen: (open: boolean) => void;
+  conversationHistory: ConversationTurn[];
+  setConversationHistory: React.Dispatch<React.SetStateAction<ConversationTurn[]>>;
+  showResult: boolean;
+  setShowResult: (v: boolean) => void;
+  pendingMessage: string;
+  setPendingMessage: (v: string) => void;
+  copilotLoading: boolean;
+  setCopilotLoading: (v: boolean) => void;
+  copilotError: string;
+  setCopilotError: (v: string) => void;
+  clearConversation: () => void;
 }
 
 const CopilotContext = createContext<CopilotContextValue>({
@@ -24,6 +37,17 @@ const CopilotContext = createContext<CopilotContextValue>({
   addToHistory: () => {},
   isOpen: false,
   setOpen: () => {},
+  conversationHistory: [],
+  setConversationHistory: () => {},
+  showResult: false,
+  setShowResult: () => {},
+  pendingMessage: "",
+  setPendingMessage: () => {},
+  copilotLoading: false,
+  setCopilotLoading: () => {},
+  copilotError: "",
+  setCopilotError: () => {},
+  clearConversation: () => {},
 });
 
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
@@ -32,6 +56,20 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
+  const [showResult, setShowResult] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState("");
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const [copilotError, setCopilotError] = useState("");
+
+  const clearConversation = useCallback(() => {
+    setShowResult(false);
+    setCopilotError("");
+    setCopilotLoading(false);
+    setConversationHistory([]);
+    setPendingMessage("");
+  }, []);
 
   const addToHistory = useCallback((query: string) => {
     const trimmed = query.trim();
@@ -68,7 +106,19 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
   }, [isOpen, setOpen]);
 
   return (
-    <CopilotContext.Provider value={{ contextHint, setContextHint, suggestions, setSuggestions, inputRef, history, addToHistory, isOpen, setOpen }}>
+    <CopilotContext.Provider value={{
+      contextHint, setContextHint,
+      suggestions, setSuggestions,
+      inputRef,
+      history, addToHistory,
+      isOpen, setOpen,
+      conversationHistory, setConversationHistory,
+      showResult, setShowResult,
+      pendingMessage, setPendingMessage,
+      copilotLoading, setCopilotLoading,
+      copilotError, setCopilotError,
+      clearConversation,
+    }}>
       {children}
     </CopilotContext.Provider>
   );

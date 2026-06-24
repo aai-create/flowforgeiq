@@ -8,20 +8,22 @@ interface AICopilotBarProps {
   alwaysOpen?: boolean;
 }
 
-type ConversationTurn = { role: "user" | "assistant"; content: string };
-
 const ACTION_CHIPS = ["Draft reply", "Flag payment", "Show all tasks"];
 
 export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopilotBarProps) {
-  const { contextHint, suggestions, inputRef, history, addToHistory, isOpen, setOpen } = useCopilot();
+  const {
+    contextHint, suggestions, inputRef, history, addToHistory, isOpen, setOpen,
+    conversationHistory, setConversationHistory,
+    showResult, setShowResult,
+    pendingMessage, setPendingMessage,
+    copilotLoading, setCopilotLoading,
+    copilotError, setCopilotError,
+    clearConversation,
+  } = useCopilot();
+
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showResult, setShowResult] = useState(false);
   const [focused, setFocused] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
-  const [pendingMessage, setPendingMessage] = useState("");
   const draftRef = useRef("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,17 +48,17 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [conversationHistory, pendingMessage, loading]);
+  }, [conversationHistory, pendingMessage, copilotLoading]);
 
   async function submitQuery(text: string) {
-    if (!text || loading) return;
+    if (!text || copilotLoading) return;
     setHistoryIndex(-1);
     draftRef.current = "";
     addToHistory(text);
     setShowResult(true);
     setFocused(false);
-    setLoading(true);
-    setError("");
+    setCopilotLoading(true);
+    setCopilotError("");
     setPendingMessage(text);
     setQuery("");
 
@@ -79,26 +81,15 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
       ]);
       setPendingMessage("");
     } catch {
-      setError("Couldn't connect to AI. Please try again.");
+      setCopilotError("Couldn't connect to AI. Please try again.");
       setPendingMessage("");
     } finally {
-      setLoading(false);
+      setCopilotLoading(false);
     }
   }
 
   async function submit() {
     await submitQuery(query.trim());
-  }
-
-  function clear() {
-    setShowResult(false);
-    setQuery("");
-    setError("");
-    setLoading(false);
-    setConversationHistory([]);
-    setPendingMessage("");
-    setHistoryIndex(-1);
-    draftRef.current = "";
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -249,7 +240,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
           {showResult && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/20 rounded-xl shadow-xl z-50 flex flex-col max-h-96">
               <button
-                onClick={clear}
+                onClick={clearConversation}
                 className="absolute top-3 right-3 text-[#5E687B] hover:text-[#212833] transition-colors z-10"
               >
                 <X size={13} />
@@ -290,7 +281,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                   </div>
                 )}
 
-                {loading && (
+                {copilotLoading && (
                   <div className="flex items-start gap-2">
                     <Sparkles size={13} className="text-[#9000FF] shrink-0 mt-0.5" />
                     <span className="flex items-center gap-1.5 mt-0.5">
@@ -301,15 +292,15 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                   </div>
                 )}
 
-                {error && (
+                {copilotError && (
                   <div className="flex items-start gap-2">
                     <AlertCircle size={13} className="text-red-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-red-600 leading-relaxed">{error}</p>
+                    <p className="text-xs text-red-600 leading-relaxed">{copilotError}</p>
                   </div>
                 )}
               </div>
 
-              {!loading && !error && hasConversation && (
+              {!copilotLoading && !copilotError && hasConversation && (
                 <div className="px-4 py-2 border-t border-[#F0F4F8] flex flex-wrap items-center gap-2">
                   {ACTION_CHIPS.map(chip => (
                     <button
@@ -325,7 +316,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                   ))}
                   {conversationHistory.length >= 4 && (
                     <button
-                      onClick={clear}
+                      onClick={clearConversation}
                       className="ml-auto text-[10px] text-[#9E9FAE] hover:text-[#5E687B] transition-colors font-medium"
                     >
                       New conversation
