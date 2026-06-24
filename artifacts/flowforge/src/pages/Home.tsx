@@ -2466,7 +2466,7 @@ export default function Home() {
 
   const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
   const isError = stagesError || shipmentsError || messagesError || tasksError;
-  if (!activeMessage || !activeShipment) {
+  if (isLoading || isError || shipments.length === 0) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{fontFamily:"Inter,sans-serif"}}>
         {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
@@ -3362,7 +3362,7 @@ export default function Home() {
               )}
 
               {/* Message body + collapsible sections */}
-              {!showComposePanel && activeMessageId !== "__cleared__" && <>
+              {!showComposePanel && activeMessageId !== "__cleared__" && activeMessage && <>
               <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
                 {/* Quote panel */}
                 {isQuotesStage&&activeShipment?.quotes&&(
