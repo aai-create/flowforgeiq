@@ -46,6 +46,7 @@ import {
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding, SupplierSummary } from "@workspace/api-client-react";
+import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED, BODY_SM_MUTED } from "@/lib/typography";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate, relativeAge,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
@@ -321,7 +322,7 @@ function StageConfigModal({ stages, onSave, onClose }: { stages: Stage[]; onSave
     <div className="fixed inset-0 z-50 bg-[#212833]/20 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[85vh]">
         <div className="px-5 py-4 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-          <div><h2 className="text-sm font-bold text-[#212833]">Workflow Stages</h2><p className="text-xs text-[#5E687B] mt-0.5">Customize your supply chain milestones.</p></div>
+          <div><h2 className={PAGE_TITLE}>Workflow Stages</h2><p className="text-xs text-[#5E687B] mt-0.5">Customize your supply chain milestones.</p></div>
           <button onClick={onClose} className="p-1.5 hover:bg-[#E5EAF0] rounded-md text-[#5E687B]"><X size={16}/></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">
@@ -391,7 +392,7 @@ function QuotePanel({ quotes, shipmentId, onSelect }: { quotes: FactoryQuote[]; 
 function TaskList({ tasks, onOpenMessage, onDismiss, onClose }: { tasks: Task[]; onOpenMessage: (id: string) => void; onDismiss: (id: string) => void; onClose: () => void }) {
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
-      <div className="px-3 pt-3 pb-1"><div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2 flex items-center gap-1"><Zap size={9} className="text-[#9000FF]"/>AI-generated from email analysis</div></div>
+      <div className="px-3 pt-3 pb-1"><div className={`${SECTION_LABEL} mb-2 flex items-center gap-1`}><Zap size={9} className="text-[#9000FF]"/>AI-generated from email analysis</div></div>
       {tasks.length===0 ? (
         <div className="flex flex-col items-center justify-center py-6 gap-2 text-[#5E687B]"><CheckCircle2 size={22} className="text-emerald-400"/><p className="text-xs font-medium">All clear — inbox is clean</p></div>
       ) : tasks.map((task,i) => (
@@ -507,12 +508,12 @@ export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
         </div>
         {/* Summary stats */}
         <div className="p-3 border-t border-[#E5EAF0]">
-          <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">This Month</div>
+          <div className={`${SECTION_LABEL} mb-2`}>This Month</div>
           <div className="grid grid-cols-2 gap-2">
             {[{label:"Payments due", value: eventsThisMonth.filter(e=>e.type==="payment").length, cls:"text-amber-600"},{label:"Ex-factory", value:eventsThisMonth.filter(e=>e.type==="exfactory").length, cls:"text-[#9000FF]"}].map(s=>(
               <div key={s.label} className="bg-white rounded-lg border border-[#E5EAF0] p-2 text-center shadow-sm">
                 <div className={`text-lg font-bold ${s.cls}`}>{s.value}</div>
-                <div className="text-[11px] text-[#5E687B]">{s.label}</div>
+                <div className={BODY_SM_MUTED}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -572,7 +573,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
             <div className="grid grid-cols-2 gap-4 w-full">
               <button onClick={()=>setStep(1)} className="border-2 border-dashed border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#FAFBFF] rounded-xl p-6 flex flex-col items-center gap-3 transition-all group">
                 <FileSpreadsheet size={32} className="text-green-600"/>
-                <div className="text-center"><div className="text-sm font-semibold text-[#212833]">Excel / CSV</div><div className="text-[11px] text-[#5E687B]">Upload .xlsx or .csv file</div></div>
+                <div className="text-center"><div className={SECTION_HEADING}>Excel / CSV</div><div className={BODY_SM_MUTED}>Upload .xlsx or .csv file</div></div>
                 <div onDragOver={e=>{e.preventDefault();setDragging(true)}} onDragLeave={()=>setDragging(false)} onDrop={()=>{setDragging(false);setStep(1)}}
                   className={`w-full border border-dashed rounded-lg py-3 text-xs text-center transition-all ${dragging?"border-[#9000FF] bg-[#9000FF]/5 text-[#9000FF]":"border-[#E5EAF0] text-[#9E9FAE] group-hover:border-[#9000FF]/30"}`}>
                   {dragging?"Drop to import":"Drag & drop here"}
@@ -580,7 +581,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
               </button>
               <button onClick={()=>setStep(1)} className="border-2 border-dashed border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#FAFBFF] rounded-xl p-6 flex flex-col items-center gap-3 transition-all">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
-                <div className="text-center"><div className="text-sm font-semibold text-[#212833]">Google Sheets</div><div className="text-[11px] text-[#5E687B]">Connect via Google</div></div>
+                <div className="text-center"><div className={SECTION_HEADING}>Google Sheets</div><div className={BODY_SM_MUTED}>Connect via Google</div></div>
                 <button className="w-full border border-[#E5EAF0] rounded-lg py-2 text-xs text-[#5E687B] hover:bg-[#F0F4F8] transition-colors">Sign in with Google</button>
               </button>
             </div>
@@ -593,7 +594,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
           <div>
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#212833] mb-1">Map your columns</h2><p className="text-sm text-[#5E687B]">We detected your spreadsheet. Confirm the column mapping below.</p></div>
             <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="grid grid-cols-3 bg-[#F0F4F8] px-4 py-2.5 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0]">
+              <div className={`grid grid-cols-3 bg-[#F0F4F8] px-4 py-2.5 ${SECTION_LABEL} border-b border-[#E5EAF0]`}>
                 <span>Your Column</span><span>Maps to</span><span>Confidence</span>
               </div>
               {IMPORT_COLUMNS.map(col=>(
@@ -620,7 +621,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
             <div className="text-center mb-6"><h2 className="text-xl font-bold text-[#212833] mb-1">Preview import</h2><p className="text-sm text-[#5E687B]">5 POs detected from your spreadsheet. Review before importing.</p></div>
             <div className="border border-[#E5EAF0] rounded-xl overflow-hidden shadow-sm mb-6 overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-[#F0F4F8]"><tr>{["PO","Product","Supplier","Cost","Margin","Ex-Factory","Status"].map(h=><th key={h} className="px-3 py-2.5 text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wider border-b border-[#E5EAF0] whitespace-nowrap">{h}</th>)}</tr></thead>
+                <thead className="bg-[#F0F4F8]"><tr>{["PO","Product","Supplier","Cost","Margin","Ex-Factory","Status"].map(h=><th key={h} className={`px-3 py-2.5 text-left ${SECTION_LABEL} border-b border-[#E5EAF0] whitespace-nowrap`}>{h}</th>)}</tr></thead>
                 <tbody>
                   {[["PO-0142","Stainless Fork","Guangzhou Metalworks","$0.88","28%","May 17","At Risk"],["PO-0157","LED Cabinet Light","Shenzhen LEDPro","$4.20","31%","May 18","Delayed"],["PO-0160","Oak Flooring","Hangzhou Timber","$18.50","34%","May 22","On Track"],["PO-0165","Chrome Hanger","Tianjin Wire Works","$2.70","25%","Jun 02","At Risk"],["PO-0168","Grid Panel","Guangzhou Metalworks","$6.10","34%","Jun 10","On Track"]].map((row,i)=>(
                     <tr key={i} className="border-b border-[#E5EAF0] last:border-b-0 hover:bg-[#FAFBFC]">
@@ -648,7 +649,7 @@ function ImportView({ onDone }: { onDone: () => void }) {
             <div className="text-center"><h2 className="text-xl font-bold text-[#212833] mb-2">Import complete!</h2><p className="text-sm text-[#5E687B]">5 POs successfully imported from your Excel tracker.</p></div>
             <div className="grid grid-cols-3 gap-3 w-full max-w-[400px]">
               {[{v:"5",l:"POs imported"},{v:"10",l:"Milestones mapped"},{v:"2",l:"Alerts triggered"}].map(s=>(
-                <div key={s.l} className="bg-white border border-[#E5EAF0] rounded-xl p-3 text-center shadow-sm"><div className="text-2xl font-bold text-[#9000FF]">{s.v}</div><div className="text-xs text-[#5E687B]">{s.l}</div></div>
+                <div key={s.l} className="bg-white border border-[#E5EAF0] rounded-xl p-3 text-center shadow-sm"><div className="text-2xl font-bold text-[#9000FF]">{s.v}</div><div className={BODY_MUTED}>{s.l}</div></div>
               ))}
             </div>
             <button onClick={onDone} className="px-6 py-2.5 bg-[#9000FF] text-white text-sm font-semibold rounded-lg hover:bg-[#7A00D9] transition-colors shadow-sm">Open Conversation Hub</button>
@@ -785,7 +786,7 @@ function DocDetailPanel({ doc, onBack }: { doc: DocumentWithExtraction; onBack: 
           <p className="text-xs font-semibold text-[#212833] truncate">{doc.fileName}</p>
           <div className="flex items-center gap-2 mt-1">
             <DocStatusBadge status={doc.status} />
-            {ext && <span className="text-[11px] text-[#5E687B]">{Math.round(ext.confidence * 100)}% confidence</span>}
+            {ext && <span className={BODY_SM_MUTED}>{Math.round(ext.confidence * 100)}% confidence</span>}
           </div>
         </div>
         {ext && fields && Object.keys(fields).length > 0 && (
@@ -1126,7 +1127,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {/* To */}
         <div className="flex items-start gap-2">
-          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-14 pt-2 shrink-0">To</span>
+          <span className={`${SECTION_LABEL} w-14 pt-2 shrink-0`}>To</span>
           <div className="flex-1 flex items-center gap-2 bg-[#F0F4F8] border border-[#E5EAF0] rounded-lg px-2.5 py-1.5">
             <span className="text-[11px] text-[#212833] font-medium truncate">{recipient}</span>
             <span className="ml-auto text-[11px] text-[#9E9FAE] shrink-0">{shipment.supplier}</span>
@@ -1135,7 +1136,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
 
         {/* Channel */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Via</span>
+          <span className={`${SECTION_LABEL} w-14 shrink-0`}>Via</span>
           <div className="flex gap-1.5">
             {(["gmail", "whatsapp"] as ComposeChannel[]).map(ch => (
               <button
@@ -1157,7 +1158,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
         {/* Subject (only for email) */}
         {channel === "gmail" && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider w-14 shrink-0">Subject</span>
+            <span className={`${SECTION_LABEL} w-14 shrink-0`}>Subject</span>
             <input
               value={subject}
               onChange={e => setSubject(e.target.value)}
@@ -1198,7 +1199,7 @@ function ComposePanel({ shipment, supplierEmail, onSend, onCancel }: ComposePane
         {/* Body */}
         <div className="flex-1 flex flex-col min-h-[140px]">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Message</span>
+            <span className={SECTION_LABEL}>Message</span>
             {body !== defaultBody && defaultBody && (
               <button onClick={() => setBody(defaultBody)} className="text-[11px] text-[#9000FF] hover:underline flex items-center gap-0.5">
                 <Sparkles size={8}/>Reset draft
@@ -1271,7 +1272,7 @@ function SearchResults({ query, messages, shipments, onOpen }: { query: string; 
   return (
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5EAF0] rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] z-50 mx-6 overflow-hidden max-h-[280px] overflow-y-auto">
       <div className="px-3 py-2 border-b border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between">
-        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{matched.length} result{matched.length!==1?"s":""} for "{query}"</span>
+        <span className={SECTION_LABEL}>{matched.length} result{matched.length!==1?"s":""} for "{query}"</span>
         <span className="text-[11px] text-[#9E9FAE]">messages</span>
       </div>
       {matched.length===0 ? (
@@ -1339,7 +1340,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-[#9E9FAE]">
         <CheckCircle2 size={32} className="text-emerald-400 mb-3 opacity-60"/>
-        <p className="text-sm font-semibold text-[#212833]">All clear — no messages need review</p>
+        <p className={SECTION_HEADING}>All clear — no messages need review</p>
         <p className="text-xs mt-1 max-w-xs">Inbound emails with high confidence are automatically routed. Low-confidence matches land here for manual assignment.</p>
       </div>
     );
@@ -1499,7 +1500,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
     <div className="flex-1 overflow-y-auto p-6 max-w-xl mx-auto w-full">
       <div className="mb-6">
         <h2 className="text-sm font-bold text-[#212833] mb-1">Email Integrations</h2>
-        <p className="text-xs text-[#5E687B]">Connect Gmail to send replies directly from FlowForgeIQ. Inbound emails and forwarded chats are received at{" "}
+        <p className={BODY_MUTED}>Connect Gmail to send replies directly from FlowForgeIQ. Inbound emails and forwarded chats are received at{" "}
           <button onClick={()=>{void navigator.clipboard.writeText(inboundEmail).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});}} className="inline-flex items-center gap-1 text-[#212833] hover:text-[#9000FF] transition-colors group" title="Copy to clipboard">
             <span className="font-mono font-semibold">{inboundEmail}</span>
             {copied ? <Check size={9} className="text-emerald-500"/> : <Copy size={9} className="opacity-0 group-hover:opacity-60"/>}
@@ -1516,7 +1517,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
             </div>
             <div>
               <div className="text-xs font-bold text-[#212833]">Gmail (Send-as)</div>
-              <div className="text-xs text-[#5E687B]">Reply to inbound emails via your Gmail account</div>
+              <div className={BODY_MUTED}>Reply to inbound emails via your Gmail account</div>
             </div>
           </div>
           {status?.connected ? (
@@ -1584,7 +1585,7 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
           </div>
           <div>
             <div className="text-xs font-bold text-[#212833]">Inbound Email Routing</div>
-            <div className="text-xs text-[#5E687B]">Emails sent to your ingest address are parsed, matched to shipments, and appear in your inbox.</div>
+            <div className={BODY_MUTED}>Emails sent to your ingest address are parsed, matched to shipments, and appear in your inbox.</div>
           </div>
         </div>
         <div className="space-y-1.5 text-xs text-[#5E687B]">
@@ -1740,7 +1741,7 @@ function ChannelPickerView({ messages, onSelect }: {
                   {ch.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-[#212833]">{ch.label}</div>
+                  <div className={SECTION_HEADING}>{ch.label}</div>
                   <div className="text-[10px] text-[#9E9FAE]">{count} message{count !== 1 ? "s" : ""}</div>
                 </div>
                 <ChevronRight size={12} className="text-[#C0C8D4] group-hover:text-[#9000FF] transition-colors shrink-0" />
@@ -2545,8 +2546,8 @@ export default function Home() {
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF]"><Clipboard size={15}/></div>
                     <div>
-                      <div className="text-sm font-bold text-[#212833]">Paste Chat Message</div>
-                      <div className="text-xs text-[#5E687B]">Paste a WhatsApp, WeChat, or iMessage export — AI will extract supply-chain data</div>
+                      <div className={PAGE_TITLE}>Paste Chat Message</div>
+                      <div className={BODY_MUTED}>Paste a WhatsApp, WeChat, or iMessage export — AI will extract supply-chain data</div>
                     </div>
                   </div>
                   <button onClick={closePasteChat} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={16}/></button>
@@ -2620,7 +2621,7 @@ export default function Home() {
                     {/* Extracted fields */}
                     {pasteChatResult.extractedFields&&Object.values(pasteChatResult.extractedFields).some(v=>v!=null)&&(
                       <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3">
-                        <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">Extracted fields</div>
+                        <div className={`${SECTION_LABEL} mb-2`}>Extracted fields</div>
                         <div className="space-y-1 text-[11px]">
                           {pasteChatResult.extractedFields.eta&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">ETA:</span><span className="text-[#212833]">{pasteChatResult.extractedFields.eta}</span></div>}
                           {pasteChatResult.extractedFields.quotePrice!=null&&<div className="flex gap-2"><span className="text-[#5E687B] w-20 shrink-0">Quote:</span><span className="text-[#212833]">${pasteChatResult.extractedFields.quotePrice}</span></div>}
@@ -3001,7 +3002,7 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">Supplier PO</span>
+                        <span className={SECTION_LABEL_MUTED}>Supplier PO</span>
                         <button
                           type="button"
                           onClick={e => copyPo(activeShipment.po, e)}
@@ -3012,7 +3013,7 @@ export default function Home() {
                             ? <Check size={9} className="text-emerald-500 shrink-0" />
                             : <Copy size={9} className="opacity-0 group-hover/spo:opacity-50 shrink-0 transition-opacity" />}
                         </button>
-                        <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">Buyer PO</span>
+                        <span className={SECTION_LABEL_MUTED}>Buyer PO</span>
                         {activeShipment.buyerPoNumbers && activeShipment.buyerPoNumbers.length > 0 ? (
                           <>
                             {activeShipment.buyerPoNumbers.map(bpo => (
@@ -3046,10 +3047,10 @@ export default function Home() {
                         <span className="text-[11px] bg-[#E5EAF0] text-[#5E687B] px-1.5 rounded font-medium">{activeShipment.customer}</span>
                         <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${statusCls(activeShipment.status)}`}>{activeShipment.status==="on-track"?<Check size={8}/>:<AlertCircle size={8}/>}{activeShipment.status}</span>
                       </div>
-                      <div className="text-[11px] text-[#5E687B]">{activeShipment.product}</div>
+                      <div className={BODY_SM_MUTED}>{activeShipment.product}</div>
                     </div>
                     <div className="flex items-start gap-1.5 shrink-0">
-                      <div className="text-right"><div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
+                      <div className="text-right"><div className={`${SECTION_LABEL} mb-0.5`}>Ex-Factory</div><div className="text-xs font-bold text-[#212833]">{activeShipment.dueDate}</div></div>
                       <button onClick={()=>setShipmentContextExpanded(v=>!v)} className="p-1 rounded hover:bg-[#E5EAF0] text-[#5E687B] transition-colors mt-0.5" title={shipmentContextExpanded?"Collapse details":"Expand details"}>
                         {shipmentContextExpanded?<ChevronUp size={11}/>:<ChevronDown size={11}/>}
                       </button>
@@ -3213,7 +3214,7 @@ export default function Home() {
                   </div>
                   {/* Your Spread row */}
                   <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                    <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <div className={`${SECTION_LABEL} mb-1.5 flex items-center justify-between`}>
                       <span className="flex items-center gap-1"><DollarSign size={8} className="text-[#9000FF]"/>Your Spread</span>
                       {!editingBuyerPrice && (
                         <button
@@ -3314,7 +3315,7 @@ export default function Home() {
                   {/* Supplier contact email */}
                   {activeSupplier ? (
                     <div className="mt-2.5 pt-2.5 border-t border-[#E5EAF0]">
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <div className={`${SECTION_LABEL} mb-1.5 flex items-center gap-1`}>
                         <Mail size={8}/>Supplier Contact
                       </div>
                       {editingEmail ? (
@@ -3490,7 +3491,7 @@ export default function Home() {
                               </div>
                             );
                           })}
-                          {activeProps.length===0&&(<div className="flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]"><Sparkles size={28} className="opacity-30 mb-2"/><p className="text-sm font-semibold text-[#212833]">No pending actions</p><p className="text-[11px] mt-1">Copilot will surface suggestions as new messages arrive.</p></div>)}
+                          {activeProps.length===0&&(<div className="flex flex-col items-center justify-center text-center py-8 text-[#9E9FAE]"><Sparkles size={28} className="opacity-30 mb-2"/><p className={SECTION_HEADING}>No pending actions</p><p className="text-[11px] mt-1">Copilot will surface suggestions as new messages arrive.</p></div>)}
                         </div>
                       </CollapsibleSection>
                     );
@@ -3551,7 +3552,7 @@ export default function Home() {
           <div className="fixed inset-0 z-[200] bg-[#212833]/30 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E5EAF0] bg-[#FAFBFC]">
-                <h2 className="text-sm font-bold text-[#212833]">Advance Shipment Stage</h2>
+                <h2 className={PAGE_TITLE}>Advance Shipment Stage</h2>
                 <p className="text-xs text-[#5E687B] mt-0.5">
                   {advanceDialogShipment.po} — {advanceDialogShipment.product}
                 </p>
@@ -3559,7 +3560,7 @@ export default function Home() {
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                   <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Current</span>
+                    <span className={SECTION_LABEL}>Current</span>
                     <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceDialogShipment.currentStageId}</span>
                   </div>
                   <ChevronRight size={20} className="text-[#9000FF] shrink-0" />

@@ -7,6 +7,7 @@ import { useUserPref } from "@/lib/useUserPref";
 import type { Stage } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
+import { SECTION_LABEL, PAGE_TITLE, BODY_MUTED } from "@/lib/typography";
 
 type SettingsTab = "general" | "pipeline" | "channels" | "team";
 
@@ -303,7 +304,7 @@ function TeamSection() {
 
           {inviteResult && (
             <div className="mt-4 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-2">{t("settings.team.inviteLink")}</div>
+              <div className={`${SECTION_LABEL} mb-2`}>{t("settings.team.inviteLink")}</div>
               <p className="text-[11px] text-[#5E687B] mb-2">
                 {t("settings.team.inviteLinkDesc")} <strong>{t(inviteRole === "admin" ? "settings.team.roleAdmin" : "settings.team.roleMember")}</strong>.
               </p>
@@ -702,7 +703,7 @@ export function Settings() {
         <div className="h-12 border-b border-[#E5EAF0] flex items-center px-6 shrink-0 bg-white justify-between">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-[#9000FF]" />
-            <h1 className="text-sm font-bold text-[#212833]">{t("settings.title")}</h1>
+            <h1 className={PAGE_TITLE}>{t("settings.title")}</h1>
           </div>
           {user && (
             <div className="flex items-center gap-3">
@@ -712,7 +713,7 @@ export function Settings() {
                     {(user.fullName ?? user.firstName ?? "U").charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-xs text-[#5E687B]">{user.fullName ?? user.primaryEmailAddress?.emailAddress}</span>
+                <span className={BODY_MUTED}>{user.fullName ?? user.primaryEmailAddress?.emailAddress}</span>
               </div>
               <button
                 onClick={() => void signOut()}
@@ -830,7 +831,7 @@ export function Settings() {
                     <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
                       <div className="flex items-center gap-1.5 mb-2.5">
                         <Eye className="w-3 h-3 text-[#9000FF]" />
-                        <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("settings.general.livePreview")}</span>
+                        <span className={SECTION_LABEL}>{t("settings.general.livePreview")}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -911,7 +912,7 @@ export function Settings() {
                 <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Mail className="w-3 h-3 text-[#9000FF]"/>
-                    <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("settings.channels.inboundAddress")}</span>
+                    <span className={SECTION_LABEL}>{t("settings.channels.inboundAddress")}</span>
                   </div>
                   <p className="text-[10px] text-[#9E9FAE] mb-2.5">{t("settings.channels.inboundDesc")}</p>
 

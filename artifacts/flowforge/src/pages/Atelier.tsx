@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { ShipmentDrawer, type MarkPaidForm } from "@/components/ShipmentDrawer";
 import { useTranslation } from "react-i18next";
 import { getDisplayLocale } from "@/lib/locale";
+import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED } from "@/lib/typography";
 
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -585,7 +586,7 @@ export function Atelier() {
                 onClick={() => setFiltersOpen(o => !o)}
                 className="w-full px-2 mb-1 flex items-center justify-between group hover:bg-[#E5EAF0] rounded-md py-1 transition-colors"
               >
-                <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase flex items-center gap-1.5">
+                <span className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                   <Filter className="w-3 h-3" /> Filters
                   {(customerFilter || supplierFilter) && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0" />}
                 </span>
@@ -597,7 +598,7 @@ export function Atelier() {
               {filtersOpen && (
                 <div className="mt-1">
                   <div className="mb-1 px-2">
-                    <span className="text-[10px] font-bold tracking-wider text-[#9E9FAE] uppercase">Suppliers</span>
+                    <span className={SECTION_LABEL_MUTED}>Suppliers</span>
                   </div>
                   <div className="space-y-0.5 mb-3">
                     {SUPPLIERS.map(s => (
@@ -619,7 +620,7 @@ export function Atelier() {
                   </div>
 
                   <div className="mb-1 px-2">
-                    <span className="text-[10px] font-bold tracking-wider text-[#9E9FAE] uppercase">Buyers</span>
+                    <span className={SECTION_LABEL_MUTED}>Buyers</span>
                   </div>
                   <div className="space-y-0.5 mb-3">
                     {CUSTOMERS.map(c => (
@@ -655,7 +656,7 @@ export function Atelier() {
         <div className="flex-1 bg-white flex flex-col min-w-0">
           <div className="h-12 border-b border-[#E5EAF0] flex items-center gap-3 px-5 shrink-0">
             <div className="flex items-center gap-2 shrink-0">
-              <h1 className="text-sm font-bold text-[#212833]">My Orders</h1>
+              <h1 className={PAGE_TITLE}>My Orders</h1>
               <span className="text-xs text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
                 {visibleShipments.length} of {shipments.length} POs
               </span>
@@ -728,7 +729,7 @@ export function Atelier() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.supplierPoLabel")}</span>
+                            <span className={SECTION_LABEL_MUTED}>{t("orders.supplierPoLabel")}</span>
                             <button
                               type="button"
                               onClick={e => copyPo(shipment.po, e)}
@@ -739,7 +740,7 @@ export function Atelier() {
                                 ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                 : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
                             </button>
-                            <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider ml-1">{t("orders.buyerPoLabel")}</span>
+                            <span className={`${SECTION_LABEL_MUTED} ml-1`}>{t("orders.buyerPoLabel")}</span>
                             {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
                               <>
                                 {shipment.buyerPoNumbers.map((bpo) => (
@@ -782,7 +783,7 @@ export function Atelier() {
                               {shipment.customer}
                             </span>
                           </div>
-                          <p className="text-sm font-semibold text-[#212833]">{shipment.product}</p>
+                          <p className={SECTION_HEADING}>{shipment.product}</p>
                         </div>
                       </div>
 
@@ -845,7 +846,7 @@ export function Atelier() {
 
                     {/* Stage tracker header */}
                     <div className="flex items-center justify-between mb-1 mt-1">
-                      <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.stageTracker")}</span>
+                      <span className={SECTION_LABEL_MUTED}>{t("orders.stageTracker")}</span>
                       <Popover>
                         <PopoverTrigger asChild>
                           <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -960,7 +961,7 @@ export function Atelier() {
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5 mb-2">
                           <Clock className="w-3 h-3 text-[#9000FF]" />
-                          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">Stage History</span>
+                          <span className={SECTION_LABEL}>Stage History</span>
                         </div>
                         <StageHistory
                           shipmentId={shipment.shipmentId}
@@ -973,7 +974,7 @@ export function Atelier() {
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1"><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
+                          <span className={`${SECTION_LABEL_MUTED} flex items-center gap-1`}><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
                           <button type="button"
                             onClick={() => setLinkPanelShipmentId(linkPanelShipmentId === shipment.shipmentId ? null : shipment.shipmentId)}
                             className="text-[11px] font-semibold text-[#9000FF] hover:underline">
@@ -1022,7 +1023,7 @@ export function Atelier() {
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
+                          <span className={`${SECTION_LABEL_MUTED} flex items-center gap-1`}>
                             <DollarSign className="w-2.5 h-2.5"/>Buyer Price
                           </span>
                           <button type="button"
@@ -1042,7 +1043,7 @@ export function Atelier() {
                           </button>
                         </div>
                         {shipment.spreadPct !== null && buyerPriceFormId !== shipment.id && (
-                          <div className="text-xs text-[#5E687B]">
+                          <div className={BODY_MUTED}>
                             ${shipment.buyerUnitPrice?.toFixed(2) ?? "—"} × {shipment.buyerQuantity?.toLocaleString() ?? "—"} &nbsp;·&nbsp;
                             <span className={`font-semibold ${shipment.spreadPct >= 25 ? "text-emerald-700" : shipment.spreadPct >= 10 ? "text-amber-700" : "text-red-700"}`}>
                               {shipment.spreadPct.toFixed(1)}% {t("orders.spreadSuffix")}
@@ -1273,7 +1274,7 @@ export function Atelier() {
                               return (
                                 <div>
                                   <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.recentThreads")}</span>
+                                    <span className={SECTION_LABEL_MUTED}>{t("orders.recentThreads")}</span>
                                     <span className="text-[11px] text-[#C0C8D4]">{msgs.length} of {allMessages.filter((m: Message) => m.shipmentId === shipment.shipmentId).length}</span>
                                   </div>
                                   {msgs.length === 0 ? (
@@ -1311,7 +1312,7 @@ export function Atelier() {
                               return (
                                 <div>
                                   <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                    <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.attachedDocuments")}</span>
+                                    <span className={SECTION_LABEL_MUTED}>{t("orders.attachedDocuments")}</span>
                                     <span className="text-[11px] text-[#C0C8D4]">{docs.length} of {allDocuments.filter((d: DocumentWithExtraction) => d.shipmentId === shipment.shipmentId).length}</span>
                                   </div>
                                   {docs.length === 0 ? (
@@ -1346,7 +1347,7 @@ export function Atelier() {
                             {activeDetailTab === "quotes" && (
                               <div>
                                 <div className="px-4 py-2.5 border-b border-[#E5EAF0] flex items-center justify-between bg-[#FAFBFC]">
-                                  <span className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("orders.factoryQuotesTab")}</span>
+                                  <span className={SECTION_LABEL_MUTED}>{t("orders.factoryQuotesTab")}</span>
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <button onClick={e => e.stopPropagation()} className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors">
@@ -1431,12 +1432,12 @@ export function Atelier() {
               <DialogTitle className="text-base font-bold text-[#212833]">{t("orders.advanceShipmentStage")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-1">
-              <p className="text-xs text-[#5E687B]">
+              <p className={BODY_MUTED}>
                 <span className="font-semibold text-[#212833]">{advanceTarget.po}</span> — {advanceTarget.product}
               </p>
               <div className="flex items-center gap-3 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
                 <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0">
-                  <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.stageCurrentLabel")}</span>
+                  <span className={SECTION_LABEL}>{t("orders.stageCurrentLabel")}</span>
                   <span className="text-[12px] font-semibold text-[#212833] text-center">{stages[idx]?.label ?? advanceTarget.currentStageId}</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-[#9000FF] shrink-0" />
@@ -1533,7 +1534,7 @@ export function Atelier() {
                 onClick={() => fileInputRef.current?.click()}
                 className={`flex flex-col items-center gap-1.5 py-5 border-2 border-dashed rounded-md cursor-pointer transition-colors ${newPODragOver ? "border-[#9000FF] bg-[#9000FF]/5" : "border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#F7F9FA]"}`}>
                 <Upload className="w-5 h-5 text-[#9E9FAE]"/>
-                <span className="text-xs text-[#5E687B]">{t("orders.dropFileBrowse")} <span className="text-[#9000FF] font-medium">{t("orders.browse")}</span></span>
+                <span className={BODY_MUTED}>{t("orders.dropFileBrowse")} <span className="text-[#9000FF] font-medium">{t("orders.browse")}</span></span>
                 <input ref={fileInputRef} type="file"
                   accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg"
                   className="hidden"
@@ -1546,7 +1547,7 @@ export function Atelier() {
           {/* PO Numbers — create mode: full form; edit mode: read-only display */}
           {editingShipmentId !== null ? (
           <div className="space-y-2 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-            <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbersReadOnly")}</span>
+            <span className={SECTION_LABEL}>{t("orders.poNumbersReadOnly")}</span>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div>
                 <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.buyerPoLabel")}</label>
@@ -1563,7 +1564,7 @@ export function Atelier() {
           ) : (
           <div className="space-y-3 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider">{t("orders.poNumbers")}</span>
+              <span className={SECTION_LABEL}>{t("orders.poNumbers")}</span>
               {/* Mode toggle */}
               <div className="flex items-center border border-[#E5EAF0] rounded-md overflow-hidden text-xs font-semibold">
                 <button type="button"

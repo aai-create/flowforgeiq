@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import { shortDate } from "@/lib/adapters";
 import { getDisplayLocale } from "@/lib/locale";
+import { SECTION_LABEL, SECTION_HEADING } from "@/lib/typography";
 
 function getStatusLabel(t: ReturnType<typeof useTranslation>["t"]): Record<string, string> {
   return {
@@ -500,7 +501,7 @@ export function RFQs() {
         <NavSidebar counts={{ myOrders: null }}>
           <div className="px-3 py-2 border-t border-[#E5EAF0]">
             <div className="mb-1.5 px-2 flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-wider text-[#5E687B] uppercase">{t("rfqs.sidebarTitle")}</span>
+              <span className={SECTION_LABEL}>{t("rfqs.sidebarTitle")}</span>
               <button onClick={() => setShowNewRfq(true)} className="p-0.5 hover:bg-[#E5EAF0] rounded transition-colors">
                 <Plus className="w-3 h-3 text-[#5E687B]" />
               </button>
@@ -611,22 +612,22 @@ export function RFQs() {
 
                   <div className="grid grid-cols-4 gap-4 mt-4">
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">{t("rfqs.buyer")}</div>
-                      <div className="text-sm font-semibold text-[#212833]">{selectedRfq.buyerName}</div>
+                      <div className={`${SECTION_LABEL} mb-0.5`}>{t("rfqs.buyer")}</div>
+                      <div className={SECTION_HEADING}>{selectedRfq.buyerName}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">{t("rfqs.targetPrice")}</div>
-                      <div className="text-sm font-semibold text-[#212833]">{usd(selectedRfq.targetPriceUsd)} {t("common.perUnit")}</div>
+                      <div className={`${SECTION_LABEL} mb-0.5`}>{t("rfqs.targetPrice")}</div>
+                      <div className={SECTION_HEADING}>{usd(selectedRfq.targetPriceUsd)} {t("common.perUnit")}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5">{t("rfqs.quantity")}</div>
-                      <div className="text-sm font-semibold text-[#212833]">{selectedRfq.quantity.toLocaleString()} {t("common.units")}</div>
+                      <div className={`${SECTION_LABEL} mb-0.5`}>{t("rfqs.quantity")}</div>
+                      <div className={SECTION_HEADING}>{selectedRfq.quantity.toLocaleString()} {t("common.units")}</div>
                     </div>
                     <div>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-[#5E687B] uppercase tracking-wider mb-0.5 cursor-default">
+                            <div className={`inline-flex items-center gap-1 ${SECTION_LABEL} mb-0.5 cursor-default`}>
                               Deadline <Info className="w-3 h-3 text-[#5E687B]/60" />
                             </div>
                           </TooltipTrigger>
@@ -635,7 +636,7 @@ export function RFQs() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <div className="text-sm font-semibold text-[#212833]">{shortDate(selectedRfq.deadline)}</div>
+                      <div className={SECTION_HEADING}>{shortDate(selectedRfq.deadline)}</div>
                     </div>
                   </div>
                   {selectedRfq.notes && (
@@ -674,13 +675,13 @@ export function RFQs() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-[#F0F2F5]">
-                            <th className="text-left text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-5 py-3">{t("rfqs.colFactory")}</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colUnitPrice")}</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colSpread")}</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colTotal")}</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colLeadTime")}</th>
-                            <th className="text-right text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colMoq")}</th>
-                            <th className="text-center text-[10px] font-bold text-[#5E687B] uppercase tracking-wider px-4 py-3">{t("rfqs.colStatus")}</th>
+                            <th className={`text-left ${SECTION_LABEL} px-5 py-3`}>{t("rfqs.colFactory")}</th>
+                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colUnitPrice")}</th>
+                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colSpread")}</th>
+                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colTotal")}</th>
+                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colLeadTime")}</th>
+                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colMoq")}</th>
+                            <th className={`text-center ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colStatus")}</th>
                             <th className="px-4 py-3" />
                           </tr>
                         </thead>
