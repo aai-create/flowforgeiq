@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { HELP_SECTIONS } from "@/lib/helpContent";
 import { SCREENSHOT_COMPONENTS } from "@/lib/helpScreenshots";
@@ -238,7 +238,7 @@ export function Help() {
       className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col"
       style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}
     >
-      <AppHeader pageLabel="Help" />
+      <GlobalHeader breadcrumb="Help" />
 
       <div className="flex-1 flex overflow-hidden">
         <NavSidebar showBrand={false} />

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -477,7 +477,7 @@ export function Buyers() {
 
   return (
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
-      <AppHeader pageLabel="Buyers" />
+      <GlobalHeader breadcrumb="Buyers" />
 
       <div className="flex-1 flex overflow-hidden">
         <NavSidebar
