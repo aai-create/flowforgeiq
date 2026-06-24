@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import {
   DollarSign, TrendingUp, Users, ListTodo,
@@ -1990,7 +1990,7 @@ export function Reports() {
   return (
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
-      <AppHeader pageLabel="Reports" />
+      <GlobalHeader breadcrumb="Reports" />
 
       <div className="flex-1 flex overflow-hidden">
       <NavSidebar showBrand={false} />

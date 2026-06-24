@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import {
   DollarSign, AlertCircle, Clock,
@@ -113,7 +113,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
   return (
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
-      <AppHeader pageLabel="Risk Radar" />
+      <GlobalHeader breadcrumb="Risk Radar" />
 
       <div className="flex-1 flex overflow-hidden">
       <NavSidebar showBrand={false} />
