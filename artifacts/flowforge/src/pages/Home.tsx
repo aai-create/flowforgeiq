@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
+import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
+import { useListFocusItems } from "@workspace/api-client-react";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSearch, useLocation } from "wouter";
@@ -11,7 +13,7 @@ import {
   Paperclip, Send, ArrowRight, Inbox, FileBox, Users, Filter,
   MapPin, LayoutGrid, MessagesSquare, X, CheckCircle2, Zap, ChevronRight,
   GripVertical, Plus, Trash2, DollarSign, CreditCard, CalendarClock,
-  ChevronUp, ListTodo, SlidersHorizontal, Calendar, Upload, Image,
+  ChevronUp, SlidersHorizontal, Calendar, Upload, Image,
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
   Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff, Clipboard, Copy, Circle,
@@ -1866,18 +1868,14 @@ export default function Home() {
   const [flaggedFilter, setFlaggedFilter] = useState(false);
   const [leftPanelMode, setLeftPanelMode] = useState<"all" | "suppliers" | "pos" | "channels">("all");
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showTaskPanel, setShowTaskPanel] = useState(false);
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+  const { data: focusData } = useListFocusItems();
+  const focusPendingCount = focusData?.pendingCount ?? 0;
   const [sectionOpen, setSectionOpen] = useState<Record<string,boolean>>(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
     return { finance: false, docs: tab === "docs", copilot: tab === "copilot", risk: tab === "risk" };
   });
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !prev[key] }));
-  useEffect(() => {
-    if (!showTaskPanel) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowTaskPanel(false); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [showTaskPanel]);
   const [composeText, setComposeText]     = useState("");
   const [composeFocused, setComposeFocused] = useState(false);
   const [showComposePanel, setShowComposePanel] = useState(false);
@@ -2554,28 +2552,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3 text-[#5E687B]">
-            {activeView==="inbox"&&<div className="relative">
-              <button onClick={()=>setShowTaskPanel(v=>!v)} className="hover:text-[#212833] p-1 relative" title="Today's Tasks">
-                <ListTodo size={15}/>
-                {highCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}
-              </button>
-              {showTaskPanel&&<>
-                <div className="fixed inset-0 z-40" onClick={()=>setShowTaskPanel(false)}/>
-                <div className="absolute top-full right-0 mt-1 w-[340px] bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-[#E5EAF0] overflow-hidden z-50 flex flex-col max-h-[420px]">
-                  <div className="flex items-center justify-between bg-gradient-to-r from-[#9000FF]/5 to-transparent px-3.5 py-3 shrink-0 border-b border-[#E5EAF0]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-[#9000FF]/10 flex items-center justify-center text-[#9000FF] shrink-0"><ListTodo size={14}/></div>
-                      <div>
-                        <div className="text-[11px] font-bold text-[#212833]">Today's Tasks</div>
-                        <div className="text-[11px] text-[#5E687B]">{highCount>0?<span className="text-red-500 font-semibold">{highCount} urgent</span>:null}{highCount>0&&tasks.length>highCount?" · ":null}{tasks.length>highCount?`${tasks.length-highCount} more`:null}{tasks.length===0?"All clear!":null}</div>
-                      </div>
-                    </div>
-                    <button onClick={()=>setShowTaskPanel(false)} className="text-[#5E687B] hover:text-[#212833] p-1"><X size={13}/></button>
-                  </div>
-                  <TaskList tasks={tasks} onOpenMessage={id=>{openMessage(id);setShowTaskPanel(false);}} onDismiss={id=>setTasks(t=>t.filter(tk=>tk.id!==id))} onClose={()=>setShowTaskPanel(false)}/>
-                </div>
-              </>}
-            </div>}
+            <AISparklesButton onClick={() => setAiDrawerOpen(true)} pendingCount={focusPendingCount} />
             {activeView==="inbox"&&<button onClick={()=>setShowPasteChat(true)} className="hover:text-[#212833] p-1" title="Paste chat message (WhatsApp / WeChat / iMessage)"><Clipboard size={15}/></button>}
             <button className="hover:text-[#212833] p-1 relative"><Bell size={15}/>{unreadCount>0&&<span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white"/>}</button>
             <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
@@ -3635,6 +3612,7 @@ export default function Home() {
           </div>
         );
       })()}
+      <AIDrawer open={aiDrawerOpen} onClose={() => setAiDrawerOpen(false)} />
     </div>
   );
 }
