@@ -1797,10 +1797,10 @@ export default function Home() {
     "Summarize this shipment's current status",
   ]);
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
-  const { data: apiStages }    = useListStages();
-  const { data: apiShipments } = useListShipments();
-  const { data: apiMessages }  = useListMessages();
-  const { data: apiTasks }     = useListTasks();
+  const { data: apiStages,    isError: stagesError,    refetch: refetchStages }    = useListStages();
+  const { data: apiShipments, isError: shipmentsError, refetch: refetchShipments } = useListShipments();
+  const { data: apiMessages,  isError: messagesError,  refetch: refetchMessages }  = useListMessages();
+  const { data: apiTasks,     isError: tasksError,     refetch: refetchTasks }     = useListTasks();
   const { data: apiProposals } = useListCopilotProposals({});
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
@@ -2465,6 +2465,7 @@ export default function Home() {
 
 
   const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
+  const isError = stagesError || shipmentsError || messagesError || tasksError;
   if (!activeMessage || !activeShipment) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{fontFamily:"Inter,sans-serif"}}>
@@ -2473,9 +2474,22 @@ export default function Home() {
           <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
             <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
           </div>
-          <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
-            {isLoading ? "Loading FlowForgeIQ…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
-          </p>
+          {isError ? (
+            <>
+              <p className="text-sm font-medium text-red-500">Could not reach the server.</p>
+              <button
+                onClick={() => { refetchStages(); refetchShipments(); refetchMessages(); refetchTasks(); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
+              {isLoading ? "Loading FlowForgeIQ…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
+            </p>
+          )}
         </div>
       </div>
     );
