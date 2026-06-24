@@ -2539,15 +2539,30 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+    <div className="flex flex-col h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
       {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
       {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
+
+      <GlobalHeader
+          breadcrumb={
+            activeView === "inbox"
+              ? (selectedShipmentId
+                  ? (shipments.find(s => s.id === selectedShipmentId)?.po ?? "Inbox")
+                  : supplierFilter ?? (channelFilter !== "all" ? channelFilter[0].toUpperCase() + channelFilter.slice(1) : "Inbox"))
+              : activeView === "copilot"  ? "Copilot Queue"
+              : "Doc Intelligence"
+          }
+          breadcrumbSegments={breadcrumbSegments}
+          onPasteChat={activeView === "inbox" ? () => setShowPasteChat(true) : undefined}
+          onOpenMessage={openMessage}
+        />
 
       {/* ── MAIN AREA: persistent filter panel + content ── */}
       <div className="flex-1 flex min-w-0 overflow-hidden">
 
         {/* ── PERSISTENT LEFT FILTER PANEL ── */}
         <NavSidebar
+          showBrand={false}
           counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
         >
           <div className="flex-1 overflow-y-auto" />
@@ -2562,21 +2577,6 @@ export default function Home() {
 
         {/* ── CONTENT AREA ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-        {/* TOP BAR */}
-        <GlobalHeader
-          breadcrumb={
-            activeView === "inbox"
-              ? (selectedShipmentId
-                  ? (shipments.find(s => s.id === selectedShipmentId)?.po ?? "Inbox")
-                  : supplierFilter ?? (channelFilter !== "all" ? channelFilter[0].toUpperCase() + channelFilter.slice(1) : "Inbox"))
-              : activeView === "copilot"  ? "Copilot Queue"
-              : "Doc Intelligence"
-          }
-          breadcrumbSegments={breadcrumbSegments}
-          onPasteChat={activeView === "inbox" ? () => setShowPasteChat(true) : undefined}
-          onOpenMessage={openMessage}
-        />
 
           {/* ── PASTE CHAT MODAL ── */}
           {showPasteChat&&(

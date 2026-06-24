@@ -569,10 +569,15 @@ export function Atelier() {
         <CheckCircle2 className="w-4 h-4 text-emerald-400" />{toast}
       </div>
     )}
-    <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+    <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+
+        <GlobalHeader breadcrumb="My Orders" />
+
+        <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT PANE — Nav + Tasks */}
         <NavSidebar
+          showBrand={false}
           counts={{
             myOrders: shipments.length,
             riskRadar: radarData ? radarData.items.filter(i => i.riskScore >= 70).length : null,
@@ -647,8 +652,6 @@ export function Atelier() {
         </NavSidebar>
 
         <div className="flex-1 flex flex-col overflow-hidden">
-
-        <GlobalHeader breadcrumb="My Orders" />
 
         <div className="flex-1 flex overflow-hidden">
 
@@ -1386,6 +1389,7 @@ export function Atelier() {
 
         </div>
 
+        </div>
         </div>
     </div>
 

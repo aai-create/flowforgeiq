@@ -497,8 +497,10 @@ export function RFQs() {
         </div>
       )}
 
-      <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
-        <NavSidebar counts={{ myOrders: null }}>
+      <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+        <GlobalHeader breadcrumb="RFQs" />
+        <div className="flex-1 flex overflow-hidden">
+        <NavSidebar showBrand={false} counts={{ myOrders: null }}>
           <div className="px-3 py-2 border-t border-[#E5EAF0]">
             <div className="mb-1.5 px-2 flex items-center justify-between">
               <span className={SECTION_LABEL}>{t("rfqs.sidebarTitle")}</span>
@@ -537,7 +539,6 @@ export function RFQs() {
         </NavSidebar>
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          <GlobalHeader breadcrumb="RFQs" />
           {/* Header */}
           <div className="h-11 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
             <div className="flex items-center gap-2">
@@ -813,6 +814,7 @@ export function RFQs() {
         </div>
 
         <AICopilotBar />
+        </div>
       </div>
 
       {/* New RFQ Modal */}
