@@ -1,0 +1,43 @@
+[Certain] Pointing your root domain at Postmark would be the wrong move if you want both Google Workspace and app automation on the same domain. [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/inbound-domain-forwarding)
+[Certain] The clean setup is: Google Workspace keeps the root domain MX, and Postmark gets a dedicated subdomain for inbound automation. [knowledge.workspace.google](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace)
+
+## Recommended setup
+
+[Certain] Keep `flowforgeiq.com` for normal Google Workspace mail, because Google’s MX for the main domain should point to Google’s mail servers, not Postmark. [support.google](https://support.google.com/a/answer/174125?fl=1&hl=en&sjid=10102258910352438944-NA)
+[Certain] Create a subdomain such as `inbound.flowforgeiq.com` or `reply.flowforgeiq.com` and point only that subdomain’s MX to `inbound.postmarkapp.com` with priority 10. [cordero](https://cordero.me/data-flow-mx-records/)
+
+Use this pattern:
+
+| Purpose | Domain | MX target |
+|---|---|---|
+| Google Workspace email | `flowforgeiq.com` | `smtp.google.com` or Google’s standard MX set  [knowledge.workspace.google](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace) |
+| Postmark inbound automation | `inbound.flowforgeiq.com` | `inbound.postmarkapp.com` with priority 10  [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/inbound-domain-forwarding) |
+
+## DNS records to add
+
+[Certain] In your DNS host, add an MX record for the subdomain, not the root. [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/inbound-domain-forwarding)
+[Certain] The record should look like this: [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/inbound-domain-forwarding)
+
+- Type: MX  
+- Host/Name: `inbound`  
+- Priority: `10`  
+- Value/Target: `inbound.postmarkapp.com`  
+- TTL: `1 hour` or default  
+
+[Certain] Then in Postmark’s inbound settings, set the inbound domain to `inbound.flowforgeiq.com`, not `flowforgeiq.com`. [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/inbound-domain-forwarding)
+
+## Why root-domain fails
+
+[Certain] MX records control where mail for a domain is delivered, and if you point the root domain’s MX to Postmark, mail to addresses like `you@flowforgeiq.com` would stop routing to Google Workspace correctly. [techdocs.akamai](https://techdocs.akamai.com/cloud-computing/docs/mx-records)
+[Certain] Postmark explicitly recommends using a separate subdomain for inbound forwarding instead of the root domain. [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/inbound-domain-forwarding)
+
+## Practical example
+
+[Likely] A solid real-world pattern is this:
+
+- `abid@flowforgeiq.com` → Google Workspace mailbox. [knowledge.workspace.google](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace)
+- `replies@inbound.flowforgeiq.com` → parsed by Postmark and sent to your webhook/app. [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/sample-inbound-workflow)
+
+[Likely] So if your app needs reply handling, you generate reply-to addresses on the Postmark subdomain and leave your human email on the main domain. [postmarkapp](https://postmarkapp.com/developer/user-guide/inbound/sample-inbound-workflow)
+
+Your next move is simple: add `inbound.flowforgeiq.com` as the Postmark inbound domain and create that single MX record in DNS. Want me to walk you through where to add it based on your DNS provider, such as Cloudflare, GoDaddy, Squarespace, or Route53?
