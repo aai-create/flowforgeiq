@@ -428,7 +428,7 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
             { label: "Email *", key: "contactEmail", placeholder: "e.g. wei@supplier.com" },
           ].map(({ label, key, placeholder }) => (
             <div key={key}>
-              <label className="block text-[11px] font-semibold text-[#5E687B] mb-1 uppercase tracking-wide">{label}</label>
+              <label className="block text-[10px] font-bold text-[#5E687B] mb-1 uppercase tracking-wide">{label}</label>
               <input
                 type={key === "contactEmail" ? "email" : "text"}
                 value={form[key as keyof typeof form]}
