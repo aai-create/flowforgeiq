@@ -27,7 +27,7 @@ export function relativeAge(iso: string | Date): string {
   return `${days}d ago`;
 }
 
-export interface UiPayment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; paymentId: number; paidAt: string | null; paidMethod: string | null; intermediaryAdvanceUsd: number | null; intermediaryRecoveredUsd: number | null; invoiceNumber: string | null; intermediarySupplierPaidUsd: number | null; intermediarySupplierPaidAt: string | null; }
+export interface UiPayment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; rawPaymentDueDate: string; paymentId: number; paidAt: string | null; paidMethod: string | null; intermediaryAdvanceUsd: number | null; intermediaryRecoveredUsd: number | null; invoiceNumber: string | null; intermediarySupplierPaidUsd: number | null; intermediarySupplierPaidAt: string | null; }
 export interface UiFactoryQuote { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean; quoteId: number; validityDate?: string | null; notes?: string | null; }
 export type UiShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -136,10 +136,10 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     assigneeName: s.assigneeName ?? null,
     payments: s.payments.length === 0
       ? [
-          { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null, invoiceNumber: null, intermediarySupplierPaidUsd: null, intermediarySupplierPaidAt: null },
-          { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null, invoiceNumber: null, intermediarySupplierPaidUsd: null, intermediarySupplierPaidAt: null },
+          { label: "Deposit (30%)", percent: 30, amountUsd: 0, paid: false, dueDate: "—", rawPaymentDueDate: "", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null, invoiceNumber: null, intermediarySupplierPaidUsd: null, intermediarySupplierPaidAt: null },
+          { label: "Balance (70%)", percent: 70, amountUsd: 0, paid: false, dueDate: "—", rawPaymentDueDate: "", paymentId: 0, paidAt: null, paidMethod: null, intermediaryAdvanceUsd: null, intermediaryRecoveredUsd: null, invoiceNumber: null, intermediarySupplierPaidUsd: null, intermediarySupplierPaidAt: null },
         ]
-      : s.payments.map(p => ({ label: p.label, percent: p.percent, amountUsd: p.amountUsd, paid: p.paid, dueDate: shortDate(p.dueDate), paymentId: p.id, paidAt: p.paidAt ?? null, paidMethod: p.method ?? null, intermediaryAdvanceUsd: p.intermediaryAdvanceUsd ?? null, intermediaryRecoveredUsd: p.intermediaryRecoveredUsd ?? null, invoiceNumber: p.invoiceNumber ?? null, intermediarySupplierPaidUsd: p.intermediarySupplierPaidUsd ?? null, intermediarySupplierPaidAt: p.intermediarySupplierPaidAt ?? null })) as [UiPayment, UiPayment],
+      : s.payments.map(p => ({ label: p.label, percent: p.percent, amountUsd: p.amountUsd, paid: p.paid, dueDate: shortDate(p.dueDate), rawPaymentDueDate: p.dueDate, paymentId: p.id, paidAt: p.paidAt ?? null, paidMethod: p.method ?? null, intermediaryAdvanceUsd: p.intermediaryAdvanceUsd ?? null, intermediaryRecoveredUsd: p.intermediaryRecoveredUsd ?? null, invoiceNumber: p.invoiceNumber ?? null, intermediarySupplierPaidUsd: p.intermediarySupplierPaidUsd ?? null, intermediarySupplierPaidAt: p.intermediarySupplierPaidAt ?? null })) as [UiPayment, UiPayment],
     quotes: s.quotes.length === 0 ? undefined : s.quotes.map((q: ApiShipment["quotes"][number]) => ({
       factory: q.factory, country: q.country, unitPrice: q.unitPrice, leadDays: q.leadDays, moq: q.moq, selected: q.selected, quoteId: q.id, validityDate: q.validityDate, notes: q.notes,
     })),

@@ -139,7 +139,7 @@ interface Doc {
   name: string; type: "pdf" | "image" | "sheet" | "video"; date: string; size: string; tag: string;
 }
 interface CalendarEvent {
-  day: number; month: number; label: string; po: string;
+  day: number; month: number; year: number; label: string; po: string;
   type: "payment" | "exfactory" | "qc" | "production"; status: ShipmentStatus;
 }
 interface EmailTemplate { label: string; body: string; }
@@ -225,21 +225,45 @@ const SHIPMENT_DOCS: Record<string, Doc[]> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Calendar events  (P2)
+// Calendar events — derived from real shipment data
 // ─────────────────────────────────────────────────────────────────────────────
-const CALENDAR_EVENTS: CalendarEvent[] = [
-  { day: 15, month: 4, label: "Balance due $8,960",  po: "PO-0142", type: "payment",   status: "at-risk"  },
-  { day: 17, month: 4, label: "Ex-Factory",           po: "PO-0142", type: "exfactory", status: "at-risk"  },
-  { day: 18, month: 4, label: "Balance due $11,900", po: "PO-0157", type: "payment",   status: "delayed"  },
-  { day: 18, month: 4, label: "Ex-Factory",           po: "PO-0157", type: "exfactory", status: "delayed"  },
-  { day: 22, month: 4, label: "Ex-Factory",           po: "PO-0160", type: "exfactory", status: "on-track" },
-  { day: 22, month: 4, label: "Balance due $21,700", po: "PO-0160", type: "payment",   status: "on-track" },
-  { day:  1, month: 5, label: "Deposit due $2,250",  po: "PO-0168", type: "payment",   status: "on-track" },
-  { day:  2, month: 5, label: "Ex-Factory",           po: "PO-0165", type: "exfactory", status: "at-risk"  },
-  { day:  2, month: 5, label: "Balance due $3,780",  po: "PO-0165", type: "payment",   status: "at-risk"  },
-  { day: 10, month: 5, label: "Ex-Factory",           po: "PO-0168", type: "exfactory", status: "on-track" },
-  { day: 25, month: 5, label: "Balance due $5,250",  po: "PO-0168", type: "payment",   status: "on-track" },
-];
+function buildCalendarEvents(shipments: UiShipment[]): CalendarEvent[] {
+  const events: CalendarEvent[] = [];
+  for (const s of shipments) {
+    if (s.archivedAt) continue;
+    // Ex-factory date
+    if (s.rawExFactoryDate) {
+      const d = new Date(s.rawExFactoryDate);
+      if (!isNaN(d.getTime())) {
+        events.push({
+          day: d.getUTCDate(),
+          month: d.getUTCMonth(),
+          year: d.getUTCFullYear(),
+          label: "Ex-Factory",
+          po: s.po,
+          type: "exfactory",
+          status: s.status,
+        });
+      }
+    }
+    // Unpaid payment due dates
+    for (const p of s.payments) {
+      if (p.paid || !p.rawPaymentDueDate) continue;
+      const d = new Date(p.rawPaymentDueDate);
+      if (isNaN(d.getTime())) continue;
+      events.push({
+        day: d.getUTCDate(),
+        month: d.getUTCMonth(),
+        year: d.getUTCFullYear(),
+        label: `${p.label} $${p.amountUsd.toLocaleString()}`,
+        po: s.po,
+        type: "payment",
+        status: s.status,
+      });
+    }
+  }
+  return events;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shipments + Messages + Tasks + Suppliers  (unchanged from P0)
@@ -419,22 +443,42 @@ function TaskList({ tasks, onOpenMessage, onDismiss, onClose }: { tasks: Task[];
 // ─────────────────────────────────────────────────────────────────────────────
 // Calendar View  (P2)
 // ─────────────────────────────────────────────────────────────────────────────
-export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
+export function CalendarView({ shipments = [] }: { shipments?: UiShipment[] }) {
   const [, navigate] = useLocation();
-  const [viewMonth, setViewMonth] = useState(4); // 4=May, 5=Jun
+  // "Today" matches the project-wide reference date
+  const TODAY = new Date("2026-05-18T00:00:00Z");
+  const [viewYear, setViewYear]   = useState(TODAY.getUTCFullYear());
+  const [viewMonth, setViewMonth] = useState(TODAY.getUTCMonth()); // 0-indexed
   const [selectedDay, setSelectedDay] = useState<number|null>(null);
-  const monthName = viewMonth === 4 ? "May 2026" : "June 2026";
-  // May 2026: starts Friday (day 5, 0=Sun); 31 days. Jun: starts Mon (day 1), 30 days.
-  const firstDow = viewMonth === 4 ? 5 : 1;
-  const daysInMonth = viewMonth === 4 ? 31 : 30;
-  const eventsThisMonth = CALENDAR_EVENTS.filter(e => e.month === viewMonth);
+
+  const allEvents = useMemo(() => buildCalendarEvents(shipments), [shipments]);
+
+  const firstDow    = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const monthName   = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+
+  const eventsThisMonth = allEvents.filter(e => e.month === viewMonth && e.year === viewYear);
   const eventsByDay: Record<number, CalendarEvent[]> = {};
   eventsThisMonth.forEach(e => { if (!eventsByDay[e.day]) eventsByDay[e.day] = []; eventsByDay[e.day].push(e); });
   const selectedEvents = selectedDay ? (eventsByDay[selectedDay] ?? []) : [];
   const totalCells = firstDow + daysInMonth;
   const rows = Math.ceil(totalCells / 7);
   const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const today = 15; // May 15 is "today"
+  const todayDay   = TODAY.getUTCDate();
+  const todayMonth = TODAY.getUTCMonth();
+  const todayYear  = TODAY.getUTCFullYear();
+
+  function prevMonth() {
+    setSelectedDay(null);
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    setSelectedDay(null);
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  }
 
   return (
     <div className="flex-1 flex overflow-hidden">
@@ -443,9 +487,9 @@ export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <button onClick={()=>setViewMonth(m=>Math.max(4,m-1))} className="p-1.5 hover:bg-[#F0F4F8] rounded-md text-[#5E687B] transition-colors"><ChevronLeft size={16}/></button>
+            <button onClick={prevMonth} className="p-1.5 hover:bg-[#F0F4F8] rounded-md text-[#5E687B] transition-colors"><ChevronLeft size={16}/></button>
             <h2 className="font-bold text-base text-[#212833]">{monthName}</h2>
-            <button onClick={()=>setViewMonth(m=>Math.min(5,m+1))} className="p-1.5 hover:bg-[#F0F4F8] rounded-md text-[#5E687B] transition-colors"><ChevronRight size={16}/></button>
+            <button onClick={nextMonth} className="p-1.5 hover:bg-[#F0F4F8] rounded-md text-[#5E687B] transition-colors"><ChevronRight size={16}/></button>
           </div>
           <div className="flex items-center gap-3 text-xs font-semibold">
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#9000FF] inline-block"/>Ex-Factory</span>
@@ -464,7 +508,7 @@ export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
           {Array.from({length:rows*7}).map((_,i)=>{
             const day = i - firstDow + 1;
             const valid = day >= 1 && day <= daysInMonth;
-            const isToday = valid && day === today && viewMonth === 4;
+            const isToday = valid && day === todayDay && viewMonth === todayMonth && viewYear === todayYear;
             const isSelected = valid && day === selectedDay;
             const evts = valid ? (eventsByDay[day] ?? []) : [];
             return (
