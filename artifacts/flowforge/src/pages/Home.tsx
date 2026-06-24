@@ -1990,6 +1990,7 @@ export default function Home() {
       setCustomerFilter(null);
       const first = messages.find(m => m.shipmentId === uiId);
       if (first) setActiveMessageId(first.id);
+      else setActiveMessageId("__cleared__");
     } else if (customerParam) {
       setCustomerFilter(customerParam);
       setSupplierFilter(null);
@@ -2028,6 +2029,7 @@ export default function Home() {
     setCustomerFilter(null);
     const first = messages.find(m => m.shipmentId === uiId);
     if (first) setActiveMessageId(first.id);
+    else setActiveMessageId("__cleared__");
   }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // (rightTab URL sync removed — sections use sectionOpen state)

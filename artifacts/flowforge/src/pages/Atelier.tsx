@@ -266,8 +266,14 @@ export function Atelier() {
     if (shipments.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const po = params.get("po");
-    if (po && shipments.some(s => s.id === po)) {
+    if (!po) return;
+    if (shipments.some(s => s.id === po)) {
+      // Existing behaviour: po param is an s{id} shipment ID
       setActiveShipmentId(po);
+    } else {
+      // Deep-link from Suppliers panel: po param is a PO number string
+      const match = shipments.find(s => s.po === po || (s.buyerPoNumbers ?? []).includes(po));
+      if (match) setActiveShipmentId(match.id);
     }
     // Run only once when shipments first populate
   }, [shipments.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
