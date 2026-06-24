@@ -419,6 +419,7 @@ function TaskList({ tasks, onOpenMessage, onDismiss, onClose }: { tasks: Task[];
 // Calendar View  (P2)
 // ─────────────────────────────────────────────────────────────────────────────
 export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
+  const [, navigate] = useLocation();
   const [viewMonth, setViewMonth] = useState(4); // 4=May, 5=Jun
   const [selectedDay, setSelectedDay] = useState<number|null>(null);
   const monthName = viewMonth === 4 ? "May 2026" : "June 2026";
@@ -473,7 +474,7 @@ export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
                     <div className={`text-xs font-bold mb-1.5 w-6 h-6 flex items-center justify-center rounded-full ${isToday?"bg-[#9000FF] text-white":isSelected?"text-[#9000FF]":"text-[#212833]"}`}>{day}</div>
                     <div className="flex flex-col gap-0.5">
                       {evts.slice(0,2).map((e,ei)=>(
-                        <div key={ei} className={`text-[11px] font-semibold px-1 py-0.5 rounded border truncate flex items-center gap-1 ${eventColor(e)}`}>{e.po} {e.type==="payment"?<CreditCard size={8}/>:<MapPin size={8}/>}</div>
+                        <div key={ei} onClick={ev=>{ev.stopPropagation();navigate(`/orders?po=${e.po}`);}} className={`text-[11px] font-semibold px-1 py-0.5 rounded border truncate flex items-center gap-1 cursor-pointer hover:ring-1 hover:ring-[#9000FF]/30 transition-all ${eventColor(e)}`}>{e.po} {e.type==="payment"?<CreditCard size={8}/>:<MapPin size={8}/>}</div>
                       ))}
                       {evts.length>2&&<div className="text-[11px] text-[#5E687B] font-medium pl-0.5">+{evts.length-2} more</div>}
                     </div>
@@ -493,7 +494,7 @@ export function CalendarView({ shipments = [] }: { shipments?: Shipment[] }) {
         </div>
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
           {(selectedDay ? selectedEvents : eventsThisMonth).map((e,i)=>(
-            <div key={i} className="bg-white border border-[#E5EAF0] rounded-lg p-3 shadow-sm">
+            <div key={i} onClick={()=>navigate(`/orders?po=${e.po}`)} className="bg-white border border-[#E5EAF0] rounded-lg p-3 shadow-sm cursor-pointer hover:border-[#9000FF]/30 hover:shadow-md transition-all">
               <div className={`text-[11px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border inline-flex items-center gap-1 mb-2 ${eventColor(e)}`}>
                 {e.type==="payment"?<CreditCard size={8}/>:<MapPin size={8}/>}
                 {e.type.replace("exfactory","Ex-Factory").replace("payment","Payment")}
