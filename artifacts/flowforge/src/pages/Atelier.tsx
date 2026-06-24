@@ -277,7 +277,7 @@ export function Atelier() {
   const [customerFilter, setCustomerFilter] = useState<number | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "all">("all");
-  const [poSearch, setPoSearch] = useState("");
+  const [poSearch, setPoSearch] = useState(() => new URLSearchParams(window.location.search).get("po") ?? "");
   const [copiedPo, setCopiedPo] = useState<string | null>(null);
 
   const copyPo = (text: string, e: React.MouseEvent) => {

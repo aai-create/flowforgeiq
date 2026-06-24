@@ -274,12 +274,11 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                 {active.map(s => {
                   const days = Math.ceil((new Date(s.dueDate).getTime() - TODAY.getTime()) / 86_400_000);
                   return (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={() => navigate(`/inbox?shipment=${s.id}`)}
-                      className="w-full text-left flex items-center gap-2 p-2 rounded-lg border border-[#E5EAF0] hover:border-[#9000FF]/30 hover:bg-[#FAFBFC] group transition-colors"
+                      className="w-full text-left p-2 rounded-lg border border-[#E5EAF0] bg-white hover:border-[#9000FF]/20 hover:bg-[#FAFBFC] transition-colors"
                     >
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 mb-2">
                         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                           <span className="font-mono text-[10px] text-[#5E687B] bg-[#F0F4F8] px-1.5 py-0.5 rounded">
                             {s.poNumber}
@@ -296,8 +295,23 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                           <span className="text-[10px] text-[#9E9FAE]">Due {shortDate(s.dueDate)}{days < 0 ? ` · ${Math.abs(days)}d late` : days <= 7 ? ` · ${days}d` : ""}</span>
                         </div>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#9000FF] opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
-                    </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => navigate(`/inbox?shipment=${s.id}`)}
+                          className="flex items-center gap-1 text-[10px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-2 py-0.5 rounded-full transition-colors"
+                        >
+                          <ArrowRight className="w-2.5 h-2.5" />
+                          Inbox
+                        </button>
+                        <button
+                          onClick={() => navigate(`/orders?po=${encodeURIComponent(s.poNumber)}`)}
+                          className="flex items-center gap-1 text-[10px] font-medium text-[#5E687B] bg-[#F0F4F8] hover:bg-[#E5EAF0] px-2 py-0.5 rounded-full transition-colors"
+                        >
+                          <Package className="w-2.5 h-2.5" />
+                          Orders
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -311,17 +325,31 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                 <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">Recent POs</div>
                 <div className="space-y-1">
                   {recent.map(s => (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={() => navigate(`/inbox?shipment=${s.id}`)}
-                      className="w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#FAFBFC] group transition-colors"
+                      className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#FAFBFC] transition-colors"
                     >
-                      <span className="text-[11px] text-[#5E687B] truncate">{s.product}</span>
-                      <span className="flex items-center gap-1 text-[10px] text-[#9E9FAE] shrink-0 ml-2">
-                        {shortDate(s.dueDate)}
-                        <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </span>
-                    </button>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[11px] text-[#5E687B] truncate block">{s.product}</span>
+                        <span className="text-[10px] text-[#9E9FAE]">{shortDate(s.dueDate)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <button
+                          onClick={() => navigate(`/inbox?shipment=${s.id}`)}
+                          className="flex items-center gap-1 text-[10px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-2 py-0.5 rounded-full transition-colors"
+                        >
+                          <ArrowRight className="w-2.5 h-2.5" />
+                          Inbox
+                        </button>
+                        <button
+                          onClick={() => navigate(`/orders?po=${encodeURIComponent(s.poNumber)}`)}
+                          className="flex items-center gap-1 text-[10px] font-medium text-[#5E687B] bg-[#F0F4F8] hover:bg-[#E5EAF0] px-2 py-0.5 rounded-full transition-colors"
+                        >
+                          <Package className="w-2.5 h-2.5" />
+                          Orders
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
