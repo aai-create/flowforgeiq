@@ -3399,7 +3399,7 @@ export default function Home() {
                 </>)}
 
                 {/* ── AI Suggested Action + Docs / Copilot / Risk — unified grouped card ── */}
-                <div className="border border-[#9000FF]/20 rounded-xl overflow-hidden">
+                <div className="border border-[#9000FF]/20 rounded-xl">
                   {/* Header — icon and text properly centered in a single flex row */}
                   <div className="bg-gradient-to-r from-[#9000FF]/8 to-transparent px-3.5 py-2.5 flex items-center gap-1.5">
                     <Wand2 size={12} className="text-[#9000FF] shrink-0"/>
