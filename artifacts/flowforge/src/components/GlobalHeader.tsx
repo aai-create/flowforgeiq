@@ -2,13 +2,17 @@ import React, { useState, useMemo } from "react";
 import { UserButton } from "@clerk/react";
 import { useLocation } from "wouter";
 import {
-  Search, Bell, Clipboard, ChevronLeft,
+  Sparkles, Search, Bell, Clipboard, ChevronLeft,
   MessageCircle, Mail, MessageSquare, FileText,
+  Image, FileSpreadsheet, Video,
 } from "lucide-react";
+import { AICopilotBar } from "@/components/AICopilotBar";
+import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
 import {
   useListStages,
   useListMessages,
   useListShipments,
+  useListFocusItems,
 } from "@workspace/api-client-react";
 import {
   adaptStages,
@@ -123,17 +127,21 @@ export function GlobalHeader({
   breadcrumbSegments = [],
 }: GlobalHeaderProps) {
   const [, navigate] = useLocation();
+  const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
 
   const { data: apiStages }    = useListStages();
   const { data: apiShipments } = useListShipments();
   const { data: apiMessages }  = useListMessages();
+  const { data: focusData }    = useListFocusItems();
 
   const stages    = useMemo(() => adaptStages(apiStages ?? []),    [apiStages]);
   const shipments = useMemo(() => adaptShipments(apiShipments ?? [], stages), [apiShipments, stages]);
   const messages  = useMemo(() => adaptMessages(apiMessages ?? [], shipments),  [apiMessages, shipments]);
 
   const unreadCount = useMemo(() => messages.filter(m => m.unread).length, [messages]);
+  const focusPendingCount = focusData?.pendingCount ?? 0;
 
   function handleOpenMessage(id: string) {
     if (onOpenMessage) {
@@ -141,91 +149,132 @@ export function GlobalHeader({
     } else {
       navigate("/");
     }
+    setSearchMode(false);
     setSearchQuery("");
   }
 
   return (
-    <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 relative">
-      <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
-        <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
-          <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
-        </div>
-        <span className="text-[#9000FF] tracking-tight">FlowForgeIQ</span>
-        <span className="text-[#E5EAF0]">/</span>
-        <span className="text-[#5E687B] font-medium text-xs">{breadcrumb}</span>
-        {breadcrumbSegments.length > 0 && (
-          <nav aria-label="breadcrumb" className="flex items-center gap-1 shrink-0">
-            <ChevronLeft size={10} className="text-[#C0C8D4] shrink-0" />
-            {breadcrumbSegments.map((seg, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && (
-                  <span className="text-[#C0C8D4] text-xs select-none">/</span>
-                )}
-                {seg.href ? (
-                  <button
-                    onClick={() => navigate(seg.href!)}
-                    className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
-                  >
-                    {seg.label}
-                  </button>
-                ) : (
-                  <span className="text-xs font-medium text-[#5E687B]">
-                    {seg.label}
-                  </span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
-        )}
-      </div>
-
-      <div className="flex-1 max-w-md mx-5 relative">
-        <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9E9FAE] pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search messages, POs, suppliers..."
-          className="w-full pl-8 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"
-        />
-        {searchQuery && (
-          <SearchResults
-            query={searchQuery}
-            messages={messages}
-            shipments={shipments}
-            onOpen={handleOpenMessage}
-          />
-        )}
-      </div>
-
-      <div className="flex items-center gap-3 text-[#5E687B]">
-        {onPasteChat && (
-          <button
-            onClick={onPasteChat}
-            className="hover:text-[#212833] p-1"
-            title="Paste chat message (WhatsApp / WeChat / iMessage)"
-          >
-            <Clipboard size={15} />
-          </button>
-        )}
-        <button className="hover:text-[#212833] p-1 relative">
-          <Bell size={15} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+    <>
+      <div className="h-12 bg-white border-b border-[#E5EAF0] flex items-center justify-between px-4 shrink-0 relative">
+        <div className="font-bold text-sm flex items-center gap-2 w-[200px]">
+          <div className="w-5 h-5 rounded-[4px] overflow-hidden shrink-0">
+            <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
+          </div>
+          <span className="text-[#9000FF] tracking-tight">FlowForgeIQ</span>
+          <span className="text-[#E5EAF0]">/</span>
+          <span className="text-[#5E687B] font-medium text-xs">{breadcrumb}</span>
+          {breadcrumbSegments.length > 0 && (
+            <nav aria-label="breadcrumb" className="flex items-center gap-1 shrink-0">
+              <ChevronLeft size={10} className="text-[#C0C8D4] shrink-0" />
+              {breadcrumbSegments.map((seg, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <span className="text-[#C0C8D4] text-xs select-none">/</span>
+                  )}
+                  {seg.href ? (
+                    <button
+                      onClick={() => navigate(seg.href!)}
+                      className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
+                    >
+                      {seg.label}
+                    </button>
+                  ) : (
+                    <span className="text-xs font-medium text-[#5E687B]">
+                      {seg.label}
+                    </span>
+                  )}
+                </React.Fragment>
+              ))}
+            </nav>
           )}
-        </button>
-        <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
-        <div className="w-7 h-7 rounded-md overflow-hidden flex items-center justify-center shrink-0 [&_.cl-avatarBox]:w-7 [&_.cl-avatarBox]:h-7 [&_.cl-avatarBox]:rounded-md [&_.cl-userButtonTrigger]:w-7 [&_.cl-userButtonTrigger]:h-7 [&_.cl-userButtonTrigger]:rounded-md">
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "w-7 h-7 rounded-md",
-                userButtonTrigger: "w-7 h-7 rounded-md focus:shadow-none",
-              },
-            }}
-          />
+        </div>
+
+        <div className="flex-1 max-w-md mx-5 relative">
+          {searchMode ? (
+            <>
+              <div className="flex items-center gap-1 absolute left-2 top-1/2 -translate-y-1/2 z-10">
+                <button
+                  onClick={() => { setSearchMode(false); setSearchQuery(""); }}
+                  title="AI mode"
+                  className="p-0.5 rounded transition-colors text-[#C0C8D4] hover:text-[#5E687B]"
+                >
+                  <Sparkles size={12} />
+                </button>
+                <button title="Search mode" className="p-0.5 rounded transition-colors text-[#9000FF]">
+                  <Search size={12} />
+                </button>
+              </div>
+              <input
+                autoFocus
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search messages, POs, suppliers..."
+                className="w-full pl-14 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"
+              />
+              {searchQuery && (
+                <SearchResults
+                  query={searchQuery}
+                  messages={messages}
+                  shipments={shipments}
+                  onOpen={handleOpenMessage}
+                />
+              )}
+            </>
+          ) : (
+            <AICopilotBar
+              className="w-full"
+              alwaysOpen
+              leftNode={
+                <div className="flex items-center gap-1">
+                  <button title="AI mode" className="p-0.5 rounded transition-colors text-[#9000FF]">
+                    <Sparkles size={12} />
+                  </button>
+                  <button
+                    onClick={() => setSearchMode(true)}
+                    title="Search mode"
+                    className="p-0.5 rounded transition-colors text-[#C0C8D4] hover:text-[#5E687B]"
+                  >
+                    <Search size={12} />
+                  </button>
+                </div>
+              }
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 text-[#5E687B]">
+          <AISparklesButton onClick={() => setAiDrawerOpen(true)} pendingCount={focusPendingCount} />
+          {onPasteChat && (
+            <button
+              onClick={onPasteChat}
+              className="hover:text-[#212833] p-1"
+              title="Paste chat message (WhatsApp / WeChat / iMessage)"
+            >
+              <Clipboard size={15} />
+            </button>
+          )}
+          <button className="hover:text-[#212833] p-1 relative">
+            <Bell size={15} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            )}
+          </button>
+          <span className="w-px h-4 bg-[#E5EAF0] shrink-0" />
+          <div className="w-7 h-7 rounded-md overflow-hidden flex items-center justify-center shrink-0 [&_.cl-avatarBox]:w-7 [&_.cl-avatarBox]:h-7 [&_.cl-avatarBox]:rounded-md [&_.cl-userButtonTrigger]:w-7 [&_.cl-userButtonTrigger]:h-7 [&_.cl-userButtonTrigger]:rounded-md">
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-7 h-7 rounded-md",
+                  userButtonTrigger: "w-7 h-7 rounded-md focus:shadow-none",
+                },
+              }}
+            />
+          </div>
         </div>
       </div>
-    </div>
+
+      <AIDrawer open={aiDrawerOpen} onClose={() => setAiDrawerOpen(false)} />
+    </>
   );
 }

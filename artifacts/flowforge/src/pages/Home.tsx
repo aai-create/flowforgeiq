@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { AICopilotBar } from "@/components/AICopilotBar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { PixelShip } from "@/components/PixelShip";
+import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
+import { useListFocusItems } from "@workspace/api-client-react";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSearch, useLocation } from "wouter";
