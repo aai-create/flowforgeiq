@@ -77,16 +77,24 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
   const { data: radarData, isLoading: radarLoading, refetch } = useGetRiskRadar();
   const { data: accuracyData, isLoading: accuracyLoading } = useGetPredictionAccuracy();
 
-  const [filter, setFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const [activeTiers, setActiveTiers] = useState<Set<"high" | "medium" | "low">>(new Set());
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"exposure" | "score">("exposure");
   const [selectedItem, setSelectedItem] = useState<RiskRadarItem | null>(null);
+
+  const toggleTier = (tier: "high" | "medium" | "low") => {
+    setActiveTiers(prev => {
+      const next = new Set(prev);
+      if (next.has(tier)) next.delete(tier); else next.add(tier);
+      return next;
+    });
+  };
 
   const items = radarData?.items ?? [];
 
   const filtered = items.filter(i => {
     const rLevel = riskLabel(i.riskScore).toLowerCase() as "high" | "medium" | "low";
-    if (filter !== "all" && rLevel !== filter) return false;
+    if (activeTiers.size > 0 && !activeTiers.has(rLevel)) return false;
     if (search) {
       const q = search.toLowerCase();
       return i.poNumber.toLowerCase().includes(q)
@@ -131,15 +139,17 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
           </button>
         </div>
         <div className="grid grid-cols-4 gap-3">
-          <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
+          <button
+            onClick={() => setActiveTiers(new Set())}
+            className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3 text-left cursor-pointer hover:border-[#9000FF]/40 hover:bg-[#F5F0FF] transition-all">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign className="w-3.5 h-3.5 text-[#9000FF]" />
               <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Risk Exposure</span>
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors ml-auto">
+                  <span className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors ml-auto" onClick={e => e.stopPropagation()}>
                     <HelpCircle className="w-3.5 h-3.5" />
-                  </button>
+                  </span>
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-3 text-[12px]" align="end">
                   <p className="font-semibold text-[#212833] mb-1">Risk Exposure</p>
@@ -151,32 +161,50 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
               </Popover>
             </div>
             <div className="text-xl font-bold text-[#212833]">{fmt(radarData?.totalExposureUsd ?? 0)}</div>
-            <div className="text-[10px] text-[#5E687B] mt-0.5">weighted by risk score</div>
-          </div>
-          <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+            <div className="text-[10px] text-[#5E687B] mt-0.5">{activeTiers.size > 0 ? "click to show all" : "weighted by risk score"}</div>
+          </button>
+          <button
+            onClick={() => toggleTier("high")}
+            className={`rounded-lg p-3 text-left cursor-pointer transition-all border-2 ${
+              activeTiers.has("high")
+                ? "bg-red-50 border-red-400 ring-2 ring-red-300 ring-offset-1"
+                : "bg-red-50 border-red-100 hover:border-red-300"
+            }`}>
             <div className="flex items-center gap-2 mb-1">
               <AlertCircle className="w-3.5 h-3.5 text-red-500" />
               <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide">High Risk</span>
             </div>
             <div className="text-xl font-bold text-red-600">{highCount}</div>
             <div className="text-[10px] text-red-500 mt-0.5">shipments score ≥70</div>
-          </div>
-          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+          </button>
+          <button
+            onClick={() => toggleTier("medium")}
+            className={`rounded-lg p-3 text-left cursor-pointer transition-all border-2 ${
+              activeTiers.has("medium")
+                ? "bg-amber-50 border-amber-400 ring-2 ring-amber-300 ring-offset-1"
+                : "bg-amber-50 border-amber-100 hover:border-amber-300"
+            }`}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Medium Risk</span>
             </div>
             <div className="text-xl font-bold text-amber-600">{medCount}</div>
             <div className="text-[10px] text-amber-600 mt-0.5">shipments score 45–69</div>
-          </div>
-          <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+          </button>
+          <button
+            onClick={() => toggleTier("low")}
+            className={`rounded-lg p-3 text-left cursor-pointer transition-all border-2 ${
+              activeTiers.has("low")
+                ? "bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300 ring-offset-1"
+                : "bg-emerald-50 border-emerald-100 hover:border-emerald-300"
+            }`}>
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">On Track</span>
             </div>
             <div className="text-xl font-bold text-emerald-600">{lowCount}</div>
             <div className="text-[10px] text-emerald-600 mt-0.5">shipments score &lt;45</div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -191,21 +219,6 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search PO, product, supplier..."
                 className="w-full h-8 bg-[#F0F4F8] border border-transparent rounded-md pl-8 pr-3 text-[12px] focus:outline-none focus:border-[#9000FF]/30 focus:bg-white transition-colors" />
-            </div>
-            <div className="flex items-center gap-1">
-              {(["all", "high", "medium", "low"] as const).map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                    filter === f
-                      ? f === "all"    ? "bg-[#212833] text-white border-[#212833]"
-                        : f === "high"   ? "bg-red-500 text-white border-red-500"
-                        : f === "medium" ? "bg-amber-500 text-white border-amber-500"
-                        : "bg-emerald-500 text-white border-emerald-500"
-                      : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"
-                  }`}>
-                  {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
             </div>
             <div className="ml-auto flex items-center gap-2 text-[11px] text-[#5E687B]">
               <span>Sort:</span>
@@ -312,7 +325,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                         </div>
                         <div className="mt-3 flex items-center gap-2">
                           <button
-                            onClick={e => { e.stopPropagation(); onNavigateToShipment?.(String(item.shipmentId)); }}
+                            onClick={e => { e.stopPropagation(); navigate(`/orders?shipment=${item.shipmentId}&from=risk-radar`); }}
                             className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
                             <ArrowUpRight className="w-3 h-3" /> Open Shipment
                           </button>

@@ -166,7 +166,7 @@ function DefaultLandingRedirect() {
 
 function RiskRadarPage() {
   const [, navigate] = useLocation();
-  return <RiskRadar onNavigateToShipment={id => navigate(`/inbox?shipment=${id}&from=risk-radar`)} />;
+  return <RiskRadar onNavigateToShipment={id => navigate(`/orders?shipment=${id}&from=risk-radar`)} />;
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
