@@ -21,7 +21,7 @@ export default function Slide06Workflow() {
 
             <div style={{ background: "#131929", borderRadius: "0.6vw", border: "1px solid rgba(124,58,237,0.22)", padding: "1.5vh 1.8vw", flex: 1 }}>
               <div style={{ fontSize: "1.4vw", fontWeight: 600, color: "#F1F5F9", fontFamily: "var(--font-body-family)", marginBottom: "0.4vh" }}>Email via Postmark inbound</div>
-              <div style={{ fontSize: "1.25vw", color: "#64748B", fontFamily: "var(--font-body-family)", lineHeight: 1.45 }}>Forward supplier emails to your FlowForge address. Attachments and PDFs extracted automatically, linked to the correct PO.</div>
+              <div style={{ fontSize: "1.25vw", color: "#64748B", fontFamily: "var(--font-body-family)", lineHeight: 1.45 }}>Forward supplier emails to your personal FlowForge address. Attachments and PDFs extracted automatically, linked to the correct PO.</div>
             </div>
 
             <div style={{ background: "#131929", borderRadius: "0.6vw", border: "1px solid rgba(124,58,237,0.22)", padding: "1.5vh 1.8vw", flex: 1 }}>

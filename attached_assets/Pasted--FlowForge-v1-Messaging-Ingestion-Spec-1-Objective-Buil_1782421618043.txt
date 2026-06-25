@@ -1,0 +1,611 @@
+# FlowForge v1 Messaging Ingestion Spec
+
+## 1. Objective
+
+Build a v1 system that lets users capture shipment-related communications from personal messaging platforms and email, route them into the correct FlowForge account, classify them against shipment threads, and prioritize them for buyer / supplier intermediary workflows.
+
+The system should optimize for:
+- Capture speed
+- Routing confidence
+- Low user effort
+- Explainable prioritization
+
+The system should not optimize for:
+- Universal inbox sync
+- Perfect channel coverage
+- Deep native integrations with closed consumer messaging platforms
+
+---
+
+## 2. Product Promise
+
+When a user receives shipment-related information in WhatsApp, iMessage, WeChat, SMS, or email, they can get it into FlowForge in under 10 seconds.
+
+FlowForge does not need to become the place where communication originates.
+FlowForge needs to become the best place where shipment signals land, get organized, and become actionable.
+
+---
+
+## 3. Key Constraints
+
+### 3.1 Account-level inbound alias only
+
+Inbound aliases look like:
+
+- `iq+abid@inbound.flowforgeiq.com`
+- `iq+deborah@inbound.flowforgeiq.com`
+
+The variable portion identifies the target account/user only.
+
+It does **not** encode:
+- Shipment ID
+- Thread ID
+- Supplier ID
+- Buyer ID
+
+Therefore:
+
+- Email alias = account routing primitive
+- Shipment routing = post-ingestion classification problem
+
+### 3.2 Initial users will rely on personal messaging platforms
+
+Do not assume Slack or Teams usage in v1.
+
+### 3.3 iPhone is a constrained platform
+
+Do not design around automatic iMessage ingestion.
+Design around user-assisted capture via share sheet, forwarding, screenshots, paste, and uploads.
+
+---
+
+## 4. Recommended v1 Intake Model
+
+All channels must map into one normalized intake pipeline.
+
+### 4.1 Intake channels
+
+1. **Mobile share-to-FlowForge**
+   - User shares text, screenshot, image, PDF, copied text, or file from another app into the FlowForge companion app.
+
+2. **Email forwarding**
+   - User forwards relevant content to their account-level alias.
+
+3. **WhatsApp Business native**
+   - Optional channel for direct communication if FlowForge or the operator owns a business number.
+
+4. **Manual paste/upload**
+   - User pastes text or uploads files directly into FlowForge.
+
+### 4.2 Core product principle
+
+FlowForge should create a canonical shipment thread.
+It should not try to perfectly mirror the original source application.
+
+---
+
+## 5. User Flows
+
+### 5.1 Primary mobile share flow
+
+1. User receives a shipment-related message in WhatsApp, iMessage, WeChat, SMS, email, or another app.
+2. User taps Share and selects FlowForge.
+3. FlowForge opens a lightweight capture screen.
+4. App previews the content being captured.
+5. App optionally suggests shipment/contact matches.
+6. User taps Confirm, or selects a shipment if needed.
+7. App submits the payload to backend.
+8. Backend parses, extracts, classifies, and routes the item.
+9. Item appears in the appropriate shipment thread or unresolved triage queue.
+
+### 5.2 Email forward flow
+
+1. User forwards relevant content to `iq+{username}@inbound.flowforgeiq.com`
+2. Inbound email provider routes message to FlowForge webhook.
+3. FlowForge maps `{username}` to account/user.
+4. FlowForge stores the raw inbound payload.
+5. FlowForge attempts to recover original sender, subject, date, and body from forwarded content.
+6. FlowForge runs shipment/contact matching.
+7. If confidence is high, the message is auto-routed.
+8. If confidence is low, the item goes to triage for user confirmation.
+
+### 5.3 Optional WhatsApp native flow
+
+1. Counterparty sends message to dedicated WhatsApp Business number.
+2. Webhook event is received by FlowForge.
+3. Message is stored as raw inbound submission.
+4. FlowForge uses sender number, text, and conversation metadata to route into an existing thread or triage queue.
+
+---
+
+## 6. Non-Goals
+
+### 6.1 Out of scope for v1
+
+- Full sync of personal messaging apps
+- Background harvesting of iMessage on iPhone
+- Device-level message scraping
+- Slack/Teams-first workflows
+- Shipment routing encoded directly in email alias
+- Fully autonomous routing with no review queue
+
+### 6.2 Explicitly avoid
+
+- Any product promise that implies universal capture of all consumer messaging channels
+- Any logic that depends on hidden OS access to private message stores
+- Any architecture where unresolved submissions can be dropped
+
+---
+
+## 7. Canonical Data Model
+
+### 7.1 `InboundSubmission`
+
+Represents the raw inbound artifact before interpretation.
+
+Fields:
+- `id`
+- `account_id`
+- `submitted_by_user_id` (nullable)
+- `source_channel`  
+  - `share_app`
+  - `email_forward`
+  - `email_reply`
+  - `whatsapp_native`
+  - `manual_note`
+- `received_at`
+- `raw_text`
+- `raw_html`
+- `raw_headers_json`
+- `attachment_refs[]`
+- `original_payload_json`
+- `status`
+  - `received`
+  - `parsed`
+  - `classified`
+  - `routed`
+  - `needs_review`
+  - `failed`
+
+### 7.2 `ExtractedSignal`
+
+Represents the structured information extracted from a submission.
+
+Fields:
+- `submission_id`
+- `original_sender_name`
+- `original_sender_address_or_phone`
+- `original_subject`
+- `original_sent_at`
+- `body_text_normalized`
+- `ocr_text`
+- `detected_language`
+- `channel_hint`
+  - `whatsapp`
+  - `imessage`
+  - `email`
+  - `sms`
+  - `wechat`
+  - `unknown`
+- `entities_json`
+- `attachment_summaries_json`
+
+### 7.3 `RoutingDecision`
+
+Represents the matching/classification result.
+
+Fields:
+- `submission_id`
+- `candidate_shipment_ids[]`
+- `candidate_contact_ids[]`
+- `candidate_supplier_ids[]`
+- `confidence_score` (0.0 to 1.0)
+- `decision_type`
+  - `auto`
+  - `human_confirmed`
+  - `unresolved`
+- `selected_shipment_id` (nullable)
+- `selected_thread_id` (nullable)
+- `reason_codes[]`
+
+### 7.4 `ShipmentThread`
+
+Canonical operational thread.
+
+Fields:
+- `id`
+- `account_id`
+- `shipment_id`
+- `title`
+- `status`
+- `priority`
+  - `high`
+  - `normal`
+  - `watchlist`
+- `last_signal_at`
+- `participants[]`
+- `open_exception_count`
+- `signal_count`
+
+---
+
+## 8. Routing Strategy
+
+### 8.1 Core principle
+
+Since the inbound alias identifies the account only, routing must happen **after** intake.
+
+### 8.2 Matching inputs
+
+Use the following inputs for shipment/thread matching:
+
+- Account identity from alias or authenticated app user
+- Original sender identity recovered from forwarded content
+- Email or phone match to known contacts
+- Shipment identifiers in body/OCR/attachments:
+  - PO number
+  - container number
+  - booking number
+  - invoice number
+  - ETA
+  - vessel
+  - location
+- Recent activity on existing shipment threads
+- Known supplier-to-shipment relationships
+- User-selected shipment from app, if provided
+
+### 8.3 Decision order
+
+Routing should occur in this order:
+
+1. Explicit user-selected shipment in companion app
+2. Strong direct match between known contact and one active shipment
+3. Explicit shipment identifier match
+4. Recent thread activity plus contact overlap
+5. Triage if ambiguous
+
+### 8.4 Confidence thresholds
+
+Initial thresholds:
+
+- `0.90+` → auto-route
+- `0.60 to 0.89` → user confirmation required
+- `< 0.60` → unresolved triage queue
+
+### 8.5 Reason codes
+
+Store explanation codes on every routing decision:
+
+- `matched_known_contact`
+- `matched_container_number`
+- `matched_booking_number`
+- `matched_po_number`
+- `recent_thread_activity`
+- `ocr_confidence_low`
+- `multiple_candidate_shipments`
+- `user_selected_override`
+
+---
+
+## 9. Prioritization Strategy
+
+Priority should be simple and explainable in v1.
+
+### 9.1 High-priority signals
+
+Increase priority for:
+- Delay language
+- Schedule slip language
+- Customs issues
+- Hold / blocked / stuck language
+- Missing docs
+- Short ship
+- Damage
+- Cancellation
+- Urgent keywords
+- Supplier on a shipment with open exceptions
+- Long silence followed by a new issue
+- Burst of multiple inbound signals on one shipment
+
+### 9.2 Priority output
+
+Allowed values:
+- `high`
+- `normal`
+- `watchlist`
+
+### 9.3 Important rule
+
+Priority must be explainable.
+Do not use opaque numerical ranking as the primary UI output in v1.
+
+---
+
+## 10. Companion App Scope
+
+### 10.1 Must-have capabilities
+
+- Receive content from iOS and Android share sheets
+- Accept pasted text
+- Accept screenshots, PDFs, photos, and files
+- Show recent shipment threads
+- Allow optional shipment selection before submit
+- Show pending routing confirmations
+- Submit content quickly with minimal taps
+
+### 10.2 Nice-to-have later
+
+- OCR preview before submit
+- Contact suggestions
+- Voice note capture
+- Android-only notification ingestion experiments
+
+### 10.3 Explicitly out of scope
+
+- Full device sync of personal messaging apps
+- Background scraping of consumer messaging platforms
+- iPhone iMessage inbox sync
+- Cross-app hidden ingestion
+
+---
+
+## 11. Required Screens
+
+### 11.1 Capture screen
+Purpose:
+- Receive share sheet content or pasted/uploaded content
+- Preview what will be submitted
+- Optionally choose shipment
+
+Fields:
+- content preview
+- attachments preview
+- suggested shipment
+- optional manual shipment selector
+- submit button
+
+### 11.2 Routing confirmation screen
+Purpose:
+- Resolve medium-confidence matches
+
+Elements:
+- source preview
+- top candidate shipment
+- alternate candidates
+- confirm button
+- “none of these” action
+
+### 11.3 Unresolved triage queue
+Purpose:
+- Show submissions that need manual review
+
+Elements:
+- submission preview
+- sender
+- extracted identifiers
+- suggested candidates
+- assign action
+
+### 11.4 Shipment thread view
+Purpose:
+- Canonical working thread for operations
+
+Elements:
+- thread timeline
+- signal list
+- participants
+- status
+- priority
+- open exceptions
+- linked docs/images
+
+### 11.5 Priority inbox
+Purpose:
+- Show highest-value operational items first
+
+Elements:
+- grouped by `high`, `normal`, `watchlist`
+- newest signals
+- explanation labels
+- unresolved indicator
+
+### 11.6 Contact/shipment mapping screen
+Purpose:
+- Improve future routing quality
+
+Elements:
+- contacts
+- supplier-company mapping
+- active shipment links
+- last-seen communication data
+
+---
+
+## 12. Processing Pipeline
+
+### 12.1 Pipeline stages
+
+1. Receive inbound submission
+2. Persist raw payload
+3. Normalize content
+4. Parse forwarded email, if applicable
+5. Run OCR on image/PDF attachments, if applicable
+6. Extract entities
+7. Match contacts and shipments
+8. Create routing decision
+9. Auto-route or enqueue for review
+10. Compute priority
+11. Append to shipment thread and inbox
+
+### 12.2 Important processing rules
+
+- Raw submission must remain immutable
+- Reprocessing must be possible as parsers improve
+- Unresolved items must never be dropped
+- Auto-routing must only happen above threshold
+- Every auto-route must store reasons
+
+---
+
+## 13. Email Handling Requirements
+
+### 13.1 Inbound email model
+
+Inbound mail arrives at:
+- `iq+abid@inbound.flowforgeiq.com`
+- `iq+deborah@inbound.flowforgeiq.com`
+
+The local part after `+` is used to map to account/user.
+
+### 13.2 Email parsing expectations
+
+The system should attempt to recover:
+- original sender
+- original subject
+- original sent timestamp
+- original body
+- attachments
+- forwarding wrapper text
+
+### 13.3 Parsing strategy
+
+- Store both raw MIME-derived content and normalized text
+- Use forwarded-email parsing for common patterns
+- Support Gmail, Outlook, Apple Mail, and common variants
+- Fall back gracefully when original sender cannot be recovered
+
+### 13.4 Do not assume
+
+- Subject lines are clean
+- Forwarding format is consistent
+- Attachments contain text
+- Original sender is always available
+
+---
+
+## 14. Suggested API Surface
+
+### 14.1 Inbound receivers
+
+- `POST /api/inbound/email`
+  - webhook receiver for inbound email provider
+
+- `POST /api/inbound/share`
+  - companion app share submission endpoint
+
+- `POST /api/inbound/whatsapp`
+  - WhatsApp webhook endpoint
+
+### 14.2 Processing endpoints
+
+- `POST /api/submissions/:id/parse`
+- `POST /api/submissions/:id/classify`
+- `POST /api/submissions/:id/confirm-route`
+
+### 14.3 Read endpoints
+
+- `GET /api/inbox/priority`
+- `GET /api/submissions/unresolved`
+- `GET /api/threads/:id`
+- `GET /api/shipments/search?q=`
+- `GET /api/contacts/search?q=`
+
+### 14.4 Suggested background jobs
+
+- `parse_submission_job`
+- `ocr_attachments_job`
+- `extract_entities_job`
+- `classify_submission_job`
+- `recompute_priority_job`
+
+---
+
+## 15. Suggested Replit Build Architecture
+
+### 15.1 Suggested services/modules
+
+- `inbound-router`
+  - accepts inbound webhooks and share submissions
+
+- `submission-store`
+  - stores raw payloads and metadata
+
+- `parser-service`
+  - email parsing, text normalization, OCR orchestration
+
+- `matcher-service`
+  - contact/shipment matching and confidence scoring
+
+- `thread-service`
+  - appends signals to canonical shipment threads
+
+- `priority-service`
+  - computes thread/event priority
+
+- `triage-service`
+  - manages unresolved items and user confirmation
+
+### 15.2 Design rule
+
+Every new channel must only need a mapper into `InboundSubmission`.
+Do not create channel-specific downstream business logic if it can be avoided.
+
+---
+
+## 16. Acceptance Criteria
+
+### 16.1 Functional
+
+- User can forward an email to account alias and see it appear in FlowForge within 30 seconds
+- User can share screenshot/text/file from phone into FlowForge within 10 seconds
+- System maps inbound alias to correct account/user
+- System stores raw inbound artifact before parsing
+- System attempts routing for every inbound artifact
+- System puts unresolved items into triage instead of dropping them
+- System explains auto-routing with reason codes
+- System updates priority inbox after successful routing
+
+### 16.2 Quality
+
+- Reprocessing is possible without losing original payload
+- Routing logic is deterministic where inputs are deterministic
+- Manual confirmation is one-tap where possible
+- Priority labels are explainable
+- All inbound paths end in the same canonical thread model
+
+---
+
+## 17. Build Order
+
+1. Canonical data model
+2. Inbound email webhook + account alias mapping
+3. Companion app share submission API
+4. Raw submission persistence
+5. Parsing + OCR pipeline
+6. Routing engine + triage queue
+7. Priority inbox + shipment thread UI
+8. Optional WhatsApp native webhook
+
+---
+
+## 18. Product Decisions to Lock Now
+
+These decisions should be treated as locked for v1:
+
+1. Alias email identifies account only
+2. Shipment routing is post-ingestion classification
+3. Companion app is a capture/forwarding tool, not a universal sync engine
+4. Unresolved queue is mandatory
+5. Auto-routing should be conservative
+6. Canonical shipment thread is the main operational object
+
+---
+
+## 19. Implementation Notes for Replit
+
+- Keep schema and services simple enough to evolve quickly
+- Separate intake, parsing, matching, threading, and prioritization cleanly
+- Preserve raw artifacts for audit and reprocessing
+- Treat explanation and operator trust as product features, not just backend metadata
+- Bias toward fast operator confirmation instead of clever but brittle automation
+
