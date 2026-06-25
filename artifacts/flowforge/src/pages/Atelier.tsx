@@ -867,9 +867,9 @@ export function Atelier() {
                     </div>
 
                     {/* Visual stage timeline */}
-                    <div className="relative py-3 mb-3">
-                      {/* Track */}
-                      <div className="absolute top-[18px] left-0 w-full h-1 bg-[#F0F4F8] rounded-full overflow-hidden">
+                    <div className="relative py-7 mb-3">
+                      {/* Track — vertically centred on the dots row (28px top padding + 5px half-dot) */}
+                      <div className="absolute top-[33px] left-0 w-full h-1 bg-[#F0F4F8] rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-700"
                           style={{
                             width: `${stagePct}%`,
@@ -879,13 +879,24 @@ export function Atelier() {
                           }} />
                       </div>
 
-                      {/* Stage dots */}
+                      {/* Stage dots with alternating above/below labels */}
                       <div className="relative flex justify-between">
                         {stages.map((stage, idx) => {
                           const isPast    = idx < stageIdx;
                           const isCurrent = idx === stageIdx;
+                          const isAbove   = idx % 2 === 0;
+                          const labelColor = isCurrent
+                            ? shipment.status === "delayed"  ? "text-red-500 font-bold"
+                              : shipment.status === "at-risk" ? "text-amber-600 font-bold"
+                              : "text-[#9000FF] font-bold"
+                            : "text-[#B8C4D0] font-medium";
                           return (
-                            <div key={stage.id} className="flex flex-col items-center">
+                            <div key={stage.id} className="relative flex flex-col items-center">
+                              {isAbove && (
+                                <span className={`absolute bottom-full mb-1.5 text-[10px] whitespace-nowrap ${labelColor}`}>
+                                  {stage.label}
+                                </span>
+                              )}
                               <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 bg-white transition-all ${
                                 isCurrent
                                   ? shipment.status === "delayed" ? "border-red-500 ring-4 ring-red-500/10"
@@ -897,11 +908,8 @@ export function Atelier() {
                                       : "border-[#9000FF]"
                                     : "border-[#D6E3EB]"}`}
                               />
-                              {isCurrent && (
-                                <span className={`absolute top-6 text-[11px] font-bold whitespace-nowrap -translate-x-1/2 left-1/2 ${
-                                  shipment.status === "delayed" ? "text-red-500"
-                                  : shipment.status === "at-risk" ? "text-amber-600"
-                                  : "text-[#9000FF]"}`}>
+                              {!isAbove && (
+                                <span className={`absolute top-full mt-1.5 text-[10px] whitespace-nowrap ${labelColor}`}>
                                   {stage.label}
                                 </span>
                               )}
@@ -909,13 +917,6 @@ export function Atelier() {
                           );
                         })}
                       </div>
-                    </div>
-
-                    {/* Stage labels — compact, only boundaries */}
-                    <div className="flex justify-between text-[11px] text-[#9E9FAE] mb-3 px-0.5">
-                      <span>{stages[0]?.label}</span>
-                      <span>{stages[Math.floor(stages.length / 2)]?.label}</span>
-                      <span>{stages[stages.length - 1]?.label}</span>
                     </div>
 
                     {/* Payment chips */}
