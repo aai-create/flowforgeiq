@@ -3,7 +3,7 @@ export default function Slide11Pilot() {
     { week: "Week 1–2", title: "Setup & onboarding", detail: "Import your supplier list. Configure inbound email routing. Select 5–10 shipments to track. No engineering required." },
     { week: "Month 1", title: "Live on a contained workflow", detail: "Forward real supplier messages. Track real shipments. AI extraction and drafting live on actual POs — not a sandbox." },
     { week: "Month 2", title: "First feedback call", detail: "30 minutes with the founding team. What's working, what's missing, what's surprising. Your feedback shapes the product." },
-    { week: "Month 3", title: "Measure and decide", detail: "Compare response times, delay detection, and manual hours before vs. after. Expand, adjust, or walk away — no lock-in." },
+    { week: "Month 3", title: "Review and decide", detail: "Walk through what changed on your pilot shipments — visibility, response speed, missed messages. Expand to your full workflow, adjust scope, or walk away — no lock-in." },
   ];
 
   return (
