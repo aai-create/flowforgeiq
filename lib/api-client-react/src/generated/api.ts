@@ -52,6 +52,7 @@ import type {
   GmailStatus,
   HealthStatus,
   InboundEmailAddress,
+  InboundEmailHealth,
   InboundEmailWebhook,
   InboundEmailWebhookResponse,
   LinkDealToShipmentBody,
@@ -4650,6 +4651,83 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getSaveExtractionCorrectionMutationOptions(options));
     }
+
+export const getGetInboundEmailHealthUrl = () => {
+
+
+
+
+  return `/api/settings/inbound-health`
+}
+
+/**
+ * @summary Health-check for the inbound email pipeline — returns last-received timestamp and overall status
+ */
+export const getInboundEmailHealth = async ( options?: RequestInit): Promise<InboundEmailHealth> => {
+
+  return customFetch<InboundEmailHealth>(getGetInboundEmailHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInboundEmailHealthQueryKey = () => {
+    return [
+    `/api/settings/inbound-health`
+    ] as const;
+    }
+
+
+export const getGetInboundEmailHealthQueryOptions = <TData = Awaited<ReturnType<typeof getInboundEmailHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboundEmailHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInboundEmailHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboundEmailHealth>>> = ({ signal }) => getInboundEmailHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInboundEmailHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInboundEmailHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getInboundEmailHealth>>>
+export type GetInboundEmailHealthQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Health-check for the inbound email pipeline — returns last-received timestamp and overall status
+ */
+
+export function useGetInboundEmailHealth<TData = Awaited<ReturnType<typeof getInboundEmailHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboundEmailHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInboundEmailHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetInboundEmailAddressUrl = () => {
 

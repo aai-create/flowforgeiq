@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, poNumberingConfigTable, teamUsersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, poNumberingConfigTable, teamUsersTable, messagesTable } from "@workspace/db";
+import { eq, sql, and, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
 import { resolveOrgId, requireAuth } from "../middlewares/requireAuth";
@@ -34,6 +34,70 @@ function buildAddress(localPart: string, domain: string, handle: string | null |
   if (plus && localPart && domain) return `${localPart}+${plus}@${domain}`;
   return `${localPart}@${domain}`;
 }
+
+router.get("/settings/inbound-health", requireAuth, async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const base = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
+  const [localPart, domain] = base.split("@") as [string, string];
+
+  let inboundEmailAddress = base;
+  try {
+    const auth = getAuth(req);
+    const userId = auth?.userId;
+    if (userId) {
+      const [teamUser] = await db
+        .select({ inboundHandle: teamUsersTable.inboundHandle, inboundToken: teamUsersTable.inboundToken })
+        .from(teamUsersTable)
+        .where(eq(teamUsersTable.clerkUserId, userId));
+      inboundEmailAddress = buildAddress(localPart, domain, teamUser?.inboundHandle, teamUser?.inboundToken);
+    }
+  } catch {
+    // fall back to base address
+  }
+
+  const configured = domain.toLowerCase().includes("inbound.");
+
+  const [lastMsg] = await db
+    .select({
+      receivedAt: messagesTable.receivedAt,
+      sender: messagesTable.sender,
+      subject: messagesTable.subject,
+    })
+    .from(messagesTable)
+    .where(and(eq(messagesTable.orgId, orgId), eq(messagesTable.channel, "email"), eq(messagesTable.direction, "inbound")))
+    .orderBy(desc(messagesTable.receivedAt))
+    .limit(1);
+
+  let status: "healthy" | "stale" | "unknown";
+  let hoursSinceLastReceived: number | null = null;
+  let message: string;
+
+  if (!lastMsg) {
+    status = "unknown";
+    message = "No inbound emails received yet. Send a test email to verify the pipeline is live.";
+  } else {
+    const ageMs = Date.now() - new Date(lastMsg.receivedAt).getTime();
+    hoursSinceLastReceived = Math.round(ageMs / 3_600_000);
+    if (ageMs < 7 * 24 * 3_600_000) {
+      status = "healthy";
+      message = `Last inbound email received ${hoursSinceLastReceived}h ago.`;
+    } else {
+      status = "stale";
+      message = `Last inbound email received ${hoursSinceLastReceived}h ago — more than 7 days. Check DNS and Postmark settings.`;
+    }
+  }
+
+  res.json({
+    status,
+    configured,
+    inboundEmailAddress,
+    lastReceivedAt: lastMsg ? new Date(lastMsg.receivedAt).toISOString() : null,
+    lastReceivedFrom: lastMsg?.sender ?? null,
+    lastReceivedSubject: lastMsg?.subject ?? null,
+    hoursSinceLastReceived,
+    message,
+  });
+});
 
 router.get("/settings/inbound-email", async (req, res) => {
   const base = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";

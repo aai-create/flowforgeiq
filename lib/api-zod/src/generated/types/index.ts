@@ -60,6 +60,8 @@ export * from './gmailStatus';
 export * from './healthStatus';
 export * from './inboundEmailAddress';
 export * from './inboundEmailAttachment';
+export * from './inboundEmailHealth';
+export * from './inboundEmailHealthStatus';
 export * from './inboundEmailWebhook';
 export * from './inboundEmailWebhookResponse';
 export * from './linkDealToShipmentBody';

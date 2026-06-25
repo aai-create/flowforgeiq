@@ -1002,6 +1002,49 @@ export interface PoNumberingConfigUpdate {
   resetSeq?: number;
 }
 
+/**
+ * healthy = received within 7 days; stale = received but older than 7 days; unknown = no inbound email ever received
+ */
+export type InboundEmailHealthStatus = typeof InboundEmailHealthStatus[keyof typeof InboundEmailHealthStatus];
+
+
+export const InboundEmailHealthStatus = {
+  healthy: 'healthy',
+  stale: 'stale',
+  unknown: 'unknown',
+} as const;
+
+export interface InboundEmailHealth {
+  /** healthy = received within 7 days; stale = received but older than 7 days; unknown = no inbound email ever received */
+  status: InboundEmailHealthStatus;
+  /** True when INBOUND_EMAIL_BASE resolves to a live inbound subdomain (e.g. inbound.flowforgeiq.com) */
+  configured: boolean;
+  /** The caller's personal inbound address assembled from INBOUND_EMAIL_BASE and their inbound handle/token */
+  inboundEmailAddress: string;
+  /**
+     * ISO timestamp of the most recent inbound email, or null if none
+     * @nullable
+     */
+  lastReceivedAt?: string | null;
+  /**
+     * Sender of the most recent inbound email, or null if none
+     * @nullable
+     */
+  lastReceivedFrom?: string | null;
+  /**
+     * Subject line of the most recent inbound email, or null if none
+     * @nullable
+     */
+  lastReceivedSubject?: string | null;
+  /**
+     * Hours since the last inbound email was received, or null if none
+     * @nullable
+     */
+  hoursSinceLastReceived?: number | null;
+  /** Human-readable summary of the health status */
+  message: string;
+}
+
 export interface InboundEmailAddress {
   /** The authenticated user's personal inbound address (iq+{handle}@flowforgeiq.com), assembled from INBOUND_EMAIL_BASE env var and the user's inbound handle */
   inboundEmailAddress: string;

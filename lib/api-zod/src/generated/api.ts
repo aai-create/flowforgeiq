@@ -1631,6 +1631,21 @@ export const SaveExtractionCorrectionResponse = zod.object({
 
 
 /**
+ * @summary Health-check for the inbound email pipeline — returns last-received timestamp and overall status
+ */
+export const GetInboundEmailHealthResponse = zod.object({
+  "status": zod.enum(['healthy', 'stale', 'unknown']).describe('healthy = received within 7 days; stale = received but older than 7 days; unknown = no inbound email ever received'),
+  "configured": zod.boolean().describe('True when INBOUND_EMAIL_BASE resolves to a live inbound subdomain (e.g. inbound.flowforgeiq.com)'),
+  "inboundEmailAddress": zod.string().describe('The caller\'s personal inbound address assembled from INBOUND_EMAIL_BASE and their inbound handle\/token'),
+  "lastReceivedAt": zod.coerce.date().nullish().describe('ISO timestamp of the most recent inbound email, or null if none'),
+  "lastReceivedFrom": zod.string().nullish().describe('Sender of the most recent inbound email, or null if none'),
+  "lastReceivedSubject": zod.string().nullish().describe('Subject line of the most recent inbound email, or null if none'),
+  "hoursSinceLastReceived": zod.number().nullish().describe('Hours since the last inbound email was received, or null if none'),
+  "message": zod.string().describe('Human-readable summary of the health status')
+})
+
+
+/**
  * @summary Get the configured inbound email address for chat/email forwarding
  */
 export const GetInboundEmailAddressResponse = zod.object({

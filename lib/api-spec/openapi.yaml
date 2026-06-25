@@ -1141,6 +1141,18 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ExtractionCorrection" }
 
+  /settings/inbound-health:
+    get:
+      operationId: getInboundEmailHealth
+      tags: [settings]
+      summary: Health-check for the inbound email pipeline — returns last-received timestamp and overall status
+      responses:
+        "200":
+          description: Inbound email health status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InboundEmailHealth" }
+
   /settings/inbound-email:
     get:
       operationId: getInboundEmailAddress
@@ -2582,6 +2594,37 @@ components:
         sequenceFormat: { type: string }
         supplierSuffix: { type: string }
         resetSeq:       { type: integer, description: "Reset the sequence counter to this value (must be positive integer)" }
+
+    InboundEmailHealth:
+      type: object
+      required: [status, configured, inboundEmailAddress, message]
+      properties:
+        status:
+          type: string
+          enum: [healthy, stale, unknown]
+          description: "healthy = received within 7 days; stale = received but older than 7 days; unknown = no inbound email ever received"
+        configured:
+          type: boolean
+          description: "True when INBOUND_EMAIL_BASE resolves to a live inbound subdomain (e.g. inbound.flowforgeiq.com)"
+        inboundEmailAddress:
+          type: string
+          description: "The caller's personal inbound address assembled from INBOUND_EMAIL_BASE and their inbound handle/token"
+        lastReceivedAt:
+          type: ["string", "null"]
+          format: date-time
+          description: "ISO timestamp of the most recent inbound email, or null if none"
+        lastReceivedFrom:
+          type: ["string", "null"]
+          description: "Sender of the most recent inbound email, or null if none"
+        lastReceivedSubject:
+          type: ["string", "null"]
+          description: "Subject line of the most recent inbound email, or null if none"
+        hoursSinceLastReceived:
+          type: ["number", "null"]
+          description: "Hours since the last inbound email was received, or null if none"
+        message:
+          type: string
+          description: "Human-readable summary of the health status"
 
     InboundEmailAddress:
       type: object
