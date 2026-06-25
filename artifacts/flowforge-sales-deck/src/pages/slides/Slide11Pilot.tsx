@@ -10,13 +10,12 @@ export default function Slide11Pilot() {
     <div className="w-screen h-screen overflow-hidden relative" style={{ background: "#0B0F1A", fontFamily: "var(--font-display-family)" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 55% 60% at 85% 50%, rgba(124,58,237,0.1) 0%, transparent 65%)" }} />
       <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(124,58,237,0.06) 1px, transparent 1px)", backgroundSize: "3.5vw 3.5vw" }} />
-
       <div className="relative z-10 flex h-full" style={{ padding: "3.5vh 7vw" }}>
         <div className="flex flex-col justify-center" style={{ flex: "0 0 40vw", paddingRight: "4vw" }}>
           <div style={{ fontSize: "1.1vw", color: "#7C3AED", fontFamily: "var(--font-body-family)", fontWeight: 500, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "0.8vh" }}>Pilot Structure</div>
-          <h2 style={{ fontSize: "3.2vw", fontWeight: 700, color: "#F1F5F9", lineHeight: 1.05, letterSpacing: "-0.025em", marginBottom: "2vh" }}>
-            3 months. No commitment. Real results.
-          </h2>
+          <h2 style={{ fontSize: "3.2vw", fontWeight: 700, color: "#F1F5F9", lineHeight: 1.05, letterSpacing: "-0.025em", marginBottom: "2vh" }}>3 months. 
+          No commitment. 
+          Real results.</h2>
 
           <p style={{ fontSize: "1.45vw", color: "#CBD5E1", lineHeight: 1.5, marginBottom: "2.5vh", fontFamily: "var(--font-body-family)" }}>
             We offer a 3-month free pilot because the only honest way to sell this is to let you run it on real shipments and measure the difference yourself.
