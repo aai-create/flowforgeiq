@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { createHmac, timingSafeEqual } from "crypto";
 import {
   db,
   documentsTable,
@@ -695,6 +696,33 @@ export { ingestDocumentFromBase64 };
 // ─── Email webhook route ──────────────────────────────────────────────────────
 
 router.post("/webhooks/email", async (req, res) => {
+  const webhookToken = process.env.POSTMARK_WEBHOOK_TOKEN;
+  if (!webhookToken) {
+    req.log.error("POSTMARK_WEBHOOK_TOKEN is not configured — rejecting webhook to prevent unauthenticated ingest");
+    res.status(500).json({ error: "Webhook token not configured" });
+    return;
+  }
+  const signature = req.headers["x-postmark-signature"];
+  const reqBodyBuf = req.rawBody;
+  if (!signature || !reqBodyBuf) {
+    req.log.warn({ reason: "missing-signature" }, "Rejected unsigned Postmark webhook");
+    res.status(401).json({ error: "Missing signature" });
+    return;
+  }
+  const expected = createHmac("sha256", webhookToken)
+    .update(reqBodyBuf)
+    .digest("base64");
+  const provided = Buffer.from(Array.isArray(signature) ? signature[0] : signature, "utf8");
+  const expectedBuf = Buffer.from(expected, "utf8");
+  if (
+    provided.length !== expectedBuf.length ||
+    !timingSafeEqual(provided, expectedBuf)
+  ) {
+    req.log.warn({ reason: "invalid-signature" }, "Rejected Postmark webhook with bad signature");
+    res.status(401).json({ error: "Invalid signature" });
+    return;
+  }
+
   const parsed = InboundEmailWebhookBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid webhook payload" });

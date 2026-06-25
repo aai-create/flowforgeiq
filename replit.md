@@ -16,6 +16,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - Required env: `DATABASE_URL` — Postgres connection string
 - Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (defaults to `iq@flowforgeiq.com`); per-user addresses are assembled as `iq+{token}@flowforgeiq.com` and surfaced via `GET /settings/inbound-email` (auth required)
 - Optional env: `CHAT_ROUTING_THRESHOLD` — confidence threshold (0.0–1.0) for auto-routing chat-forward messages; defaults to `0.65`
+- Required secret: `POSTMARK_WEBHOOK_TOKEN` — `POST /webhooks/email` verifies the `X-Postmark-Signature` header (HMAC-SHA256 of the raw request body, base64-encoded) against this token; requests with a missing or invalid signature return `401`; if the token is not set the endpoint returns `500` and rejects all payloads (fail-closed); set via Replit Secrets to the token value configured in Postmark → Servers → your server → Webhooks
 
 ## Stack
 
