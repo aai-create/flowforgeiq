@@ -14,7 +14,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - `pnpm --filter @workspace/db run push` — push DB schema changes directly (dev only, requires interactive TTY)
 - `pnpm --filter @workspace/db run seed` — reseed all tables from seed-data.json (wipes first)
 - Required env: `DATABASE_URL` — Postgres connection string
-- Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (defaults to `iq@flowforgeiq.com`); per-user addresses are assembled as `iq+{token}@flowforgeiq.com` and surfaced via `GET /settings/inbound-email` (auth required)
+- Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (production value: `iq@inbound.flowforgeiq.com`; per-user addresses are assembled as `iq+{token}@inbound.flowforgeiq.com` and surfaced via `GET /settings/inbound-email`). This is the **only app-side knob** for switching inbound domains — no code changes required. Two external steps are needed to go live: (1) add an MX record in your DNS provider: `inbound.flowforgeiq.com MX 10 inbound.postmarkapp.com`; (2) update the Postmark inbound server in the Postmark dashboard to use `inbound.flowforgeiq.com`.
 - Optional env: `CHAT_ROUTING_THRESHOLD` — confidence threshold (0.0–1.0) for auto-routing chat-forward messages; defaults to `0.65`
 - Required secret: `POSTMARK_WEBHOOK_TOKEN` — `POST /webhooks/email` verifies the `X-Postmark-Signature` header (HMAC-SHA256 of the raw request body, base64-encoded) against this token; requests with a missing or invalid signature return `401`; if the token is not set the endpoint returns `500` and rejects all payloads (fail-closed); set via Replit Secrets to the token value configured in Postmark → Servers → your server → Webhooks
 
@@ -71,6 +71,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - `aiRoutingGuess.buyerName` and `aiRoutingGuess.shipmentId` are nullable — the OpenAPI spec and Zod schema must declare them `["type", "null"]` or the `GET /messages/needs-review` endpoint returns 500.
 - Inbox is now the default route (`/`); Orders/Atelier is at `/orders` (also aliased `/command`). Do not restore the old `/` → Atelier routing.
 - Clerk requires `VITE_CLERK_PUBLISHABLE_KEY` (frontend) and the AI Integrations proxy for backend JWT verification. Check the clerk-auth skill before modifying auth flows.
+- **Branded inbound email domain**: production inbound addresses use `inbound.flowforgeiq.com` (e.g. `iq+{token}@inbound.flowforgeiq.com`). Before emails arrive, an operator must: (1) add DNS MX record — `inbound.flowforgeiq.com MX 10 inbound.postmarkapp.com` — in the DNS provider (Cloudflare, Route 53, etc.); (2) configure the Postmark inbound server to `inbound.flowforgeiq.com` in the Postmark dashboard. No code change is needed — only `INBOUND_EMAIL_BASE=iq@inbound.flowforgeiq.com` (already set).
 
 ## Pointers
 
