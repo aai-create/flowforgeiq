@@ -367,7 +367,9 @@ export function Atelier() {
   const [newPODragOver, setNewPODragOver] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [supplierDropdownOpen, setSupplierDropdownOpen] = useState(false);
+  const [buyerDropdownOpen, setBuyerDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [supplierFilter, setSupplierFilter] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createShipmentMutation = useCreateShipment();
@@ -582,74 +584,7 @@ export function Atelier() {
             myOrders: shipments.length,
             riskRadar: radarData ? radarData.items.filter(i => i.riskScore >= 70).length : null,
           }}
-        >
-          <ScrollArea className="flex-1">
-            <div className="px-3 pb-3">
-
-              {/* Filters — collapsible */}
-              <button
-                onClick={() => setFiltersOpen(o => !o)}
-                className="w-full px-2 mb-1 flex items-center justify-between group hover:bg-[#E5EAF0] rounded-md py-1 transition-colors"
-              >
-                <span className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-                  <Filter className="w-3 h-3" /> Filters
-                  {(customerFilter || supplierFilter) && <span className="w-1.5 h-1.5 rounded-full bg-[#9000FF] shrink-0" />}
-                </span>
-                {filtersOpen
-                  ? <ChevronDown className="w-3 h-3 text-[#5E687B]" />
-                  : <ChevronRight className="w-3 h-3 text-[#5E687B]" />}
-              </button>
-
-              {filtersOpen && (
-                <div className="mt-1">
-                  <div className="mb-1 px-2">
-                    <span className={SECTION_LABEL_MUTED}>Suppliers</span>
-                  </div>
-                  <div className="space-y-0.5 mb-3">
-                    {SUPPLIERS.map(s => (
-                      <button key={s.id} onClick={() => setSupplierFilter(supplierFilter === s.name ? null : s.name)}
-                        className={`w-full flex items-center justify-between px-2 h-7 rounded-md transition-colors ${supplierFilter === s.name ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                        <span className="flex items-center gap-1.5 truncate">
-                          <Hash className="w-3 h-3 opacity-50 shrink-0" />
-                          <span className="truncate text-xs">{s.name}</span>
-                        </span>
-                        <span className="text-xs bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{s.count}</span>
-                      </button>
-                    ))}
-                    {supplierFilter && (
-                      <button onClick={() => setSupplierFilter(null)}
-                        className="w-full text-xs text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
-                        <X className="w-3 h-3" /> Clear
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="mb-1 px-2">
-                    <span className={SECTION_LABEL_MUTED}>Buyers</span>
-                  </div>
-                  <div className="space-y-0.5 mb-3">
-                    {CUSTOMERS.map(c => (
-                      <button key={c.buyerId ?? `name:${c.name}`} onClick={() => setCustomerFilter(customerFilter === c.buyerId ? null : c.buyerId)}
-                        className={`w-full flex items-center justify-between px-2 h-7 rounded-md transition-colors ${customerFilter === c.buyerId ? "bg-white border border-[#9000FF]/20 text-[#9000FF] font-semibold" : "text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0]"}`}>
-                        <span className="flex items-center gap-1.5 truncate">
-                          <Hash className="w-3 h-3 opacity-50 shrink-0" />
-                          <span className="truncate text-xs">{c.name}</span>
-                        </span>
-                        <span className="text-xs bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-1">{c.count}</span>
-                      </button>
-                    ))}
-                    {customerFilter && (
-                      <button onClick={() => setCustomerFilter(null)}
-                        className="w-full text-xs text-[#9000FF] hover:underline flex items-center gap-1 px-2 mt-1">
-                        <X className="w-3 h-3" /> Clear
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </NavSidebar>
+        />
 
         <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -665,7 +600,7 @@ export function Atelier() {
               </span>
             </div>
             {/* PO Search */}
-            <div className="flex-1 max-w-[220px] relative">
+            <div className="w-[200px] relative shrink-0">
               <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9E9FAE] pointer-events-none" />
               <input
                 type="text"
@@ -680,21 +615,76 @@ export function Atelier() {
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-2 ml-auto shrink-0">
-              {/* Status filter chips */}
-              {(["all", "on-track", "at-risk", "delayed"] as const).map(s => (
-                <button key={s} onClick={() => setStatusFilter(s)}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-all ${statusFilter === s
-                    ? s === "all" ? "bg-[#212833] text-white border-[#212833]"
-                      : s === "on-track" ? "bg-emerald-500 text-white border-emerald-500"
-                      : s === "at-risk"  ? "bg-amber-500 text-white border-amber-500"
-                      : "bg-red-500 text-white border-red-500"
-                    : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#D6E3EB]"
-                  }`}>
-                  {s === "all" ? t("orders.filterAll") : s === "on-track" ? t("orders.onTrack") : s === "at-risk" ? t("orders.atRisk") : t("orders.delayed")}
+            {/* Supplier dropdown */}
+            <Popover open={supplierDropdownOpen} onOpenChange={setSupplierDropdownOpen}>
+              <PopoverTrigger asChild>
+                <button className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors shrink-0 ${supplierFilter ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/30" : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#C0C8D4]"}`}>
+                  <span className="max-w-[120px] truncate">{supplierFilter ?? "Supplier"}</span>
+                  <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
                 </button>
-              ))}
-              <Separator orientation="vertical" className="h-5 mx-1" />
+              </PopoverTrigger>
+              <PopoverContent align="start" className="p-1 w-56">
+                <button onClick={() => { setSupplierFilter(null); setSupplierDropdownOpen(false); }}
+                  className={`w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-[#F0F4F8] transition-colors ${!supplierFilter ? "font-semibold text-[#212833]" : "text-[#5E687B]"}`}>
+                  All suppliers
+                </button>
+                {SUPPLIERS.map(s => (
+                  <button key={s.id} onClick={() => { setSupplierFilter(s.name); setSupplierDropdownOpen(false); }}
+                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-[#F0F4F8] transition-colors flex items-center justify-between ${supplierFilter === s.name ? "font-semibold text-[#9000FF]" : "text-[#5E687B]"}`}>
+                    <span className="truncate">{s.name}</span>
+                    <span className="text-[10px] bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-2">{s.count}</span>
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+            {/* Buyer dropdown */}
+            <Popover open={buyerDropdownOpen} onOpenChange={setBuyerDropdownOpen}>
+              <PopoverTrigger asChild>
+                <button className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors shrink-0 ${customerFilter !== null ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/30" : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#C0C8D4]"}`}>
+                  <span className="max-w-[110px] truncate">
+                    {customerFilter !== null ? (CUSTOMERS.find(c => c.buyerId === customerFilter)?.name ?? "Buyer") : "Buyer"}
+                  </span>
+                  <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="p-1 w-52">
+                <button onClick={() => { setCustomerFilter(null); setBuyerDropdownOpen(false); }}
+                  className={`w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-[#F0F4F8] transition-colors ${customerFilter === null ? "font-semibold text-[#212833]" : "text-[#5E687B]"}`}>
+                  All buyers
+                </button>
+                {CUSTOMERS.map(c => (
+                  <button key={c.buyerId ?? `name:${c.name}`} onClick={() => { setCustomerFilter(c.buyerId); setBuyerDropdownOpen(false); }}
+                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-[#F0F4F8] transition-colors flex items-center justify-between ${customerFilter === c.buyerId ? "font-semibold text-[#9000FF]" : "text-[#5E687B]"}`}>
+                    <span className="truncate">{c.name}</span>
+                    <span className="text-[10px] bg-[#E5EAF0] px-1.5 rounded shrink-0 ml-2">{c.count}</span>
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+            {/* Status dropdown */}
+            <Popover open={statusDropdownOpen} onOpenChange={setStatusDropdownOpen}>
+              <PopoverTrigger asChild>
+                <button className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors shrink-0 ${statusFilter !== "all" ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/30" : "bg-white text-[#5E687B] border-[#E5EAF0] hover:border-[#C0C8D4]"}`}>
+                  {statusFilter !== "all" && (
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${statusFilter === "on-track" ? "bg-emerald-500" : statusFilter === "at-risk" ? "bg-amber-500" : "bg-red-500"}`} />
+                  )}
+                  {statusFilter === "all" ? "Status" : statusFilter === "on-track" ? t("orders.onTrack") : statusFilter === "at-risk" ? t("orders.atRisk") : t("orders.delayed")}
+                  <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="p-1 w-40">
+                {(["all", "on-track", "at-risk", "delayed"] as const).map(s => (
+                  <button key={s} onClick={() => { setStatusFilter(s); setStatusDropdownOpen(false); }}
+                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-[#F0F4F8] transition-colors flex items-center gap-2 ${statusFilter === s ? "font-semibold text-[#212833]" : "text-[#5E687B]"}`}>
+                    {s !== "all" && (
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${s === "on-track" ? "bg-emerald-500" : s === "at-risk" ? "bg-amber-500" : "bg-red-500"}`} />
+                    )}
+                    {s === "all" ? t("orders.filterAll") : s === "on-track" ? t("orders.onTrack") : s === "at-risk" ? t("orders.atRisk") : t("orders.delayed")}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+            <div className="ml-auto flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setShowArchived(v => !v)}
                 className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-md border transition-colors ${showArchived ? "bg-amber-50 border-amber-300 text-amber-700" : "bg-white border-[#E5EAF0] text-[#5E687B] hover:border-[#C0C8D4]"}`}>
