@@ -151,7 +151,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     id: "team-access",
     title: "Inviting Your Team",
     summary:
-      "FlowForgeIQ supports multi-user access via Clerk. Admins can invite colleagues — including China-side staff and freight forwarders — and control who has admin privileges.",
+      "FlowForgeIQ supports multi-user access via Clerk. Admins can invite colleagues — including supplier-side staff and freight forwarders — and control who has admin privileges.",
     steps: [
       { text: "Open Settings → Team tab. You must be an Admin to invite or remove members." },
       { text: 'Click "Invite colleague" and enter their email address. They will receive a link to join your FlowForgeIQ workspace.' },

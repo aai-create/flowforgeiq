@@ -88,7 +88,7 @@ const DIAGRAM_LANES = [
     accent: "#7C3AED",
     bg: "#FAF5FF",
     nodes: [
-      { icon: Users, text: "Invite colleagues\n& China staff" },
+      { icon: Users, text: "Invite colleagues\n& supplier staff" },
       { icon: MessageCircle, text: "Shared inbox\n& shipments" },
       { icon: CheckCircle2, text: "Stage changes\nattributed by name" },
       { icon: Wand2, text: "Same AI drafts\nfor everyone" },
