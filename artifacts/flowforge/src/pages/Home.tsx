@@ -2198,10 +2198,26 @@ export default function Home() {
       totalCounts.set(m.supplierId, (totalCounts.get(m.supplierId) ?? 0) + 1);
       if (m.unread) unreadCounts.set(m.supplierId, (unreadCounts.get(m.supplierId) ?? 0) + 1);
     }
-    return Array.from(totalCounts.entries()).map(([name, total]) => ({
-      id: name, label: name, count: total, unread: unreadCounts.get(name) ?? 0,
+    return apiSuppliers.map(s => ({
+      id: s.name, label: s.name,
+      count: totalCounts.get(s.name) ?? 0,
+      unread: unreadCounts.get(s.name) ?? 0,
     }));
-  }, [messages]);
+  }, [messages, apiSuppliers]);
+
+  const BUYERS = useMemo(() => {
+    const seen = new Map<string, { label: string; shipmentIds: Set<string> }>();
+    for (const s of shipments) {
+      const key = s.buyerId !== null ? String(s.buyerId) : s.customer;
+      if (!seen.has(key)) seen.set(key, { label: s.customer, shipmentIds: new Set() });
+      seen.get(key)!.shipmentIds.add(s.id);
+    }
+    return Array.from(seen.entries()).map(([id, { label, shipmentIds }]) => ({
+      id,
+      label,
+      count: messages.filter(m => m.shipmentId !== null && shipmentIds.has(m.shipmentId)).length,
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [shipments, messages]);
 
   const activeMessage  = activeMessageId === "__cleared__" ? undefined : (messages.find(m => m.id === activeMessageId) || messages[0]);
   const activeShipment = activeMessage ? shipments.find(s => s.id === activeMessage.shipmentId) : undefined;
@@ -2272,11 +2288,19 @@ export default function Home() {
   const customerShipmentIds = useMemo(() => {
     if (!customerFilter) return null;
     const filterId = Number(customerFilter);
-    const buyerName = shipments.find(s => s.buyerId === filterId)?.customer ?? null;
     const ids = new Set<string>();
-    for (const s of shipments) {
-      if (s.buyerId === filterId || (s.buyerId === null && buyerName !== null && s.customer === buyerName)) {
-        ids.add(s.id);
+    if (!Number.isNaN(filterId)) {
+      // customerFilter is a numeric buyerId
+      const buyerName = shipments.find(s => s.buyerId === filterId)?.customer ?? null;
+      for (const s of shipments) {
+        if (s.buyerId === filterId || (s.buyerId === null && buyerName !== null && s.customer === buyerName)) {
+          ids.add(s.id);
+        }
+      }
+    } else {
+      // customerFilter is a customer name (buyerId was null)
+      for (const s of shipments) {
+        if (s.customer === customerFilter) ids.add(s.id);
       }
     }
     return ids;
@@ -2813,6 +2837,25 @@ export default function Home() {
                 searchPlaceholder="Search suppliers…"
               />
 
+              {/* Buyers dropdown — independent; does not clear other filters */}
+              <FilterDropdown
+                label="Buyers"
+                icon={<Users className="w-2.5 h-2.5" />}
+                options={BUYERS}
+                value={customerFilter}
+                onSelect={(id) => {
+                  urlParamsApplied.current = true;
+                  setActiveView("inbox");
+                  setCustomerFilter(id);
+                  if (id) {
+                    const buyerShipmentIds = BUYERS.find(b => b.id === id) ? new Set(shipments.filter(s => (s.buyerId !== null ? String(s.buyerId) : s.customer) === id).map(s => s.id)) : null;
+                    const first = buyerShipmentIds ? messages.find(m => m.shipmentId !== null && buyerShipmentIds.has(m.shipmentId)) : null;
+                    if (first) openMessage(first.id);
+                  }
+                }}
+                searchPlaceholder="Search buyers…"
+              />
+
               {/* POs dropdown — independent; does not clear supplier/channel/flagged */}
               <FilterDropdown
                 label="POs"
@@ -2839,7 +2882,7 @@ export default function Home() {
               <FilterDropdown
                 label="Channels"
                 icon={<MessagesSquare className="w-2.5 h-2.5" />}
-                options={CHANNEL_FILTER_OPTIONS.filter(ch => messages.some(m => m.channel === ch.id)).map(ch => ({
+                options={CHANNEL_FILTER_OPTIONS.map(ch => ({
                   ...ch,
                   count: messages.filter(m => m.channel === ch.id).length,
                 }))}
@@ -2868,19 +2911,6 @@ export default function Home() {
                   </button>
                 );
               })()}
-
-              {/* Buyer filter pill — visible only when customerFilter is active (deep-link) */}
-              {customerFilter && (
-                <button
-                  onClick={()=>setCustomerFilter(null)}
-                  className="flex items-center gap-1 px-2.5 h-6 rounded-full text-[11px] font-medium shrink-0 bg-[#9000FF]/10 text-[#9000FF] hover:bg-[#9000FF]/20 transition-colors"
-                >
-                  <X className="w-2.5 h-2.5"/>
-                  <span className="max-w-[100px] truncate">
-                    {shipments.find(s => s.buyerId === Number(customerFilter))?.customer ?? customerFilter}
-                  </span>
-                </button>
-              )}
 
               {/* Needs Review — simple toggle */}
               {(()=>{
