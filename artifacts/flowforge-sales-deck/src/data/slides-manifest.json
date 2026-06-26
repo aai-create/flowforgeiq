@@ -118,5 +118,13 @@
     "title": "Pilot With Us",
     "description": "Three clear next steps: 3-month free pilot (5-10 shipments, 2-week setup), live walkthrough, or discovery call",
     "speakerNotes": "End by giving them a clear choice — not a vague 'let us know.'\n\n- The pilot is the strongest first step for anyone in the room who has a live PO problem right now. 'Five shipments, two weeks to live, no engineering. If it works, you'll know by month three.'\n- The live walkthrough is for prospects who are still evaluating. 'Bring your hardest PO scenario — we'll run it through FlowForge live in 30 minutes. That's usually enough to know.'\n- The discovery call is for enterprise scenarios. 'Custom org structure, ERP integration, complex requirements? Let's scope it before you commit to anything.'\n- After presenting: ask directly — 'Which of these three makes the most sense as a first step for you?' — and stop talking. Let them answer.\n- Email is pilot@flowforge.com — signals intent and makes the ask concrete."
+  },
+  {
+    "id": "d5e6f7a8-901b-cdef-2345-678901bc1601",
+    "position": 16,
+    "filepath": "src/pages/slides/Slide16AppendixWorkflow.tsx",
+    "title": "Appendix — Platform Workflow",
+    "description": "Line-art flow diagram showing the end-to-end FlowForgeIQ workflow: Channels → Ingest → AI Engine → FlowForge Hub → Outcomes",
+    "speakerNotes": "Use this slide when prospects ask 'how does it actually work under the hood?'\n\n- Walk left to right: messages arrive from any channel (email, WhatsApp, WeChat, iMessage, SMS, documents). The buyer forwards or pastes them into FlowForge via email forward, chat export, mobile companion, or file upload.\n- The AI engine extracts entities (PO number, dates, quantities), routes the message to the correct shipment thread, drafts a reply, and flags any risk signals (delays, discrepancies).\n- Everything lands in the FlowForge Hub — the unified Inbox, Orders Grid, RFQ Manager, and Task Tracker — staged against the shipment lifecycle from Quote through Delivery.\n- The outcomes on the right are what gets recorded automatically: stage progression, payment records, spread tracking, tasks, and a full audit trail.\n- Key message: 'The buyer initiates every step. We never passively monitor anything. That's deliberate — compliance, trust, and simplicity.'"
   }
 ]
