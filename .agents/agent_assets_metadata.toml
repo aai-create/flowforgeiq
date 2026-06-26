@@ -65,3 +65,9 @@ id = "-PiE-lHJleuKji-b-yaAu"
 uri = "file://.local/outputs/FlowForge-Sourcing.pdf"
 type = "pdf"
 title = "FlowForge-Sourcing.pdf"
+
+[[outputs]]
+id = "rwD39MuZvgC_IVYCwvf-k"
+uri = "file://.local/outputs/FlowForgeIQ.pdf"
+type = "pdf"
+title = "FlowForgeIQ.pdf"
