@@ -15,7 +15,7 @@ const http = require("http");
 const net = require("net");
 
 const PROXY_PORT = parseInt(process.env.PORT || "3000", 10);
-const METRO_PORT = PROXY_PORT + 1;
+const METRO_PORT = parseInt(process.env.METRO_PORT || String(PROXY_PORT + 100), 10);
 const BASE = (process.env.BASE_PATH || "/flowforge-mobile").replace(/\/$/, "");
 
 function rewriteUrl(url) {

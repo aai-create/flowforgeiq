@@ -9,27 +9,6 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "FlowForge Mobile"
-
-[[workflows.workflow]]
-name = "FlowForge Mobile"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && PORT=3001 pnpm --filter @workspace/flowforge-mobile run dev"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -54,6 +33,10 @@ externalPort = 6800
 [[ports]]
 localPort = 3003
 externalPort = 6000
+
+[[ports]]
+localPort = 3100
+externalPort = 5173
 
 [[ports]]
 localPort = 8080
