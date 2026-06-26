@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.flowforge.mobile",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "FlowForge needs access to your photo library to attach images to shipment messages.",
         "NSCameraUsageDescription": "FlowForge needs camera access to capture documents for shipment messages.",
@@ -23,6 +24,7 @@
       }
     },
     "android": {
+      "package": "com.flowforge.mobile",
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
