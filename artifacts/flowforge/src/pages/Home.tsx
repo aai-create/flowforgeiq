@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useUser } from "@clerk/react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
@@ -30,6 +31,7 @@ import { RiskRadar } from "./RiskRadar";
 import { Reports } from "./Reports";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
+  getListStagesQueryKey, getListShipmentsQueryKey, getListMessagesQueryKey, getListTasksQueryKey,
   updateMessage, updateTask, updateShipment, updatePayment,
   selectFactoryQuote, reorderStages, createMessage,
   useListDocuments, getListDocumentsQueryKey,
@@ -1815,6 +1817,7 @@ function ChannelPickerView({ messages, onSelect }: {
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
+  const { isLoaded, isSignedIn } = useUser();
   const search = useSearch();
   const [, navigate] = useLocation();
   const fromParam = new URLSearchParams(search).get("from");
@@ -1855,10 +1858,11 @@ export default function Home() {
     "Summarize this shipment's current status",
   ]);
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
-  const { data: apiStages,    isError: stagesError,    refetch: refetchStages }    = useListStages();
-  const { data: apiShipments, isError: shipmentsError, refetch: refetchShipments } = useListShipments();
-  const { data: apiMessages,  isError: messagesError,  refetch: refetchMessages }  = useListMessages();
-  const { data: apiTasks,     isError: tasksError,     refetch: refetchTasks }     = useListTasks();
+  const authReady = isLoaded && !!isSignedIn;
+  const { data: apiStages,    isError: stagesError,    refetch: refetchStages }    = useListStages(   { query: { enabled: authReady, queryKey: getListStagesQueryKey() } });
+  const { data: apiShipments, isError: shipmentsError, refetch: refetchShipments } = useListShipments(undefined, { query: { enabled: authReady, queryKey: getListShipmentsQueryKey() } });
+  const { data: apiMessages,  isError: messagesError,  refetch: refetchMessages }  = useListMessages( undefined, { query: { enabled: authReady, queryKey: getListMessagesQueryKey() } });
+  const { data: apiTasks,     isError: tasksError,     refetch: refetchTasks }     = useListTasks(    { query: { enabled: authReady, queryKey: getListTasksQueryKey() } });
   const { data: apiProposals } = useListCopilotProposals({});
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
@@ -2575,7 +2579,7 @@ export default function Home() {
   };
 
 
-  const isLoading = !apiStages || !apiShipments || !apiMessages || !apiTasks;
+  const isLoading = !isLoaded || !isSignedIn || !apiStages || !apiShipments || !apiMessages || !apiTasks;
   const isError = stagesError || shipmentsError || messagesError || tasksError;
   if (isLoading || isError || shipments.length === 0) {
     return (
