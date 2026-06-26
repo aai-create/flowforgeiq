@@ -131,7 +131,7 @@ export default function Slide05WhatItIs() {
           <div style={{ padding: "1.4vh 2vw", fontSize: "1.5vw", color: "#CBD5E1", fontFamily: "var(--font-body-family)" }}>
             Zero supplier onboarding. They keep their tools. You get the structure.
           </div>
-          <div style={{ marginLeft: "auto", padding: "1.4vh 2vw", display: "flex", gap: "2vw" }}>
+          <div style={{ marginLeft: "auto", padding: "1.4vh 2vw", display: "flex", gap: "1.2vw 2vw", flexWrap: "wrap" }}>
             {["Not a new channel", "Not an ERP", "Not passive monitoring"].map((item) => (
               <div key={item} style={{ display: "flex", gap: "0.5vw", alignItems: "center" }}>
                 <span style={{ color: "#475569", fontSize: "1.3vw", fontWeight: 700 }}>×</span>
