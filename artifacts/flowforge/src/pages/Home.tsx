@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useUser } from "@clerk/react";
+import { useUser, useClerk } from "@clerk/react";
+import { ApiError } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AICopilotBar } from "@/components/AICopilotBar";
@@ -1817,6 +1818,7 @@ function ChannelPickerView({ messages, onSelect }: {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const search = useSearch();
   const [, navigate] = useLocation();
   const fromParam = new URLSearchParams(search).get("from");
@@ -1860,10 +1862,10 @@ export default function Home() {
   const authReady = isLoaded && !!isSignedIn;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const authQuery = { query: { enabled: authReady } as any };
-  const { data: apiStages,    isError: stagesError,    refetch: refetchStages }    = useListStages(authQuery);
-  const { data: apiShipments, isError: shipmentsError, refetch: refetchShipments } = useListShipments(undefined, authQuery);
-  const { data: apiMessages,  isError: messagesError,  refetch: refetchMessages }  = useListMessages( undefined, authQuery);
-  const { data: apiTasks,     isError: tasksError,     refetch: refetchTasks }     = useListTasks(authQuery);
+  const { data: apiStages,    isError: stagesError,    error: stagesErrObj,    refetch: refetchStages }    = useListStages(authQuery);
+  const { data: apiShipments, isError: shipmentsError, error: shipmentsErrObj, refetch: refetchShipments } = useListShipments(undefined, authQuery);
+  const { data: apiMessages,  isError: messagesError,  error: messagesErrObj,  refetch: refetchMessages }  = useListMessages( undefined, authQuery);
+  const { data: apiTasks,     isError: tasksError,     error: tasksErrObj,     refetch: refetchTasks }     = useListTasks(authQuery);
   const { data: apiProposals } = useListCopilotProposals({});
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
@@ -2582,6 +2584,9 @@ export default function Home() {
 
   const isLoading = !isLoaded || !isSignedIn || !apiStages || !apiShipments || !apiMessages || !apiTasks;
   const isError = stagesError || shipmentsError || messagesError || tasksError;
+  const authError = [stagesErrObj, shipmentsErrObj, messagesErrObj, tasksErrObj].some(
+    (e) => e instanceof ApiError && e.status === 401,
+  );
   if (isLoading || isError || shipments.length === 0) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{ fontFamily: "Inter, sans-serif" }}>
@@ -2591,6 +2596,21 @@ export default function Home() {
             <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
           </div>
           {isError ? (
+            authError ? (
+              <>
+                <p className="text-sm font-medium text-red-500">Your session has expired.</p>
+                <p className="text-xs text-[#5E687B] max-w-xs text-center">
+                  Signing you out clears stale login cookies. Sign back in to reconnect.
+                </p>
+                <button
+                  onClick={() => { void signOut(); }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
+                >
+                  Sign out &amp; sign in again
+                </button>
+              </>
+            ) : (
             <>
               <p className="text-sm font-medium text-red-500">Could not reach the server.</p>
               <button
@@ -2601,6 +2621,7 @@ export default function Home() {
                 Retry
               </button>
             </>
+            )
           ) : (
             <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
               {isLoading ? "Loading FlowForgeIQ…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
