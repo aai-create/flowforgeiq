@@ -1814,6 +1814,51 @@ function ChannelPickerView({ messages, onSelect }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Auth recovery
+// ─────────────────────────────────────────────────────────────────────────────
+// In the Replit dev environment Clerk can leave behind *duplicate* session
+// cookies (e.g. two `__session`, two `__client_uat`) scoped to both the host
+// (`<id>.riker.replit.dev`) and the shared parent domain (`.replit.dev`). When
+// the browser sends both, the server can't resolve the session → 401. Clerk's
+// own signOut() only clears cookies on its expected scope, so the stale parent-
+// domain copies survive and the user gets stuck. This nukes every Clerk cookie
+// across all plausible domain/path scopes so a fresh login starts clean.
+function clearAllClerkCookies(): void {
+  if (typeof document === "undefined") return;
+  const CLERK_PREFIXES = ["__session", "__client_uat", "__clerk", "__client"];
+  const names = document.cookie
+    .split(";")
+    .map((c) => c.split("=")[0].trim())
+    .filter((n) => n && CLERK_PREFIXES.some((p) => n.startsWith(p)));
+
+  const host = window.location.hostname;
+  const parts = host.split(".");
+  const domains = new Set<string>();
+  domains.add(host);
+  domains.add("." + host);
+  for (let i = 1; i < parts.length - 1; i++) {
+    const suffix = parts.slice(i).join(".");
+    domains.add(suffix);
+    domains.add("." + suffix);
+  }
+
+  const paths = new Set<string>(["/", window.location.pathname]);
+  const expiry = "Thu, 01 Jan 1970 00:00:00 GMT";
+
+  for (const name of names) {
+    for (const path of paths) {
+      // Host-only (no Domain attribute)
+      document.cookie = `${name}=; expires=${expiry}; path=${path}`;
+      document.cookie = `${name}=; expires=${expiry}; path=${path}; secure; samesite=lax`;
+      for (const domain of domains) {
+        document.cookie = `${name}=; expires=${expiry}; path=${path}; domain=${domain}`;
+        document.cookie = `${name}=; expires=${expiry}; path=${path}; domain=${domain}; secure; samesite=lax`;
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
@@ -2603,7 +2648,13 @@ export default function Home() {
                   Signing you out clears stale login cookies. Sign back in to reconnect.
                 </p>
                 <button
-                  onClick={() => { void signOut(); }}
+                  onClick={() => {
+                    clearAllClerkCookies();
+                    void signOut().finally(() => {
+                      clearAllClerkCookies();
+                      window.location.assign(`${import.meta.env.BASE_URL}sign-in`);
+                    });
+                  }}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                   style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
                 >

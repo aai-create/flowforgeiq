@@ -19,6 +19,12 @@ A real browser can accumulate **duplicate** Clerk cookies — `__session`, `__cl
 
 # Self-heal in code
 
-`Home.tsx` distinguishes a **401** `ApiError` (status from `@workspace/api-client-react`'s `ApiError`) and shows a "session expired → sign out & sign in again" screen (`useClerk().signOut()` clears the stale cookies). Do NOT treat 403 the same — 403 is "not provisioned", and signing out won't provision the account; let 403 fall through to the generic/retry path.
+`Home.tsx` distinguishes a **401** `ApiError` (status from `@workspace/api-client-react`'s `ApiError`) and shows a "session expired → sign out & sign in again" recovery screen. Do NOT treat 403 the same — 403 is "not provisioned", and signing out won't provision the account; let 403 fall through to the generic/retry path.
 
 **Why:** the only failure mode that signing out actually fixes is the unverifiable-session (401) case.
+
+# Clerk's signOut() does NOT clear the colliding cookies
+
+Critical: `useClerk().signOut()` alone does **not** fix the collision — it only clears cookies on Clerk's expected scope, leaving the stale **parent-domain (`.replit.dev`)** copies behind, so the user loops (sign out → log in via Google → 401 again). The recovery action must **manually clear every Clerk cookie across all domain/path scopes** (host-only, `<host>`, `.<host>`, and every parent suffix incl. `.replit.dev`, paths `/` and current) BEFORE/around signOut, then hard-redirect to `${BASE_URL}sign-in` for a clean login. See `clearAllClerkCookies()` in `Home.tsx`. `__session`/`__client_uat` are not httpOnly, so JS can delete them.
+
+**How to apply:** any "session desync / re-auth" remediation on a shared-dev-domain (`*.replit.dev`) must nuke cookies across scopes, not rely on `signOut()`.
