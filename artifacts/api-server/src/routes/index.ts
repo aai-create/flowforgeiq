@@ -17,6 +17,7 @@ import integrationsRouter from "./integrations";
 import rfqsRouter from "./rfqs";
 import teamRouter from "./team";
 import focusRouter from "./focus";
+import pushTokensRouter from "./push-tokens";
 
 const router: IRouter = Router();
 
@@ -44,6 +45,7 @@ protectedRouter.use(focusRouter);
 protectedRouter.use(settingsRouter);
 protectedRouter.use(integrationsRouter);
 protectedRouter.use(rfqsRouter);
+protectedRouter.use(pushTokensRouter);
 
 router.use(protectedRouter);
 

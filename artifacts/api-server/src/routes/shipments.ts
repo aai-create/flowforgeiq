@@ -13,8 +13,10 @@ import {
   stagesTable,
   tasksTable,
   buyersTable,
+  pushTokensTable,
 } from "@workspace/db";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { sendExpoPushNotifications } from "../lib/pushNotifications";
 import {
   ListShipmentsResponseItem,
   CreateShipmentBody,
@@ -446,6 +448,29 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
         orgId,
       })
       .returning();
+  });
+
+  setImmediate(async () => {
+    try {
+      const tokenRows = await db
+        .select({ expoPushToken: pushTokensTable.expoPushToken })
+        .from(pushTokensTable)
+        .where(eq(pushTokensTable.orgId, orgId));
+      const tokens = tokenRows.map((r) => r.expoPushToken);
+      if (tokens.length > 0) {
+        const stageLabel = input.toStageId ?? "next stage";
+        const poNumber = shipment.poNumber ?? String(shipmentId);
+        await sendExpoPushNotifications(
+          tokens,
+          `Shipment stage updated`,
+          `PO ${poNumber} moved to "${stageLabel}"`,
+          { type: "stage-change", shipmentId, toStageId: input.toStageId },
+          req.log,
+        );
+      }
+    } catch (err) {
+      req.log.warn({ err }, "stage-events: push notification error");
+    }
   });
 
   res.status(201).json(ListShipmentStageEventsResponseItem.parse(event));

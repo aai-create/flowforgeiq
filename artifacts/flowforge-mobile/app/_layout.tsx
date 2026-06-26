@@ -21,6 +21,7 @@ import { I18nextProvider } from "react-i18next";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import i18n, { loadStoredLanguage } from "@/hooks/useI18n";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 if (domain) setBaseUrl(`https://${domain}`);
@@ -58,6 +59,7 @@ function ShareIntentHandler() {
 }
 
 function RootLayoutNav() {
+  useNotifications();
   return (
     <>
       <ShareIntentHandler />

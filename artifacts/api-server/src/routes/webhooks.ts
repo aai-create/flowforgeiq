@@ -10,7 +10,9 @@ import {
   messagesTable,
   buyerEmailsTable,
   teamUsersTable,
+  pushTokensTable,
 } from "@workspace/db";
+import { sendExpoPushNotifications } from "../lib/pushNotifications";
 import { InboundEmailWebhookBody } from "@workspace/api-zod";
 import { and, asc, eq, or, isNull } from "drizzle-orm";
 import { runExtraction, extractFromChatText } from "../lib/extraction";
@@ -1001,6 +1003,30 @@ router.post("/webhooks/email", async (req, res) => {
       orgId: scopedOrgId,
     })
     .returning();
+
+  // Async: push notification + AI reply draft + field extraction
+  setImmediate(async () => {
+    try {
+      const tokenRows = await db
+        .select({ expoPushToken: pushTokensTable.expoPushToken })
+        .from(pushTokensTable)
+        .where(eq(pushTokensTable.orgId, scopedOrgId));
+      const tokens = tokenRows.map((r) => r.expoPushToken);
+      if (tokens.length > 0) {
+        const subjectLabel = Subject ? Subject.slice(0, 60) : "No subject";
+        const senderShort = senderLabel.slice(0, 40);
+        await sendExpoPushNotifications(
+          tokens,
+          `New email from ${senderShort}`,
+          subjectLabel,
+          { type: "message", messageId: msg.id, shipmentId: finalShipmentId ?? null },
+          req.log,
+        );
+      }
+    } catch {
+      // best-effort
+    }
+  });
 
   // Async: AI reply draft + field extraction
   setImmediate(async () => {

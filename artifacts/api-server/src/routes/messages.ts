@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable } from "@workspace/db";
+import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable, pushTokensTable } from "@workspace/db";
 import { and, desc, eq } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
+import { sendExpoPushNotifications } from "../lib/pushNotifications";
 import {
   ListMessagesResponseItem,
   CreateMessageBody,
@@ -69,6 +70,56 @@ router.post("/messages", async (req, res) => {
       orgId,
     })
     .returning();
+
+  if ((input.direction ?? "inbound") === "inbound") {
+    setImmediate(async () => {
+      try {
+        const tokenRows = await db
+          .select({ expoPushToken: pushTokensTable.expoPushToken })
+          .from(pushTokensTable)
+          .where(eq(pushTokensTable.orgId, orgId));
+        const tokens = tokenRows.map((r) => r.expoPushToken);
+        if (tokens.length === 0) return;
+
+        const routingStatus = inserted.routingStatus ?? "routed";
+        const confidence = inserted.routingConfidence ?? 0;
+        const HIGH_CONFIDENCE_THRESHOLD = Number(process.env.CHAT_ROUTING_THRESHOLD ?? "0.65");
+        const isHighConfidenceRouted =
+          routingStatus === "routed" && confidence >= HIGH_CONFIDENCE_THRESHOLD && inserted.shipmentId != null;
+
+        if (isHighConfidenceRouted) {
+          const poRow = inserted.shipmentId
+            ? await db
+                .select({ poNumber: shipmentsTable.poNumber })
+                .from(shipmentsTable)
+                .where(eq(shipmentsTable.id, inserted.shipmentId))
+                .then((r) => r[0] ?? null)
+            : null;
+          const poLabel = poRow ? `PO ${poRow.poNumber}` : "a shipment";
+          await sendExpoPushNotifications(
+            tokens,
+            `Message auto-routed to ${poLabel}`,
+            `From ${inserted.sender ?? "Unknown"}: ${(inserted.snippet ?? "").slice(0, 80)}`,
+            { type: "message-routed", messageId: inserted.id, shipmentId: inserted.shipmentId },
+            req.log,
+          );
+        } else {
+          const channel = input.channel ?? "message";
+          const sender = inserted.sender ?? "Unknown";
+          const snippet = (inserted.snippet ?? "").slice(0, 80);
+          await sendExpoPushNotifications(
+            tokens,
+            `New ${channel} from ${sender}`,
+            snippet || "New inbound message",
+            { type: "message", messageId: inserted.id, shipmentId: inserted.shipmentId ?? null },
+            req.log,
+          );
+        }
+      } catch (err) {
+        req.log.warn({ err }, "messages-post: push notification error");
+      }
+    });
+  }
 
   if (
     input.channel === "whatsapp" &&
