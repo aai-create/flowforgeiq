@@ -39,7 +39,11 @@ process.on("SIGINT", () => metro.kill("SIGINT"));
 
 // --- 2. Start the path-stripping HTTP proxy on PROXY_PORT ---
 const proxyServer = http.createServer((req, res) => {
+  const originalUrl = req.url;
   req.url = rewriteUrl(req.url);
+  console.log(
+    `[proxy] ${req.method} ${originalUrl} → ${req.url}  (host: ${req.headers.host})`
+  );
 
   const opts = {
     hostname: "localhost",
@@ -50,11 +54,13 @@ const proxyServer = http.createServer((req, res) => {
   };
 
   const proxyReq = http.request(opts, (proxyRes) => {
+    console.log(`[proxy] ← ${proxyRes.statusCode} ${req.url}`);
     res.writeHead(proxyRes.statusCode, proxyRes.headers);
     proxyRes.pipe(res, { end: true });
   });
 
-  proxyReq.on("error", () => {
+  proxyReq.on("error", (e) => {
+    console.log(`[proxy] ERR ${req.url}: ${e.message}`);
     if (!res.headersSent) {
       res.writeHead(502);
       res.end("Metro not ready yet");
