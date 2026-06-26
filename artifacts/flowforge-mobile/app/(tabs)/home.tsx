@@ -80,7 +80,7 @@ function ShipmentCard({ shipment, onPress }: ShipmentCardProps) {
             </Text>
           </View>
           <View style={styles.captureHint}>
-            <Feather name="zap" size={14} color={colors.primary} />
+            <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
           </View>
         </View>
 
@@ -121,13 +121,7 @@ export default function HomeScreen() {
 
   function handleShipmentPress(shipment: Shipment) {
     Haptics.selectionAsync();
-    router.push({
-      pathname: "/(tabs)/chat" as any,
-      params: {
-        preSelectedShipmentId: String(shipment.id),
-        preSelectedShipmentName: `PO ${shipment.poNumber} — ${shipment.product}`,
-      },
-    });
+    router.push(`/shipment/${shipment.id}` as any);
   }
 
   return (
@@ -200,7 +194,7 @@ export default function HomeScreen() {
               <View style={[styles.hintBanner, { backgroundColor: colors.accent, borderColor: colors.border }]}>
                 <Feather name="zap" size={13} color={colors.primary} />
                 <Text style={[styles.hintText, { color: colors.accentForeground }]}>
-                  Tap a shipment to pre-select it when capturing a message
+                  Tap a shipment to view its details, messages, and capture new updates
                 </Text>
               </View>
             ) : null
