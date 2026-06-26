@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, teamUsersTable, teamInvitationsTable, organizationsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, requireAdmin, requireClerkAuth } from "../middlewares/requireAuth";
+import { clerkClient } from "@clerk/express";
 import crypto from "node:crypto";
 
 function generateInboundToken(): string {
@@ -113,6 +114,23 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
     return;
   }
 
+  // Verify the signed-in Clerk user owns an email address that matches the invitation.
+  // This must happen before marking acceptedAt so a wrong-account attempt cannot
+  // consume the invite and deny access to the intended recipient.
+  let clerkUserEmails: string[] = [];
+  try {
+    const clerkUser = await clerkClient.users.getUser(req.userId!);
+    clerkUserEmails = clerkUser.emailAddresses.map(e => e.emailAddress.toLowerCase());
+  } catch {
+    res.status(500).json({ error: "Could not verify account email. Please try again." });
+    return;
+  }
+
+  if (!clerkUserEmails.includes(inv.email.toLowerCase())) {
+    res.status(403).json({ error: "This invitation was sent to a different email address." });
+    return;
+  }
+
   await db
     .update(teamInvitationsTable)
     .set({ acceptedAt: new Date() })
@@ -186,9 +204,14 @@ router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
     return;
   }
 
+  // Only allow self-provisioning when the organization has no members yet
+  // (first-user bootstrap). All subsequent accounts must join via an invitation.
   const allMembers = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, 1));
-  const isFirstUser = allMembers.length === 0;
-  const role = isFirstUser ? "admin" : "member";
+  if (allMembers.length > 0) {
+    res.status(403).json({ error: "Access restricted. Please use an invitation link to join this workspace." });
+    return;
+  }
+
   const displayName = name || email?.split("@")[0] || "Team Member";
   const handle = await generateUniqueHandle(displayName);
 
@@ -198,7 +221,7 @@ router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
       clerkUserId: req.userId!,
       email: email || `user-${req.userId}@flowforge.local`,
       name: displayName,
-      role,
+      role: "admin",
       inboundToken: generateInboundToken(),
       inboundHandle: handle,
       orgId: 1,
