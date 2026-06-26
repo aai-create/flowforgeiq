@@ -4,6 +4,7 @@ import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { HELP_SECTIONS } from "@/lib/helpContent";
 import { SCREENSHOT_COMPONENTS } from "@/lib/helpScreenshots";
+import { GlossaryText } from "@/components/GlossaryText";
 import {
   Search, ChevronRight, X, ArrowRight,
   MessageCircle, ClipboardList, Inbox, Wand2, CheckCircle2,
@@ -332,7 +333,7 @@ export function Help() {
 
                       {/* Summary */}
                       <p className="text-[13px] text-[#5E687B] leading-relaxed mb-5">
-                        {highlight(section.summary)}
+                        <GlossaryText text={section.summary} query={query} />
                       </p>
 
                       {/* Steps */}
@@ -343,7 +344,7 @@ export function Help() {
                               {i + 1}
                             </span>
                             <p className="text-[12px] text-[#212833] leading-relaxed">
-                              {highlight(step.text)}
+                              <GlossaryText text={step.text} query={query} />
                             </p>
                           </div>
                         ))}

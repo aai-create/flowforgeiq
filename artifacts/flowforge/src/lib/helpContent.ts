@@ -13,6 +13,40 @@ export interface HelpSection {
 
 export const HELP_SECTIONS: HelpSection[] = [
   {
+    id: "inbox",
+    title: "Using the Inbox",
+    summary:
+      "The Inbox is FlowForgeIQ's command centre — every inbound message from suppliers is routed here, linked to its shipment, and given an AI-drafted reply. It is the default screen when you open the app.",
+    steps: [
+      { text: "Messages are listed on the left, grouped by recency. Click any message to open it in the reading pane." },
+      { text: "The right panel shows the matched shipment's stage tracker, payments, spread, and supplier contact details." },
+      { text: "Use the filter bar above the message list to narrow by Supplier, PO, or Channel — each is a dropdown pill. Active filters show their selection in the pill label; click the × to clear one. The Flagged toggle works independently alongside any active filter." },
+      { text: "The search bar in the header matches on sender name, message content, supplier PO number, and buyer PO number." },
+      { text: "The AI draft is pre-populated in the compose area. Edit it or send as-is — sending advances the stage and clears related tasks." },
+      { text: 'Forwarded chat messages show a teal "Fwd chat" badge and include an expandable transcript view so you can see the original conversation.' },
+      { text: "Needs Review messages (low confidence routing) are shown in the amber Needs Review panel — assign them to the correct shipment or delete them." },
+    ],
+    screenshot: "inbox.png",
+    keywords: ["inbox", "messages", "filter", "search", "reply", "draft", "channel", "needs review", "forwarded"],
+  },
+  {
+    id: "track-shipment",
+    title: "Tracking a Shipment",
+    summary:
+      "Every shipment moves through 11 stages from Spec Sheet to Delivered. FlowForgeIQ shows exactly where each order is, lets you advance it with a logged note, and keeps a full audit trail of every stage change.",
+    steps: [
+      { text: "On My Orders, click any shipment card to expand its detail view. In the Inbox, the shipment context panel is visible on the right whenever a message is selected." },
+      { text: "The stage tracker shows all 11 milestones. The purple dot marks the current stage; completed stages are highlighted." },
+      { text: 'When a stage is complete, click "Advance Stage". A confirmation dialog shows the from/to stages.' },
+      { text: 'Optionally add a note (e.g. "QC passed, container booked") — this is stored in the audit trail with a timestamp and the name of the team member who made the change.' },
+      { text: 'Click "Confirm" to advance. Both Inbox messages and Needs Review replies that advance a stage clear their related tasks automatically.' },
+      { text: 'Click "History" on any shipment to see the full audit trail of stage changes, with dates, notes, and actor names.' },
+      { text: "Risk Radar monitors every active shipment and flags it if delay signals are detected." },
+    ],
+    screenshot: "track-shipment.png",
+    keywords: ["stage", "advance", "milestone", "tracker", "history", "audit", "progress", "11 stages"],
+  },
+  {
     id: "create-po",
     title: "Creating a Purchase Order",
     summary:
@@ -31,21 +65,21 @@ export const HELP_SECTIONS: HelpSection[] = [
     keywords: ["new po", "purchase order", "create", "supplier", "buyer", "document upload", "ex-factory", "spread", "margin"],
   },
   {
-    id: "rfq-quotes",
-    title: "RFQs & Factory Quote Comparison",
+    id: "record-payments",
+    title: "Recording Payments",
     summary:
-      "The RFQ flow lets you solicit quotes from multiple factories, compare their prices against your target, and convert the winner to a PO — all without leaving FlowForgeIQ.",
+      "Each shipment has a Deposit and a Balance payment. Record them as paid, edit the amount, and attach a reference number so the finance trail is always complete. Paid amounts feed the spread calculation automatically.",
     steps: [
-      { text: 'Open RFQs from the left sidebar and click "+ New RFQ".' },
-      { text: "Set the product, buyer, target price per unit, quantity, and deadline for quote submissions." },
-      { text: 'Click "Add Quote" to enter each factory\'s quote: unit price, lead time, MOQ, and which supplier in your directory they correspond to.' },
-      { text: "The quote comparison table shows spread (target price − quoted price) per unit and for the full order. The lowest-price quote is badged LOWEST." },
-      { text: 'Click "Use this quote" on the winner. A Convert-to-PO dialog appears — confirm the PO number, supplier, factory dates, and deposit percentage.' },
-      { text: "FlowForgeIQ creates the shipment and pre-creates the Deposit and Balance payments based on your deposit percentage." },
-      { text: 'After conversion, download the Proforma Invoice as a PDF or click "View PO" to jump straight to the new shipment.' },
+      { text: "On My Orders, expand a shipment card. The payment chips show Deposit and Balance with their due dates." },
+      { text: 'Click "Mark Paid" on an unpaid payment. A confirmation form slides open.' },
+      { text: "Verify or edit the amount in USD, then set the payment date (defaults to today)." },
+      { text: "Optionally add a reference number (e.g. wire transfer ID) and select a payment method (Wire, Credit, or Other)." },
+      { text: 'Click "Confirm" — the chip turns green and the spread calculation updates to reflect the new outlay.' },
+      { text: 'To reverse a payment, click "Undo" on a paid chip. This clears the paid status and removes the reference data.' },
+      { text: "The Calendar view shows upcoming payment due dates and ex-factory dates for all your live shipments on a monthly grid. Click any event card or pill to jump directly to that PO in My Orders." },
     ],
-    screenshot: "rfq-quotes.png",
-    keywords: ["rfq", "quote", "factory", "comparison", "spread", "margin", "target price", "proforma", "convert po"],
+    screenshot: "payments.png",
+    keywords: ["payment", "deposit", "balance", "paid", "mark paid", "wire", "reference", "due date", "spread"],
   },
   {
     id: "spread-margin",
@@ -80,40 +114,6 @@ export const HELP_SECTIONS: HelpSection[] = [
     keywords: ["whatsapp", "wechat", "imessage", "sms", "chat", "paste", "ingest", "forward", "postmark", "needs review", "routing"],
   },
   {
-    id: "track-shipment",
-    title: "Tracking a Shipment",
-    summary:
-      "Every shipment moves through 11 stages from Spec Sheet to Delivered. FlowForgeIQ shows exactly where each order is, lets you advance it with a logged note, and keeps a full audit trail of every stage change.",
-    steps: [
-      { text: "On My Orders, click any shipment card to expand its detail view. In the Inbox, the shipment context panel is visible on the right whenever a message is selected." },
-      { text: "The stage tracker shows all 11 milestones. The purple dot marks the current stage; completed stages are highlighted." },
-      { text: 'When a stage is complete, click "Advance Stage". A confirmation dialog shows the from/to stages.' },
-      { text: 'Optionally add a note (e.g. "QC passed, container booked") — this is stored in the audit trail with a timestamp and the name of the team member who made the change.' },
-      { text: 'Click "Confirm" to advance. Both Inbox messages and Needs Review replies that advance a stage clear their related tasks automatically.' },
-      { text: 'Click "History" on any shipment to see the full audit trail of stage changes, with dates, notes, and actor names.' },
-      { text: "Risk Radar monitors every active shipment and flags it if delay signals are detected." },
-    ],
-    screenshot: "track-shipment.png",
-    keywords: ["stage", "advance", "milestone", "tracker", "history", "audit", "progress", "11 stages"],
-  },
-  {
-    id: "inbox",
-    title: "Using the Inbox",
-    summary:
-      "The Inbox is FlowForgeIQ's command centre — every inbound message from suppliers is routed here, linked to its shipment, and given an AI-drafted reply. It is the default screen when you open the app.",
-    steps: [
-      { text: "Messages are listed on the left, grouped by recency. Click any message to open it in the reading pane." },
-      { text: "The right panel shows the matched shipment's stage tracker, payments, spread, and supplier contact details." },
-      { text: "Use the filter bar above the message list to narrow by Supplier, PO, or Channel — each is a dropdown pill. Active filters show their selection in the pill label; click the × to clear one. The Flagged toggle works independently alongside any active filter." },
-      { text: "The search bar in the header matches on sender name, message content, supplier PO number, and buyer PO number." },
-      { text: 'The AI draft is pre-populated in the compose area. Edit it or send as-is — sending advances the stage and clears related tasks.' },
-      { text: 'Forwarded chat messages show a teal "Fwd chat" badge and include an expandable transcript view so you can see the original conversation.' },
-      { text: "Needs Review messages (low confidence routing) are shown in the amber Needs Review panel — assign them to the correct shipment or delete them." },
-    ],
-    screenshot: "inbox.png",
-    keywords: ["inbox", "messages", "filter", "search", "reply", "draft", "channel", "needs review", "forwarded"],
-  },
-  {
     id: "handle-delays",
     title: "Handling Delays & Risks",
     summary:
@@ -131,21 +131,37 @@ export const HELP_SECTIONS: HelpSection[] = [
     keywords: ["risk", "delay", "flag", "radar", "exposure", "port", "congestion", "signal"],
   },
   {
-    id: "record-payments",
-    title: "Recording Payments",
+    id: "manage-suppliers",
+    title: "Managing Suppliers",
     summary:
-      "Each shipment has a Deposit and a Balance payment. Record them as paid, edit the amount, and attach a reference number so the finance trail is always complete. Paid amounts feed the spread calculation automatically.",
+      "The Suppliers page is your factory directory. It shows on-time performance, active POs, and lets you edit contact details used to pre-fill outbound messages in the Inbox.",
     steps: [
-      { text: "On My Orders, expand a shipment card. The payment chips show Deposit and Balance with their due dates." },
-      { text: 'Click "Mark Paid" on an unpaid payment. A confirmation form slides open.' },
-      { text: "Verify or edit the amount in USD, then set the payment date (defaults to today)." },
-      { text: "Optionally add a reference number (e.g. wire transfer ID) and select a payment method (Wire, Credit, or Other)." },
-      { text: 'Click "Confirm" — the chip turns green and the spread calculation updates to reflect the new outlay.' },
-      { text: 'To reverse a payment, click "Undo" on a paid chip. This clears the paid status and removes the reference data.' },
-      { text: "The Calendar view shows upcoming payment due dates and ex-factory dates for all your live shipments on a monthly grid. Click any event card or pill to jump directly to that PO in My Orders." },
+      { text: "Open Suppliers from the left sidebar. Suppliers are listed with their country, active PO count, and on-time percentage." },
+      { text: "Click any row to open the supplier detail panel. All contact fields are editable inline — click to edit, click away to save." },
+      { text: "Keep email and WhatsApp number up to date — these are used to pre-fill the recipient field when composing outbound messages from the Inbox." },
+      { text: "The detail panel lists recent and active shipments. Click a PO number to jump to it in My Orders." },
+      { text: 'To add a supplier, click "New Supplier" and fill in name, country, contact name, and email.' },
+      { text: "When creating a new PO, you can create a supplier on the fly by typing their name in the Supplier field — no need to visit this page first." },
     ],
-    screenshot: "payments.png",
-    keywords: ["payment", "deposit", "balance", "paid", "mark paid", "wire", "reference", "due date", "spread"],
+    screenshot: "suppliers.png",
+    keywords: ["supplier", "contact", "email", "whatsapp", "factory", "on-time", "performance", "directory"],
+  },
+  {
+    id: "rfq-quotes",
+    title: "RFQs & Factory Quote Comparison",
+    summary:
+      "The RFQ flow lets you solicit quotes from multiple factories, compare their prices against your target, and convert the winner to a PO — all without leaving FlowForgeIQ.",
+    steps: [
+      { text: 'Open RFQs from the left sidebar and click "+ New RFQ".' },
+      { text: "Set the product, buyer, target price per unit, quantity, and deadline for quote submissions." },
+      { text: 'Click "Add Quote" to enter each factory\'s quote: unit price, lead time, MOQ, and which supplier in your directory they correspond to.' },
+      { text: "The quote comparison table shows spread (target price − quoted price) per unit and for the full order. The lowest-price quote is badged LOWEST." },
+      { text: 'Click "Use this quote" on the winner. A Convert-to-PO dialog appears — confirm the PO number, supplier, factory dates, and deposit percentage.' },
+      { text: "FlowForgeIQ creates the shipment and pre-creates the Deposit and Balance payments based on your deposit percentage." },
+      { text: 'After conversion, download the Proforma Invoice as a PDF or click "View PO" to jump straight to the new shipment.' },
+    ],
+    screenshot: "rfq-quotes.png",
+    keywords: ["rfq", "quote", "factory", "comparison", "spread", "margin", "target price", "proforma", "convert po"],
   },
   {
     id: "team-access",
@@ -163,22 +179,6 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
     screenshot: "team-access.png",
     keywords: ["team", "invite", "colleague", "admin", "member", "access", "clerk", "sign in", "login"],
-  },
-  {
-    id: "manage-suppliers",
-    title: "Managing Suppliers",
-    summary:
-      "The Suppliers page is your factory directory. It shows on-time performance, active POs, and lets you edit contact details used to pre-fill outbound messages in the Inbox.",
-    steps: [
-      { text: "Open Suppliers from the left sidebar. Suppliers are listed with their country, active PO count, and on-time percentage." },
-      { text: "Click any row to open the supplier detail panel. All contact fields are editable inline — click to edit, click away to save." },
-      { text: "Keep email and WhatsApp number up to date — these are used to pre-fill the recipient field when composing outbound messages from the Inbox." },
-      { text: "The detail panel lists recent and active shipments. Click a PO number to jump to it in My Orders." },
-      { text: 'To add a supplier, click "New Supplier" and fill in name, country, contact name, and email.' },
-      { text: "When creating a new PO, you can create a supplier on the fly by typing their name in the Supplier field — no need to visit this page first." },
-    ],
-    screenshot: "suppliers.png",
-    keywords: ["supplier", "contact", "email", "whatsapp", "factory", "on-time", "performance", "directory"],
   },
   {
     id: "intermediary-financing",
