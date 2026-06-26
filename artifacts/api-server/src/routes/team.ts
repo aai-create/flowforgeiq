@@ -204,6 +204,36 @@ router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
     return;
   }
 
+  // If the caller supplies an email that already belongs to a team member, this is
+  // a Clerk dev→prod environment switch (same Gmail, different Clerk user ID).
+  // Re-bind the existing row to the new Clerk user ID so the user can sign in.
+  if (email) {
+    const [byEmail] = await db
+      .select()
+      .from(teamUsersTable)
+      .where(eq(teamUsersTable.email, email));
+
+    if (byEmail) {
+      const updates: Record<string, unknown> = {
+        clerkUserId: req.userId!,
+      };
+      if (!byEmail.inboundToken) updates.inboundToken = generateInboundToken();
+      if (!byEmail.inboundHandle) updates.inboundHandle = await generateUniqueHandle(byEmail.name);
+
+      await db
+        .update(teamUsersTable)
+        .set(updates)
+        .where(eq(teamUsersTable.clerkUserId, byEmail.clerkUserId));
+
+      const [updated] = await db
+        .select()
+        .from(teamUsersTable)
+        .where(eq(teamUsersTable.clerkUserId, req.userId!));
+      res.json({ user: updated });
+      return;
+    }
+  }
+
   // Only allow self-provisioning when the organization has no members yet
   // (first-user bootstrap). All subsequent accounts must join via an invitation.
   const allMembers = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, 1));
