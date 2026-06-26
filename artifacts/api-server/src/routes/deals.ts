@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, dealsTable, shipmentsTable, paymentsTable, suppliersTable, dealShipmentsTable } from "@workspace/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { db, dealsTable, dealAdjustmentsTable, shipmentsTable, paymentsTable, suppliersTable, dealShipmentsTable } from "@workspace/db";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   CreateDealBody,
   UpdateDealBody,
@@ -37,14 +37,24 @@ async function buildDealWithSpread(dealId: number, orgId: number) {
       eq(shipmentsTable.orgId, orgId),
     ));
 
+  const adjustments = await db.select().from(dealAdjustmentsTable)
+    .where(and(eq(dealAdjustmentsTable.dealId, dealId), eq(dealAdjustmentsTable.orgId, orgId)))
+    .orderBy(asc(dealAdjustmentsTable.sortOrder), asc(dealAdjustmentsTable.id));
+  const adjustmentsUsd = adjustments.reduce((sum, a) =>
+    sum + (a.type === "percent" ? (a.value / 100) * deal.buyerTotalUsd : a.value), 0);
+
   if (!shipments.length) {
+    const spreadUsd0 = deal.buyerTotalUsd - adjustmentsUsd;
     return GetDealResponse.parse({
       ...deal,
       notes: deal.notes ?? null,
+      targetSpreadPct: deal.targetSpreadPct ?? null,
       supplierCostUsd: 0,
       supplierPaidUsd: 0,
-      spreadUsd: deal.buyerTotalUsd,
-      spreadPct: 100,
+      adjustmentsUsd,
+      adjustments,
+      spreadUsd: spreadUsd0,
+      spreadPct: deal.buyerTotalUsd > 0 ? (spreadUsd0 / deal.buyerTotalUsd) * 100 : 0,
       legs: [],
       createdAt: deal.createdAt.toISOString(),
     });
@@ -95,14 +105,17 @@ async function buildDealWithSpread(dealId: number, orgId: number) {
 
   const supplierCostUsd = legs.reduce((sum, l) => sum + l.supplierCost, 0);
   const supplierPaidUsd = legs.reduce((sum, l) => sum + l.supplierPaid, 0);
-  const spreadUsd = deal.buyerTotalUsd - supplierCostUsd;
+  const spreadUsd = deal.buyerTotalUsd - supplierCostUsd - adjustmentsUsd;
   const spreadPct = deal.buyerTotalUsd > 0 ? (spreadUsd / deal.buyerTotalUsd) * 100 : 0;
 
   return GetDealResponse.parse({
     ...deal,
     notes: deal.notes ?? null,
+    targetSpreadPct: deal.targetSpreadPct ?? null,
     supplierCostUsd,
     supplierPaidUsd,
+    adjustmentsUsd,
+    adjustments,
     spreadUsd,
     spreadPct,
     legs,

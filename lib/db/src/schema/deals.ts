@@ -12,6 +12,7 @@ export const dealsTable = pgTable("deals", {
   buyerQuantity: integer("buyer_quantity").notNull(),
   currency: text("currency").notNull().default("USD"),
   notes: text("notes"),
+  targetSpreadPct: doublePrecision("target_spread_pct"),
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

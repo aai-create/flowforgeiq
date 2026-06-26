@@ -424,6 +424,79 @@ paths:
         "404":
           description: Shipment not found
 
+  /shipments/{id}/deal/adjustments:
+    post:
+      operationId: createDealAdjustment
+      tags: [deals]
+      summary: Add a hidden-cost adjustment line to the shipment's linked deal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DealAdjustmentInput" }
+      responses:
+        "201":
+          description: Updated shipment with recalculated spread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "404":
+          description: Shipment or linked deal not found
+
+  /shipments/{id}/deal/adjustments/{adjustmentId}:
+    patch:
+      operationId: updateDealAdjustment
+      tags: [deals]
+      summary: Update a hidden-cost adjustment line on the shipment's linked deal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: adjustmentId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DealAdjustmentUpdate" }
+      responses:
+        "200":
+          description: Updated shipment with recalculated spread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "404":
+          description: Shipment, deal, or adjustment not found
+    delete:
+      operationId: deleteDealAdjustment
+      tags: [deals]
+      summary: Remove a hidden-cost adjustment line from the shipment's linked deal
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: adjustmentId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Updated shipment with recalculated spread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "404":
+          description: Shipment, deal, or adjustment not found
+
   /shipments/{id}/deals:
     post:
       operationId: linkDealToShipment
@@ -1854,20 +1927,46 @@ components:
     PatchShipmentDealBody:
       type: object
       properties:
-        buyerUnitPrice: { type: number, description: "Buyer-facing unit price (USD)" }
-        buyerQuantity:  { type: integer, description: "Total buyer quantity" }
+        buyerUnitPrice:  { type: number, description: "Buyer-facing unit price (USD)" }
+        buyerQuantity:   { type: integer, description: "Total buyer quantity" }
+        targetSpreadPct: { type: ["number", "null"], description: "Target spread % for the linked deal. Null clears the target." }
 
     DealInput:
       type: object
       required: [buyerPoNumber, customerName, buyerTotalUsd, buyerUnitPrice, buyerQuantity]
       properties:
-        buyerPoNumber:  { type: string }
-        customerName:   { type: string }
-        buyerTotalUsd:  { type: number }
-        buyerUnitPrice: { type: number }
-        buyerQuantity:  { type: integer }
-        currency:       { type: string }
-        notes:          { type: string }
+        buyerPoNumber:   { type: string }
+        customerName:    { type: string }
+        buyerTotalUsd:   { type: number }
+        buyerUnitPrice:  { type: number }
+        buyerQuantity:   { type: integer }
+        currency:        { type: string }
+        notes:           { type: string }
+        targetSpreadPct: { type: ["number", "null"], description: "Target spread % for the deal. Null clears the target." }
+
+    DealAdjustment:
+      type: object
+      required: [id, dealId, label, type, value]
+      properties:
+        id:        { type: integer }
+        dealId:    { type: integer }
+        label:     { type: string }
+        type:      { type: string, enum: [flat, percent], description: "flat = USD amount; percent = percent of buyer total" }
+        value:     { type: number, description: "Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent" }
+        sortOrder: { type: integer }
+    DealAdjustmentInput:
+      type: object
+      required: [label, type, value]
+      properties:
+        label: { type: string }
+        type:  { type: string, enum: [flat, percent] }
+        value: { type: number }
+    DealAdjustmentUpdate:
+      type: object
+      properties:
+        label: { type: string }
+        type:  { type: string, enum: [flat, percent] }
+        value: { type: number }
 
     DealShipmentLeg:
       type: object
@@ -1908,6 +2007,11 @@ components:
         buyerQuantity:   { type: integer }
         currency:        { type: string }
         notes:           { type: ["string", "null"] }
+        targetSpreadPct: { type: ["number", "null"], description: "Target spread % for this deal. Null means no target set." }
+        adjustmentsUsd:  { type: number, description: "Total hidden-cost adjustments applied to the spread, in USD." }
+        adjustments:
+          type: array
+          items: { $ref: "#/components/schemas/DealAdjustment" }
         supplierCostUsd: { type: number }
         supplierPaidUsd: { type: number }
         spreadUsd:       { type: number }
@@ -1961,8 +2065,14 @@ components:
         unitCostUsd:    { type: integer, nullable: true }
         buyerUnitPrice: { type: ["number", "null"], description: "Buyer-facing unit price from the linked deal. Null if no deal is linked." }
         buyerQuantity:  { type: ["integer", "null"], description: "Buyer quantity from the linked deal. Null if no deal is linked." }
-        spreadUsd:      { type: ["number", "null"], description: "Gross spread in USD (buyer total − supplier cost). Null if no deal is linked." }
-        spreadPct:      { type: ["number", "null"], description: "Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero." }
+        spreadUsd:      { type: ["number", "null"], description: "Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked." }
+        spreadPct:      { type: ["number", "null"], description: "Net margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero." }
+        targetSpreadPct: { type: ["number", "null"], description: "Target spread % from the linked deal. Null if no deal is linked or no target set." }
+        adjustmentsUsd: { type: ["number", "null"], description: "Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked." }
+        adjustments:
+          type: array
+          items: { $ref: "#/components/schemas/DealAdjustment" }
+          description: "Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked."
         assigneeId:     { type: ["string", "null"], description: "Clerk userId of the assigned team member" }
         assigneeName:   { type: ["string", "null"], description: "Display name of the assigned team member" }
         archivedAt:     { type: ["string", "null"], format: date-time, description: "ISO timestamp when this shipment was archived. Null means active." }

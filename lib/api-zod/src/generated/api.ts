@@ -171,6 +171,16 @@ export const ListDealsResponseItem = zod.object({
   "buyerQuantity": zod.number(),
   "currency": zod.string(),
   "notes": zod.string().nullish(),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % for this deal. Null means no target set.'),
+  "adjustmentsUsd": zod.number().optional().describe('Total hidden-cost adjustments applied to the spread, in USD.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional(),
   "supplierCostUsd": zod.number(),
   "supplierPaidUsd": zod.number(),
   "spreadUsd": zod.number(),
@@ -198,7 +208,8 @@ export const CreateDealBody = zod.object({
   "buyerUnitPrice": zod.number(),
   "buyerQuantity": zod.number(),
   "currency": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % for the deal. Null clears the target.')
 })
 
 
@@ -215,6 +226,16 @@ export const GetDealResponse = zod.object({
   "buyerQuantity": zod.number(),
   "currency": zod.string(),
   "notes": zod.string().nullish(),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % for this deal. Null means no target set.'),
+  "adjustmentsUsd": zod.number().optional().describe('Total hidden-cost adjustments applied to the spread, in USD.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional(),
   "supplierCostUsd": zod.number(),
   "supplierPaidUsd": zod.number(),
   "spreadUsd": zod.number(),
@@ -245,7 +266,8 @@ export const UpdateDealBody = zod.object({
   "buyerUnitPrice": zod.number(),
   "buyerQuantity": zod.number(),
   "currency": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % for the deal. Null clears the target.')
 })
 
 export const UpdateDealResponse = zod.object({
@@ -257,6 +279,16 @@ export const UpdateDealResponse = zod.object({
   "buyerQuantity": zod.number(),
   "currency": zod.string(),
   "notes": zod.string().nullish(),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % for this deal. Null means no target set.'),
+  "adjustmentsUsd": zod.number().optional().describe('Total hidden-cost adjustments applied to the spread, in USD.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional(),
   "supplierCostUsd": zod.number(),
   "supplierPaidUsd": zod.number(),
   "spreadUsd": zod.number(),
@@ -303,8 +335,18 @@ export const ListShipmentsResponseItem = zod.object({
   "unitCostUsd": zod.number().nullish(),
   "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
   "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
-  "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
-  "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "spreadUsd": zod.number().nullish().describe('Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Net margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % from the linked deal. Null if no deal is linked or no target set.'),
+  "adjustmentsUsd": zod.number().nullish().describe('Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional().describe('Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
   "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
@@ -420,8 +462,18 @@ export const UpdateShipmentResponse = zod.object({
   "unitCostUsd": zod.number().nullish(),
   "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
   "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
-  "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
-  "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "spreadUsd": zod.number().nullish().describe('Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Net margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % from the linked deal. Null if no deal is linked or no target set.'),
+  "adjustmentsUsd": zod.number().nullish().describe('Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional().describe('Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
   "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
@@ -542,7 +594,8 @@ export const PatchShipmentDealParams = zod.object({
 
 export const PatchShipmentDealBody = zod.object({
   "buyerUnitPrice": zod.number().optional().describe('Buyer-facing unit price (USD)'),
-  "buyerQuantity": zod.number().optional().describe('Total buyer quantity')
+  "buyerQuantity": zod.number().optional().describe('Total buyer quantity'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % for the linked deal. Null clears the target.')
 })
 
 export const PatchShipmentDealResponse = zod.object({
@@ -568,8 +621,200 @@ export const PatchShipmentDealResponse = zod.object({
   "unitCostUsd": zod.number().nullish(),
   "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
   "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
-  "spreadUsd": zod.number().nullish().describe('Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.'),
-  "spreadPct": zod.number().nullish().describe('Gross margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "spreadUsd": zod.number().nullish().describe('Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Net margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % from the linked deal. Null if no deal is linked or no target set.'),
+  "adjustmentsUsd": zod.number().nullish().describe('Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional().describe('Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked.'),
+  "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "label": zod.string(),
+  "percent": zod.number(),
+  "amountUsd": zod.number(),
+  "paid": zod.boolean(),
+  "dueDate": zod.coerce.date(),
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.'),
+  "invoiceNumber": zod.string().nullish().describe('Supplier invoice number for this payment.'),
+  "intermediarySupplierPaidUsd": zod.number().nullish().describe('USD amount the Intermediary has actually wired to the Supplier.'),
+  "intermediarySupplierPaidAt": zod.coerce.date().nullish().describe('Date the Intermediary wired funds to the Supplier.')
+})),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "factory": zod.string(),
+  "country": zod.string(),
+  "unitPrice": zod.number(),
+  "leadDays": zod.number(),
+  "moq": zod.number(),
+  "selected": zod.boolean(),
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Add a hidden-cost adjustment line to the shipment's linked deal
+ */
+export const CreateDealAdjustmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateDealAdjustmentBody = zod.object({
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']),
+  "value": zod.number()
+})
+
+
+/**
+ * @summary Update a hidden-cost adjustment line on the shipment's linked deal
+ */
+export const UpdateDealAdjustmentParams = zod.object({
+  "id": zod.coerce.number(),
+  "adjustmentId": zod.coerce.number()
+})
+
+export const UpdateDealAdjustmentBody = zod.object({
+  "label": zod.string().optional(),
+  "type": zod.enum(['flat', 'percent']).optional(),
+  "value": zod.number().optional()
+})
+
+export const UpdateDealAdjustmentResponse = zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().nullish().describe('Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumbers": zod.array(zod.string()).optional().describe('All buyer-facing PO numbers linked to this shipment via the deal_shipments join table.'),
+  "product": zod.string(),
+  "category": zod.string(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string(),
+  "customerName": zod.string(),
+  "buyerId": zod.number().nullish().describe('FK to the buyers table. Null if no buyer record is linked.'),
+  "dealId": zod.number().nullish(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string(),
+  "via": zod.string(),
+  "notes": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "unitCostUsd": zod.number().nullish(),
+  "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
+  "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
+  "spreadUsd": zod.number().nullish().describe('Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Net margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % from the linked deal. Null if no deal is linked or no target set.'),
+  "adjustmentsUsd": zod.number().nullish().describe('Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional().describe('Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked.'),
+  "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "label": zod.string(),
+  "percent": zod.number(),
+  "amountUsd": zod.number(),
+  "paid": zod.boolean(),
+  "dueDate": zod.coerce.date(),
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.'),
+  "invoiceNumber": zod.string().nullish().describe('Supplier invoice number for this payment.'),
+  "intermediarySupplierPaidUsd": zod.number().nullish().describe('USD amount the Intermediary has actually wired to the Supplier.'),
+  "intermediarySupplierPaidAt": zod.coerce.date().nullish().describe('Date the Intermediary wired funds to the Supplier.')
+})),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "factory": zod.string(),
+  "country": zod.string(),
+  "unitPrice": zod.number(),
+  "leadDays": zod.number(),
+  "moq": zod.number(),
+  "selected": zod.boolean(),
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Remove a hidden-cost adjustment line from the shipment's linked deal
+ */
+export const DeleteDealAdjustmentParams = zod.object({
+  "id": zod.coerce.number(),
+  "adjustmentId": zod.coerce.number()
+})
+
+export const DeleteDealAdjustmentResponse = zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().nullish().describe('Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumbers": zod.array(zod.string()).optional().describe('All buyer-facing PO numbers linked to this shipment via the deal_shipments join table.'),
+  "product": zod.string(),
+  "category": zod.string(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string(),
+  "customerName": zod.string(),
+  "buyerId": zod.number().nullish().describe('FK to the buyers table. Null if no buyer record is linked.'),
+  "dealId": zod.number().nullish(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string(),
+  "via": zod.string(),
+  "notes": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "unitCostUsd": zod.number().nullish(),
+  "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
+  "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
+  "spreadUsd": zod.number().nullish().describe('Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Net margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % from the linked deal. Null if no deal is linked or no target set.'),
+  "adjustmentsUsd": zod.number().nullish().describe('Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional().describe('Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked.'),
   "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
   "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),

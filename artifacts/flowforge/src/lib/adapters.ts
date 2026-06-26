@@ -29,6 +29,7 @@ export function relativeAge(iso: string | Date): string {
 
 export interface UiPayment { label: string; percent: number; amountUsd: number; paid: boolean; dueDate: string; rawPaymentDueDate: string; paymentId: number; paidAt: string | null; paidMethod: string | null; intermediaryAdvanceUsd: number | null; intermediaryRecoveredUsd: number | null; invoiceNumber: string | null; intermediarySupplierPaidUsd: number | null; intermediarySupplierPaidAt: string | null; }
 export interface UiFactoryQuote { factory: string; country: string; unitPrice: number; leadDays: number; moq: number; selected: boolean; quoteId: number; validityDate?: string | null; notes?: string | null; }
+export interface UiDealAdjustment { id: number; label: string; type: "flat" | "percent"; value: number; }
 export type UiShipmentStatus = "on-track" | "at-risk" | "delayed";
 
 export interface UiShipment {
@@ -60,6 +61,9 @@ export interface UiShipment {
   buyerQuantity: number | null;
   spreadUsd: number | null;
   spreadPct: number | null;
+  targetSpreadPct: number | null;
+  adjustmentsUsd: number | null;
+  adjustments: UiDealAdjustment[];
   assigneeId: string | null;
   assigneeName: string | null;
   archivedAt: string | null;
@@ -102,6 +106,18 @@ export interface UiTask {
 }
 
 export interface UiStage { id: string; label: string; }
+
+// Spread badge color: target-driven when a target spread % is set, else 25/10 fallback.
+export function spreadBadgeClass(pct: number, target: number | null | undefined): string {
+  if (target !== null && target !== undefined) {
+    if (pct >= target) return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (pct >= target - 5) return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-red-50 text-red-700 border-red-200";
+  }
+  if (pct >= 25) return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (pct >= 10) return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-red-50 text-red-700 border-red-200";
+}
 
 export function adaptStages(rows: ApiStage[]): UiStage[] {
   return [...rows].sort((a, b) => a.sortOrder - b.sortOrder).map(s => ({ id: s.id, label: s.label }));
@@ -147,6 +163,11 @@ export function adaptShipments(rows: ApiShipment[], stages: UiStage[]): UiShipme
     buyerQuantity: s.buyerQuantity ?? null,
     spreadUsd: s.spreadUsd ?? null,
     spreadPct: s.spreadPct ?? null,
+    targetSpreadPct: s.targetSpreadPct ?? null,
+    adjustmentsUsd: s.adjustmentsUsd ?? null,
+    adjustments: (s.adjustments ?? []).map(a => ({
+      id: a.id, label: a.label, type: a.type, value: a.value,
+    })),
     archivedAt: s.archivedAt ?? null,
   }));
 }

@@ -98,7 +98,7 @@ async function main() {
   await db.execute(sql`
     TRUNCATE TABLE
       tasks, messages, factory_quotes, payments, deal_shipments, shipments,
-      deals, suppliers, buyers, stages, rfqs, rfq_quotes, copilot_proposals,
+      deal_adjustments, deals, suppliers, buyers, stages, rfqs, rfq_quotes, copilot_proposals,
       autonomy_policies, shipment_predictions, stage_events, buyer_emails,
       gmail_credentials, po_numbering_config, extraction_corrections, extractions,
       documents, team_invitations, team_users, organizations

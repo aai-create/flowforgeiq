@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DealAdjustment } from './dealAdjustment';
 import type { FactoryQuote } from './factoryQuote';
 import type { Payment } from './payment';
 
@@ -52,15 +53,27 @@ export interface Shipment {
      */
   buyerQuantity?: number | null;
   /**
-     * Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.
+     * Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.
      * @nullable
      */
   spreadUsd?: number | null;
   /**
-     * Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.
+     * Net margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.
      * @nullable
      */
   spreadPct?: number | null;
+  /**
+     * Target spread % from the linked deal. Null if no deal is linked or no target set.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
+  /**
+     * Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.
+     * @nullable
+     */
+  adjustmentsUsd?: number | null;
+  /** Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked. */
+  adjustments?: DealAdjustment[];
   /**
      * Clerk userId of the assigned team member
      * @nullable

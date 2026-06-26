@@ -212,6 +212,11 @@ export interface PatchShipmentDealBody {
   buyerUnitPrice?: number;
   /** Total buyer quantity */
   buyerQuantity?: number;
+  /**
+     * Target spread % for the linked deal. Null clears the target.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
 }
 
 export interface DealInput {
@@ -222,6 +227,61 @@ export interface DealInput {
   buyerQuantity: number;
   currency?: string;
   notes?: string;
+  /**
+     * Target spread % for the deal. Null clears the target.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
+}
+
+/**
+ * flat = USD amount; percent = percent of buyer total
+ */
+export type DealAdjustmentType = typeof DealAdjustmentType[keyof typeof DealAdjustmentType];
+
+
+export const DealAdjustmentType = {
+  flat: 'flat',
+  percent: 'percent',
+} as const;
+
+export interface DealAdjustment {
+  id: number;
+  dealId: number;
+  label: string;
+  /** flat = USD amount; percent = percent of buyer total */
+  type: DealAdjustmentType;
+  /** Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent */
+  value: number;
+  sortOrder?: number;
+}
+
+export type DealAdjustmentInputType = typeof DealAdjustmentInputType[keyof typeof DealAdjustmentInputType];
+
+
+export const DealAdjustmentInputType = {
+  flat: 'flat',
+  percent: 'percent',
+} as const;
+
+export interface DealAdjustmentInput {
+  label: string;
+  type: DealAdjustmentInputType;
+  value: number;
+}
+
+export type DealAdjustmentUpdateType = typeof DealAdjustmentUpdateType[keyof typeof DealAdjustmentUpdateType];
+
+
+export const DealAdjustmentUpdateType = {
+  flat: 'flat',
+  percent: 'percent',
+} as const;
+
+export interface DealAdjustmentUpdate {
+  label?: string;
+  type?: DealAdjustmentUpdateType;
+  value?: number;
 }
 
 export interface DealShipmentLeg {
@@ -246,6 +306,14 @@ export interface DealWithSpread {
   currency: string;
   /** @nullable */
   notes?: string | null;
+  /**
+     * Target spread % for this deal. Null means no target set.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
+  /** Total hidden-cost adjustments applied to the spread, in USD. */
+  adjustmentsUsd?: number;
+  adjustments?: DealAdjustment[];
   supplierCostUsd: number;
   supplierPaidUsd: number;
   spreadUsd: number;
@@ -298,15 +366,27 @@ export interface Shipment {
      */
   buyerQuantity?: number | null;
   /**
-     * Gross spread in USD (buyer total − supplier cost). Null if no deal is linked.
+     * Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.
      * @nullable
      */
   spreadUsd?: number | null;
   /**
-     * Gross margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.
+     * Net margin % (spreadUsd / buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.
      * @nullable
      */
   spreadPct?: number | null;
+  /**
+     * Target spread % from the linked deal. Null if no deal is linked or no target set.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
+  /**
+     * Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.
+     * @nullable
+     */
+  adjustmentsUsd?: number | null;
+  /** Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked. */
+  adjustments?: DealAdjustment[];
   /**
      * Clerk userId of the assigned team member
      * @nullable

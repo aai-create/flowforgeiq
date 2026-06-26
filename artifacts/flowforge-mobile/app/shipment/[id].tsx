@@ -324,7 +324,44 @@ export default function ShipmentDetailScreen() {
                   </View>
                 </>
               )}
+              {shipment.targetSpreadPct != null && (
+                <>
+                  <View style={[styles.spreadDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.spreadItem}>
+                    <Text style={[styles.spreadLabel, { color: colors.mutedForeground }]}>Target</Text>
+                    <Text style={[styles.spreadValue, { color: colors.foreground }]}>
+                      {shipment.targetSpreadPct.toFixed(1)}%
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
+            {shipment.adjustments != null && shipment.adjustments.length > 0 && (
+              <>
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <Text style={[styles.spreadLabel, { color: colors.mutedForeground, marginBottom: 6 }]}>
+                  Adjustments
+                </Text>
+                {shipment.adjustments.map((a) => (
+                  <View key={a.id} style={styles.adjustmentRow}>
+                    <Text style={[styles.adjustmentLabel, { color: colors.foreground }]} numberOfLines={1}>
+                      {a.label}
+                    </Text>
+                    <Text style={[styles.adjustmentValue, { color: colors.mutedForeground }]}>
+                      {a.type === "percent" ? `${a.value}%` : formatCurrency(a.value)}
+                    </Text>
+                  </View>
+                ))}
+                {shipment.adjustmentsUsd != null && shipment.adjustmentsUsd > 0 && (
+                  <View style={styles.adjustmentRow}>
+                    <Text style={[styles.adjustmentLabel, { color: colors.mutedForeground }]}>Total adjustments</Text>
+                    <Text style={[styles.adjustmentValue, { color: colors.destructive }]}>
+                      −{formatCurrency(shipment.adjustmentsUsd)}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
           </Animated.View>
         )}
 
@@ -424,6 +461,9 @@ const styles = StyleSheet.create({
   spreadDivider: { width: 1, marginVertical: 4 },
   spreadLabel: { fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 4, letterSpacing: 0.3 },
   spreadValue: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  adjustmentRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 4, gap: 12 },
+  adjustmentLabel: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
+  adjustmentValue: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   emptyMessages: { alignItems: "center", gap: 8, paddingVertical: 20 },
   emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
   notes: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20, paddingTop: 10 },

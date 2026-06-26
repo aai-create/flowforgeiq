@@ -14,4 +14,9 @@ export interface DealInput {
   buyerQuantity: number;
   currency?: string;
   notes?: string;
+  /**
+     * Target spread % for the deal. Null clears the target.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
 }

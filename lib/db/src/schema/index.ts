@@ -2,6 +2,7 @@ export * from "./organizations";
 export * from "./stages";
 export * from "./suppliers";
 export * from "./deals";
+export * from "./deal_adjustments";
 export * from "./shipments";
 export * from "./payments";
 export * from "./factory_quotes";

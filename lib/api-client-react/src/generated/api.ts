@@ -34,6 +34,8 @@ import type {
   CopilotProposalUpdate,
   CopilotSummary,
   CopilotTriggerResult,
+  DealAdjustmentInput,
+  DealAdjustmentUpdate,
   DealInput,
   DealWithSpread,
   DisconnectGmail200,
@@ -1726,6 +1728,224 @@ export const usePatchShipmentDeal = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPatchShipmentDealMutationOptions(options));
+    }
+
+export const getCreateDealAdjustmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deal/adjustments`
+}
+
+/**
+ * @summary Add a hidden-cost adjustment line to the shipment's linked deal
+ */
+export const createDealAdjustment = async (id: number,
+    dealAdjustmentInput: DealAdjustmentInput, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getCreateDealAdjustmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      dealAdjustmentInput,)
+  }
+);}
+
+
+
+
+export const getCreateDealAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDealAdjustment>>, TError,{id: number;data: BodyType<DealAdjustmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDealAdjustment>>, TError,{id: number;data: BodyType<DealAdjustmentInput>}, TContext> => {
+
+const mutationKey = ['createDealAdjustment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDealAdjustment>>, {id: number;data: BodyType<DealAdjustmentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createDealAdjustment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDealAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof createDealAdjustment>>>
+    export type CreateDealAdjustmentMutationBody = BodyType<DealAdjustmentInput>
+    export type CreateDealAdjustmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a hidden-cost adjustment line to the shipment's linked deal
+ */
+export const useCreateDealAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDealAdjustment>>, TError,{id: number;data: BodyType<DealAdjustmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDealAdjustment>>,
+        TError,
+        {id: number;data: BodyType<DealAdjustmentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDealAdjustmentMutationOptions(options));
+    }
+
+export const getUpdateDealAdjustmentUrl = (id: number,
+    adjustmentId: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deal/adjustments/${adjustmentId}`
+}
+
+/**
+ * @summary Update a hidden-cost adjustment line on the shipment's linked deal
+ */
+export const updateDealAdjustment = async (id: number,
+    adjustmentId: number,
+    dealAdjustmentUpdate: DealAdjustmentUpdate, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getUpdateDealAdjustmentUrl(id,adjustmentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      dealAdjustmentUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateDealAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDealAdjustment>>, TError,{id: number;adjustmentId: number;data: BodyType<DealAdjustmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDealAdjustment>>, TError,{id: number;adjustmentId: number;data: BodyType<DealAdjustmentUpdate>}, TContext> => {
+
+const mutationKey = ['updateDealAdjustment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDealAdjustment>>, {id: number;adjustmentId: number;data: BodyType<DealAdjustmentUpdate>}> = (props) => {
+          const {id,adjustmentId,data} = props ?? {};
+
+          return  updateDealAdjustment(id,adjustmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDealAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDealAdjustment>>>
+    export type UpdateDealAdjustmentMutationBody = BodyType<DealAdjustmentUpdate>
+    export type UpdateDealAdjustmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a hidden-cost adjustment line on the shipment's linked deal
+ */
+export const useUpdateDealAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDealAdjustment>>, TError,{id: number;adjustmentId: number;data: BodyType<DealAdjustmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDealAdjustment>>,
+        TError,
+        {id: number;adjustmentId: number;data: BodyType<DealAdjustmentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDealAdjustmentMutationOptions(options));
+    }
+
+export const getDeleteDealAdjustmentUrl = (id: number,
+    adjustmentId: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deal/adjustments/${adjustmentId}`
+}
+
+/**
+ * @summary Remove a hidden-cost adjustment line from the shipment's linked deal
+ */
+export const deleteDealAdjustment = async (id: number,
+    adjustmentId: number, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getDeleteDealAdjustmentUrl(id,adjustmentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDealAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDealAdjustment>>, TError,{id: number;adjustmentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDealAdjustment>>, TError,{id: number;adjustmentId: number}, TContext> => {
+
+const mutationKey = ['deleteDealAdjustment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDealAdjustment>>, {id: number;adjustmentId: number}> = (props) => {
+          const {id,adjustmentId} = props ?? {};
+
+          return  deleteDealAdjustment(id,adjustmentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDealAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDealAdjustment>>>
+
+    export type DeleteDealAdjustmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove a hidden-cost adjustment line from the shipment's linked deal
+ */
+export const useDeleteDealAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDealAdjustment>>, TError,{id: number;adjustmentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDealAdjustment>>,
+        TError,
+        {id: number;adjustmentId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDealAdjustmentMutationOptions(options));
     }
 
 export const getLinkDealToShipmentUrl = (id: number,) => {

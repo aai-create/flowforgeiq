@@ -8,7 +8,7 @@ import { QuotesTab } from "@/components/QuotesTab";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { Message, DocumentWithExtraction, FactoryQuote, SupplierSummary, DealWithSpread } from "@workspace/api-client-react";
 import type { UiShipment, UiStage } from "@/lib/adapters";
-import { shortDate } from "@/lib/adapters";
+import { shortDate, spreadBadgeClass } from "@/lib/adapters";
 import { getDisplayLocale } from "@/lib/locale";
 import {
   X, MessageCircle, FileText, DollarSign, Clock, MapPin,
@@ -51,8 +51,13 @@ interface ShipmentDrawerProps {
   setBuyerPriceFormId: React.Dispatch<React.SetStateAction<string | null>>;
   buyerPriceDraft: { unitPrice: string; quantity: string };
   setBuyerPriceDraft: React.Dispatch<React.SetStateAction<{ unitPrice: string; quantity: string }>>;
-  patchDealForShipment: (args: { id: number; data: { buyerUnitPrice: number; buyerQuantity: number } }) => void;
+  patchDealForShipment: (args: { id: number; data: { buyerUnitPrice?: number; buyerQuantity?: number; targetSpreadPct?: number | null } }) => void;
   patchDealPending: boolean;
+
+  createAdjustment: (args: { id: number; data: { label: string; type: "flat" | "percent"; value: number } }) => void;
+  updateAdjustment: (args: { id: number; adjustmentId: number; data: { label?: string; type?: "flat" | "percent"; value?: number } }) => void;
+  deleteAdjustment: (args: { id: number; adjustmentId: number }) => void;
+  adjustmentPending: boolean;
 
   linkPanelShipmentId: number | null;
   setLinkPanelShipmentId: React.Dispatch<React.SetStateAction<number | null>>;
@@ -101,6 +106,10 @@ export function ShipmentDrawer({
   setBuyerPriceDraft,
   patchDealForShipment,
   patchDealPending,
+  createAdjustment,
+  updateAdjustment,
+  deleteAdjustment,
+  adjustmentPending,
   linkPanelShipmentId,
   setLinkPanelShipmentId,
   linkDeal,
@@ -112,6 +121,11 @@ export function ShipmentDrawer({
   onClose,
 }: ShipmentDrawerProps) {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [targetEditing, setTargetEditing] = useState(false);
+  const [targetDraft, setTargetDraft] = useState("");
+  const [adjDraft, setAdjDraft] = useState<{ label: string; type: "flat" | "percent"; value: string }>({ label: "", type: "flat", value: "" });
+  const [editingAdjId, setEditingAdjId] = useState<number | null>(null);
+  const [editAdjDraft, setEditAdjDraft] = useState<{ label: string; type: "flat" | "percent"; value: string }>({ label: "", type: "flat", value: "" });
 
   const isOpen = shipment !== null;
 
@@ -300,12 +314,9 @@ export function ShipmentDrawer({
                     <span
                       className={cn(
                         "flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded border",
-                        shipment.spreadPct >= 25
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : shipment.spreadPct >= 10
-                          ? "bg-amber-50 text-amber-700 border-amber-200"
-                          : "bg-red-50 text-red-700 border-red-200"
+                        spreadBadgeClass(shipment.spreadPct, shipment.targetSpreadPct)
                       )}
+                      title={shipment.targetSpreadPct !== null ? `Target ${shipment.targetSpreadPct}%` : undefined}
                     >
                       <DollarSign className="w-2.5 h-2.5" />
                       {shipment.spreadPct.toFixed(1)}%
@@ -873,6 +884,226 @@ export function ShipmentDrawer({
                                 );
                               })()}
                           </>
+                        )}
+                      </div>
+
+                      {/* Deal economics: target spread % + hidden-cost adjustments */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider flex items-center gap-1">
+                            <DollarSign className="w-2.5 h-2.5" />
+                            Deal Economics
+                          </span>
+                        </div>
+
+                        {/* Target spread % */}
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] text-[#5E687B]">Target spread</span>
+                          {targetEditing ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={targetDraft}
+                                onChange={(e) => setTargetDraft(e.target.value)}
+                                placeholder="%"
+                                className="w-16 px-1.5 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 text-[#212833]"
+                              />
+                              <button
+                                type="button"
+                                disabled={patchDealPending}
+                                onClick={() => {
+                                  const trimmed = targetDraft.trim();
+                                  const val = trimmed === "" ? null : Number(trimmed);
+                                  if (val !== null && (!Number.isFinite(val) || val < 0)) return;
+                                  patchDealForShipment({ id: shipment.shipmentId, data: { targetSpreadPct: val } });
+                                  setTargetEditing(false);
+                                }}
+                                className="text-[9px] bg-[#9000FF] text-white px-1.5 py-0.5 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50"
+                              >
+                                {patchDealPending ? "…" : "Save"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTargetEditing(false)}
+                                className="text-[9px] font-semibold text-[#9000FF] hover:underline"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold text-[#212833]">
+                                {shipment.targetSpreadPct !== null ? `${shipment.targetSpreadPct}%` : "Not set"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTargetDraft(shipment.targetSpreadPct !== null ? String(shipment.targetSpreadPct) : "");
+                                  setTargetEditing(true);
+                                }}
+                                className="text-[9px] font-semibold text-[#9000FF] hover:underline"
+                              >
+                                {shipment.targetSpreadPct !== null ? "Edit" : "Set"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actual vs target readout */}
+                        {shipment.spreadPct !== null && shipment.targetSpreadPct !== null && (
+                          <div className="text-[9px] text-[#5E687B] mb-1.5">
+                            Actual{" "}
+                            <span
+                              className={cn(
+                                "font-semibold",
+                                shipment.spreadPct >= shipment.targetSpreadPct
+                                  ? "text-emerald-700"
+                                  : shipment.spreadPct >= shipment.targetSpreadPct - 5
+                                  ? "text-amber-700"
+                                  : "text-red-700"
+                              )}
+                            >
+                              {shipment.spreadPct.toFixed(1)}%
+                            </span>{" "}
+                            vs target {shipment.targetSpreadPct}% (
+                            {shipment.spreadPct >= shipment.targetSpreadPct ? "+" : ""}
+                            {(shipment.spreadPct - shipment.targetSpreadPct).toFixed(1)} pts)
+                          </div>
+                        )}
+
+                        {/* Adjustment lines */}
+                        <div className="space-y-1">
+                          {shipment.adjustments.map((a) =>
+                            editingAdjId === a.id ? (
+                              <div key={a.id} className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={editAdjDraft.label}
+                                  onChange={(e) => setEditAdjDraft((d) => ({ ...d, label: e.target.value }))}
+                                  placeholder="Label"
+                                  className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 text-[#212833]"
+                                />
+                                <select
+                                  value={editAdjDraft.type}
+                                  onChange={(e) => setEditAdjDraft((d) => ({ ...d, type: e.target.value as "flat" | "percent" }))}
+                                  className="px-1 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none text-[#212833]"
+                                >
+                                  <option value="flat">$</option>
+                                  <option value="percent">%</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={editAdjDraft.value}
+                                  onChange={(e) => setEditAdjDraft((d) => ({ ...d, value: e.target.value }))}
+                                  className="w-14 px-1.5 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 text-[#212833]"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={adjustmentPending}
+                                  onClick={() => {
+                                    const val = Number(editAdjDraft.value);
+                                    if (!editAdjDraft.label.trim() || !Number.isFinite(val) || val < 0) return;
+                                    updateAdjustment({ id: shipment.shipmentId, adjustmentId: a.id, data: { label: editAdjDraft.label.trim(), type: editAdjDraft.type, value: val } });
+                                    setEditingAdjId(null);
+                                  }}
+                                  className="text-[9px] bg-[#9000FF] text-white px-1.5 py-0.5 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0"
+                                >
+                                  {adjustmentPending ? "…" : "Save"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAdjId(null)}
+                                  className="text-[9px] font-semibold text-[#9000FF] hover:underline shrink-0"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div key={a.id} className="flex items-center justify-between gap-2 text-[10px]">
+                                <span className="text-[#5E687B] truncate">{a.label}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="font-semibold text-[#212833]">
+                                    {a.type === "percent" ? `${a.value}%` : `$${a.value.toLocaleString()}`}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingAdjId(a.id);
+                                      setEditAdjDraft({ label: a.label, type: a.type, value: String(a.value) });
+                                    }}
+                                    className="text-[9px] font-semibold text-[#9000FF] hover:underline"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={adjustmentPending}
+                                    onClick={() => deleteAdjustment({ id: shipment.shipmentId, adjustmentId: a.id })}
+                                    className="text-[9px] font-semibold text-red-600 hover:underline disabled:opacity-50"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+
+                        {shipment.adjustmentsUsd !== null && shipment.adjustmentsUsd > 0 && (
+                          <div className="text-[9px] text-[#5E687B] mt-1">
+                            Total adjustments: −${Math.round(shipment.adjustmentsUsd).toLocaleString()}
+                          </div>
+                        )}
+
+                        {/* Add adjustment */}
+                        {shipment.spreadPct === null ? (
+                          <div className="text-[9px] text-[#C0C8D4] italic mt-1.5">
+                            Set a buyer price to add adjustments
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 mt-1.5">
+                            <input
+                              type="text"
+                              value={adjDraft.label}
+                              onChange={(e) => setAdjDraft((d) => ({ ...d, label: e.target.value }))}
+                              placeholder="Add adjustment (e.g. Freight)"
+                              className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 text-[#212833]"
+                            />
+                            <select
+                              value={adjDraft.type}
+                              onChange={(e) => setAdjDraft((d) => ({ ...d, type: e.target.value as "flat" | "percent" }))}
+                              className="px-1 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none text-[#212833]"
+                            >
+                              <option value="flat">$</option>
+                              <option value="percent">%</option>
+                            </select>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={adjDraft.value}
+                              onChange={(e) => setAdjDraft((d) => ({ ...d, value: e.target.value }))}
+                              placeholder="0"
+                              className="w-14 px-1.5 py-0.5 text-[10px] border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40 text-[#212833]"
+                            />
+                            <button
+                              type="button"
+                              disabled={adjustmentPending || !adjDraft.label.trim() || !adjDraft.value}
+                              onClick={() => {
+                                const val = Number(adjDraft.value);
+                                if (!adjDraft.label.trim() || !Number.isFinite(val) || val < 0) return;
+                                createAdjustment({ id: shipment.shipmentId, data: { label: adjDraft.label.trim(), type: adjDraft.type, value: val } });
+                                setAdjDraft({ label: "", type: "flat", value: "" });
+                              }}
+                              className="text-[9px] bg-[#9000FF] text-white px-1.5 py-0.5 rounded-md font-semibold hover:bg-[#7A00D9] disabled:opacity-50 shrink-0"
+                            >
+                              {adjustmentPending ? "…" : "Add"}
+                            </button>
+                          </div>
                         )}
                       </div>
 

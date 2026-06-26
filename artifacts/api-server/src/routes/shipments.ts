@@ -7,6 +7,7 @@ import {
   factoryQuotesTable,
   stageEventsTable,
   dealsTable,
+  dealAdjustmentsTable,
   poNumberingConfigTable,
   dealShipmentsTable,
   teamUsersTable,
@@ -30,11 +31,25 @@ import {
   CreateShipmentStageEventBody,
   CreateFactoryQuoteBody,
   ListShipmentQuotesResponseItem,
+  CreateDealAdjustmentBody,
+  UpdateDealAdjustmentBody,
 } from "@workspace/api-zod";
 import { insertFactoryQuoteSchema } from "@workspace/db";
 import { resolveOrgId } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+
+// Sum hidden-cost adjustment lines into USD: flat lines are dollar amounts;
+// percent lines are a percentage of the buyer total.
+function computeAdjustmentsUsd(
+  adjustments: { type: string; value: number }[],
+  buyerTotalUsd: number,
+): number {
+  return adjustments.reduce(
+    (sum, a) => sum + (a.type === "percent" ? (a.value / 100) * buyerTotalUsd : a.value),
+    0,
+  );
+}
 
 async function loadShipment(id: number, orgId?: number) {
   const conditions = [eq(shipmentsTable.id, id)];
@@ -47,6 +62,7 @@ async function loadShipment(id: number, orgId?: number) {
       buyerTotalUsd: dealsTable.buyerTotalUsd,
       buyerUnitPrice: dealsTable.buyerUnitPrice,
       buyerQuantity: dealsTable.buyerQuantity,
+      targetSpreadPct: dealsTable.targetSpreadPct,
       assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
@@ -78,15 +94,25 @@ async function loadShipment(id: number, orgId?: number) {
   const quotes = await db.select().from(factoryQuotesTable).where(quoteCond).orderBy(asc(factoryQuotesTable.sortOrder));
 
   const buyerTotalUsd = row.buyerTotalUsd ?? null;
+  const dealId = row.shipment.dealId ?? null;
+  const adjustments = dealId !== null
+    ? await db.select().from(dealAdjustmentsTable).where(
+        orgId !== undefined
+          ? and(eq(dealAdjustmentsTable.dealId, dealId), eq(dealAdjustmentsTable.orgId, orgId))
+          : eq(dealAdjustmentsTable.dealId, dealId),
+      ).orderBy(asc(dealAdjustmentsTable.sortOrder), asc(dealAdjustmentsTable.id))
+    : [];
   let spreadUsd: number | null = null;
   let spreadPct: number | null = null;
+  let adjustmentsUsd: number | null = null;
   if (buyerTotalUsd !== null) {
     const supplierCostUsd = payments.reduce((sum, p) => sum + p.amountUsd, 0);
-    spreadUsd = buyerTotalUsd - supplierCostUsd;
+    adjustmentsUsd = computeAdjustmentsUsd(adjustments, buyerTotalUsd);
+    spreadUsd = buyerTotalUsd - supplierCostUsd - adjustmentsUsd;
     spreadPct = buyerTotalUsd > 0 ? (spreadUsd / buyerTotalUsd) * 100 : null;
   }
 
-  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerUnitPrice: row.buyerUnitPrice ?? null, buyerQuantity: row.buyerQuantity ?? null, assigneeName: row.assigneeName ?? null, buyerPoNumbers, payments, quotes, spreadUsd, spreadPct };
+  return { ...row.shipment, supplierName: row.supplierName, buyerPoNumber: row.buyerPoNumber ?? null, buyerUnitPrice: row.buyerUnitPrice ?? null, buyerQuantity: row.buyerQuantity ?? null, targetSpreadPct: row.targetSpreadPct ?? null, assigneeName: row.assigneeName ?? null, buyerPoNumbers, payments, quotes, adjustments, adjustmentsUsd, spreadUsd, spreadPct };
 }
 
 router.get("/shipments", async (req, res) => {
@@ -103,6 +129,7 @@ router.get("/shipments", async (req, res) => {
       buyerTotalUsd: dealsTable.buyerTotalUsd,
       buyerUnitPrice: dealsTable.buyerUnitPrice,
       buyerQuantity: dealsTable.buyerQuantity,
+      targetSpreadPct: dealsTable.targetSpreadPct,
       assigneeName: teamUsersTable.name,
     })
     .from(shipmentsTable)
@@ -111,7 +138,7 @@ router.get("/shipments", async (req, res) => {
     .leftJoin(teamUsersTable, eq(shipmentsTable.assigneeId, teamUsersTable.clerkUserId))
     .where(and(...whereConditions))
     .orderBy(asc(shipmentsTable.id));
-  const [allPayments, allQuotes, allDealShipments] = await Promise.all([
+  const [allPayments, allQuotes, allDealShipments, allAdjustments] = await Promise.all([
     shipments.length
       ? db.select().from(paymentsTable).where(eq(paymentsTable.orgId, orgId)).orderBy(asc(paymentsTable.sortOrder))
       : Promise.resolve([] as (typeof paymentsTable.$inferSelect)[]),
@@ -125,19 +152,31 @@ router.get("/shipments", async (req, res) => {
           .innerJoin(dealsTable, eq(dealShipmentsTable.dealId, dealsTable.id))
           .where(eq(dealShipmentsTable.orgId, orgId))
       : Promise.resolve([] as { shipmentId: number; buyerPoNumber: string }[]),
+    shipments.length
+      ? db.select().from(dealAdjustmentsTable).where(eq(dealAdjustmentsTable.orgId, orgId)).orderBy(asc(dealAdjustmentsTable.sortOrder), asc(dealAdjustmentsTable.id))
+      : Promise.resolve([] as (typeof dealAdjustmentsTable.$inferSelect)[]),
   ]);
   const buyerPoByShipment: Record<number, string[]> = {};
   for (const { shipmentId, buyerPoNumber } of allDealShipments) {
     if (!buyerPoByShipment[shipmentId]) buyerPoByShipment[shipmentId] = [];
     buyerPoByShipment[shipmentId].push(buyerPoNumber);
   }
-  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd, buyerUnitPrice, buyerQuantity, assigneeName }) => {
+  const adjustmentsByDeal = new Map<number, (typeof dealAdjustmentsTable.$inferSelect)[]>();
+  for (const a of allAdjustments) {
+    const arr = adjustmentsByDeal.get(a.dealId) ?? [];
+    arr.push(a);
+    adjustmentsByDeal.set(a.dealId, arr);
+  }
+  const out = shipments.map(({ shipment, supplierName, buyerPoNumber, buyerTotalUsd, buyerUnitPrice, buyerQuantity, targetSpreadPct, assigneeName }) => {
     const payments = allPayments.filter(p => p.shipmentId === shipment.id);
+    const adjustments = shipment.dealId !== null ? (adjustmentsByDeal.get(shipment.dealId) ?? []) : [];
     let spreadUsd: number | null = null;
     let spreadPct: number | null = null;
+    let adjustmentsUsd: number | null = null;
     if (buyerTotalUsd !== null && buyerTotalUsd !== undefined) {
       const supplierCostUsd = payments.reduce((sum, p) => sum + p.amountUsd, 0);
-      spreadUsd = buyerTotalUsd - supplierCostUsd;
+      adjustmentsUsd = computeAdjustmentsUsd(adjustments, buyerTotalUsd);
+      spreadUsd = buyerTotalUsd - supplierCostUsd - adjustmentsUsd;
       spreadPct = buyerTotalUsd > 0 ? (spreadUsd / buyerTotalUsd) * 100 : null;
     }
     return ListShipmentsResponseItem.parse({
@@ -146,10 +185,13 @@ router.get("/shipments", async (req, res) => {
       buyerPoNumber: buyerPoNumber ?? null,
       buyerUnitPrice: buyerUnitPrice ?? null,
       buyerQuantity: buyerQuantity ?? null,
+      targetSpreadPct: targetSpreadPct ?? null,
       assigneeName: assigneeName ?? null,
       buyerPoNumbers: buyerPoByShipment[shipment.id] ?? [],
       payments,
       quotes: allQuotes.filter(q => q.shipmentId === shipment.id),
+      adjustments,
+      adjustmentsUsd,
       spreadUsd,
       spreadPct,
     });
@@ -484,11 +526,17 @@ router.patch("/shipments/:id/deal", async (req, res) => {
   const rawBody = req.body as Record<string, unknown>;
   const buyerUnitPrice = rawBody.buyerUnitPrice !== undefined ? Number(rawBody.buyerUnitPrice) : undefined;
   const buyerQuantity  = rawBody.buyerQuantity  !== undefined ? Number(rawBody.buyerQuantity)  : undefined;
+  const targetSpreadPctRaw = rawBody.targetSpreadPct;
+  const hasTarget = targetSpreadPctRaw !== undefined;
+  const targetSpreadPct = hasTarget && targetSpreadPctRaw !== null ? Number(targetSpreadPctRaw) : null;
   if (buyerUnitPrice !== undefined && (!Number.isFinite(buyerUnitPrice) || buyerUnitPrice < 0)) {
     res.status(400).json({ error: "buyerUnitPrice must be a non-negative number" }); return;
   }
   if (buyerQuantity !== undefined && (!Number.isFinite(buyerQuantity) || buyerQuantity < 1 || !Number.isInteger(buyerQuantity))) {
     res.status(400).json({ error: "buyerQuantity must be a positive integer" }); return;
+  }
+  if (hasTarget && targetSpreadPct !== null && (!Number.isFinite(targetSpreadPct) || targetSpreadPct < 0)) {
+    res.status(400).json({ error: "targetSpreadPct must be a non-negative number or null" }); return;
   }
 
   const shipment = await loadShipment(id, orgId);
@@ -516,6 +564,7 @@ router.patch("/shipments/:id/deal", async (req, res) => {
       buyerUnitPrice: resolvedUnitPrice,
       buyerQuantity: resolvedQuantity,
       buyerTotalUsd: resolvedUnitPrice * resolvedQuantity,
+      targetSpreadPct: hasTarget ? targetSpreadPct : null,
       orgId,
     }).returning({ id: dealsTable.id });
     dealId = created.id;
@@ -529,10 +578,86 @@ router.patch("/shipments/:id/deal", async (req, res) => {
       const update: Record<string, unknown> = { buyerTotalUsd: up * qty };
       if (buyerUnitPrice !== undefined) update.buyerUnitPrice = buyerUnitPrice;
       if (buyerQuantity !== undefined) update.buyerQuantity = buyerQuantity;
+      if (hasTarget) update.targetSpreadPct = targetSpreadPct;
       await db.update(dealsTable).set(update).where(eq(dealsTable.id, dealId));
     }
   }
 
+  const out = await loadShipment(id, orgId);
+  if (!out) { res.status(500).json({ error: "Failed to reload shipment" }); return; }
+  res.json(ListShipmentsResponseItem.parse(out));
+});
+
+// Resolve the deal linked to a shipment (via FK first, then deal_shipments join).
+async function resolveShipmentDealId(shipmentId: number, orgId: number): Promise<number | null> {
+  const [ship] = await db.select({ dealId: shipmentsTable.dealId })
+    .from(shipmentsTable)
+    .where(and(eq(shipmentsTable.id, shipmentId), eq(shipmentsTable.orgId, orgId)));
+  if (!ship) return null;
+  if (ship.dealId !== null) return ship.dealId;
+  const [link] = await db.select({ dealId: dealShipmentsTable.dealId })
+    .from(dealShipmentsTable)
+    .where(and(eq(dealShipmentsTable.shipmentId, shipmentId), eq(dealShipmentsTable.orgId, orgId)));
+  return link?.dealId ?? null;
+}
+
+// POST /shipments/:id/deal/adjustments — add a hidden-cost adjustment line to the linked deal
+router.post("/shipments/:id/deal/adjustments", async (req, res) => {
+  const id = Number(req.params.id);
+  const orgId = await resolveOrgId(req);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const body = CreateDealAdjustmentBody.parse(req.body);
+  const dealId = await resolveShipmentDealId(id, orgId);
+  if (dealId === null) { res.status(404).json({ error: "Shipment has no linked deal — set a buyer price first" }); return; }
+  const [maxRow] = await db.select({ max: dealAdjustmentsTable.sortOrder })
+    .from(dealAdjustmentsTable)
+    .where(and(eq(dealAdjustmentsTable.dealId, dealId), eq(dealAdjustmentsTable.orgId, orgId)))
+    .orderBy(desc(dealAdjustmentsTable.sortOrder)).limit(1);
+  const sortOrder = (maxRow?.max ?? -1) + 1;
+  await db.insert(dealAdjustmentsTable).values({
+    dealId, label: body.label, type: body.type, value: body.value, sortOrder, orgId,
+  });
+  const out = await loadShipment(id, orgId);
+  if (!out) { res.status(500).json({ error: "Failed to reload shipment" }); return; }
+  res.status(201).json(ListShipmentsResponseItem.parse(out));
+});
+
+// PATCH /shipments/:id/deal/adjustments/:adjustmentId — update an adjustment line
+router.patch("/shipments/:id/deal/adjustments/:adjustmentId", async (req, res) => {
+  const id = Number(req.params.id);
+  const adjustmentId = Number(req.params.adjustmentId);
+  const orgId = await resolveOrgId(req);
+  if (!Number.isFinite(id) || !Number.isFinite(adjustmentId)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const body = UpdateDealAdjustmentBody.parse(req.body);
+  const dealId = await resolveShipmentDealId(id, orgId);
+  if (dealId === null) { res.status(404).json({ error: "Shipment has no linked deal" }); return; }
+  const update: Record<string, unknown> = {};
+  if (body.label !== undefined) update.label = body.label;
+  if (body.type !== undefined) update.type = body.type;
+  if (body.value !== undefined) update.value = body.value;
+  if (Object.keys(update).length) {
+    const result = await db.update(dealAdjustmentsTable).set(update)
+      .where(and(eq(dealAdjustmentsTable.id, adjustmentId), eq(dealAdjustmentsTable.dealId, dealId), eq(dealAdjustmentsTable.orgId, orgId)))
+      .returning({ id: dealAdjustmentsTable.id });
+    if (!result.length) { res.status(404).json({ error: "Adjustment not found" }); return; }
+  }
+  const out = await loadShipment(id, orgId);
+  if (!out) { res.status(500).json({ error: "Failed to reload shipment" }); return; }
+  res.json(ListShipmentsResponseItem.parse(out));
+});
+
+// DELETE /shipments/:id/deal/adjustments/:adjustmentId — remove an adjustment line
+router.delete("/shipments/:id/deal/adjustments/:adjustmentId", async (req, res) => {
+  const id = Number(req.params.id);
+  const adjustmentId = Number(req.params.adjustmentId);
+  const orgId = await resolveOrgId(req);
+  if (!Number.isFinite(id) || !Number.isFinite(adjustmentId)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const dealId = await resolveShipmentDealId(id, orgId);
+  if (dealId === null) { res.status(404).json({ error: "Shipment has no linked deal" }); return; }
+  const result = await db.delete(dealAdjustmentsTable)
+    .where(and(eq(dealAdjustmentsTable.id, adjustmentId), eq(dealAdjustmentsTable.dealId, dealId), eq(dealAdjustmentsTable.orgId, orgId)))
+    .returning({ id: dealAdjustmentsTable.id });
+  if (!result.length) { res.status(404).json({ error: "Adjustment not found" }); return; }
   const out = await loadShipment(id, orgId);
   if (!out) { res.status(500).json({ error: "Failed to reload shipment" }); return; }
   res.json(ListShipmentsResponseItem.parse(out));

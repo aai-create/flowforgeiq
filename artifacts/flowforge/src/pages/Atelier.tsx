@@ -4,10 +4,10 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment } from "@workspace/api-client-react";
+import { useListShipments, useListStages, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment, useCreateDealAdjustment, useUpdateDealAdjustment, useDeleteDealAdjustment } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
-import { adaptShipments, adaptStages, shortDate, type UiShipment, type UiStage } from "@/lib/adapters";
+import { adaptShipments, adaptStages, shortDate, spreadBadgeClass, type UiShipment, type UiStage } from "@/lib/adapters";
 import { QuotesTab } from "@/components/QuotesTab";
 import {
   Search, Plus,
@@ -319,6 +319,17 @@ export function Atelier() {
       },
     },
   });
+  const adjInvalidate = { onSuccess: () => { queryClient.invalidateQueries({ queryKey: shipmentsQueryKey }); } };
+  const { mutate: createAdjustmentMut, isPending: createAdjPending } = useCreateDealAdjustment({ mutation: adjInvalidate });
+  const { mutate: updateAdjustmentMut, isPending: updateAdjPending } = useUpdateDealAdjustment({ mutation: adjInvalidate });
+  const { mutate: deleteAdjustmentMut, isPending: deleteAdjPending } = useDeleteDealAdjustment({ mutation: adjInvalidate });
+  const adjustmentPending = createAdjPending || updateAdjPending || deleteAdjPending;
+  const createAdjustment = (args: { id: number; data: { label: string; type: "flat" | "percent"; value: number } }) =>
+    createAdjustmentMut({ id: args.id, data: args.data });
+  const updateAdjustment = (args: { id: number; adjustmentId: number; data: { label?: string; type?: "flat" | "percent"; value?: number } }) =>
+    updateAdjustmentMut({ id: args.id, adjustmentId: args.adjustmentId, data: args.data });
+  const deleteAdjustment = (args: { id: number; adjustmentId: number }) =>
+    deleteAdjustmentMut({ id: args.id, adjustmentId: args.adjustmentId });
 
   const [showArchived, setShowArchived] = useState(false);
 
@@ -816,13 +827,12 @@ export function Atelier() {
                         )}
                         {shipment.spreadPct !== null ? (() => {
                           const pct = shipment.spreadPct!;
-                          const cls = pct >= 25
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : pct >= 10
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-red-50 text-red-700 border-red-200";
+                          const cls = spreadBadgeClass(pct, shipment.targetSpreadPct);
+                          const title = shipment.targetSpreadPct !== null
+                            ? `Your spread vs target ${shipment.targetSpreadPct}% (buyer price − supplier cost − adjustments)`
+                            : "Your spread (buyer price − supplier cost − adjustments)";
                           return (
-                            <span className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded border ${cls}`} title="Your spread (buyer price − supplier cost)">
+                            <span className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded border ${cls}`} title={title}>
                               <DollarSign className="w-2.5 h-2.5" />
                               {pct.toFixed(1)}%{shipment.spreadUsd !== null ? ` · $${Math.round(shipment.spreadUsd!).toLocaleString()}` : ""}
                             </span>
@@ -1411,6 +1421,10 @@ export function Atelier() {
       setBuyerPriceDraft={setBuyerPriceDraft}
       patchDealForShipment={patchDealForShipment}
       patchDealPending={patchDealPending}
+      createAdjustment={createAdjustment}
+      updateAdjustment={updateAdjustment}
+      deleteAdjustment={deleteAdjustment}
+      adjustmentPending={adjustmentPending}
       linkPanelShipmentId={linkPanelShipmentId}
       setLinkPanelShipmentId={setLinkPanelShipmentId}
       linkDeal={linkDeal}

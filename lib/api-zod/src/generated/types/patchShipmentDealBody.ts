@@ -11,4 +11,9 @@ export interface PatchShipmentDealBody {
   buyerUnitPrice?: number;
   /** Total buyer quantity */
   buyerQuantity?: number;
+  /**
+     * Target spread % for the linked deal. Null clears the target.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
 }

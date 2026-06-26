@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DealAdjustment } from './dealAdjustment';
 import type { DealShipmentLeg } from './dealShipmentLeg';
 
 export interface DealWithSpread {
@@ -17,6 +18,14 @@ export interface DealWithSpread {
   currency: string;
   /** @nullable */
   notes?: string | null;
+  /**
+     * Target spread % for this deal. Null means no target set.
+     * @nullable
+     */
+  targetSpreadPct?: number | null;
+  /** Total hidden-cost adjustments applied to the spread, in USD. */
+  adjustmentsUsd?: number;
+  adjustments?: DealAdjustment[];
   supplierCostUsd: number;
   supplierPaidUsd: number;
   spreadUsd: number;
