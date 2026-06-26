@@ -31,7 +31,6 @@ import { RiskRadar } from "./RiskRadar";
 import { Reports } from "./Reports";
 import {
   useListStages, useListShipments, useListMessages, useListTasks,
-  getListStagesQueryKey, getListShipmentsQueryKey, getListMessagesQueryKey, getListTasksQueryKey,
   updateMessage, updateTask, updateShipment, updatePayment,
   selectFactoryQuote, reorderStages, createMessage,
   useListDocuments, getListDocumentsQueryKey,
@@ -1859,10 +1858,12 @@ export default function Home() {
   ]);
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const authReady = isLoaded && !!isSignedIn;
-  const { data: apiStages,    isError: stagesError,    refetch: refetchStages }    = useListStages(   { query: { enabled: authReady, queryKey: getListStagesQueryKey() } });
-  const { data: apiShipments, isError: shipmentsError, refetch: refetchShipments } = useListShipments(undefined, { query: { enabled: authReady, queryKey: getListShipmentsQueryKey() } });
-  const { data: apiMessages,  isError: messagesError,  refetch: refetchMessages }  = useListMessages( undefined, { query: { enabled: authReady, queryKey: getListMessagesQueryKey() } });
-  const { data: apiTasks,     isError: tasksError,     refetch: refetchTasks }     = useListTasks(    { query: { enabled: authReady, queryKey: getListTasksQueryKey() } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const authQuery = { query: { enabled: authReady } as any };
+  const { data: apiStages,    isError: stagesError,    refetch: refetchStages }    = useListStages(authQuery);
+  const { data: apiShipments, isError: shipmentsError, refetch: refetchShipments } = useListShipments(undefined, authQuery);
+  const { data: apiMessages,  isError: messagesError,  refetch: refetchMessages }  = useListMessages( undefined, authQuery);
+  const { data: apiTasks,     isError: tasksError,     refetch: refetchTasks }     = useListTasks(authQuery);
   const { data: apiProposals } = useListCopilotProposals({});
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
