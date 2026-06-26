@@ -30,6 +30,32 @@ export const orgContextMiddleware = async (
   try {
     const auth = getAuth(req);
     const userId = auth?.userId;
+    // ── TEMP DEBUG (auth troubleshooting) ──────────────────────────────────
+    if (req.url.startsWith("/messages") || req.url.startsWith("/shipments") || req.url.startsWith("/stages")) {
+      const rawCookie = req.headers.cookie ?? "";
+      const cookieNames = rawCookie
+        .split(";")
+        .map((c) => c.split("=")[0].trim())
+        .filter(Boolean);
+      const clerkCookieNames = cookieNames.filter((n) => n.startsWith("__"));
+      const dup = clerkCookieNames.filter((n, i) => clerkCookieNames.indexOf(n) !== i);
+      req.log.warn(
+        {
+          authDebug: {
+            url: req.url,
+            userId: auth?.userId ?? null,
+            sessionId: (auth as { sessionId?: string })?.sessionId ?? null,
+            tokenType: (auth as { tokenType?: string })?.tokenType ?? null,
+            hasCookieHeader: rawCookie.length > 0,
+            hasAuthHeader: Boolean(req.headers.authorization),
+            clerkCookieNames,
+            duplicateClerkCookies: Array.from(new Set(dup)),
+          },
+        },
+        "AUTH_DEBUG",
+      );
+    }
+    // ── END TEMP DEBUG ─────────────────────────────────────────────────────
     if (userId) {
       req.userId = userId;
       const [user] = await db
