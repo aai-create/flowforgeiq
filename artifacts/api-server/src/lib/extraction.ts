@@ -715,8 +715,14 @@ Reply with JSON only (no markdown):
   if (raw.extractedFields?.qcNote) extractedFields.qcNote = raw.extractedFields.qcNote;
   if (raw.extractedFields?.statusUpdate) extractedFields.statusUpdate = raw.extractedFields.statusUpdate;
 
+  // Validate the AI-returned matchedShipmentId against the org-scoped candidates list
+  // to prevent prompt-injection attacks that force an out-of-scope shipment match.
+  const rawShipmentId = typeof raw.matchedShipmentId === "number" ? raw.matchedShipmentId : undefined;
+  const validChatIds = new Set(shipments.map(s => s.id));
+  const validatedShipmentId = rawShipmentId !== undefined && validChatIds.has(rawShipmentId) ? rawShipmentId : undefined;
+
   return {
-    shipmentId: typeof raw.matchedShipmentId === "number" ? raw.matchedShipmentId : undefined,
+    shipmentId: validatedShipmentId,
     confidence: Math.min(Math.max(Number(raw.confidence ?? 0.5), 0), 1),
     matchMethod: raw.matchMethod ?? "none",
     extractedFields,
@@ -747,6 +753,17 @@ export async function runExtraction(input: ExtractionInput): Promise<ExtractionR
     modality = "pdf";
     const text = await parsePdf(fileBuffer);
     result = await extractFromPdfOrText(text, doc, shipments, corrections, supplierId);
+  }
+
+  // Validate the AI-returned matchedShipmentId against the org-scoped candidates list.
+  // The model may be misled via prompt-injected document content into returning an
+  // out-of-scope ID; accepting it would silently corrupt shipment/document associations
+  // outside the intended tenant.
+  if (result.matchedShipmentId !== undefined) {
+    const validIds = new Set(shipments.map(s => s.id));
+    if (!validIds.has(result.matchedShipmentId)) {
+      result = { ...result, matchedShipmentId: undefined };
+    }
   }
 
   // Programmatically apply saved corrections so they always win over the AI output

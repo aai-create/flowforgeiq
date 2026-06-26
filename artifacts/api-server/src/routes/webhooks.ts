@@ -241,6 +241,17 @@ Reply with JSON only (no markdown):
     if (typeof parsed.shipmentId !== "number" && parsed.shipmentId !== null) {
       return null;
     }
+
+    // Validate the AI-returned shipmentId against the org-scoped candidate set.
+    // The model may be tricked via prompt injection into returning an out-of-scope ID;
+    // if the returned ID is not in the candidates list, treat it as no match.
+    if (parsed.shipmentId !== null) {
+      const candidateIdSet = new Set(candidates.map(s => s.id));
+      if (!candidateIdSet.has(parsed.shipmentId)) {
+        parsed.shipmentId = null;
+      }
+    }
+
     return parsed;
   } catch {
     return null;
@@ -289,6 +300,7 @@ async function extractFieldsFromEmail(
   subject: string,
   shipmentId: number,
   messageId: number,
+  orgId: number,
 ): Promise<void> {
   const prompt = `Extract shipment-relevant fields from this email body. Return JSON only.
 
@@ -339,7 +351,7 @@ Extract these fields if clearly mentioned (leave null otherwise):
         patch.quantity = parsed.quantity;
       }
       if (Object.keys(patch).length > 0) {
-        await db.update(shipmentsTable).set(patch).where(eq(shipmentsTable.id, shipmentId));
+        await db.update(shipmentsTable).set(patch).where(and(eq(shipmentsTable.id, shipmentId), eq(shipmentsTable.orgId, orgId)));
       }
     } else if (conf >= 0.45) {
       await db.update(messagesTable).set({
@@ -886,6 +898,10 @@ router.post("/webhooks/email", async (req, res) => {
   let finalMatchMethod = ctx.matchMethod;
   let aiGuess: { buyerName: string | null; shipmentId: number | null; confidence: number; reasoning: string } | null = null;
 
+  // Track every shipment ID that was legitimately presented to the AI as a routing candidate.
+  // This set is used as the final allowlist guard before any write is applied.
+  const aiCandidateIds = new Set<number>(ctx.candidateShipments.map(s => s.id));
+
   // AI inference: run when confidence is below threshold OR when sender is known but no specific
   // shipment was resolved via reference scan (multiple candidates — need AI to pick one).
   const needsAiInference = !ctx.unresolvable && ctx.candidateShipments.length > 0 &&
@@ -914,10 +930,11 @@ router.post("/webhooks/email", async (req, res) => {
     }
   }
 
-  // For completely unresolvable senders, also attempt AI inference against ALL shipments
+  // For completely unresolvable senders, also attempt AI inference against ALL org-scoped shipments.
+  // These are explicitly added to the candidate set so the final guard permits them.
   if (ctx.unresolvable && ctx.candidateShipments.length === 0) {
     try {
-      const allShipments = await db
+      const allOrgShipments = await db
         .select({
           id: shipmentsTable.id,
           poNumber: shipmentsTable.poNumber,
@@ -929,11 +946,15 @@ router.post("/webhooks/email", async (req, res) => {
         })
         .from(shipmentsTable)
         .where(eq(shipmentsTable.orgId, scopedOrgId));
+
+      // Register all fetched org-scoped shipments as valid candidates for the final guard
+      for (const s of allOrgShipments) aiCandidateIds.add(s.id);
+
       const guess = await inferShipmentWithAI(
         Subject ?? "",
         TextBody ?? "",
         ctx.effectiveSenderEmail,
-        allShipments,
+        allOrgShipments,
       );
       if (guess) {
         aiGuess = guess;
@@ -945,6 +966,29 @@ router.post("/webhooks/email", async (req, res) => {
       }
     } catch {
       // best-effort
+    }
+  }
+
+  // ── Final pre-write guard ─────────────────────────────────────────────────
+  // Reject any finalShipmentId that was not part of the org-scoped candidate set
+  // explicitly presented to the AI. This prevents prompt-injection attacks where
+  // the model fabricates or is instructed to return an out-of-scope ID.
+  // The DB-level check is a second line of defence against any logic gap above.
+  if (finalShipmentId !== null) {
+    if (!aiCandidateIds.has(finalShipmentId)) {
+      req.log.warn({ finalShipmentId, scopedOrgId }, "email-webhook: AI-inferred shipmentId not in candidate set — rejected");
+      finalShipmentId = null;
+    } else {
+      // Confirm the ID still belongs to this org in the DB (defence-in-depth)
+      const [guardRow] = await db
+        .select({ id: shipmentsTable.id })
+        .from(shipmentsTable)
+        .where(and(eq(shipmentsTable.id, finalShipmentId), eq(shipmentsTable.orgId, scopedOrgId)))
+        .limit(1);
+      if (!guardRow) {
+        req.log.warn({ finalShipmentId, scopedOrgId }, "email-webhook: AI-inferred shipmentId failed org-scope DB check — rejected");
+        finalShipmentId = null;
+      }
     }
   }
 
@@ -1053,7 +1097,7 @@ router.post("/webhooks/email", async (req, res) => {
       await db.update(messagesTable).set(patch).where(eq(messagesTable.id, msg.id));
 
       if (finalShipmentId && routingStatus === "routed") {
-        await extractFieldsFromEmail(rawBody, Subject ?? "", finalShipmentId, msg.id);
+        await extractFieldsFromEmail(rawBody, Subject ?? "", finalShipmentId, msg.id, scopedOrgId);
       }
     } catch {
       // best-effort
