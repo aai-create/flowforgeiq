@@ -70,7 +70,7 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   const protocol = forwardedProto || "https";
   const host = req.headers["x-forwarded-host"] || req.headers["host"];
   const baseUrl = `${protocol}://${host}`;
-  const expsUrl = `${host}`;
+  const expsUrl = basePath ? `${host}${basePath}` : `${host}`;
 
   const html = landingPageTemplate
     .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
