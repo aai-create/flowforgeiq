@@ -24,9 +24,9 @@ export default function Slide14Roadmap() {
 
         <div className="flex flex-col justify-center" style={{ flex: 1, gap: "1.8vh" }}>
           {[
-            { horizon: "Near-term", color: "#7C3AED", title: "Supplier directory & marketplace", detail: "A verified directory of factories and agents — searchable by category, geography, and MOQ. Buyers discover new suppliers without leaving FlowForge." },
-            { horizon: "Mid-term", color: "#A78BFA", title: "Localization — 中文 · 한국어", detail: "Full UI and AI drafting in Simplified Chinese, Traditional Chinese, and Korean. Removes the translation layer from the drafting step entirely." },
-            { horizon: "Longer horizon", color: "#475569", title: "Industry expansion", detail: "The same fragmented communication problem exists in electronics, furniture, food, and industrial goods. We'll expand category by category." },
+            { horizon: "Near-term", color: "#7C3AED", title: "Localization — 中文 · 한국어", detail: "Full UI and AI drafting in Simplified Chinese, Traditional Chinese, and Korean. Removes the translation layer from the drafting step entirely." },
+            { horizon: "Mid-term", color: "#A78BFA", title: "Industry expansion", detail: "The same fragmented communication problem exists in electronics, furniture, food, and industrial goods. We'll expand category by category." },
+            { horizon: "Longer horizon", color: "#475569", title: "Supplier directory & marketplace", detail: "A verified directory of factories and agents — searchable by category, geography, and MOQ. Buyers discover new suppliers without leaving FlowForge." },
           ].map((item) => (
             <div key={item.horizon} style={{ background: "#131929", borderRadius: "0.8vw", border: `1px solid ${item.color === "#475569" ? "rgba(124,58,237,0.2)" : "rgba(124,58,237,0.3)"}`, padding: "2vh 2.2vw" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "1vw", marginBottom: "0.8vh" }}>
