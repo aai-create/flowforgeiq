@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, X, Search, Check } from "lucide-react";
 
 export interface FilterOption {
@@ -27,7 +28,9 @@ export function FilterDropdown({
 }: FilterDropdownProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const selectedOption = value ? options.find(o => o.id === value) : null;
@@ -41,10 +44,32 @@ export function FilterDropdown({
     }
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPos(null);
+      return;
+    }
+    const updatePosition = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, left: rect.left });
+    };
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inMenu = menuRef.current?.contains(target);
+      if (!inContainer && !inMenu) {
         setOpen(false);
       }
     };
@@ -97,8 +122,11 @@ export function FilterDropdown({
         )}
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-[#E5EAF0] rounded-xl shadow-lg w-56 py-1.5 overflow-hidden">
+      {open && menuPos && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
+          className="z-50 bg-white border border-[#E5EAF0] rounded-xl shadow-lg w-56 py-1.5 overflow-hidden">
           {showSearch && (
             <div className="px-2 pb-1.5 pt-0.5">
               <div className="flex items-center gap-1.5 bg-[#F0F4F8] rounded-lg px-2 py-1">
@@ -150,7 +178,8 @@ export function FilterDropdown({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
