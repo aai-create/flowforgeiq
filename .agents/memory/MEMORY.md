@@ -4,4 +4,5 @@
 - [Postmark inbound setup](postmark-inbound.md) — no custom domain needed; free @inbound.postmarkapp.com address; webhook URL must use the deployed domain, not dev localhost.
 - [shipmentId canonical format](shipment-id-format.md) — optimistic UiMessage.shipmentId must use `s${id}` prefix format to match UiShipment.id; raw DB number breaks inbox thread lookup.
 - [drizzle-kit push TTY limitation](db-push-tty.md) — drizzle-kit push fails non-interactively; use psql heredoc for schema changes + TRUNCATE CASCADE for seed teardown.
+- [RN worklets babel phantom dep](rn-worklets-babel-phantom-dep.md) — mobile deploy "Cannot find module '@babel/generator'" → add @babel/generator+traverse+types (7.x) to WORKSPACE ROOT package.json.
 - [Clerk duplicate-cookie 401s](clerk-duplicate-cookies.md) — "Could not reach the server" is a generic query-error label; real cause was duplicate stale Clerk cookies → 401. Fresh browser = 403 (verified), polluted = 401.
