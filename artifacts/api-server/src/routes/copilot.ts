@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, copilotProposalsTable, autonomyPoliciesTable, shipmentsTable, messagesTable, suppliersTable, paymentsTable } from "@workspace/db";
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
-import { resolveOrgId } from "../middlewares/requireAuth";
+import { resolveOrgId, requireAdmin } from "../middlewares/requireAuth";
 import {
   CreateCopilotProposalBody,
   UpdateCopilotProposalBody,
@@ -156,7 +156,7 @@ router.patch("/copilot/proposals/:id", async (req, res) => {
 });
 
 // ─── Trigger engine ───────────────────────────────────────────────────────────
-router.post("/copilot/trigger", async (req, res) => {
+router.post("/copilot/trigger", requireAdmin, async (req, res) => {
   const orgId = await resolveOrgId(req);
   const result = await runTriggerEngine(orgId);
   res.json(result);
@@ -286,7 +286,7 @@ router.get("/copilot/policies", async (req, res) => {
   res.json(rows);
 });
 
-router.put("/copilot/policies", async (req, res) => {
+router.put("/copilot/policies", requireAdmin, async (req, res) => {
   const orgId = await resolveOrgId(req);
   const input = UpsertAutonomyPolicyBody.parse(req.body);
 

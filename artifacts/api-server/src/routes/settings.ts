@@ -3,7 +3,7 @@ import { db, poNumberingConfigTable, teamUsersTable, messagesTable } from "@work
 import { eq, sql, and, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
-import { resolveOrgId, requireAuth } from "../middlewares/requireAuth";
+import { resolveOrgId, requireAuth, requireAdmin } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -181,7 +181,7 @@ const UpdateBody = z.object({
   resetSeq:       z.number().int().positive().optional(),
 });
 
-router.put("/settings/po-numbering", async (req, res) => {
+router.put("/settings/po-numbering", requireAdmin, async (req, res) => {
   const orgId = await resolveOrgId(req);
   const body = UpdateBody.parse(req.body);
   const cfg = await getConfig(orgId);
@@ -201,7 +201,7 @@ router.get("/settings/po-numbering/next", async (req, res) => {
   res.json(makePreview(cfg));
 });
 
-router.post("/settings/po-numbering/next", async (req, res) => {
+router.post("/settings/po-numbering/next", requireAdmin, async (req, res) => {
   const orgId = await resolveOrgId(req);
   const cfg = await getConfig(orgId);
   const [updated] = await db

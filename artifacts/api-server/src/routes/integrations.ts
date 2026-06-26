@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, gmailCredentialsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
-import { resolveOrgId } from "../middlewares/requireAuth";
+import { resolveOrgId, requireAdmin } from "../middlewares/requireAuth";
 import { z } from "zod/v4";
 import { randomBytes, createHmac } from "crypto";
 
@@ -42,7 +42,7 @@ function signState(token: string, clientSecret: string): string {
   return createHmac("sha256", clientSecret).update(token).digest("hex");
 }
 
-router.get("/integrations/gmail/connect", async (req, res) => {
+router.get("/integrations/gmail/connect", requireAdmin, async (req, res) => {
   const clientId = getGoogleClientId();
   const clientSecret = getGoogleClientSecret();
   if (!clientId || !clientSecret) {
@@ -177,7 +177,7 @@ router.get("/integrations/gmail/callback", async (req, res) => {
   }
 });
 
-router.post("/integrations/gmail/disconnect", async (req, res) => {
+router.post("/integrations/gmail/disconnect", requireAdmin, async (req, res) => {
   const orgId = await resolveOrgId(req);
   const rows = await db.delete(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, orgId)).returning();
   req.log.info({ deleted: rows.length }, "gmail-oauth: disconnected");
@@ -188,7 +188,7 @@ const TestEmailBody = z.object({
   to: z.string().optional(),
 });
 
-router.post("/integrations/gmail/test", async (req, res) => {
+router.post("/integrations/gmail/test", requireAdmin, async (req, res) => {
   const body = TestEmailBody.safeParse(req.body);
   const to = (body.success ? body.data.to : undefined) ?? "test@example.com";
   const orgId = await resolveOrgId(req);
