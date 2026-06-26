@@ -1,7 +1,9 @@
 const en = {
   tabs: {
+    home: "Home",
     documents: "Documents",
     chat: "Chat",
+    capture: "Capture",
     settings: "Settings",
   },
   common: {
@@ -129,6 +131,9 @@ const en = {
       "zh-CN": "简体中文",
       "zh-TW": "繁體中文",
     },
+    account: "Account",
+    signOut: "Sign out",
+    signOutDesc: "You will need to sign in again",
   },
 };
 

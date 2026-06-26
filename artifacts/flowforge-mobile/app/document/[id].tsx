@@ -162,7 +162,7 @@ function POPickerModal({
 }: POPickerModalProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const { data: shipments, isLoading } = useListShipments(undefined, { query: { queryKey: getListShipmentsQueryKey(), enabled: visible } });
+  const { data: shipments, isLoading } = useListShipments(undefined, { query: { enabled: visible } } as any);
 
   const filtered = (shipments ?? []).filter((s) => {
     const q = query.toLowerCase();

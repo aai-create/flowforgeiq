@@ -1,7 +1,9 @@
 const zhTW = {
   tabs: {
+    home: "主頁",
     documents: "文件",
     chat: "聊天",
+    capture: "採集",
     settings: "設定",
   },
   common: {
@@ -129,6 +131,9 @@ const zhTW = {
       "zh-CN": "简体中文",
       "zh-TW": "繁體中文",
     },
+    account: "帳戶",
+    signOut: "登出",
+    signOutDesc: "您需要重新登入",
   },
 };
 

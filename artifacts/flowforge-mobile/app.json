@@ -14,9 +14,20 @@
       "backgroundColor": "#8800ff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "FlowForge needs access to your photo library to attach images to shipment messages.",
+        "NSCameraUsageDescription": "FlowForge needs camera access to capture documents for shipment messages.",
+        "NSPhotoLibraryAddUsageDescription": "FlowForge needs access to save photos.",
+        "UIBackgroundModes": ["fetch", "remote-notification"]
+      }
     },
-    "android": {},
+    "android": {
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,7 +39,27 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FlowForge needs access to your photos to attach images to messages.",
+          "cameraPermission": "FlowForge needs camera access to capture documents."
+        }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsImageWithMaxCount": 5,
+            "NSExtensionActivationSupportsFileWithMaxCount": 5
+          },
+          "androidIntentFilters": ["text/*", "image/*", "application/pdf"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

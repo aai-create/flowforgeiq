@@ -5,6 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setBaseUrl } from "@workspace/api-client-react";
 import { Stack } from "expo-router";
@@ -18,7 +20,11 @@ import { I18nextProvider } from "react-i18next";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import i18n, { loadStoredLanguage } from "@/hooks/useI18n";
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+const domain = process.env.EXPO_PUBLIC_DOMAIN;
+if (domain) setBaseUrl(`https://${domain}`);
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +34,8 @@ function RootLayoutNav() {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="routing-result" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="document/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
@@ -55,18 +63,22 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <I18nextProvider i18n={i18n}>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </QueryClientProvider>
-        </I18nextProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={proxyUrl}>
+      <ClerkLoaded>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <I18nextProvider i18n={i18n}>
+              <QueryClientProvider client={queryClient}>
+                <GestureHandlerRootView>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </QueryClientProvider>
+            </I18nextProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

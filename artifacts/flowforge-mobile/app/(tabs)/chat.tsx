@@ -1,14 +1,16 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -16,24 +18,21 @@ import {
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useIngestChat, useListShipments } from "@workspace/api-client-react";
+import type { Shipment } from "@workspace/api-client-react";
 
-import { useIngestChat, useGetInboundEmailAddress } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
-import * as Clipboard from "expo-clipboard";
 
-type Channel = "whatsapp" | "wechat" | "imessage" | "sms";
+type Channel = "whatsapp" | "wechat" | "imessage" | "sms" | "email";
 
 function getChannelIcon(id: Channel, color: string) {
   const size = 16;
   switch (id) {
-    case "whatsapp":
-      return <MaterialCommunityIcons name="whatsapp" size={size} color={color} />;
-    case "wechat":
-      return <MaterialCommunityIcons name="wechat" size={size} color={color} />;
-    case "imessage":
-      return <Feather name="message-circle" size={size} color={color} />;
-    case "sms":
-      return <Feather name="message-square" size={size} color={color} />;
+    case "whatsapp": return <MaterialCommunityIcons name="whatsapp" size={size} color={color} />;
+    case "wechat": return <MaterialCommunityIcons name="wechat" size={size} color={color} />;
+    case "imessage": return <Feather name="message-circle" size={size} color={color} />;
+    case "sms": return <Feather name="message-square" size={size} color={color} />;
+    case "email": return <Feather name="mail" size={size} color={color} />;
   }
 }
 
@@ -42,6 +41,7 @@ const CHANNEL_COLORS: Record<Channel, string> = {
   wechat: "#09B83E",
   imessage: "#007AFF",
   sms: "#5856D6",
+  email: "#FF6B35",
 };
 
 const CHANNELS: { id: Channel; label: string }[] = [
@@ -49,103 +49,187 @@ const CHANNELS: { id: Channel; label: string }[] = [
   { id: "wechat", label: "WeChat" },
   { id: "imessage", label: "iMessage" },
   { id: "sms", label: "SMS" },
+  { id: "email", label: "Email" },
 ];
 
-function ConfidenceBar({ confidence, colors: c, label }: { confidence: number; colors: ReturnType<typeof useColors>; label: string }) {
-  const pct = Math.round(confidence * 100);
-  const barColor = pct >= 75 ? c.success : pct >= 50 ? c.warning : c.destructive;
-  return (
-    <View>
-      <View style={styles.confidenceRow}>
-        <Text style={[styles.label, { color: c.mutedForeground }]}>{label}</Text>
-        <Text style={[styles.confidenceValue, { color: barColor }]}>{pct}%</Text>
-      </View>
-      <View style={[styles.confidenceTrack, { backgroundColor: c.muted }]}>
-        <View style={[styles.confidenceFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
-      </View>
-    </View>
-  );
+interface AttachedFile {
+  uri: string;
+  name: string;
+  type: "image" | "file";
+  mimeType?: string;
+  size?: number;
 }
 
-function FieldRow({ label, value, colors: c }: { label: string; value: string; colors: ReturnType<typeof useColors> }) {
-  return (
-    <View style={styles.fieldRow}>
-      <Text style={[styles.fieldLabel, { color: c.mutedForeground }]}>{label}</Text>
-      <Text style={[styles.fieldValue, { color: c.foreground }]}>{value}</Text>
-    </View>
-  );
-}
-
-export default function ChatPasteScreen() {
+export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { t } = useTranslation();
-  const [channel, setChannel] = useState<Channel>("whatsapp");
-  const [rawText, setRawText] = useState("");
-  const [senderHint, setSenderHint] = useState("");
-  const [emailCopied, setEmailCopied] = useState(false);
+  const router = useRouter();
   const textRef = useRef<TextInput>(null);
 
-  const { data: inboundEmailData } = useGetInboundEmailAddress();
-  const inboundEmail = inboundEmailData?.inboundEmailAddress ?? "iq@flowforgeiq.com";
+  const params = useLocalSearchParams<{
+    sharedText?: string;
+    sharedImageUri?: string;
+    preSelectedShipmentId?: string;
+    preSelectedShipmentName?: string;
+  }>();
 
-  async function handleCopyEmail() {
-    await Clipboard.setStringAsync(inboundEmail);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setEmailCopied(true);
-    setTimeout(() => setEmailCopied(false), 2000);
+  const [channel, setChannel] = useState<Channel>("whatsapp");
+  const [rawText, setRawText] = useState(params.sharedText ?? "");
+  const [senderHint, setSenderHint] = useState("");
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(
+    params.sharedImageUri
+      ? { uri: params.sharedImageUri, name: "Shared Image", type: "image" }
+      : null,
+  );
+  const [selectedShipment, setSelectedShipment] = useState<{ id: number; name: string } | null>(
+    params.preSelectedShipmentId
+      ? { id: Number(params.preSelectedShipmentId), name: params.preSelectedShipmentName ?? `Shipment #${params.preSelectedShipmentId}` }
+      : null,
+  );
+  const [showShipmentPicker, setShowShipmentPicker] = useState(false);
+  const [shipmentSearch, setShipmentSearch] = useState("");
+
+  const { data: shipments } = useListShipments();
+  const { mutate: ingestChat, isPending } = useIngestChat();
+
+  useEffect(() => {
+    if (params.sharedText && params.sharedText !== rawText) {
+      setRawText(params.sharedText);
+    }
+  }, [params.sharedText]);
+
+  useEffect(() => {
+    if (params.preSelectedShipmentId) {
+      setSelectedShipment({
+        id: Number(params.preSelectedShipmentId),
+        name: params.preSelectedShipmentName ?? `Shipment #${params.preSelectedShipmentId}`,
+      });
+    }
+  }, [params.preSelectedShipmentId, params.preSelectedShipmentName]);
+
+  const filteredShipments = (shipments ?? [])
+    .filter((s) => s.status !== "completed")
+    .filter((s) => {
+      if (!shipmentSearch.trim()) return true;
+      const q = shipmentSearch.toLowerCase();
+      return (
+        s.poNumber?.toLowerCase().includes(q) ||
+        s.product?.toLowerCase().includes(q) ||
+        s.supplierName?.toLowerCase().includes(q)
+      );
+    })
+    .slice(0, 20);
+
+  const canSubmit = (rawText.trim().length > 5 || attachedFile != null) && !isPending;
+
+  async function handlePickImage() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      Haptics.selectionAsync();
+      setAttachedFile({
+        uri: asset.uri,
+        name: asset.fileName ?? "image.jpg",
+        type: "image",
+        mimeType: asset.mimeType ?? "image/jpeg",
+        size: asset.fileSize,
+      });
+    }
   }
 
-  const { mutate: ingestChat, isPending, data: result, error, reset } = useIngestChat();
+  async function handlePickFile() {
+    if (Platform.OS === "web") {
+      Alert.alert("File picker", "File picking is available on iOS and Android.");
+      return;
+    }
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        Haptics.selectionAsync();
+        setAttachedFile({
+          uri: asset.uri,
+          name: asset.name,
+          type: "file",
+          mimeType: asset.mimeType ?? "application/octet-stream",
+          size: asset.size,
+        });
+      }
+    } catch {
+      Alert.alert("Error", "Could not open file picker.");
+    }
+  }
 
-  const canAnalyze = rawText.trim().length > 10 && !isPending;
-
-  function handleAnalyze() {
-    if (!canAnalyze) return;
+  function handleSubmit() {
+    if (!canSubmit) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    ingestChat({
-      data: {
-        rawText: rawText.trim(),
-        channel,
-        senderHint: senderHint.trim() || undefined,
+
+    const textToAnalyze = rawText.trim() || (attachedFile ? `[Attached file: ${attachedFile.name}]` : "");
+
+    ingestChat(
+      {
+        data: {
+          rawText: textToAnalyze,
+          channel: channel as any,
+          senderHint: senderHint.trim() || undefined,
+        },
       },
-    });
+      {
+        onSuccess: (result) => {
+          router.push({
+            pathname: "/routing-result" as any,
+            params: {
+              result: JSON.stringify(result),
+              rawText: textToAnalyze,
+              channel,
+              senderHint: senderHint.trim(),
+              preSelectedShipmentId: selectedShipment ? String(selectedShipment.id) : "",
+              attachedFileName: attachedFile?.name ?? "",
+              attachedFileMimeType: attachedFile?.mimeType ?? "",
+            },
+          });
+        },
+        onError: () => {
+          Alert.alert("Analysis failed", "Could not analyze your message. Please try again.");
+        },
+      },
+    );
   }
 
   function handleClear() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRawText("");
     setSenderHint("");
-    reset();
+    setAttachedFile(null);
+    setSelectedShipment(null);
   }
 
-  async function handleCopyDraft() {
-    if (!result?.aiDraft) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    try {
-      await Share.share({ message: result.aiDraft });
-    } catch {
-      Alert.alert(t("chat.copyFailed"), t("chat.copyFailedDesc"));
-    }
-  }
+  const c = colors;
+  const hasContent = rawText.length > 0 || attachedFile != null;
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: c.background }]}>
       <View
         style={[
           styles.header,
           {
             paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12),
-            backgroundColor: colors.primary,
+            backgroundColor: c.primary,
           },
         ]}
       >
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.headerTitle}>FlowForge</Text>
-            <Text style={styles.headerSubtitle}>{t("chat.headerSubtitle")}</Text>
+            <Text style={styles.headerSubtitle}>Capture</Text>
           </View>
-          {(rawText.length > 0 || result) && (
+          {hasContent && (
             <Pressable
               onPress={handleClear}
               hitSlop={12}
@@ -167,33 +251,31 @@ export default function ChatPasteScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Channel selector */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t("chat.source")}</Text>
-          <View style={styles.channelRow}>
+          <Text style={[styles.sectionLabel, { color: c.mutedForeground }]}>SOURCE CHANNEL</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelRow}>
             {CHANNELS.map(({ id, label }) => {
               const active = channel === id;
               const ch = CHANNEL_COLORS[id];
               return (
                 <Pressable
                   key={id}
-                  onPress={() => {
-                    setChannel(id);
-                    Haptics.selectionAsync();
-                  }}
+                  onPress={() => { setChannel(id); Haptics.selectionAsync(); }}
                   style={[
                     styles.channelPill,
                     {
-                      borderColor: active ? ch : colors.border,
-                      backgroundColor: active ? `${ch}18` : colors.card,
+                      borderColor: active ? ch : c.border,
+                      backgroundColor: active ? `${ch}18` : c.card,
                     },
                   ]}
                   testID={`channel-${id}`}
                 >
-                  {getChannelIcon(id, active ? ch : colors.mutedForeground)}
+                  {getChannelIcon(id, active ? ch : c.mutedForeground)}
                   <Text
                     style={[
                       styles.channelLabel,
-                      { color: active ? ch : colors.mutedForeground, fontWeight: active ? "600" : "400" },
+                      { color: active ? ch : c.mutedForeground, fontWeight: active ? "600" : "400" },
                     ]}
                   >
                     {label}
@@ -201,79 +283,98 @@ export default function ChatPasteScreen() {
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
+        {/* Text input */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t("chat.pasteChat")}</Text>
+          <Text style={[styles.sectionLabel, { color: c.mutedForeground }]}>PASTE OR TYPE MESSAGE</Text>
           <Pressable onPress={() => textRef.current?.focus()}>
-            <View
-              style={[
-                styles.textAreaWrapper,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
+            <View style={[styles.textAreaWrapper, { backgroundColor: c.card, borderColor: c.border }]}>
               <TextInput
                 ref={textRef}
-                style={[styles.textArea, { color: colors.foreground }]}
+                style={[styles.textArea, { color: c.foreground }]}
                 value={rawText}
                 onChangeText={setRawText}
                 multiline
-                placeholder={t("chat.pastePlaceholder")}
-                placeholderTextColor={colors.mutedForeground}
+                placeholder={`Paste your ${CHANNELS.find((ch) => ch.id === channel)?.label ?? "chat"} export or type a message…\n\nE.g.:\n[06/10/26, 10:22] Supplier: Production is 85% done, ETA ex-factory 25 June.`}
+                placeholderTextColor={c.mutedForeground}
                 textAlignVertical="top"
                 autoCapitalize="none"
                 autoCorrect={false}
-                testID="chat-input"
+                testID="capture-input"
               />
               {rawText.length > 0 && (
-                <Text style={[styles.charCount, { color: colors.mutedForeground }]}>
-                  {t("chat.charCount", { count: rawText.length })}
+                <Text style={[styles.charCount, { color: c.mutedForeground }]}>
+                  {rawText.length} chars
                 </Text>
               )}
             </View>
           </Pressable>
         </View>
 
-        <View style={[styles.emailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.emailCardHeader}>
-            <Feather name="mail" size={14} color={colors.primary} />
-            <Text style={[styles.emailCardTitle, { color: colors.foreground }]}>{t("chat.forwardInbox")}</Text>
-          </View>
-          <Text style={[styles.emailCardBody, { color: colors.mutedForeground }]}>
-            {t("chat.forwardDesc")}
-          </Text>
-          <View style={[styles.emailRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.emailText, { color: colors.foreground }]} numberOfLines={1} ellipsizeMode="tail">
-              {inboundEmail}
-            </Text>
+        {/* File/photo attachment */}
+        <View style={styles.attachRow}>
+          <Text style={[styles.sectionLabel, { color: c.mutedForeground }]}>ATTACH</Text>
+          <View style={styles.attachBtns}>
             <Pressable
-              onPress={() => void handleCopyEmail()}
-              hitSlop={8}
-              style={({ pressed }) => [styles.copyBtn, { backgroundColor: pressed ? colors.muted : colors.accent }]}
+              onPress={handlePickImage}
+              style={({ pressed }) => [
+                styles.attachBtn,
+                { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+              ]}
+              testID="pick-image-button"
             >
-              <Feather name={emailCopied ? "check" : "copy"} size={14} color={emailCopied ? "#22c55e" : colors.primary} />
+              <Feather name="image" size={16} color={c.primary} />
+              <Text style={[styles.attachBtnText, { color: c.foreground }]}>Photo</Text>
+            </Pressable>
+            <Pressable
+              onPress={handlePickFile}
+              style={({ pressed }) => [
+                styles.attachBtn,
+                { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+              ]}
+              testID="pick-file-button"
+            >
+              <Feather name="paperclip" size={16} color={c.primary} />
+              <Text style={[styles.attachBtnText, { color: c.foreground }]}>File</Text>
             </Pressable>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-            {t("chat.senderHint")} <Text style={{ fontWeight: "400" }}>{t("chat.senderHintOptional")}</Text>
-          </Text>
-          <View
-            style={[
-              styles.hintInput,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
+        {attachedFile && (
+          <Animated.View
+            entering={FadeInDown.duration(250)}
+            style={[styles.attachedCard, { backgroundColor: c.card, borderColor: c.primary + "40" }]}
           >
-            <Feather name="user" size={16} color={colors.mutedForeground} />
+            <Feather name={attachedFile.type === "image" ? "image" : "file"} size={16} color={c.primary} />
+            <Text style={[styles.attachedName, { color: c.foreground }]} numberOfLines={1}>
+              {attachedFile.name}
+            </Text>
+            {attachedFile.size != null && (
+              <Text style={[styles.attachedSize, { color: c.mutedForeground }]}>
+                {(attachedFile.size / 1024).toFixed(0)} KB
+              </Text>
+            )}
+            <Pressable onPress={() => setAttachedFile(null)} hitSlop={8}>
+              <Feather name="x" size={14} color={c.mutedForeground} />
+            </Pressable>
+          </Animated.View>
+        )}
+
+        {/* Sender hint */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: c.mutedForeground }]}>
+            SENDER HINT <Text style={{ fontWeight: "400" }}>(optional)</Text>
+          </Text>
+          <View style={[styles.hintInput, { backgroundColor: c.card, borderColor: c.border }]}>
+            <Feather name="user" size={16} color={c.mutedForeground} />
             <TextInput
-              style={[styles.hintText, { color: colors.foreground }]}
+              style={[styles.hintText, { color: c.foreground }]}
               value={senderHint}
               onChangeText={setSenderHint}
-              placeholder={t("chat.senderPlaceholder")}
-              placeholderTextColor={colors.mutedForeground}
+              placeholder="Supplier or contact name…"
+              placeholderTextColor={c.mutedForeground}
               autoCapitalize="words"
               returnKeyType="done"
               testID="sender-hint"
@@ -281,188 +382,126 @@ export default function ChatPasteScreen() {
           </View>
         </View>
 
+        {/* Shipment selector */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: c.mutedForeground }]}>
+            SHIPMENT <Text style={{ fontWeight: "400" }}>(optional — helps routing)</Text>
+          </Text>
+
+          {selectedShipment ? (
+            <Pressable
+              onPress={() => setShowShipmentPicker((v) => !v)}
+              style={[styles.selectedShipment, { backgroundColor: c.accent, borderColor: c.primary + "60" }]}
+              testID="selected-shipment"
+            >
+              <Feather name="package" size={15} color={c.primary} />
+              <Text style={[styles.selectedShipmentText, { color: c.accentForeground }]} numberOfLines={1}>
+                {selectedShipment.name}
+              </Text>
+              <Pressable
+                onPress={(e) => { e.stopPropagation(); setSelectedShipment(null); }}
+                hitSlop={8}
+              >
+                <Feather name="x" size={14} color={c.accentForeground} />
+              </Pressable>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => { setShowShipmentPicker((v) => !v); Haptics.selectionAsync(); }}
+              style={({ pressed }) => [
+                styles.shipmentPickerToggle,
+                { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.8 : 1 },
+              ]}
+              testID="shipment-picker-toggle"
+            >
+              <Feather name="search" size={15} color={c.mutedForeground} />
+              <Text style={[styles.shipmentPickerPlaceholder, { color: c.mutedForeground }]}>
+                Search shipments…
+              </Text>
+              <Feather name={showShipmentPicker ? "chevron-up" : "chevron-down"} size={15} color={c.mutedForeground} />
+            </Pressable>
+          )}
+
+          {showShipmentPicker && (
+            <Animated.View entering={FadeInDown.duration(200)}>
+              <View style={[styles.shipmentSearchWrap, { backgroundColor: c.card, borderColor: c.border }]}>
+                <Feather name="search" size={14} color={c.mutedForeground} />
+                <TextInput
+                  style={[styles.shipmentSearchInput, { color: c.foreground }]}
+                  value={shipmentSearch}
+                  onChangeText={setShipmentSearch}
+                  placeholder="PO number, product, supplier…"
+                  placeholderTextColor={c.mutedForeground}
+                  autoCapitalize="none"
+                  autoFocus
+                />
+              </View>
+              <View style={[styles.shipmentDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
+                {filteredShipments.length === 0 ? (
+                  <Text style={[styles.noShipmentsText, { color: c.mutedForeground }]}>No shipments found</Text>
+                ) : (
+                  filteredShipments.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setSelectedShipment({ id: s.id, name: `PO ${s.poNumber} — ${s.product}` });
+                        setShowShipmentPicker(false);
+                        setShipmentSearch("");
+                      }}
+                      style={({ pressed }) => [
+                        styles.shipmentOption,
+                        { borderTopColor: c.border, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      testID={`shipment-option-${s.id}`}
+                    >
+                      <View style={styles.shipmentOptionLeft}>
+                        <Text style={[styles.shipmentOptionPo, { color: c.foreground }]}>PO {s.poNumber}</Text>
+                        <Text style={[styles.shipmentOptionProduct, { color: c.mutedForeground }]} numberOfLines={1}>
+                          {s.product}
+                        </Text>
+                      </View>
+                      {s.supplierName && (
+                        <Text style={[styles.shipmentOptionSupplier, { color: c.mutedForeground }]} numberOfLines={1}>
+                          {s.supplierName}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ))
+                )}
+              </View>
+            </Animated.View>
+          )}
+        </View>
+
+        {/* Submit button */}
         <Pressable
-          onPress={handleAnalyze}
-          disabled={!canAnalyze}
+          onPress={handleSubmit}
+          disabled={!canSubmit}
           style={({ pressed }) => [
-            styles.analyzeBtn,
+            styles.submitBtn,
             {
-              backgroundColor: canAnalyze ? colors.primary : colors.muted,
+              backgroundColor: canSubmit ? c.primary : c.muted,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
-          testID="analyze-button"
+          testID="submit-button"
         >
           {isPending ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <>
-              <Ionicons
-                name="flash"
-                size={18}
-                color={canAnalyze ? "#fff" : colors.mutedForeground}
-              />
-              <Text
-                style={[
-                  styles.analyzeBtnText,
-                  { color: canAnalyze ? "#fff" : colors.mutedForeground },
-                ]}
-              >
-                {t("chat.analyze")}
+              <Ionicons name="flash" size={18} color={canSubmit ? "#fff" : c.mutedForeground} />
+              <Text style={[styles.submitBtnText, { color: canSubmit ? "#fff" : c.mutedForeground }]}>
+                Submit for Routing
               </Text>
             </>
           )}
         </Pressable>
 
-        {error && (
-          <Animated.View
-            entering={FadeInDown.duration(300)}
-            style={[styles.errorCard, { backgroundColor: `${colors.destructive}18`, borderColor: colors.destructive }]}
-          >
-            <Feather name="alert-circle" size={16} color={colors.destructive} />
-            <Text style={[styles.errorText, { color: colors.destructive }]}>
-              {(error as Error)?.message ?? t("chat.analysisError")}
-            </Text>
-          </Animated.View>
-        )}
-
-        {result && !isPending && (
-          <Animated.View entering={FadeInDown.duration(350).springify()} style={styles.results}>
-            <View style={styles.statusRow}>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor:
-                      result.routingStatus === "routed"
-                        ? `${colors.success}20`
-                        : `${colors.warning}20`,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={result.routingStatus === "routed" ? "checkmark-circle" : "alert-circle"}
-                  size={14}
-                  color={result.routingStatus === "routed" ? colors.success : colors.warning}
-                />
-                <Text
-                  style={[
-                    styles.statusText,
-                    {
-                      color:
-                        result.routingStatus === "routed" ? colors.success : colors.warning,
-                    },
-                  ]}
-                >
-                  {result.routingStatus === "routed" ? t("chat.routed") : t("chat.needsReview")}
-                </Text>
-              </View>
-              {result.sender && (
-                <Text style={[styles.senderText, { color: colors.mutedForeground }]}>
-                  {t("chat.from", { sender: result.sender })}
-                </Text>
-              )}
-            </View>
-
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <ConfidenceBar confidence={result.confidence} colors={colors} label={t("chat.confidence")} />
-              {result.matchMethod && (
-                <Text style={[styles.matchMethod, { color: colors.mutedForeground }]}>
-                  {t("chat.match", { method: result.matchMethod })}
-                </Text>
-              )}
-            </View>
-
-            {result.shipmentId != null && (
-              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.cardHeader}>
-                  <Feather name="package" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("chat.matchedShipment")}</Text>
-                </View>
-                <Text style={[styles.shipmentId, { color: colors.primary }]}>
-                  ID #{result.shipmentId}
-                </Text>
-              </View>
-            )}
-
-            {result.extractedFields && Object.values(result.extractedFields).some(Boolean) && (
-              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.cardHeader}>
-                  <Feather name="layers" size={15} color={colors.primary} />
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("chat.extractedFields")}</Text>
-                </View>
-                <View style={[styles.fieldsDivider, { backgroundColor: colors.border }]} />
-                {result.extractedFields.eta && (
-                  <FieldRow label={t("chat.field.eta")} value={result.extractedFields.eta} colors={colors} />
-                )}
-                {result.extractedFields.quotePrice != null && (
-                  <FieldRow
-                    label={t("chat.field.quotePrice")}
-                    value={`$${result.extractedFields.quotePrice.toLocaleString()}`}
-                    colors={colors}
-                  />
-                )}
-                {result.extractedFields.productionPct != null && (
-                  <FieldRow
-                    label={t("chat.field.production")}
-                    value={`${result.extractedFields.productionPct}%`}
-                    colors={colors}
-                  />
-                )}
-                {result.extractedFields.qcNote && (
-                  <FieldRow label={t("chat.field.qcNote")} value={result.extractedFields.qcNote} colors={colors} />
-                )}
-                {result.extractedFields.statusUpdate && (
-                  <FieldRow
-                    label={t("chat.field.status")}
-                    value={result.extractedFields.statusUpdate}
-                    colors={colors}
-                  />
-                )}
-              </View>
-            )}
-
-            {result.aiTags && result.aiTags.length > 0 && (
-              <View style={styles.tagsRow}>
-                {result.aiTags.map((tag, i) => (
-                  <View key={i} style={[styles.tag, { backgroundColor: colors.accent }]}>
-                    <Text style={[styles.tagText, { color: colors.accentForeground }]}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {result.aiAction && (
-              <View style={[styles.actionCard, { backgroundColor: colors.accent, borderColor: colors.primary + "40" }]}>
-                <Ionicons name="flash" size={14} color={colors.primary} />
-                <Text style={[styles.actionText, { color: colors.accentForeground }]}>
-                  {result.aiAction}
-                </Text>
-              </View>
-            )}
-
-            {result.aiDraft && (
-              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.cardHeader}>
-                    <Feather name="edit-3" size={15} color={colors.primary} />
-                    <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("chat.aiDraftReply")}</Text>
-                  </View>
-                  <Pressable
-                    onPress={handleCopyDraft}
-                    hitSlop={8}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                    testID="copy-draft"
-                  >
-                    <Feather name="share" size={16} color={colors.primary} />
-                  </Pressable>
-                </View>
-                <View style={[styles.draftDivider, { backgroundColor: colors.border }]} />
-                <Text style={[styles.draftText, { color: colors.foreground }]}>{result.aiDraft}</Text>
-              </View>
-            )}
-          </Animated.View>
-        )}
+        <Text style={[styles.footerNote, { color: c.mutedForeground }]}>
+          AI will extract details and route to the best-matching shipment
+        </Text>
       </ScrollView>
     </View>
   );
@@ -472,56 +511,41 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   header: { paddingBottom: 16, paddingHorizontal: 20 },
   headerContent: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  headerTitle: { fontSize: 22, fontWeight: "700", color: "#ffffff", fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff", fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   headerSubtitle: { fontSize: 12, color: "rgba(255,255,255,0.72)", fontFamily: "Inter_400Regular", marginTop: 1, letterSpacing: 0.3 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 20, gap: 16 },
   section: { gap: 8 },
   sectionLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.8, fontFamily: "Inter_600SemiBold" },
-  channelRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  channelRow: { flexDirection: "row", gap: 8, paddingRight: 4 },
   channelPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
   channelLabel: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  textAreaWrapper: { borderRadius: 12, borderWidth: 1, padding: 14, minHeight: 160 },
-  textArea: { fontSize: 14, lineHeight: 21, minHeight: 130, fontFamily: "Inter_400Regular" },
+  textAreaWrapper: { borderRadius: 12, borderWidth: 1, padding: 14, minHeight: 140 },
+  textArea: { fontSize: 14, lineHeight: 21, minHeight: 110, fontFamily: "Inter_400Regular" },
   charCount: { fontSize: 11, marginTop: 8, textAlign: "right", fontFamily: "Inter_400Regular" },
+  attachRow: { gap: 8 },
+  attachBtns: { flexDirection: "row", gap: 10 },
+  attachBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderRadius: 12, paddingVertical: 12 },
+  attachBtnText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  attachedCard: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1.5 },
+  attachedName: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium" },
+  attachedSize: { fontSize: 12, fontFamily: "Inter_400Regular" },
   hintInput: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderWidth: 1 },
   hintText: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
-  analyzeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, paddingVertical: 15, marginTop: 4 },
-  analyzeBtnText: { fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
-  errorCard: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
-  errorText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
-  results: { gap: 12, marginTop: 4 },
-  statusRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  statusBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  statusText: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
-  senderText: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  card: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
-  cardHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  cardTitle: { fontSize: 14, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
-  confidenceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  label: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  confidenceValue: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  confidenceTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  confidenceFill: { height: 6, borderRadius: 3 },
-  matchMethod: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  shipmentId: { fontSize: 20, fontWeight: "700", fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
-  fieldsDivider: { height: 1, marginVertical: 2 },
-  fieldRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 5 },
-  fieldLabel: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
-  fieldValue: { fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", flex: 2, textAlign: "right" },
-  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  actionCard: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 10, borderWidth: 1 },
-  actionText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
-  draftDivider: { height: 1, marginVertical: 2 },
-  draftText: { fontSize: 14, lineHeight: 21, fontFamily: "Inter_400Regular" },
-  emailCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
-  emailCardHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
-  emailCardTitle: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
-  emailCardBody: { fontSize: 12, lineHeight: 17, fontFamily: "Inter_400Regular" },
-  emailRow: { flexDirection: "row", alignItems: "center", borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
-  emailText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium" },
-  copyBtn: { borderRadius: 6, padding: 6 },
+  selectedShipment: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5 },
+  selectedShipmentText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
+  shipmentPickerToggle: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1 },
+  shipmentPickerPlaceholder: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
+  shipmentSearchWrap: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderRadius: 10, marginBottom: 6 },
+  shipmentSearchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
+  shipmentDropdown: { borderRadius: 12, borderWidth: 1, overflow: "hidden", maxHeight: 220 },
+  shipmentOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: 1, gap: 8 },
+  shipmentOptionLeft: { flex: 1 },
+  shipmentOptionPo: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  shipmentOptionProduct: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  shipmentOptionSupplier: { fontSize: 12, fontFamily: "Inter_400Regular", maxWidth: 100 },
+  noShipmentsText: { padding: 16, fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
+  submitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, paddingVertical: 15, marginTop: 4 },
+  submitBtnText: { fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
+  footerNote: { fontSize: 12, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 17, marginTop: -4 },
 });

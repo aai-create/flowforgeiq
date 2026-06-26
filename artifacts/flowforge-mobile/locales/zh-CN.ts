@@ -1,7 +1,9 @@
 const zhCN = {
   tabs: {
+    home: "主页",
     documents: "文件",
     chat: "聊天",
+    capture: "采集",
     settings: "设置",
   },
   common: {
@@ -129,6 +131,9 @@ const zhCN = {
       "zh-CN": "简体中文",
       "zh-TW": "繁體中文",
     },
+    account: "账户",
+    signOut: "退出登录",
+    signOutDesc: "您需要重新登录",
   },
 };
 
