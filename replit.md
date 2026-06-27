@@ -17,6 +17,8 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (production value: `iq@inbound.flowforgeiq.com`; per-user addresses are assembled as `iq+{token}@inbound.flowforgeiq.com` and surfaced via `GET /settings/inbound-email`). This is the **only app-side knob** for switching inbound domains — no code changes required. Two external steps are needed to go live: (1) add an MX record in your DNS provider: `inbound.flowforgeiq.com MX 10 inbound.postmarkapp.com`; (2) update the Postmark inbound server in the Postmark dashboard to use `inbound.flowforgeiq.com`.
 - Optional env: `CHAT_ROUTING_THRESHOLD` — confidence threshold (0.0–1.0) for auto-routing chat-forward messages; defaults to `0.65`
 - Required secret: `POSTMARK_WEBHOOK_TOKEN` — `POST /webhooks/email` verifies the `X-Postmark-Signature` header (HMAC-SHA256 of the raw request body, base64-encoded) against this token; requests with a missing or invalid signature return `401`; if the token is not set the endpoint returns `500` and rejects all payloads (fail-closed); set via Replit Secrets to the token value configured in Postmark → Servers → your server → Webhooks
+- Required secret: `POSTMARK_SERVER_TOKEN` — used by `POST /api/team/invite` to send transactional invite emails; if unset the invite is still created and `inviteUrl` is returned but no email is sent (warning logged)
+- Optional env: `POSTMARK_FROM_EMAIL` — outbound sender address for transactional emails (e.g. `noreply@flowforgeiq.com`); must match a verified Postmark sender signature; defaults to `noreply@flowforgeiq.com`; do **not** use the inbound address here
 
 ## Stack
 

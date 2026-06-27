@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { requireAuth, requireAdmin, requireClerkAuth } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 import crypto from "node:crypto";
+import * as postmark from "postmark";
 
 function generateInboundToken(): string {
   return crypto.randomBytes(8).toString("hex");
@@ -77,6 +78,38 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
       ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
       : "";
   const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
+
+  const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
+  if (postmarkToken) {
+    try {
+      const client = new postmark.ServerClient(postmarkToken);
+      await client.sendEmail({
+        From: process.env.POSTMARK_FROM_EMAIL ?? "noreply@flowforgeiq.com",
+        To: email,
+        Subject: "You've been invited to join FlowForge",
+        TextBody: [
+          `You've been invited to join FlowForge as a ${validRole}.`,
+          "",
+          "Click the link below to accept your invitation:",
+          inviteUrl,
+          "",
+          "If you weren't expecting this invitation, you can safely ignore this email.",
+        ].join("\n"),
+        HtmlBody: [
+          `<p>You've been invited to join <strong>FlowForge</strong> as a <strong>${validRole}</strong>.</p>`,
+          `<p><a href="${inviteUrl}" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;text-decoration:none;border-radius:6px;">Accept invitation</a></p>`,
+          `<p>Or copy this link into your browser:<br><a href="${inviteUrl}">${inviteUrl}</a></p>`,
+          `<p style="color:#6b7280;font-size:12px;">If you weren't expecting this invitation, you can safely ignore this email.</p>`,
+        ].join("\n"),
+        MessageStream: "outbound",
+      });
+    } catch (err) {
+      req.log.warn({ err, email }, "Failed to send invite email via Postmark");
+    }
+  } else {
+    req.log.warn("POSTMARK_SERVER_TOKEN not set — invite email not sent");
+  }
+
   res.status(201).json({ invitation: inv, inviteUrl });
 });
 
