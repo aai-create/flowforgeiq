@@ -108,11 +108,16 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
     .where(eq(teamInvitationsTable.token, token));
 
   if (!inv) {
-    res.status(404).json({ error: "Invitation not found or already used" });
+    res.status(404).json({ error: "Invitation not found." });
     return;
   }
   if (inv.acceptedAt) {
-    res.status(409).json({ error: "Invitation already accepted" });
+    res.status(409).json({ error: "ALREADY_ACCEPTED" });
+    return;
+  }
+  const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  if (Date.now() - inv.createdAt.getTime() > INVITE_TTL_MS) {
+    res.status(410).json({ error: "EXPIRED" });
     return;
   }
 
