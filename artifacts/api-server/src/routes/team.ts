@@ -52,12 +52,23 @@ router.get("/org", requireAuth, async (req, res) => {
 
 router.get("/team", requireAuth, async (req, res) => {
   const members = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, req.orgId));
-  const pending = await db
+  const rawPending = await db
     .select()
     .from(teamInvitationsTable)
     .where(eq(teamInvitationsTable.orgId, req.orgId))
     .then(rows => rows.filter(r => !r.acceptedAt));
-  res.json({ members, pendingInvitations: pending });
+
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+      : "";
+  const pendingInvitations = rawPending.map(inv => ({
+    ...inv,
+    inviteUrl: `${baseUrl}/accept-invite?token=${inv.token}`,
+  }));
+
+  res.json({ members, pendingInvitations });
 });
 
 router.post("/team/invite", requireAdmin, async (req, res) => {

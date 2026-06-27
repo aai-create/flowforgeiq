@@ -15,4 +15,5 @@ export interface TeamInvitation {
   createdAt: Date;
   /** @nullable */
   acceptedAt?: Date | null;
+  inviteUrl: string;
 }

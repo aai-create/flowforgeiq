@@ -1737,7 +1737,7 @@ components:
 
     TeamInvitation:
       type: object
-      required: [id, email, role, token, invitedBy, createdAt]
+      required: [id, email, role, token, invitedBy, createdAt, inviteUrl]
       properties:
         id:         { type: integer }
         email:      { type: string }
@@ -1746,6 +1746,7 @@ components:
         invitedBy:  { type: string }
         createdAt:  { type: string, format: date-time }
         acceptedAt: { type: ["string", "null"], format: date-time }
+        inviteUrl:  { type: string }
 
     TeamResponse:
       type: object

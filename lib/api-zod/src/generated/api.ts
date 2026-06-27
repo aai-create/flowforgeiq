@@ -2278,7 +2278,8 @@ export const GetTeamResponse = zod.object({
   "token": zod.string(),
   "invitedBy": zod.string(),
   "createdAt": zod.coerce.date(),
-  "acceptedAt": zod.coerce.date().nullish()
+  "acceptedAt": zod.coerce.date().nullish(),
+  "inviteUrl": zod.string()
 }))
 })
 

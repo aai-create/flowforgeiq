@@ -36,6 +36,7 @@ export interface TeamInvitation {
   createdAt: string;
   /** @nullable */
   acceptedAt?: string | null;
+  inviteUrl: string;
 }
 
 export interface TeamResponse {

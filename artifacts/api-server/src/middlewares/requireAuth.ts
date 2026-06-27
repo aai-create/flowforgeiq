@@ -30,32 +30,24 @@ export const orgContextMiddleware = async (
   try {
     const auth = getAuth(req);
     const userId = auth?.userId;
-    // ── TEMP DEBUG (auth troubleshooting) ──────────────────────────────────
-    if (req.url.startsWith("/messages") || req.url.startsWith("/shipments") || req.url.startsWith("/stages")) {
+    // ── Duplicate-cookie detection ──────────────────────────────────────────
+    {
       const rawCookie = req.headers.cookie ?? "";
       const cookieNames = rawCookie
         .split(";")
         .map((c) => c.split("=")[0].trim())
         .filter(Boolean);
       const clerkCookieNames = cookieNames.filter((n) => n.startsWith("__"));
-      const dup = clerkCookieNames.filter((n, i) => clerkCookieNames.indexOf(n) !== i);
-      req.log.warn(
-        {
-          authDebug: {
-            url: req.url,
-            userId: auth?.userId ?? null,
-            sessionId: (auth as { sessionId?: string })?.sessionId ?? null,
-            tokenType: (auth as { tokenType?: string })?.tokenType ?? null,
-            hasCookieHeader: rawCookie.length > 0,
-            hasAuthHeader: Boolean(req.headers.authorization),
-            clerkCookieNames,
-            duplicateClerkCookies: Array.from(new Set(dup)),
-          },
-        },
-        "AUTH_DEBUG",
+      const dup = Array.from(
+        new Set(clerkCookieNames.filter((n, i) => clerkCookieNames.indexOf(n) !== i)),
       );
+      if (dup.length > 0) {
+        req.log.warn({ duplicateClerkCookies: dup, url: req.url }, "duplicate-clerk-cookies detected");
+        // Stash duplicates so requireAuth can surface a hint header on 401
+        (req as Request & { _dupClerkCookies?: string[] })._dupClerkCookies = dup;
+      }
     }
-    // ── END TEMP DEBUG ─────────────────────────────────────────────────────
+    // ── End duplicate-cookie detection ─────────────────────────────────────
     if (userId) {
       req.userId = userId;
       const [user] = await db
@@ -78,6 +70,14 @@ export const orgContextMiddleware = async (
   next();
 };
 
+/** Set X-Auth-Hint header when duplicate Clerk cookies are present on a 401 */
+function setDupCookieHint(req: Request, res: Response): void {
+  const dupCookies = (req as Request & { _dupClerkCookies?: string[] })._dupClerkCookies;
+  if (dupCookies && dupCookies.length > 0) {
+    res.set("X-Auth-Hint", "duplicate-clerk-cookies");
+  }
+}
+
 // ─── requireClerkAuth ─────────────────────────────────────────────────────────
 // Requires a valid Clerk JWT; does NOT require team membership.
 // Use only for the provision-self bootstrap endpoint.
@@ -87,6 +87,7 @@ export const requireClerkAuth = (
   next: NextFunction,
 ): void => {
   if (!req.userId) {
+    setDupCookieHint(req, res);
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -102,6 +103,7 @@ export const requireAuth = (
   next: NextFunction,
 ): void => {
   if (!req.userId) {
+    setDupCookieHint(req, res);
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
