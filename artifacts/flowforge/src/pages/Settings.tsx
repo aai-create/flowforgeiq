@@ -247,7 +247,7 @@ function TeamSection() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => copyInviteLink(window.location.origin + inv.token)}
+                    onClick={() => copyInviteLink(window.location.origin + "/accept-invite?token=" + inv.token)}
                     className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium border border-[#E5EAF0] rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors"
                   >
                     <Copy className="w-2.5 h-2.5" />

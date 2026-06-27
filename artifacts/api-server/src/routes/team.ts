@@ -73,7 +73,9 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
     .returning();
   const baseUrl = process.env.REPLIT_DEV_DOMAIN
     ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "";
+    : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+      : "";
   const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
   res.status(201).json({ invitation: inv, inviteUrl });
 });
