@@ -83,7 +83,7 @@ function TeamSection() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviting, setInviting] = useState(false);
-  const [inviteResult, setInviteResult] = useState<{ url: string } | null>(null);
+  const [inviteResult, setInviteResult] = useState<{ url: string; emailSent: boolean; email: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -122,8 +122,8 @@ function TeamSection() {
       });
       if (res.status === 403) { setError(t("settings.team.adminOnly")); return; }
       if (!res.ok) throw new Error("Failed");
-      const data = await res.json() as { inviteUrl: string };
-      setInviteResult({ url: data.inviteUrl });
+      const data = await res.json() as { inviteUrl: string; emailSent?: boolean };
+      setInviteResult({ url: data.inviteUrl, emailSent: data.emailSent === true, email: inviteEmail.trim() });
       setInviteEmail("");
       void loadTeam();
     } catch {
@@ -303,21 +303,37 @@ function TeamSection() {
           </button>
 
           {inviteResult && (
-            <div className="mt-4 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-              <div className={`${SECTION_LABEL} mb-2`}>{t("settings.team.inviteLink")}</div>
-              <p className="text-[11px] text-[#5E687B] mb-2">
-                {t("settings.team.inviteLinkDesc")} <strong>{t(inviteRole === "admin" ? "settings.team.roleAdmin" : "settings.team.roleMember")}</strong>.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-[10px] font-mono text-[#212833] bg-white border border-[#E5EAF0] rounded px-2 py-1.5 truncate">
-                  {inviteResult.url}
-                </code>
-                <button
-                  onClick={() => copyInviteLink(inviteResult.url)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white transition-colors shrink-0"
-                >
-                  {copied ? <><Check className="w-3 h-3 text-emerald-500" />{t("common.copied")}</> : <><Copy className="w-3 h-3" />{t("settings.team.copyTeamLink")}</>}
-                </button>
+            <div className="mt-4 space-y-2">
+              {inviteResult.emailSent ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3.5 py-3 flex items-start gap-2.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-800">{t("settings.team.emailSentTitle")}</p>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">{t("settings.team.emailSentDesc", { email: inviteResult.email })}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg px-3.5 py-2.5 flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <p className="text-[11px] text-amber-700">{t("settings.team.emailFallback")}</p>
+                </div>
+              )}
+              <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+                <div className={`${SECTION_LABEL} mb-2`}>{t("settings.team.inviteLink")}</div>
+                <p className="text-[11px] text-[#5E687B] mb-2">
+                  {t("settings.team.inviteLinkDesc")} <strong>{t(inviteRole === "admin" ? "settings.team.roleAdmin" : "settings.team.roleMember")}</strong>.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-[10px] font-mono text-[#212833] bg-white border border-[#E5EAF0] rounded px-2 py-1.5 truncate">
+                    {inviteResult.url}
+                  </code>
+                  <button
+                    onClick={() => copyInviteLink(inviteResult.url)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white transition-colors shrink-0"
+                  >
+                    {copied ? <><Check className="w-3 h-3 text-emerald-500" />{t("common.copied")}</> : <><Copy className="w-3 h-3" />{t("settings.team.copyTeamLink")}</>}
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -80,6 +80,7 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
   const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
 
   const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
+  let emailSent = false;
   if (postmarkToken) {
     try {
       const client = new postmark.ServerClient(postmarkToken);
@@ -103,6 +104,7 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
         ].join("\n"),
         MessageStream: "outbound",
       });
+      emailSent = true;
     } catch (err) {
       req.log.warn({ err, email }, "Failed to send invite email via Postmark");
     }
@@ -110,7 +112,7 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
     req.log.warn("POSTMARK_SERVER_TOKEN not set — invite email not sent");
   }
 
-  res.status(201).json({ invitation: inv, inviteUrl });
+  res.status(201).json({ invitation: inv, inviteUrl, emailSent });
 });
 
 router.delete("/team/:userId", requireAdmin, async (req, res) => {
