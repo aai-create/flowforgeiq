@@ -147,6 +147,11 @@ const en = {
       inviteError: "Enter a valid email address.",
       couldNotLoad: "Could not load team data.",
       cancelFailed: "Failed to cancel invitation.",
+      resend: "Resend",
+      resendFailed: "Failed to resend invitation. Please try again.",
+      resendEmailSent: "New invite sent to {{email}}.",
+      resendLinkReady: "Token refreshed — copy the new link above.",
+      expired: "Expired",
     },
   },
   home: {

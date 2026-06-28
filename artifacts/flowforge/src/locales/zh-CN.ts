@@ -147,6 +147,11 @@ const zhCN = {
       inviteError: "请输入有效的邮箱地址。",
       couldNotLoad: "无法加载团队数据。",
       cancelFailed: "取消邀请失败。",
+      resend: "重新发送",
+      resendFailed: "重新发送邀请失败，请重试。",
+      resendEmailSent: "已重新发送邀请至 {{email}}。",
+      resendLinkReady: "链接已更新——请复制上方新链接。",
+      expired: "已过期",
     },
   },
   home: {

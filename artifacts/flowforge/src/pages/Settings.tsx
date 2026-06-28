@@ -153,6 +153,25 @@ function TeamSection() {
     }
   };
 
+  const [resendingId, setResendingId] = useState<number | null>(null);
+  const [resendResult, setResendResult] = useState<{ id: number; emailSent: boolean } | null>(null);
+
+  const handleResendInvitation = async (id: number) => {
+    setResendingId(id);
+    setResendResult(null);
+    try {
+      const res = await fetch(`${basePath}api/team/invitations/${id}/resend`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json() as { emailSent: boolean };
+      setResendResult({ id, emailSent: data.emailSent });
+      void loadTeam();
+    } catch {
+      setError(t("settings.team.resendFailed"));
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   const copyInviteLink = (url: string) => {
     void navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
@@ -236,35 +255,66 @@ function TeamSection() {
             <span className="ml-auto text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded-full">{pendingInvitations.length}</span>
           </div>
           <ul className="divide-y divide-[#E5EAF0]">
-            {pendingInvitations.map(inv => (
-              <li key={inv.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-[#212833] truncate">{inv.email}</div>
-                  <div className="text-[10px] text-[#9E9FAE]">
-                    {t("settings.team.invitedAs")} <span className="font-medium">{inv.role}</span>
-                    {" · "}
-                    {new Date(inv.createdAt).toLocaleDateString()}
+            {pendingInvitations.map(inv => {
+              const isExpired = Date.now() - new Date(inv.createdAt).getTime() > 7 * 24 * 60 * 60 * 1000;
+              const wasResent = resendResult?.id === inv.id;
+              return (
+                <li key={inv.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-[#212833] truncate">{inv.email}</span>
+                        {isExpired && (
+                          <span className="text-[9px] font-bold bg-red-50 text-red-600 border border-red-100 px-1.5 py-0.5 rounded-full shrink-0">{t("settings.team.expired")}</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-[#9E9FAE]">
+                        {t("settings.team.invitedAs")} <span className="font-medium">{inv.role}</span>
+                        {" · "}
+                        {new Date(inv.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => copyInviteLink(inv.inviteUrl)}
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium border border-[#E5EAF0] rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors"
+                      >
+                        <Copy className="w-2.5 h-2.5" />
+                        {t("settings.team.copyLink")}
+                      </button>
+                      {myRole === "admin" && (
+                        <button
+                          onClick={() => void handleResendInvitation(inv.id)}
+                          disabled={resendingId === inv.id}
+                          className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium border border-[#9000FF]/30 rounded-md text-[#9000FF] hover:bg-[#9000FF]/5 disabled:opacity-60 transition-colors"
+                          title={t("settings.team.resend")}
+                        >
+                          {resendingId === inv.id
+                            ? <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                            : <RefreshCw className="w-2.5 h-2.5" />}
+                          {t("settings.team.resend")}
+                        </button>
+                      )}
+                      {myRole === "admin" && (
+                        <button
+                          onClick={() => void handleCancelInvitation(inv.id)}
+                          className="p-1 text-[#9E9FAE] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => copyInviteLink(inv.inviteUrl)}
-                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium border border-[#E5EAF0] rounded-md text-[#5E687B] hover:bg-[#F0F4F8] transition-colors"
-                  >
-                    <Copy className="w-2.5 h-2.5" />
-                    {t("settings.team.copyLink")}
-                  </button>
-                  {myRole === "admin" && (
-                    <button
-                      onClick={() => void handleCancelInvitation(inv.id)}
-                      className="p-1 text-[#9E9FAE] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                  {wasResent && (
+                    <div className={`flex items-center gap-1.5 text-[10px] rounded-md px-2.5 py-1.5 ${resendResult.emailSent ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                      {resendResult.emailSent
+                        ? <><Check className="w-3 h-3 shrink-0" />{t("settings.team.resendEmailSent", { email: inv.email })}</>
+                        : <><Mail className="w-3 h-3 shrink-0" />{t("settings.team.resendLinkReady")}</>}
+                    </div>
                   )}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

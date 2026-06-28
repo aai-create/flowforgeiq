@@ -142,6 +142,72 @@ router.delete("/team/invitations/:id", requireAdmin, async (req, res) => {
   res.status(204).send();
 });
 
+router.post("/team/invitations/:id/resend", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const [inv] = await db
+    .select()
+    .from(teamInvitationsTable)
+    .where(and(eq(teamInvitationsTable.id, id), eq(teamInvitationsTable.orgId, req.orgId)));
+
+  if (!inv) {
+    res.status(404).json({ error: "Invitation not found" });
+    return;
+  }
+  if (inv.acceptedAt) {
+    res.status(409).json({ error: "Invitation already accepted" });
+    return;
+  }
+
+  const newToken = crypto.randomBytes(24).toString("hex");
+  const [updated] = await db
+    .update(teamInvitationsTable)
+    .set({ token: newToken, createdAt: new Date() })
+    .where(eq(teamInvitationsTable.id, id))
+    .returning();
+
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+      : "";
+  const inviteUrl = `${baseUrl}/accept-invite?token=${newToken}`;
+
+  const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
+  let emailSent = false;
+  if (postmarkToken) {
+    try {
+      const client = new postmark.ServerClient(postmarkToken);
+      await client.sendEmail({
+        From: process.env.POSTMARK_FROM_EMAIL ?? "noreply@flowforgeiq.com",
+        To: inv.email,
+        Subject: "Your FlowForge invitation has been refreshed",
+        TextBody: [
+          `Your invitation to join FlowForge as a ${inv.role} has been refreshed.`,
+          "",
+          "Click the link below to accept your invitation:",
+          inviteUrl,
+          "",
+          "If you weren't expecting this invitation, you can safely ignore this email.",
+        ].join("\n"),
+        HtmlBody: [
+          `<p>Your invitation to join <strong>FlowForge</strong> as a <strong>${inv.role}</strong> has been refreshed.</p>`,
+          `<p><a href="${inviteUrl}" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;text-decoration:none;border-radius:6px;">Accept invitation</a></p>`,
+          `<p>Or copy this link into your browser:<br><a href="${inviteUrl}">${inviteUrl}</a></p>`,
+          `<p style="color:#6b7280;font-size:12px;">If you weren't expecting this invitation, you can safely ignore this email.</p>`,
+        ].join("\n"),
+        MessageStream: "outbound",
+      });
+      emailSent = true;
+    } catch (err) {
+      req.log.warn({ err, email: inv.email }, "Failed to resend invite email via Postmark");
+    }
+  } else {
+    req.log.warn("POSTMARK_SERVER_TOKEN not set — resend invite email not sent");
+  }
+
+  res.json({ invitation: updated, inviteUrl, emailSent });
+});
+
 router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
   const { token } = req.body as { token?: string };
   if (!token) {

@@ -147,6 +147,11 @@ const zhTW = {
       inviteError: "請輸入有效的電子郵件地址。",
       couldNotLoad: "無法載入團隊資料。",
       cancelFailed: "取消邀請失敗。",
+      resend: "重新傳送",
+      resendFailed: "重新傳送邀請失敗，請重試。",
+      resendEmailSent: "已重新傳送邀請至 {{email}}。",
+      resendLinkReady: "連結已更新——請複製上方新連結。",
+      expired: "已過期",
     },
   },
   home: {
