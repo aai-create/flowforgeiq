@@ -1,37 +1,50 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { useUser } from "@clerk/react";
-import { CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
+import { useUser, useClerk } from "@clerk/react";
+import { CheckCircle2, XCircle, Clock, RefreshCw, UserX } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type InviteStatus = "loading" | "success" | "expired" | "already_accepted" | "error";
+type InviteStatus = "loading" | "success" | "expired" | "already_accepted" | "wrong_account" | "error";
 
 export function AcceptInvite() {
   const [, navigate] = useLocation();
   const { user, isLoaded } = useUser();
+  const clerk = useClerk();
   const [status, setStatus] = useState<InviteStatus>("loading");
   const [message, setMessage] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [token, setToken] = useState("");
 
   useEffect(() => {
     if (!isLoaded) return;
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (!token) {
+    const tok = params.get("token");
+    if (!tok) {
       setStatus("error");
       setMessage("No invitation token found in the URL.");
       return;
     }
+    setToken(tok);
     if (!user) {
-      const returnTo = encodeURIComponent(`/accept-invite?token=${token}`);
+      const returnTo = encodeURIComponent(`/accept-invite?token=${tok}`);
       navigate(`/sign-in?redirect_url=${returnTo}`);
       return;
     }
 
+    fetch(`${basePath}/api/team/invite-peek?token=${encodeURIComponent(tok)}`)
+      .then(async r => {
+        if (r.ok) {
+          const data = await r.json() as { maskedEmail?: string };
+          setMaskedEmail(data.maskedEmail ?? "");
+        }
+      })
+      .catch(() => {});
+
     fetch(`${basePath}/api/team/accept-invite`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token: tok }),
     })
       .then(async res => {
         if (res.ok) {
@@ -44,6 +57,8 @@ export function AcceptInvite() {
             setStatus("expired");
           } else if (res.status === 409 || code === "ALREADY_ACCEPTED") {
             setStatus("already_accepted");
+          } else if (res.status === 403) {
+            setStatus("wrong_account");
           } else {
             setStatus("error");
             setMessage(code || "Failed to accept invitation.");
@@ -55,6 +70,11 @@ export function AcceptInvite() {
         setMessage("Network error. Please try again.");
       });
   }, [isLoaded, user]);
+
+  function handleSwitchAccount() {
+    const returnUrl = `${window.location.origin}/accept-invite?token=${encodeURIComponent(token)}`;
+    clerk.signOut({ redirectUrl: returnUrl });
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFBFC]" style={{ fontFamily: "Inter, sans-serif" }}>
@@ -111,6 +131,24 @@ export function AcceptInvite() {
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
               >
                 Go to FlowForgeIQ
+              </button>
+            </>
+          )}
+
+          {status === "wrong_account" && (
+            <>
+              <UserX className="w-8 h-8 text-amber-500 mx-auto mb-4" />
+              <h2 className="text-sm font-bold text-[#212833] mb-2">Wrong account</h2>
+              <p className="text-xs text-[#5E687B] mb-4">
+                You're signed in as the wrong account.{maskedEmail ? (
+                  <> This invite was sent to <span className="font-semibold text-[#212833]">{maskedEmail}</span>.</>
+                ) : " Please sign in with the email address this invite was sent to."}
+              </p>
+              <button
+                onClick={handleSwitchAccount}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
+              >
+                Switch account
               </button>
             </>
           )}

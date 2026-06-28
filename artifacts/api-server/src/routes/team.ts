@@ -208,6 +208,31 @@ router.post("/team/invitations/:id/resend", requireAdmin, async (req, res) => {
   res.json({ invitation: updated, inviteUrl, emailSent });
 });
 
+router.get("/team/invite-peek", async (req, res) => {
+  const token = String(req.query.token ?? "");
+  if (!token) {
+    res.status(400).json({ error: "Token required" });
+    return;
+  }
+  const [inv] = await db
+    .select({ email: teamInvitationsTable.email, acceptedAt: teamInvitationsTable.acceptedAt })
+    .from(teamInvitationsTable)
+    .where(eq(teamInvitationsTable.token, token));
+
+  if (!inv || inv.acceptedAt) {
+    res.status(404).json({ error: "Invitation not found" });
+    return;
+  }
+
+  const [localPart, domain] = inv.email.split("@");
+  const masked =
+    localPart && domain
+      ? `${localPart.charAt(0)}***@${domain}`
+      : "***";
+
+  res.json({ maskedEmail: masked });
+});
+
 router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
   const { token } = req.body as { token?: string };
   if (!token) {
