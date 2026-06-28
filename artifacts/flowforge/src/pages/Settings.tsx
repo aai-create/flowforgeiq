@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSearch, useLocation } from "wouter";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe } from "lucide-react";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
@@ -690,7 +691,10 @@ export function Settings() {
   const { data: inboundEmailData, refetch: refetchInboundEmail } = useGetInboundEmailAddress();
   const inboundEmail = inboundEmailData?.inboundEmailAddress || "ai@flowforge.com";
   const [emailCopied, setEmailCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  const activeTab = (new URLSearchParams(search).get("tab") as SettingsTab | null) ?? "general";
+  const setActiveTab = (tab: SettingsTab) => navigate(`/settings?tab=${tab}`);
 
   // Derive the current handle (the part between + and @) from the full address
   const currentHandle = (() => {
