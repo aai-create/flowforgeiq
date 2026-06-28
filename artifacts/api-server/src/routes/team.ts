@@ -58,10 +58,10 @@ router.get("/team", requireAuth, async (req, res) => {
     .where(eq(teamInvitationsTable.orgId, req.orgId))
     .then(rows => rows.filter(r => !r.acceptedAt));
 
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPLIT_DOMAINS
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+  const baseUrl = process.env.REPLIT_DOMAINS
+    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+    : process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
       : "";
   const pendingInvitations = rawPending.map(inv => ({
     ...inv,
@@ -83,10 +83,10 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
     .insert(teamInvitationsTable)
     .values({ email, role: validRole, token, invitedBy: req.userId!, orgId: req.orgId })
     .returning();
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPLIT_DOMAINS
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+  const baseUrl = process.env.REPLIT_DOMAINS
+    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+    : process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
       : "";
   const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
 

@@ -23,7 +23,8 @@ export function AcceptInvite() {
       return;
     }
     if (!user) {
-      navigate(`/sign-in`);
+      const returnTo = encodeURIComponent(`/accept-invite?token=${token}`);
+      navigate(`/sign-in?redirect_url=${returnTo}`);
       return;
     }
 
