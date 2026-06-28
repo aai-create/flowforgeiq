@@ -19,6 +19,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - Required secret: `POSTMARK_WEBHOOK_TOKEN` — `POST /webhooks/email` verifies the `X-Postmark-Signature` header (HMAC-SHA256 of the raw request body, base64-encoded) against this token; requests with a missing or invalid signature return `401`; if the token is not set the endpoint returns `500` and rejects all payloads (fail-closed); set via Replit Secrets to the token value configured in Postmark → Servers → your server → Webhooks
 - Required secret: `POSTMARK_SERVER_TOKEN` — used by `POST /api/team/invite` to send transactional invite emails; if unset the invite is still created and `inviteUrl` is returned but no email is sent (warning logged)
 - Optional env: `POSTMARK_FROM_EMAIL` — outbound sender address for transactional emails (e.g. `noreply@flowforgeiq.com`); must match a verified Postmark sender signature; defaults to `noreply@flowforgeiq.com`; do **not** use the inbound address here
+- Optional env: `APP_URL` — canonical base URL used when constructing invite links in emails (e.g. `https://flowforgeiq.com`); takes priority over `REPLIT_DOMAINS` and `REPLIT_DEV_DOMAIN`; set this in production so invite emails link to the deployed domain instead of the Replit dev URL; trailing slash is stripped automatically
 
 ## Stack
 

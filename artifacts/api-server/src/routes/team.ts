@@ -58,11 +58,13 @@ router.get("/team", requireAuth, async (req, res) => {
     .where(eq(teamInvitationsTable.orgId, req.orgId))
     .then(rows => rows.filter(r => !r.acceptedAt));
 
-  const baseUrl = process.env.REPLIT_DOMAINS
-    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
-    : process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : "";
+  const baseUrl = process.env.APP_URL
+    ? process.env.APP_URL.replace(/\/$/, "")
+    : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+      : process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "";
   const pendingInvitations = rawPending.map(inv => ({
     ...inv,
     inviteUrl: `${baseUrl}/accept-invite?token=${inv.token}`,
@@ -83,11 +85,13 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
     .insert(teamInvitationsTable)
     .values({ email, role: validRole, token, invitedBy: req.userId!, orgId: req.orgId })
     .returning();
-  const baseUrl = process.env.REPLIT_DOMAINS
-    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
-    : process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : "";
+  const baseUrl = process.env.APP_URL
+    ? process.env.APP_URL.replace(/\/$/, "")
+    : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+      : process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "";
   const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
 
   const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
@@ -165,11 +169,13 @@ router.post("/team/invitations/:id/resend", requireAdmin, async (req, res) => {
     .where(eq(teamInvitationsTable.id, id))
     .returning();
 
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+  const baseUrl = process.env.APP_URL
+    ? process.env.APP_URL.replace(/\/$/, "")
     : process.env.REPLIT_DOMAINS
       ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
-      : "";
+      : process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "";
   const inviteUrl = `${baseUrl}/accept-invite?token=${newToken}`;
 
   const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;

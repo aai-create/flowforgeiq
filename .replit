@@ -107,3 +107,6 @@ channel = "stable-25_05"
 
 [userenv.shared]
 INBOUND_EMAIL_BASE = "iq@inbound.flowforgeiq.com"
+
+[userenv.production]
+APP_URL = "https://flowforgeiq.com"
