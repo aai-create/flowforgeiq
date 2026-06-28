@@ -96,7 +96,7 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
     try {
       const client = new postmark.ServerClient(postmarkToken);
       await client.sendEmail({
-        From: process.env.POSTMARK_FROM_EMAIL ?? "noreply@flowforgeiq.com",
+        From: process.env.POSTMARK_FROM_EMAIL ?? "abid@tirasoftware.com",
         To: email,
         Subject: "You've been invited to join FlowForge",
         TextBody: [
@@ -178,7 +178,7 @@ router.post("/team/invitations/:id/resend", requireAdmin, async (req, res) => {
     try {
       const client = new postmark.ServerClient(postmarkToken);
       await client.sendEmail({
-        From: process.env.POSTMARK_FROM_EMAIL ?? "noreply@flowforgeiq.com",
+        From: process.env.POSTMARK_FROM_EMAIL ?? "abid@tirasoftware.com",
         To: inv.email,
         Subject: "Your FlowForge invitation has been refreshed",
         TextBody: [
