@@ -1,9 +1,13 @@
 /**
  * Standalone production server for Expo static builds.
  *
- * Serves the output of build.js (static-build/) with two special routes:
+ * Serves the output of build.js (static-build/) with special routes:
+ * - GET /health → JSON status of manifest artifacts
  * - GET / or /manifest with expo-platform header → platform manifest JSON
+ *   (if manifest is missing, returns a valid error-state manifest so Expo Go
+ *    can display a human-readable message instead of a parse failure)
  * - GET / without expo-platform → landing page HTML
+ *   (if manifests are missing, shows a "build not ready" page with instructions)
  * Everything else falls through to static file serving from ./static-build/.
  *
  * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
@@ -45,27 +49,214 @@ function getAppName() {
   }
 }
 
-function serveManifest(platform, res) {
+function manifestExists(platform) {
   const manifestPath = path.join(STATIC_ROOT, platform, "manifest.json");
+  return fs.existsSync(manifestPath);
+}
 
-  if (!fs.existsSync(manifestPath)) {
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(
-      JSON.stringify({ error: `Manifest not found for platform: ${platform}` }),
-    );
+function readManifestSafe(platform) {
+  const manifestPath = path.join(STATIC_ROOT, platform, "manifest.json");
+  try {
+    return { ok: true, content: fs.readFileSync(manifestPath, "utf-8") };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function serveHealth(res) {
+  const ios = manifestExists("ios");
+  const android = manifestExists("android");
+  const allReady = ios && android;
+
+  const body = JSON.stringify({
+    status: allReady ? "ok" : "build_not_ready",
+    manifests: { ios, android },
+  });
+
+  res.writeHead(allReady ? 200 : 503, { "content-type": "application/json" });
+  res.end(body);
+}
+
+function serveManifest(platform, res) {
+  const result = readManifestSafe(platform);
+
+  if (!result.ok) {
+    // Expo Go expects a JSON object it can parse as a manifest. Returning a
+    // bare {"error": "..."} causes "Failed to parse manifest JSON". Instead,
+    // return a minimal manifest whose launchAsset points nowhere but carries a
+    // human-readable message field that Expo Go can surface.
+    const errorManifest = JSON.stringify({
+      id: `build-not-ready-${platform}`,
+      createdAt: new Date().toISOString(),
+      runtimeVersion: "0",
+      launchAsset: {
+        key: "build-not-ready",
+        contentType: "application/javascript",
+        url: "",
+      },
+      assets: [],
+      metadata: {},
+      extra: {
+        expoClient: { name: getAppName() },
+      },
+      message:
+        "The app build has not completed yet. " +
+        `The manifest for platform "${platform}" is not available. ` +
+        "Trigger a new deployment to rebuild the bundle, then try again.",
+    });
+
+    res.writeHead(200, {
+      "content-type": "application/json",
+      "expo-protocol-version": "1",
+      "expo-sfv-version": "0",
+      "x-build-status": "not-ready",
+    });
+    res.end(errorManifest);
     return;
   }
 
-  const manifest = fs.readFileSync(manifestPath, "utf-8");
+  let parsed;
+  try {
+    parsed = JSON.parse(result.content);
+  } catch {
+    // Content exists but is malformed — serve the same error-state manifest.
+    const errorManifest = JSON.stringify({
+      id: `malformed-manifest-${platform}`,
+      createdAt: new Date().toISOString(),
+      runtimeVersion: "0",
+      launchAsset: {
+        key: "malformed-manifest",
+        contentType: "application/javascript",
+        url: "",
+      },
+      assets: [],
+      metadata: {},
+      extra: {
+        expoClient: { name: getAppName() },
+      },
+      message:
+        `The stored manifest for platform "${platform}" is malformed (not valid JSON). ` +
+        "Trigger a new deployment to rebuild the bundle, then try again.",
+    });
+
+    res.writeHead(200, {
+      "content-type": "application/json",
+      "expo-protocol-version": "1",
+      "expo-sfv-version": "0",
+      "x-build-status": "malformed",
+    });
+    res.end(errorManifest);
+    return;
+  }
+
+  void parsed;
   res.writeHead(200, {
     "content-type": "application/json",
     "expo-protocol-version": "1",
     "expo-sfv-version": "0",
   });
-  res.end(manifest);
+  res.end(result.content);
+}
+
+function serveBuildNotReadyPage(res, appName) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${appName} — Build Not Ready</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 1rem;
+      padding: 2.5rem;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,.5);
+    }
+    .icon { font-size: 3rem; margin-bottom: 1.25rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; color: #f1f5f9; }
+    p { color: #94a3b8; line-height: 1.6; margin-bottom: 1rem; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: #7c3aed22; border: 1px solid #7c3aed55;
+      color: #a78bfa; border-radius: 99px;
+      padding: 0.2rem 0.75rem; font-size: 0.8rem;
+      margin-bottom: 1.75rem;
+    }
+    .steps { list-style: none; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex; align-items: flex-start; gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #1e293b;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(step);
+      background: #334155; color: #e2e8f0;
+      border-radius: 50%; min-width: 1.5rem; height: 1.5rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+    }
+    .health-url {
+      font-family: monospace; font-size: 0.85rem;
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 0.4rem; padding: 0.2rem 0.5rem;
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🏗️</div>
+    <span class="badge">⚠ Build not ready</span>
+    <h1>${appName}</h1>
+    <p>
+      The mobile app bundle has not been built yet, or the last build did not
+      complete successfully. Expo Go cannot load the app until a valid build
+      is present.
+    </p>
+    <ol class="steps">
+      <li>Trigger a new deployment from the Replit Deployments panel.</li>
+      <li>Watch the deployment logs — look for "Build complete!" at the end to confirm success.</li>
+      <li>
+        Check <span class="health-url">/health</span> on this domain — it returns
+        <code>{"status":"ok"}</code> once both iOS and Android manifests are present.
+      </li>
+      <li>Open Expo Go and scan the QR code (or enter the URL manually) to load the app.</li>
+    </ol>
+  </div>
+</body>
+</html>`;
+
+  res.writeHead(503, { "content-type": "text/html; charset=utf-8" });
+  res.end(html);
 }
 
 function serveLandingPage(req, res, landingPageTemplate, appName) {
+  // If neither manifest exists, show a "build not ready" page instead.
+  const iosReady = manifestExists("ios");
+  const androidReady = manifestExists("android");
+  if (!iosReady && !androidReady) {
+    return serveBuildNotReadyPage(res, appName);
+  }
+
   const forwardedProto = req.headers["x-forwarded-proto"];
   const protocol = forwardedProto || "https";
   const host = req.headers["x-forwarded-host"] || req.headers["host"];
@@ -104,7 +295,12 @@ function serveStaticFile(urlPath, res) {
   res.end(content);
 }
 
-const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+let landingPageTemplate;
+try {
+  landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+} catch {
+  landingPageTemplate = null;
+}
 const appName = getAppName();
 
 const server = http.createServer((req, res) => {
@@ -115,6 +311,10 @@ const server = http.createServer((req, res) => {
     pathname = pathname.slice(basePath.length) || "/";
   }
 
+  if (pathname === "/health") {
+    return serveHealth(res);
+  }
+
   if (pathname === "/" || pathname === "/manifest") {
     const platform = req.headers["expo-platform"];
     if (platform === "ios" || platform === "android") {
@@ -122,6 +322,9 @@ const server = http.createServer((req, res) => {
     }
 
     if (pathname === "/") {
+      if (!landingPageTemplate) {
+        return serveBuildNotReadyPage(res, appName);
+      }
       return serveLandingPage(req, res, landingPageTemplate, appName);
     }
   }
@@ -132,4 +335,5 @@ const server = http.createServer((req, res) => {
 const port = parseInt(process.env.PORT || "3000", 10);
 server.listen(port, "0.0.0.0", () => {
   console.log(`Serving static Expo build on port ${port}`);
+  console.log(`Health check available at /health`);
 });

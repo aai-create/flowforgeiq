@@ -130,11 +130,11 @@ function getExpoPublicReplId() {
 async function startMetro(expoPublicDomain, expoPublicReplId) {
   const isRunning = await checkMetroHealth();
   if (isRunning) {
-    console.log("Metro already running");
+    console.log("Metro already running, skipping start");
     return;
   }
 
-  console.log("Starting Metro...");
+  console.log("Starting Metro bundler...");
   console.log(`Setting EXPO_PUBLIC_DOMAIN=${expoPublicDomain}`);
   const env = {
     ...process.env,
@@ -164,6 +164,12 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     },
   );
 
+  metroProcess.on("exit", (code, signal) => {
+    if (code !== null && code !== 0) {
+      console.error(`[Metro] Process exited unexpectedly with code ${code}`);
+    }
+  });
+
   if (metroProcess.stdout) {
     metroProcess.stdout.on("data", (data) => {
       const output = data.toString().trim();
@@ -173,22 +179,39 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
   if (metroProcess.stderr) {
     metroProcess.stderr.on("data", (data) => {
       const output = data.toString().trim();
-      if (output) console.error(`[Metro Error] ${output}`);
+      if (output) console.error(`[Metro stderr] ${output}`);
     });
   }
 
-  for (let i = 0; i < 60; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Exponential backoff: start at 1s, double each time up to 8s cap.
+  // Total window: ~2.5 minutes (30 retries with backoff 1→2→4→8→8→…)
+  const MAX_RETRIES = 30;
+  const BASE_DELAY_MS = 1000;
+  const MAX_DELAY_MS = 8000;
+
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const delay = Math.min(BASE_DELAY_MS * Math.pow(2, i), MAX_DELAY_MS);
+    await new Promise((resolve) => setTimeout(resolve, delay));
 
     const healthy = await checkMetroHealth();
     if (healthy) {
-      console.log("Metro ready");
+      console.log(`Metro ready after ${i + 1} health check(s)`);
       return;
     }
+
+    const elapsed = Math.round(
+      (BASE_DELAY_MS * (Math.pow(2, Math.min(i + 1, 4)) - 1)) / 1000,
+    );
+    console.log(
+      `[Metro] Not yet ready (attempt ${i + 1}/${MAX_RETRIES}, ~${elapsed}s elapsed) — retrying in ${delay / 1000}s…`,
+    );
   }
 
-  console.error("Metro timeout");
-  process.exit(1);
+  exitWithError(
+    "ERROR: Metro bundler never became healthy after all retries.\n" +
+      "Check the [Metro] and [Metro stderr] lines above for startup errors.\n" +
+      "Common causes: missing dependencies, syntax errors in app code, or port 8081 already in use.",
+  );
 }
 
 async function downloadFile(url, outputPath) {
@@ -505,6 +528,48 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
   console.log("Manifests updated");
 }
 
+function validateManifests() {
+  const platforms = ["ios", "android"];
+  const staticBuild = path.join(projectRoot, "static-build");
+  const errors = [];
+
+  for (const platform of platforms) {
+    const manifestPath = path.join(staticBuild, platform, "manifest.json");
+
+    if (!fs.existsSync(manifestPath)) {
+      errors.push(`${platform}: manifest.json does not exist at ${manifestPath}`);
+      continue;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    } catch (e) {
+      errors.push(`${platform}: manifest.json is not valid JSON — ${e.message}`);
+      continue;
+    }
+
+    if (!parsed.launchAsset) {
+      errors.push(`${platform}: manifest.json is missing required "launchAsset" field`);
+    }
+
+    if (!parsed.launchAsset?.url) {
+      errors.push(`${platform}: manifest.json launchAsset is missing "url" field`);
+    }
+  }
+
+  if (errors.length > 0) {
+    exitWithError(
+      "ERROR: Manifest validation failed after build:\n" +
+        errors.map((e) => `  - ${e}`).join("\n") +
+        "\nThe deployment will not serve a valid app to Expo Go.\n" +
+        "Check the Metro logs above for bundling errors.",
+    );
+  }
+
+  console.log("Manifest validation passed (ios + android)");
+}
+
 async function main() {
   console.log("Building static Expo Go deployment...");
 
@@ -555,6 +620,8 @@ async function main() {
 
   console.log("Updating manifests and creating landing page...");
   updateManifests(manifests, timestamp, baseUrl, assetsByHash);
+
+  validateManifests();
 
   console.log("Build complete! Deploy to:", baseUrl);
 
