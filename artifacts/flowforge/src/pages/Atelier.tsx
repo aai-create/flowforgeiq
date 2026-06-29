@@ -17,6 +17,7 @@ import {
   DollarSign, CreditCard,
   MapPin, Filter, ShieldAlert, Upload, MoreHorizontal,
   HelpCircle, Link2, Copy, Check as CheckIcon, Archive, ArchiveRestore,
+  Factory, Tag,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -739,7 +740,10 @@ export function Atelier() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className={SECTION_LABEL_MUTED}>{t("orders.supplierPoLabel")}</span>
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              <Factory className="w-3 h-3 shrink-0" />
+                              {t("orders.supplierPoLabel")}
+                            </span>
                             <button
                               type="button"
                               onClick={e => copyPo(shipment.po, e)}
@@ -750,7 +754,11 @@ export function Atelier() {
                                 ? <CheckIcon className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                                 : <Copy className="w-2.5 h-2.5 opacity-0 group-hover/po:opacity-60 shrink-0 transition-opacity" />}
                             </button>
-                            <span className={`${SECTION_LABEL_MUTED} ml-1`}>{t("orders.buyerPoLabel")}</span>
+                            <span className="w-px h-3 bg-[#E5EAF0] self-center mx-0.5 shrink-0" />
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                              <Tag className="w-3 h-3 shrink-0" />
+                              {t("orders.buyerPoLabel")}
+                            </span>
                             {shipment.buyerPoNumbers && shipment.buyerPoNumbers.length > 0 ? (
                               <>
                                 {shipment.buyerPoNumbers.map((bpo) => (
