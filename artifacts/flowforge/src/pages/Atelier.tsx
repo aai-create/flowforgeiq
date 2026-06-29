@@ -992,7 +992,7 @@ export function Atelier() {
                     {isActive && (
                       <div className="mt-3 pt-3 border-t border-[#E5EAF0]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`${SECTION_LABEL_MUTED} flex items-center gap-1`}><Link2 className="w-2.5 h-2.5"/>Buyer PO Links</span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600"><Tag className="w-2.5 h-2.5 shrink-0"/>Buyer PO Links</span>
                           <button type="button"
                             onClick={() => setLinkPanelShipmentId(linkPanelShipmentId === shipment.shipmentId ? null : shipment.shipmentId)}
                             className="text-[11px] font-semibold text-[#9000FF] hover:underline">
