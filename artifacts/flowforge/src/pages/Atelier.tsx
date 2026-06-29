@@ -1573,12 +1573,18 @@ export function Atelier() {
             <span className={SECTION_LABEL}>{t("orders.poNumbersReadOnly")}</span>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.buyerPoLabel")}</label>
+                <label className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mb-1">
+                  <Tag className="w-3 h-3 shrink-0" />
+                  {t("orders.buyerPoLabel")}
+                </label>
                 <input readOnly value={newPOForm.buyerPoNumber || "—"}
                   className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.supplierPoLabel")}</label>
+                <label className="flex items-center gap-1 text-xs font-semibold text-slate-400 mb-1">
+                  <Factory className="w-3 h-3 shrink-0" />
+                  {t("orders.supplierPoLabel")}
+                </label>
                 <input readOnly value={newPOForm.poNumber}
                   className="w-full border border-[#E5EAF0] bg-[#F0F4F8] rounded-md px-2 py-1.5 text-[11px] text-[#5E687B] font-mono outline-none cursor-default"/>
               </div>
@@ -1624,12 +1630,18 @@ export function Atelier() {
                 {newPOForm.buyerPoNumber ? (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.buyerPoLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.buyerPoGenerated")}</span></label>
+                      <label className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mb-1">
+                        <Tag className="w-3 h-3 shrink-0" />
+                        {t("orders.buyerPoLabel")} <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.buyerPoGenerated")}</span>
+                      </label>
                       <input readOnly value={newPOForm.buyerPoNumber}
                         className="w-full border border-emerald-200 bg-emerald-50 rounded-md px-2 py-1.5 text-[11px] text-emerald-700 font-mono outline-none cursor-default"/>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("orders.supplierPoLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.supplierPoOverrideLabel")}</span></label>
+                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-400 mb-1">
+                        <Factory className="w-3 h-3 shrink-0" />
+                        {t("orders.supplierPoLabel")} <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.supplierPoOverrideLabel")}</span>
+                      </label>
                       <input value={newPOForm.poNumber}
                         onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
                         className={`w-full border rounded-md px-2 py-1.5 text-[11px] font-mono outline-none focus:ring-1 transition-colors ${poNumberError ? "border-red-400 focus:border-red-400 focus:ring-red-200" : "border-[#E5EAF0] focus:border-[#9000FF] focus:ring-[#9000FF]/20"}`}/>
@@ -1642,8 +1654,9 @@ export function Atelier() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                    {t("orders.buyerPoLabel")} <span className="text-[#9E9FAE] font-normal">{t("orders.buyerPoHint")}</span>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-emerald-600 mb-1">
+                    <Tag className="w-3 h-3 shrink-0" />
+                    {t("orders.buyerPoLabel")} <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.buyerPoHint")}</span>
                   </label>
                   {existingDeals && existingDeals.length > 0 && (
                     <div className="mb-2 border border-[#E5EAF0] rounded-md overflow-hidden divide-y divide-[#F0F4F8] max-h-28 overflow-y-auto">
@@ -1685,8 +1698,9 @@ export function Atelier() {
                     className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 transition-colors font-mono"/>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">
-                    {t("orders.supplierPoLabel")} <span className="text-red-500">*</span>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-400 mb-1">
+                    <Factory className="w-3 h-3 shrink-0" />
+                    {t("orders.supplierPoLabel")} <span className="text-red-500 ml-0.5">*</span>
                     <span className="text-[#9E9FAE] font-normal ml-1">{t("orders.supplierPoHint")}</span>
                   </label>
                   <input value={newPOForm.poNumber} onChange={e => { setNewPOForm(p => ({ ...p, poNumber: e.target.value })); setPoNumberError(null); }}
