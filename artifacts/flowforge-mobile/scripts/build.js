@@ -231,6 +231,19 @@ async function downloadFile(url, outputPath) {
       throw new Error(`HTTP ${response.status}`);
     }
 
+    // Guard against Metro returning an HTML error page instead of JavaScript.
+    // This happens when Metro can't resolve the bundle path — response.ok is
+    // true but the body is HTML, which would produce an invalid (and often
+    // oversized) "bundle" that passes the size check but crashes the app.
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/javascript")) {
+      const preview = await response.text();
+      throw new Error(
+        `Metro returned unexpected content-type "${contentType}" for ${url}\n` +
+          `First 2 KB of response:\n${preview.slice(0, 2048)}`,
+      );
+    }
+
     const file = fs.createWriteStream(outputPath);
     await pipeline(Readable.fromWeb(response.body), file);
 
@@ -256,7 +269,10 @@ async function downloadFile(url, outputPath) {
 
 async function downloadBundle(platform, timestamp) {
   const entryPath = path.resolve(projectRoot, "node_modules", "expo-router", "entry");
-  const bundlePath = path.relative(workspaceRoot, entryPath);
+  // bundlePath must be relative to projectRoot (Metro's CWD), not workspaceRoot.
+  // Metro resolves bundle paths relative to its own project root, so using a
+  // workspace-relative path sends Metro looking for a non-existent nested path.
+  const bundlePath = path.relative(projectRoot, entryPath);
   const url = new URL(`http://localhost:${METRO_BUILD_PORT}/${bundlePath}.bundle`);
   url.searchParams.set("platform", platform);
   url.searchParams.set("dev", "false");
