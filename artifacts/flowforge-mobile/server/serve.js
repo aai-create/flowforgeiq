@@ -262,7 +262,10 @@ async function serveLandingPage(req, res, landingPageTemplate, appName) {
   const protocol = forwardedProto || "https";
   const host = req.headers["x-forwarded-host"] || req.headers["host"];
   const baseUrl = `${protocol}://${host}`;
-  const expsUrl = basePath ? `${host}${basePath}` : `${host}`;
+  // Use /manifest sub-path so Expo Go fetches a sub-path (bypasses the
+  // flowforge CDN's /* → /index.html static rewrite that catches the root).
+  const manifestSubPath = basePath ? `${basePath}/manifest` : `/manifest`;
+  const expsUrl = `${host}${manifestSubPath}`;
   const deepLink = `exp://${expsUrl}`;
 
   let qrSvg = "";
@@ -331,18 +334,25 @@ const server = http.createServer((req, res) => {
     return serveHealth(res);
   }
 
-  if (pathname === "/" || pathname === "/manifest") {
+  // /manifest is a dedicated manifest endpoint that doesn't rely on the
+  // expo-platform header being forwarded through the proxy. Defaults to "ios"
+  // so Expo Go on iPhone always gets a valid JSON manifest regardless of
+  // whether the proxy strips the expo-platform header.
+  if (pathname === "/manifest") {
+    const platform =
+      req.headers["expo-platform"] === "android" ? "android" : "ios";
+    return serveManifest(platform, res);
+  }
+
+  if (pathname === "/") {
     const platform = req.headers["expo-platform"];
     if (platform === "ios" || platform === "android") {
       return serveManifest(platform, res);
     }
-
-    if (pathname === "/") {
-      if (!landingPageTemplate) {
-        return serveBuildNotReadyPage(res, appName);
-      }
-      return serveLandingPage(req, res, landingPageTemplate, appName);
+    if (!landingPageTemplate) {
+      return serveBuildNotReadyPage(res, appName);
     }
+    return serveLandingPage(req, res, landingPageTemplate, appName);
   }
 
   serveStaticFile(pathname, res);
