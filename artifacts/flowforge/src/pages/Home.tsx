@@ -22,6 +22,7 @@ import {
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
   Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff, Clipboard, Copy, Circle,
+  Factory, Tag,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
@@ -3185,7 +3186,7 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className={SECTION_LABEL_MUTED}>Supplier PO</span>
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400"><Factory className="w-2.5 h-2.5 shrink-0" />Supplier PO</span>
                         <button
                           type="button"
                           onClick={e => copyPo(activeShipment.po, e)}
@@ -3196,7 +3197,7 @@ export default function Home() {
                             ? <Check size={9} className="text-emerald-500 shrink-0" />
                             : <Copy size={9} className="opacity-0 group-hover/spo:opacity-50 shrink-0 transition-opacity" />}
                         </button>
-                        <span className={SECTION_LABEL_MUTED}>Buyer PO</span>
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600"><Tag className="w-2.5 h-2.5 shrink-0" />Buyer PO</span>
                         {activeShipment.buyerPoNumbers && activeShipment.buyerPoNumbers.length > 0 ? (
                           <>
                             {activeShipment.buyerPoNumbers.map(bpo => (
