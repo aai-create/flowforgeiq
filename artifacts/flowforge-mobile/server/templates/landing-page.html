@@ -181,10 +181,14 @@
         background: #fff;
         border-radius: 8px;
         padding: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      .qr-code canvas {
+      .qr-code svg {
         width: 100%;
         height: 100%;
+        display: block;
       }
       .open-button {
         display: inline-block;
@@ -385,7 +389,7 @@
               <h2 class="step-title">Scan QR Code</h2>
             </div>
             <p class="step-description">Use your phone's camera or Expo Go</p>
-            <div class="qr-code" id="qr-code"></div>
+            <div class="qr-code">QR_SVG_PLACEHOLDER</div>
             <a href="exps://EXPS_URL_PLACEHOLDER" class="open-button"
               >Open in Expo Go</a
             >
@@ -394,24 +398,23 @@
       </div>
     </div>
 
-    <script src="https://unpkg.com/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
     <script>
       (function () {
-        const ua = navigator.userAgent;
-        const loadingEl = document.getElementById("loading");
-        const contentEl = document.getElementById("content");
+        var ua = navigator.userAgent;
+        var loadingEl = document.getElementById("loading");
+        var contentEl = document.getElementById("content");
 
-        const isAndroid = /Android/i.test(ua);
-        const isIOS =
+        var isAndroid = /Android/i.test(ua);
+        var isIOS =
           /iPhone|iPad|iPod/i.test(ua) ||
           (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-        const deepLink = "exps://EXPS_URL_PLACEHOLDER";
+        var deepLink = "exps://EXPS_URL_PLACEHOLDER";
 
         // Adjust store buttons based on platform
-        const appStoreBtn = document.getElementById("app-store-btn");
-        const playStoreBtn = document.getElementById("play-store-btn");
-        const storeButtonsContainer = document.getElementById("store-buttons");
+        var appStoreBtn = document.getElementById("app-store-btn");
+        var playStoreBtn = document.getElementById("play-store-btn");
+        var storeButtonsContainer = document.getElementById("store-buttons");
 
         if (isIOS) {
           playStoreBtn.className = "store-link";
@@ -421,30 +424,7 @@
           storeButtonsContainer.insertBefore(playStoreBtn, appStoreBtn);
         }
 
-        const qrCode = new QRCodeStyling({
-          width: 400,
-          height: 400,
-          data: deepLink,
-          dotsOptions: {
-            color: "#333333",
-            type: "rounded",
-          },
-          backgroundOptions: {
-            color: "#ffffff",
-          },
-          cornersSquareOptions: {
-            type: "extra-rounded",
-          },
-          cornersDotOptions: {
-            type: "dot",
-          },
-          qrOptions: {
-            errorCorrectionLevel: "H",
-          },
-        });
-
-        qrCode.append(document.getElementById("qr-code"));
-
+        // On mobile, attempt deep-link redirect; show landing if it fails
         if (isAndroid || isIOS) {
           loadingEl.style.display = "block";
           contentEl.style.display = "none";

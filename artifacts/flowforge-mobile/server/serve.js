@@ -10,12 +10,13 @@
  *   (if manifests are missing, shows a "build not ready" page with instructions)
  * Everything else falls through to static file serving from ./static-build/.
  *
- * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
+ * Dependencies: Node.js built-ins (http, fs, path) + qrcode (server-side QR generation).
  */
 
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const QRCode = require("qrcode");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
@@ -249,7 +250,7 @@ function serveBuildNotReadyPage(res, appName) {
   res.end(html);
 }
 
-function serveLandingPage(req, res, landingPageTemplate, appName) {
+async function serveLandingPage(req, res, landingPageTemplate, appName) {
   // If neither manifest exists, show a "build not ready" page instead.
   const iosReady = manifestExists("ios");
   const androidReady = manifestExists("android");
@@ -262,11 +263,26 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   const host = req.headers["x-forwarded-host"] || req.headers["host"];
   const baseUrl = `${protocol}://${host}`;
   const expsUrl = basePath ? `${host}${basePath}` : `${host}`;
+  const deepLink = `exp://${expsUrl}`;
+
+  let qrSvg = "";
+  try {
+    qrSvg = await QRCode.toString(deepLink, {
+      type: "svg",
+      margin: 1,
+      color: { dark: "#333333", light: "#ffffff" },
+      errorCorrectionLevel: "H",
+    });
+  } catch (err) {
+    // Non-fatal: fall back to empty; client-side JS will still attempt to render.
+    console.error("QR generation failed:", err.message);
+  }
 
   const html = landingPageTemplate
     .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
     .replace(/EXPS_URL_PLACEHOLDER/g, expsUrl)
-    .replace(/APP_NAME_PLACEHOLDER/g, appName);
+    .replace(/APP_NAME_PLACEHOLDER/g, appName)
+    .replace(/QR_SVG_PLACEHOLDER/g, qrSvg);
 
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(html);
