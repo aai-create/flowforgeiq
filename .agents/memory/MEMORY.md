@@ -6,3 +6,6 @@
 - [drizzle-kit push TTY limitation](db-push-tty.md) — drizzle-kit push fails non-interactively; use psql heredoc for schema changes + TRUNCATE CASCADE for seed teardown.
 - [RN worklets babel phantom dep](rn-worklets-babel-phantom-dep.md) — mobile deploy "Cannot find module '@babel/generator'" → add @babel/generator+traverse+types (7.x) to WORKSPACE ROOT package.json.
 - [Clerk duplicate-cookie 401s](clerk-duplicate-cookies.md) — "Could not reach the server" is a generic query-error label; real cause was duplicate stale Clerk cookies → 401. Fresh browser = 403 (verified), polluted = 401.
+- [Vite build env vars](vite-build-env-vars.md) — PORT and BASE_PATH are runtime-only; vite.config.ts must use async ({command}) form and skip PORT/BASE_PATH validation when command === "build".
+- [react-native-worklets root hoist](rn-worklets-root-hoist.md) — react-native-reanimated v4 Babel plugin requires react-native-worklets/plugin at workspace root; add to root package.json devDependencies or Babel can't find it from pnpm store.
+- [Mobile Metro build port](mobile-metro-build-port.md) — mobile build script uses METRO_BUILD_PORT=8083 for expo start during deploy builds; avoids conflict with dev workflow on 8081.
