@@ -528,12 +528,43 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
   console.log("Manifests updated");
 }
 
-function validateManifests() {
+const BUNDLE_MIN_BYTES = 10 * 1024; // 10 KB — a valid production bundle is always larger
+
+function validateManifests(timestamp) {
   const platforms = ["ios", "android"];
   const staticBuild = path.join(projectRoot, "static-build");
   const errors = [];
 
   for (const platform of platforms) {
+    // --- Bundle validation ---
+    const bundlePath = path.join(
+      staticBuild,
+      timestamp,
+      "_expo",
+      "static",
+      "js",
+      platform,
+      "bundle.js",
+    );
+
+    if (!fs.existsSync(bundlePath)) {
+      errors.push(
+        `${platform}: bundle.js does not exist at ${bundlePath}`,
+      );
+    } else {
+      const bundleSize = fs.statSync(bundlePath).size;
+      console.log(
+        `Bundle check [${platform}]: ${bundlePath} — ${(bundleSize / 1024).toFixed(1)} KB`,
+      );
+      if (bundleSize < BUNDLE_MIN_BYTES) {
+        errors.push(
+          `${platform}: bundle.js is suspiciously small (${bundleSize} bytes, minimum is ${BUNDLE_MIN_BYTES} bytes / 10 KB). ` +
+            "The bundle may be empty or corrupted — this would cause a white screen or crash in Expo Go.",
+        );
+      }
+    }
+
+    // --- Manifest validation ---
     const manifestPath = path.join(staticBuild, platform, "manifest.json");
 
     if (!fs.existsSync(manifestPath)) {
@@ -560,14 +591,14 @@ function validateManifests() {
 
   if (errors.length > 0) {
     exitWithError(
-      "ERROR: Manifest validation failed after build:\n" +
+      "ERROR: Build validation failed after bundling:\n" +
         errors.map((e) => `  - ${e}`).join("\n") +
         "\nThe deployment will not serve a valid app to Expo Go.\n" +
         "Check the Metro logs above for bundling errors.",
     );
   }
 
-  console.log("Manifest validation passed (ios + android)");
+  console.log("Bundle + manifest validation passed (ios + android)");
 }
 
 async function main() {
@@ -621,7 +652,7 @@ async function main() {
   console.log("Updating manifests and creating landing page...");
   updateManifests(manifests, timestamp, baseUrl, assetsByHash);
 
-  validateManifests();
+  validateManifests(timestamp);
 
   console.log("Build complete! Deploy to:", baseUrl);
 
