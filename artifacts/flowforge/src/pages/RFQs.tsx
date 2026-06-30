@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
-import { AICopilotBar } from "@/components/AICopilotBar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { useTranslation } from "react-i18next";
@@ -833,7 +832,6 @@ export function RFQs() {
           )}
         </div>
 
-        <AICopilotBar />
         </div>
       </div>
 
