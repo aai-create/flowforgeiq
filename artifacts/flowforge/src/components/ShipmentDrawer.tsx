@@ -372,7 +372,7 @@ export function ShipmentDrawer({
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider">
-                            Stage Tracker
+                            Pipeline Stage Tracker
                           </span>
                           <div className="flex items-center gap-2">
                             <Popover>
@@ -382,7 +382,7 @@ export function ShipmentDrawer({
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent className="w-64 p-3 text-[12px]" align="end">
-                                <p className="font-semibold text-[#212833] mb-1">Stage Tracker</p>
+                                <p className="font-semibold text-[#212833] mb-1">Pipeline Stage Tracker</p>
                                 <p className="text-[#5E687B] leading-relaxed">
                                   Every shipment moves through milestones. Click "Advance Stage" to log a stage change.
                                 </p>

@@ -268,7 +268,7 @@ const en = {
     supplierPoLabel: "Supplier PO",
     buyerPoLabel: "Buyer PO",
     linkDeal: "Link deal",
-    stageTracker: "Stage Tracker",
+    stageTracker: "Pipeline Stage Tracker",
     paidLabel: "paid",
     overdueLabel: "OVERDUE",
     dueLabel: "due",
