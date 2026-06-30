@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlowForge Mobile – Capture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+body{background:#1A1A2E;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden}
+.phone-frame{width:375px;height:667px;background:#F2F2F7;border-radius:42px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.5),0 0 0 12px #2C2C3E,0 0 0 14px #1A1A2E;display:flex;flex-direction:column;position:relative}
+/* Status bar */
+.status-bar{background:#fff;display:flex;justify-content:space-between;align-items:center;padding:12px 20px 6px;font-size:12px;font-weight:600;color:#212833}
+.status-icons{display:flex;gap:5px;align-items:center}
+/* Nav bar */
+.nav-bar{background:#fff;border-bottom:1px solid #E5EAF0;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:52px}
+.nav-title{font-size:16px;font-weight:700}
+.nav-icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center}
+/* Content */
+.content{flex:1;overflow-y:auto;background:#F2F2F7;padding:14px}
+.section-title{font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:6px}
+/* Channel picker */
+.channel-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.channel-pill{padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;border:2px solid}
+.ch-whatsapp{background:#E9FCF0;color:#128C7E;border-color:#128C7E}
+.ch-wechat{background:#E8F8EE;color:#09B83E;border-color:#09B83E;opacity:0.5}
+.ch-imessage{background:#E8F2FF;color:#007AFF;border-color:#007AFF;opacity:0.5}
+.ch-sms{background:#EEE8FF;color:#5856D6;border-color:#5856D6;opacity:0.5}
+.ch-email{background:#FFF0EA;color:#FF6B35;border-color:#FF6B35;opacity:0.5}
+/* Paste area */
+.paste-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.paste-label{font-size:11px;font-weight:700;color:#8E8E93;text-transform:uppercase;margin-bottom:6px}
+.paste-area{background:#F2F2F7;border-radius:8px;padding:10px;font-size:13px;color:#212833;line-height:1.5;min-height:80px;border:1px dashed #C7C7CC}
+.char-count{font-size:11px;color:#8E8E93;text-align:right;margin-top:4px}
+/* Sender hint */
+.hint-row{display:flex;gap:10px;margin-bottom:10px}
+.hint-field{flex:1;background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.hint-label{font-size:11px;font-weight:700;color:#8E8E93;margin-bottom:4px}
+.hint-value{font-size:13px;color:#212833}
+.hint-value.placeholder{color:#C7C7CC}
+/* Submit button */
+.submit-btn{width:100%;background:#7C3AED;color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px}
+/* Bottom tab bar */
+.tab-bar{background:#fff;border-top:1px solid #E5EAF0;display:flex;padding:6px 0 20px;flex-shrink:0}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0}
+.tab-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.tab-label{font-size:10px;font-weight:500;color:#8E8E93}
+.tab-item.active .tab-label{color:#7C3AED;font-weight:600}
+.tab-item.active .tab-icon svg{stroke:#7C3AED}
+</style>
+</head>
+<body>
+<div class="phone-frame">
+  <div class="status-bar">
+    <span>9:41 AM</span>
+    <div class="status-icons">
+      <svg width="15" height="11" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#212833"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#212833"/><rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#212833"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#E5EAF0"/></svg>
+      <svg width="15" height="11" viewBox="0 0 24 24" fill="none" stroke="#212833" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+      <span>100%</span>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9E9FAE" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>
+    <span class="nav-title">Capture</span>
+    <div class="nav-icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+  </div>
+  <div class="content">
+    <div class="section-title">Source Channel</div>
+    <div class="channel-row">
+      <div class="channel-pill ch-whatsapp">WhatsApp ✓</div>
+      <div class="channel-pill ch-wechat">WeChat</div>
+      <div class="channel-pill ch-imessage">iMessage</div>
+      <div class="channel-pill ch-sms">SMS</div>
+      <div class="channel-pill ch-email">Email</div>
+    </div>
+    <div class="paste-card">
+      <div class="paste-label">Chat Export</div>
+      <div class="paste-area">[06/28/26, 14:22] Tianjin Wire Works: Production is 80% complete. ETA ex-factory July 12. Please confirm if ok to proceed with balance payment. INV-TWW-001 attached.
+
+[06/28/26, 14:35] You: Confirmed. Please proceed and send QC report when done.</div>
+      <div class="char-count">342 characters</div>
+    </div>
+    <div class="hint-row">
+      <div class="hint-field">
+        <div class="hint-label">Sender Hint</div>
+        <div class="hint-value">Tianjin Wire Works</div>
+      </div>
+      <div class="hint-field">
+        <div class="hint-label">Link to Shipment</div>
+        <div class="hint-value">PO-2026-HANGERS-001</div>
+      </div>
+    </div>
+    <button class="submit-btn">Submit for Routing →</button>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-item">
+      <div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg></div>
+      <span class="tab-label">Inbox</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+      <span class="tab-label">Orders</span>
+    </div>
+    <div class="tab-item active">
+      <div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <span class="tab-label" style="color:#7C3AED">Capture</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <span class="tab-label">Documents</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
+      <span class="tab-label">Profile</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

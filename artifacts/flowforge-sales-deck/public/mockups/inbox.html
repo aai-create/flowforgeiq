@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlowForge – Inbox</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+body{background:#F8FAFC;display:flex;height:100vh;overflow:hidden;color:#212833}
+/* Sidebar */
+.sidebar{width:200px;background:#fff;border-right:1px solid #E5EAF0;display:flex;flex-direction:column;padding:12px 8px;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 8px 14px;border-bottom:1px solid #E5EAF0;margin-bottom:8px}
+.brand-icon{width:28px;height:28px;background:#7C3AED;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800}
+.brand-name{font-size:13px;font-weight:700;color:#212833}
+.brand-sub{font-size:10px;color:#9E9FAE}
+.nav-item{display:flex;align-items:center;justify-content:space-between;padding:0 8px;height:32px;border-radius:6px;font-size:13px;cursor:pointer;margin-bottom:1px;color:#5E687B;text-decoration:none}
+.nav-item.active{background:#E5EAF0;color:#212833;font-weight:600}
+.nav-item:hover:not(.active){background:#F4F6F8}
+.nav-icon{width:16px;height:16px;opacity:0.75;margin-right:8px;flex-shrink:0}
+.nav-label{flex:1}
+.nav-badge{background:#E5EAF0;color:#5E687B;font-size:10px;font-weight:600;padding:0 5px;border-radius:8px;min-width:18px;text-align:center}
+.nav-badge.alert{background:#FEE2E2;color:#DC2626}
+.sidebar-bottom{margin-top:auto;border-top:1px solid #E5EAF0;padding-top:10px}
+.user-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px}
+.avatar{width:28px;height:28px;background:#7C3AED;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+.user-name{font-size:12px;color:#5E687B;truncate}
+/* Main layout */
+.main{flex:1;display:flex;overflow:hidden}
+/* Message list */
+.msg-panel{width:380px;border-right:1px solid #E5EAF0;display:flex;flex-direction:column;background:#fff;flex-shrink:0}
+.panel-header{padding:12px 14px 8px;border-bottom:1px solid #E5EAF0}
+.panel-title{font-size:16px;font-weight:700;color:#212833;margin-bottom:8px}
+.search-bar{display:flex;align-items:center;gap:8px;background:#F4F6F8;border:1px solid #E5EAF0;border-radius:6px;padding:5px 10px;margin-bottom:8px}
+.search-bar input{border:none;background:transparent;font-size:12px;color:#5E687B;outline:none;flex:1}
+.filter-pills{display:flex;gap:5px;flex-wrap:wrap}
+.pill{padding:3px 10px;border-radius:14px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid #E5EAF0;background:#fff;color:#5E687B}
+.pill.active{background:#212833;color:#fff;border-color:#212833}
+.msg-list{flex:1;overflow-y:auto}
+.msg-row{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid #F4F6F8;cursor:pointer;align-items:flex-start}
+.msg-row.selected{background:#EDE9FE}
+.msg-row:hover:not(.selected){background:#F8FAFC}
+.msg-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
+.msg-body{flex:1;min-width:0}
+.msg-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+.msg-sender{font-size:13px;font-weight:700;color:#212833;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.msg-time{font-size:10px;color:#9E9FAE;flex-shrink:0}
+.msg-snippet{font-size:12px;color:#5E687B;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:5px}
+.msg-tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500}
+.tag.stage{background:#EDE9FE;color:#7C3AED}
+.tag.payment{background:#FEF3C7;color:#D97706}
+.tag.risk{background:#FEE2E2;color:#DC2626}
+.tag.milestone{background:#DCFCE7;color:#16A34A}
+.tag.channel{background:#E0F2FE;color:#0284C7}
+/* Thread panel */
+.thread-panel{flex:1;display:flex;flex-direction:column;background:#fff}
+.thread-header{padding:12px 16px;border-bottom:1px solid #E5EAF0;display:flex;align-items:center;justify-content:space-between}
+.thread-title{font-size:14px;font-weight:600;color:#212833}
+.thread-meta{font-size:11px;color:#9E9FAE}
+.thread-body{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.msg-bubble{max-width:80%}
+.bubble-name{font-size:11px;font-weight:600;color:#5E687B;margin-bottom:4px}
+.bubble{background:#F4F6F8;border-radius:10px;padding:10px 12px;font-size:13px;color:#212833;line-height:1.5}
+.bubble.outbound{background:#EDE9FE;color:#212833}
+.msg-bubble.right{align-self:flex-end}
+.bubble-time{font-size:10px;color:#9E9FAE;margin-top:3px}
+.ai-draft{margin:12px 16px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:12px}
+.ai-label{font-size:10px;font-weight:700;color:#16A34A;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.ai-text{font-size:13px;color:#212833;line-height:1.5;margin-bottom:8px}
+.ai-actions{display:flex;gap:8px}
+.btn{padding:5px 12px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:none}
+.btn-primary{background:#7C3AED;color:#fff}
+.btn-ghost{background:#E5EAF0;color:#212833}
+.unread-dot{width:7px;height:7px;background:#7C3AED;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">FF</div>
+    <div><div class="brand-name">FlowForge IQ</div></div>
+  </div>
+  <a class="nav-item active">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+    <span class="nav-label">Inbox</span><span class="nav-badge alert">7</span>
+  </a>
+  <a class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span class="nav-label">Orders</span><span class="nav-badge">14</span>
+  </a>
+  <a class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>
+    <span class="nav-label">RFQs</span>
+  </a>
+  <a class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span class="nav-label">Risk Radar</span><span class="nav-badge alert">3</span>
+  </a>
+  <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nav-label">Reports</span></a>
+  <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">Suppliers</span></a>
+  <a class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span class="nav-label">Settings</span></a>
+  <div class="sidebar-bottom">
+    <div class="user-row">
+      <div class="avatar">JL</div>
+      <div style="font-size:12px;color:#5E687B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Jamie L.</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="msg-panel">
+    <div class="panel-header">
+      <div class="panel-title">Inbox</div>
+      <div class="search-bar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9E9FAE" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search messages…" />
+      </div>
+      <div class="filter-pills">
+        <div class="pill active">All</div>
+        <div class="pill">Gmail</div>
+        <div class="pill">WhatsApp</div>
+        <div class="pill">WeChat</div>
+        <div class="pill">iMessage</div>
+      </div>
+    </div>
+    <div class="msg-list">
+      <!-- Row 1 - selected, unread -->
+      <div class="msg-row selected">
+        <div class="msg-avatar" style="background:#DCFCE7;color:#16A34A">TW</div>
+        <div class="msg-body">
+          <div class="msg-top">
+            <div class="msg-sender">Tianjin Wire Works</div>
+            <div class="msg-time">2:14 pm</div>
+          </div>
+          <div class="msg-snippet">Production is 80% complete. ETA ex-factory July 12. Please confirm if ok to proceed with balance payment schedule.</div>
+          <div class="msg-tags">
+            <span class="tag stage">Spec Sheet</span>
+            <span class="tag payment">payment: balance due</span>
+            <span class="tag channel">WhatsApp</span>
+          </div>
+        </div>
+        <div class="unread-dot"></div>
+      </div>
+      <!-- Row 2 -->
+      <div class="msg-row">
+        <div class="msg-avatar" style="background:#E0F2FE;color:#0284C7">GL</div>
+        <div class="msg-body">
+          <div class="msg-top">
+            <div class="msg-sender">Guangzhou Lighting</div>
+            <div class="msg-time">11:05 am</div>
+          </div>
+          <div class="msg-snippet">Hi team, the LED display cabinet units passed QC this morning. Packing list and commercial invoice attached for your review.</div>
+          <div class="msg-tags">
+            <span class="tag stage">QC Inspection</span>
+            <span class="tag milestone">milestone: QC passed</span>
+            <span class="tag channel">Gmail</span>
+          </div>
+        </div>
+        <div class="unread-dot"></div>
+      </div>
+      <!-- Row 3 -->
+      <div class="msg-row">
+        <div class="msg-avatar" style="background:#FEF3C7;color:#D97706">HT</div>
+        <div class="msg-body">
+          <div class="msg-top">
+            <div class="msg-sender" style="font-weight:500">Hangzhou Timber Co.</div>
+            <div class="msg-time">Yesterday</div>
+          </div>
+          <div class="msg-snippet">Re: PO-2026-0160 — We need 3 more days on the oak flooring. Kiln moisture still at 9.8%, target is 8%. Will update by EOD tomorrow.</div>
+          <div class="msg-tags">
+            <span class="tag stage">Production</span>
+            <span class="tag risk">risk: delay 3d</span>
+          </div>
+        </div>
+      </div>
+      <!-- Row 4 -->
+      <div class="msg-row">
+        <div class="msg-avatar" style="background:#F3E8FF;color:#9333EA">SM</div>
+        <div class="msg-body">
+          <div class="msg-top">
+            <div class="msg-sender" style="font-weight:500">Shenzhen MetalPro</div>
+            <div class="msg-time">Jun 27</div>
+          </div>
+          <div class="msg-snippet">Quote for Chrome Retail Hanger order: 5,000 units × $0.91/unit = $4,550. Lead time 32 days from PO confirmation. MOQ 2,000.</div>
+          <div class="msg-tags">
+            <span class="tag stage">Factory Quotes</span>
+          </div>
+        </div>
+      </div>
+      <!-- Row 5 -->
+      <div class="msg-row">
+        <div class="msg-avatar" style="background:#FCE7F3;color:#DB2777">NB</div>
+        <div class="msg-body">
+          <div class="msg-top">
+            <div class="msg-sender" style="font-weight:500">Northbound Outfitters</div>
+            <div class="msg-time">Jun 26</div>
+          </div>
+          <div class="msg-snippet">Hi — following up on the Chrome Retail Hanger PO. Can you confirm delivery timing? Our planogram sets are due for the Chicago store by Aug 10.</div>
+          <div class="msg-tags">
+            <span class="tag stage">Spec Sheet</span>
+            <span class="tag channel">Gmail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="thread-panel">
+    <div class="thread-header">
+      <div>
+        <div class="thread-title">Tianjin Wire Works · Chrome Retail Hangers</div>
+        <div class="thread-meta">PO-2026-HANGERS-001 · Stage: Spec Sheet · via WhatsApp</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="font-size:11px">Stage →</button>
+        <button class="btn btn-ghost" style="font-size:11px">Details</button>
+      </div>
+    </div>
+    <div class="thread-body">
+      <div class="msg-bubble">
+        <div class="bubble-name">Tianjin Wire Works · Jun 25</div>
+        <div class="bubble">Hello team, we have received your PO-2026-HANGERS-001 for 5,000 Chrome Retail Hangers. Unit price confirmed at $0.87/pc. We will begin production this week. Lead time: 28 days from today.</div>
+        <div class="bubble-time">Jun 25, 9:02 am</div>
+      </div>
+      <div class="msg-bubble right">
+        <div class="bubble-name" style="text-align:right">You · Jun 25</div>
+        <div class="bubble outbound">Thanks for confirming. Please proceed with production. Send us the packing list and commercial invoice once goods are ready for QC inspection.</div>
+        <div class="bubble-time" style="text-align:right">Jun 25, 10:15 am</div>
+      </div>
+      <div class="msg-bubble">
+        <div class="bubble-name">Tianjin Wire Works · Today</div>
+        <div class="bubble">Production is 80% complete. ETA ex-factory July 12. Please confirm if ok to proceed with balance payment schedule. Invoice INV-TWW-001 is attached.</div>
+        <div class="bubble-time">Today, 2:14 pm</div>
+      </div>
+    </div>
+    <div class="ai-draft">
+      <div class="ai-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#16A34A"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        AI Draft Reply
+      </div>
+      <div class="ai-text">Hi team at Tianjin Wire Works — thanks for the update. The July 12 ex-factory date works for us. Please proceed and share the packing list + commercial invoice (INV-TWW-001) when ready. We will arrange the balance payment on ex-factory confirmation.</div>
+      <div class="ai-actions">
+        <button class="btn btn-primary">Send Reply</button>
+        <button class="btn btn-ghost">Edit Draft</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

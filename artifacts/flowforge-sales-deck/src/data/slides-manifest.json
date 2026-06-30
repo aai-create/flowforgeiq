@@ -126,5 +126,85 @@
     "title": "Appendix — Platform Workflow",
     "description": "Line-art flow diagram showing the end-to-end FlowForgeIQ workflow: Channels → Ingest → AI Engine → FlowForge Hub → Outcomes",
     "speakerNotes": "Use this slide when prospects ask 'how does it actually work under the hood?'\n\n- Walk left to right: messages arrive from any channel (email, WhatsApp, WeChat, iMessage, SMS, documents). The buyer forwards or pastes them into FlowForge via email forward, chat export, mobile companion, or file upload.\n- The AI engine extracts entities (PO number, dates, quantities), routes the message to the correct shipment thread, drafts a reply, and flags any risk signals (delays, discrepancies).\n- Everything lands in the FlowForge Hub — the unified Inbox, Orders Grid, RFQ Manager, and Task Tracker — staged against the shipment lifecycle from Quote through Delivery.\n- The outcomes on the right are what gets recorded automatically: stage progression, payment records, spread tracking, tasks, and a full audit trail.\n- Key message: 'The buyer initiates every step. We never passively monitor anything. That's deliberate — compliance, trust, and simplicity.'"
+  },
+  {
+    "id": "e6f7a8b9-012c-3456-789d-ef0123456717",
+    "position": 17,
+    "filepath": "src/pages/slides/Slide17WalkthroughCover.tsx",
+    "title": "Team Walkthrough Cover",
+    "description": "Cover slide for the RFQ-to-Shipment team walkthrough: scenario details (Chrome Retail Hangers, Tianjin Wire Works, Northbound Outfitters) and 9-part roadmap",
+    "speakerNotes": "Use this walkthrough section for new team member onboarding or as a live demo guide for pilot prospects.\n\n- The scenario is realistic: Chrome Retail Hangers sourced from Tianjin Wire Works for Northbound Outfitters.\n- Nine parts cover the full buyer workflow end-to-end — from creating an RFQ to uploading a document on mobile.\n- Estimated time: 30–45 minutes for a first run-through; 15–20 minutes for team members who have done it before.\n- Encourage participants to follow along in a live FlowForge session if possible."
+  },
+  {
+    "id": "f7a8b9c0-123d-4567-890e-f01234567818",
+    "position": 18,
+    "filepath": "src/pages/slides/Slide18Part1Oriented.tsx",
+    "title": "Part 1 — Getting Oriented",
+    "description": "Inbox overview: sidebar navigation, channel filter pills, message thread panel, AI draft reply, unread indicators and AI tags",
+    "speakerNotes": "Start here to orient new team members.\n\n- The Inbox is the default landing page at flowforgeiq.com — there is no separate home page after sign-in.\n- Walk through the sidebar: Inbox (home), Orders, RFQs, Copilot, Risk Radar, Settings.\n- Channel filter pills allow fast scoping — useful when a team member is responsible for a specific channel (e.g. email only).\n- The AI tags (risk, milestone, payment) are auto-generated — not manually assigned. Point them out early so team members know to look for them.\n- Transition: 'Now let's create your first RFQ for the walkthrough scenario.'"
+  },
+  {
+    "id": "a8b9c0d1-234e-5678-901f-012345678919",
+    "position": 19,
+    "filepath": "src/pages/slides/Slide19Part2CreateRFQ.tsx",
+    "title": "Part 2 — Create the RFQ",
+    "description": "RFQ creation: New RFQ modal walkthrough with field values for Chrome Retail Hangers, Northbound Outfitters buyer, target price $0.95, quantity 5,000",
+    "speakerNotes": "Creating an RFQ is the starting gun for the procurement workflow.\n\n- The buyer name combobox supports both selecting from existing buyers and typing new ones — Northbound Outfitters should already exist in the seed data.\n- Target price is critical: it's what FlowForge uses to compute 'cheapest' badges and savings percentage in the comparison table.\n- Draft autosaves to session storage — participants can refresh the page if they make a mistake.\n- After creation: the RFQ status is 'Open' and the Quotes tab is empty. The next step fills it."
+  },
+  {
+    "id": "b9c0d1e2-345f-6789-0120-123456789020",
+    "position": 20,
+    "filepath": "src/pages/slides/Slide20Part3AddQuotes.tsx",
+    "title": "Part 3 — Add Three Quotes",
+    "description": "Quotes tab: adding three factory quotes (Tianjin Wire Works $0.87, Guangzhou Metalworks $0.91, Ningbo Alloy Co. $0.96) with lead times and MOQs",
+    "speakerNotes": "This is where the multi-supplier comparison begins.\n\n- Add each quote using the '+ Add Quote' modal. Three quotes is the minimum for a meaningful comparison — participants should add all three.\n- The quote status defaults to 'received' — there's also 'pending' for quotes still outstanding.\n- Lead time and MOQ are important inputs: they feed the comparison table's fastest/cheapest badges.\n- Ningbo Alloy at $0.96 is above the $0.95 target — the comparison table will flag this. That's intentional for the demo."
+  },
+  {
+    "id": "c0d1e2f3-4560-789a-1230-234567890121",
+    "position": 21,
+    "filepath": "src/pages/slides/Slide21Part4CompareQuotes.tsx",
+    "title": "Part 4 — Compare Quotes & Pick a Winner",
+    "description": "Quotes comparison table with cheapest/fastest badges, spread vs. target price, and Convert to PO button on the Tianjin Wire Works row",
+    "speakerNotes": "The comparison table is the most visually powerful part of the RFQ workflow.\n\n- Ask participants: 'Which factory wins on price? Which wins on lead time? What would you pick?' — let them reason through it before revealing the badges.\n- Tianjin Wire Works wins on both price ($0.87 vs $0.95 target) and lead time (28 days) in this scenario.\n- The 'above target' badge on Ningbo Alloy is a deliberate signal — team members should learn to look for it.\n- After picking a winner: click 'Convert to PO' to move to the next step. This is a one-way action — emphasize it."
+  },
+  {
+    "id": "d1e2f3a4-5671-890b-2340-345678901222",
+    "position": 22,
+    "filepath": "src/pages/slides/Slide22Part5ConvertPO.tsx",
+    "title": "Part 5 — Convert to PO",
+    "description": "Convert-to-PO dialog: accepting quote, entering PO number, supplier, due date, ex-factory date, destination, via, and deposit percentage",
+    "speakerNotes": "Converting is the pivot point from sourcing to operations.\n\n- All required fields must be filled before 'Convert' becomes enabled — enforce this with participants who try to skip.\n- PO number format: use something memorable for the walkthrough, like PO-2026-HANGERS-001.\n- Ex-factory date is typically 1–2 weeks before due date to allow for transit time.\n- After converting: the RFQ status flips to 'Awarded' and a new row appears in the Orders grid. The two payment milestones (Deposit 30% / Balance 70%) are auto-created.\n- Participants can optionally download a Proforma Invoice PDF immediately after conversion."
+  },
+  {
+    "id": "e2f3a4b5-6782-901c-3450-456789012323",
+    "position": 23,
+    "filepath": "src/pages/slides/Slide23Part6TrackShipment.tsx",
+    "title": "Part 6 — Track the Shipment",
+    "description": "Orders grid: locating the new PO, shipment detail panel, stage tracker progression, spread badge, and stage advance workflow",
+    "speakerNotes": "The Orders grid is where day-to-day shipment management happens.\n\n- New PO starts at 'Spec Sheet' — the first stage in the 11-stage lifecycle.\n- Advance the stage to show how it works: click the arrow, confirm the transition, watch the stage history update.\n- The spread badge is automatic: it recalculates every time payments are updated or the buyer price is set.\n- Risk score appears in the right panel — mention that it factors in overdue payments, delayed stages, and unread messages.\n- Encourage participants to explore the 'Docs' and 'Threads' tabs in the detail panel — they'll use these in real workflows."
+  },
+  {
+    "id": "f3a4b5c6-7893-012d-4560-567890123424",
+    "position": 24,
+    "filepath": "src/pages/slides/Slide24Part7LogPayment.tsx",
+    "title": "Part 7 — Log a Payment",
+    "description": "Payment milestone panel: marking the 30% deposit as paid with amount, date, payment method, invoice number, and reference fields",
+    "speakerNotes": "Payment logging is a critical operational step — it's what keeps the spread/margin calculation accurate.\n\n- The Invoice Number field is required. Enforce this in real usage — it's the audit trail anchor.\n- Method options: Wire, PayPal, Letter of Credit, Cash. Wire is the most common for factory payments.\n- After marking paid: the milestone turns green, the balance due updates, and the spread recalculates.\n- Participants often ask 'can we undo this?' — yes, there's an 'undo' action available immediately after marking paid.\n- For the walkthrough: mark the 30% deposit as paid. Leave the balance for a later step or skip it to keep the session moving."
+  },
+  {
+    "id": "a4b5c6d7-8904-123e-5670-678901234525",
+    "position": 25,
+    "filepath": "src/pages/slides/Slide25Part8MobileChat.tsx",
+    "title": "Part 8 — Mobile: Paste Supplier Chat",
+    "description": "Mobile Capture tab: channel picker, WhatsApp export paste, sender hint, shipment linker, submit for routing, and routing result screen with confidence states",
+    "speakerNotes": "This is the moment where the mobile companion clicks for participants.\n\n- Have participants use their own phones if possible — the demo is more visceral on a real device.\n- The WhatsApp export flow: open WhatsApp → long-press conversation → More → Export Chat → share to FlowForge.\n- If no real export is available: paste a realistic chat string into the text field. Use the example placeholder text in the app.\n- Routing result: high confidence (green) means auto-routed. Medium (amber) asks to confirm. Low (red) sends to the web review queue.\n- After confirming: the message appears in the web Inbox within seconds. Open the web app to show this in real time."
+  },
+  {
+    "id": "b5c6d7e8-9015-234f-6780-789012345626",
+    "position": 26,
+    "filepath": "src/pages/slides/Slide26Part9MobileDoc.tsx",
+    "title": "Part 9 — Mobile: Upload a Document",
+    "description": "Mobile document upload: file picker, Documents tab, extraction review with confidence score, inline field corrections, and save corrections workflow",
+    "speakerNotes": "Document upload is the final step — it completes the walkthrough scenario.\n\n- Use a real PDF if available: a quote sheet, packing list, or proforma from any supplier works.\n- The extraction shows confidence percentage — 94% means the AI parsed most fields correctly.\n- Inline corrections: tap any field, edit, save. This trains the extraction model over time.\n- After saving corrections: the document is linked to the PO and appears in the web Orders → Docs tab.\n- Close the walkthrough: 'You've now run the complete Chrome Retail Hangers scenario from RFQ to delivered document. Every step you just did is what your team will do on live POs.'"
   }
 ]

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlowForge Mobile – Document Detail</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+body{background:#1A1A2E;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden}
+.phone-frame{width:375px;height:667px;background:#F2F2F7;border-radius:42px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.5),0 0 0 12px #2C2C3E,0 0 0 14px #1A1A2E;display:flex;flex-direction:column}
+.status-bar{background:#fff;display:flex;justify-content:space-between;align-items:center;padding:12px 20px 6px;font-size:12px;font-weight:600;color:#212833}
+.status-icons{display:flex;gap:5px;align-items:center}
+.nav-bar{background:#fff;border-bottom:1px solid #E5EAF0;padding:0 16px;display:flex;align-items:center;height:52px;gap:12px}
+.nav-back{font-size:14px;color:#7C3AED;font-weight:500;display:flex;align-items:center;gap:3px}
+.nav-title{font-size:16px;font-weight:700;flex:1}
+.content{flex:1;overflow-y:auto;padding:0}
+/* Doc header card */
+.doc-header{background:#fff;padding:14px 16px;border-bottom:1px solid #E5EAF0;margin-bottom:10px}
+.doc-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.doc-meta{font-size:12px;color:#8E8E93}
+.doc-status{display:inline-flex;align-items:center;gap:6px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:#15803D;margin-top:8px}
+/* Confidence bar */
+.confidence-card{background:#fff;margin:0 12px 10px;border-radius:12px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.confidence-label{font-size:11px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:flex;justify-content:space-between}
+.confidence-bar{height:8px;background:#E5EAF0;border-radius:4px;overflow:hidden}
+.confidence-fill{height:100%;background:linear-gradient(90deg,#16A34A,#22C55E);border-radius:4px;width:94%}
+.confidence-pct{font-size:16px;font-weight:700;color:#15803D;text-align:right;margin-top:4px}
+/* Fields */
+.fields-card{background:#fff;margin:0 12px 10px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden}
+.fields-header{padding:10px 14px;border-bottom:1px solid #F4F6F8;display:flex;justify-content:space-between}
+.fields-title{font-size:12px;font-weight:700;color:#8E8E93;text-transform:uppercase;letter-spacing:.05em}
+.edit-hint{font-size:11px;color:#7C3AED;font-weight:500}
+.field-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #F4F6F8}
+.field-row:last-child{border-bottom:none}
+.field-label{font-size:13px;color:#8E8E93}
+.field-value{font-size:13px;font-weight:600;color:#212833;text-align:right}
+/* Actions */
+.actions-bar{padding:12px 12px 0;display:flex;gap:8px}
+.btn-save{flex:1;background:#7C3AED;color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;cursor:pointer}
+.btn-discard{flex:0 0 auto;background:#fff;color:#DC2626;border:1px solid #FECACA;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer}
+/* Tab bar */
+.tab-bar{background:#fff;border-top:1px solid #E5EAF0;display:flex;padding:6px 0 20px;flex-shrink:0}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0}
+.tab-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.tab-label{font-size:10px;font-weight:500;color:#8E8E93}
+.tab-item.active .tab-label{color:#7C3AED;font-weight:600}
+</style>
+</head>
+<body>
+<div class="phone-frame">
+  <div class="status-bar">
+    <span>9:41 AM</span>
+    <div class="status-icons">
+      <svg width="15" height="11" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#212833"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#212833"/><rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#212833"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#E5EAF0"/></svg>
+      <svg width="15" height="11" viewBox="0 0 24 24" fill="none" stroke="#212833" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+      <span>100%</span>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-back"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg> Documents</div>
+    <span class="nav-title">Document Detail</span>
+  </div>
+  <div class="content">
+    <div class="doc-header">
+      <div class="doc-name">Tianjin_Wire_Works_Quote_CRH.pdf</div>
+      <div class="doc-meta">Uploaded Jun 30, 2026 · 147 KB · PDF · Linked: PO-2026-HANGERS-001</div>
+      <div class="doc-status">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Extracted — ready to review
+      </div>
+    </div>
+    <div class="confidence-card">
+      <div class="confidence-label"><span>AI Extraction Confidence</span></div>
+      <div class="confidence-bar"><div class="confidence-fill"></div></div>
+      <div class="confidence-pct">94%</div>
+    </div>
+    <div class="fields-card">
+      <div class="fields-header">
+        <span class="fields-title">Extracted Fields</span>
+        <span class="edit-hint">Tap to edit</span>
+      </div>
+      <div class="field-row"><span class="field-label">Supplier</span><span class="field-value">Tianjin Wire Works</span></div>
+      <div class="field-row"><span class="field-label">Product</span><span class="field-value">Chrome Retail Hanger</span></div>
+      <div class="field-row"><span class="field-label">Unit Price</span><span class="field-value" style="color:#15803D">$0.87</span></div>
+      <div class="field-row"><span class="field-label">Quantity</span><span class="field-value">5,000 units</span></div>
+      <div class="field-row"><span class="field-label">Lead Time</span><span class="field-value">28 days</span></div>
+      <div class="field-row"><span class="field-label">MOQ</span><span class="field-value">1,000</span></div>
+      <div class="field-row" style="background:#FFFBEB">
+        <span class="field-label" style="color:#92400E">Document Type</span>
+        <span class="field-value" style="color:#D97706">Proforma Invoice ✎</span>
+      </div>
+      <div class="field-row"><span class="field-label">Invoice Number</span><span class="field-value">INV-TWW-001</span></div>
+    </div>
+    <div class="actions-bar">
+      <button class="btn-save">Save Corrections</button>
+      <button class="btn-discard">Discard</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-item"><div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg></div><span class="tab-label">Inbox</span></div>
+    <div class="tab-item"><div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><span class="tab-label">Orders</span></div>
+    <div class="tab-item"><div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><span class="tab-label">Capture</span></div>
+    <div class="tab-item active"><div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><span class="tab-label" style="color:#7C3AED">Documents</span></div>
+    <div class="tab-item"><div class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 10-16 0"/></svg></div><span class="tab-label">Profile</span></div>
+  </div>
+</div>
+</body>
+</html>
