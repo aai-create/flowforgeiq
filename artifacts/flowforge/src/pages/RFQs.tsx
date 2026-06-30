@@ -21,7 +21,7 @@ import {
   getListRfqsQueryKey,
 } from "@workspace/api-client-react";
 import type { RfqWithQuotes, RfqQuote } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   Plus, FileText, CheckCircle2, AlertCircle,
   X, Trash2, Edit2, Check, TrendingDown, TrendingUp, Minus,
@@ -234,7 +234,8 @@ export function RFQs() {
   const rfqsQueryKey = getListRfqsQueryKey();
   const shipmentsQueryKey = getListShipmentsQueryKey();
 
-  const { data: rfqs = [], refetch: refetchRfqs } = useListRfqs();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rfqs = [], refetch: refetchRfqs } = useListRfqs({ query: { placeholderData: keepPreviousData } as any });
   const { data: suppliers = [] } = useListSuppliers();
   const { data: stages = [] } = useListStages();
   const { data: knownBuyers = [] } = useListRfqBuyers();
@@ -249,7 +250,6 @@ export function RFQs() {
   const sendEmailMutation = useSendRfqEmail();
 
   const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
-  const [showNewRfq, setShowNewRfq] = useState(false);
   const [showConvert, setShowConvert] = useState(false);
   const [showAddQuote, setShowAddQuote] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
@@ -264,10 +264,23 @@ export function RFQs() {
   const [sendEmailForm, setSendEmailForm] = useState({ to: "", subject: "", body: "" });
   const [sendEmailError, setSendEmailError] = useState<string | null>(null);
 
-  const [newRfqForm, setNewRfqForm] = useState<NewRfqFormState>({
-    product: "", category: "", buyerName: "", targetPriceUsd: "", quantity: "", deadline: "", notes: "",
+  const RFQ_DRAFT_KEY = "rfq_new_draft";
+
+  const [newRfqForm, setNewRfqForm] = useState<NewRfqFormState>(() => {
+    try {
+      const stored = sessionStorage.getItem(RFQ_DRAFT_KEY);
+      if (stored) return JSON.parse(stored) as NewRfqFormState;
+    } catch {}
+    return { product: "", category: "", buyerName: "", targetPriceUsd: "", quantity: "", deadline: "", notes: "" };
   });
   const [newRfqError, setNewRfqError] = useState<string | null>(null);
+
+  const [showNewRfq, setShowNewRfq] = useState(() => {
+    try {
+      return !!sessionStorage.getItem(RFQ_DRAFT_KEY);
+    } catch {}
+    return false;
+  });
 
   const [convertForm, setConvertForm] = useState<ConvertFormState>({
     acceptedQuoteId: null, poNumber: "", supplierId: "", dueDate: "", exFactoryDate: "",
@@ -295,6 +308,12 @@ export function RFQs() {
     }
   }, [rfqs, selectedRfqId]);
 
+  useEffect(() => {
+    if (showNewRfq) {
+      try { sessionStorage.setItem(RFQ_DRAFT_KEY, JSON.stringify(newRfqForm)); } catch {}
+    }
+  }, [showNewRfq, newRfqForm]);
+
   const submitNewRfq = async () => {
     setNewRfqError(null);
     if (!newRfqForm.product.trim() || !newRfqForm.buyerName.trim() || !newRfqForm.targetPriceUsd || !newRfqForm.quantity || !newRfqForm.deadline) {
@@ -316,6 +335,7 @@ export function RFQs() {
       setSelectedRfqId(created.id);
       setShowNewRfq(false);
       setNewRfqForm({ product: "", category: "", buyerName: "", targetPriceUsd: "", quantity: "", deadline: "", notes: "" });
+      try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {}
       setBuyerInput("");
       showToast("RFQ created");
     } catch {
@@ -818,7 +838,7 @@ export function RFQs() {
       </div>
 
       {/* New RFQ Modal */}
-      <Dialog open={showNewRfq} onOpenChange={open => { if (!open) { setShowNewRfq(false); setNewRfqError(null); } }}>
+      <Dialog open={showNewRfq} onOpenChange={open => { if (!open) { setShowNewRfq(false); setNewRfqError(null); try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {} } }}>
         <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{t("rfqs.dialogNewTitle")}</DialogTitle>
@@ -940,7 +960,7 @@ export function RFQs() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => { setShowNewRfq(false); setNewRfqError(null); }}>{t("common.cancel")}</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowNewRfq(false); setNewRfqError(null); try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {} }}>{t("common.cancel")}</Button>
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitNewRfq}
               disabled={createRfqMutation.isPending}>
               {createRfqMutation.isPending ? t("common.creating") : t("rfqs.createRfq")}
