@@ -8,7 +8,9 @@
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test plugins/withSpmNilTargetFix.test.js"
+    "test": "node --test plugins/withSpmNilTargetFix.test.js",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@workspace/api-client-react": "workspace:*",
@@ -68,6 +70,9 @@
   },
   "dependencies": {
     "expo-clipboard": "^56.0.4",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "expo": "~54.0.35",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }

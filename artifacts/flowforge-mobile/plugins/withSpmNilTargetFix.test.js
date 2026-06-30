@@ -16,11 +16,18 @@ const assert = require("node:assert/strict");
 // ---------------------------------------------------------------------------
 
 const REQUIRE_LINE = "require 'react_native_pods'";
-const PATCH_MARKER = "ReactNativeSPMPatch";
-const POST_INSTALL_ANCHOR = "react_native_post_install(installer";
+const MODULE_MARKER = "ReactNativeSPMPatch";
+// Keep PATCH_MARKER as an alias so existing assertions still read clearly.
+const PATCH_MARKER = MODULE_MARKER;
+const PREPEND_MARKER = "singleton_class.prepend(ReactNativeSPMPatch)";
+// Expo 54 / RN 0.81 splits the call across lines:
+//   react_native_post_install(
+//     installer,
+// so the anchor is just the opening paren, not the argument list.
+const POST_INSTALL_ANCHOR = "react_native_post_install(";
 const POST_INSTALL_PREPEND = "ReactNative::SPM.singleton_class.prepend(ReactNativeSPMPatch)";
 
-/** Minimal Expo-generated Podfile that has both the require line and the anchor. */
+/** Minimal Expo-generated Podfile matching Expo 54 / RN 0.81 multi-line format. */
 const STANDARD_PODFILE = [
   "require 'react_native_pods'",
   "",
@@ -28,7 +35,8 @@ const STANDARD_PODFILE = [
   "",
   "target 'flowforgemobile' do",
   "  post_install do |installer|",
-  "    react_native_post_install(installer,",
+  "    react_native_post_install(",
+  "      installer,",
   "      :mac_catalyst_enabled => false",
   "    )",
   "  end",
@@ -41,7 +49,8 @@ const PODFILE_WITHOUT_REQUIRE = [
   "",
   "target 'flowforgemobile' do",
   "  post_install do |installer|",
-  "    react_native_post_install(installer,",
+  "    react_native_post_install(",
+  "      installer,",
   "      :mac_catalyst_enabled => false",
   "    )",
   "  end",
@@ -228,4 +237,34 @@ test("no-op when Podfile does not exist", () => {
   // We verify this by confirming the initial (empty) content is unchanged.
   const result = runPlugin("", { exists: false });
   assert.equal(result, "", "Content should be untouched when Podfile is absent");
+});
+
+test("partial patch — adds prepend when module is already present but prepend is missing", () => {
+  // Simulate a Podfile that has the module definition from a previous broken
+  // run (old anchor did not match) but is missing the singleton_class.prepend.
+  const firstPass = runPlugin(STANDARD_PODFILE);
+  // Manually strip the prepend line to simulate the partial-patch state.
+  const partiallyPatched = firstPass
+    .split("\n")
+    .filter((line) => !line.includes("singleton_class.prepend"))
+    .join("\n");
+
+  assert.ok(
+    partiallyPatched.includes(PATCH_MARKER),
+    "Partially-patched Podfile must still contain the module marker",
+  );
+  assert.ok(
+    !partiallyPatched.includes(PREPEND_MARKER),
+    "Partially-patched Podfile must not contain the prepend call",
+  );
+
+  const repaired = runPlugin(partiallyPatched);
+
+  assert.ok(
+    repaired.includes(PREPEND_MARKER),
+    "Plugin should insert the missing prepend call",
+  );
+  // Module definition must not be duplicated.
+  const moduleCount = repaired.split("module ReactNativeSPMPatch").length - 1;
+  assert.equal(moduleCount, 1, "Module definition must appear exactly once");
 });

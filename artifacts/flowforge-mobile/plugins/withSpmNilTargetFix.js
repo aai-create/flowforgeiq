@@ -2,7 +2,11 @@ const { withDangerousMod } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
-const PATCH_MARKER = "ReactNativeSPMPatch";
+// Used to detect whether each half of the patch is already present so we can
+// apply each part independently — avoids duplicating either block when the
+// Podfile is partially patched (e.g. module present but prepend missing).
+const MODULE_MARKER = "ReactNativeSPMPatch";
+const PREPEND_MARKER = "singleton_class.prepend(ReactNativeSPMPatch)";
 
 // Module definition inserted after `require 'react_native_pods'`.
 // ReactNative::SPM may not be defined at top-level parse time, so we only
@@ -40,7 +44,13 @@ const POST_INSTALL_PREPEND = `
 `;
 
 // Anchor used to locate the insertion point inside post_install.
-const POST_INSTALL_ANCHOR = "react_native_post_install(installer";
+// Expo 54 / RN 0.81 formats the call as:
+//   react_native_post_install(
+//     installer,
+//     ...
+// so we match only "react_native_post_install(" — the argument list is on the
+// next line and varies between SDK versions.
+const POST_INSTALL_ANCHOR = "react_native_post_install(";
 
 module.exports = (config) =>
   withDangerousMod(config, [
@@ -57,36 +67,43 @@ module.exports = (config) =>
 
       let contents = fs.readFileSync(podfilePath, "utf8");
 
-      // Idempotency: skip if the patch was already applied.
-      if (contents.includes(PATCH_MARKER)) {
+      const hasModule = contents.includes(MODULE_MARKER);
+      const hasPrepend = contents.includes(PREPEND_MARKER);
+
+      // Both parts already present — fully patched, nothing to do.
+      if (hasModule && hasPrepend) {
         return config;
       }
 
-      // 1. Insert the module definition after `require 'react_native_pods'`.
-      const requireLine = "require 'react_native_pods'";
-      const requireIdx = contents.indexOf(requireLine);
-      if (requireIdx !== -1) {
-        const insertAt = requireIdx + requireLine.length;
-        contents =
-          contents.slice(0, insertAt) +
-          "\n" +
-          RUBY_MODULE +
-          contents.slice(insertAt);
-      } else {
-        // Fallback: prepend to the file when the require line is absent.
-        contents = RUBY_MODULE + contents;
+      // 1. Insert the module definition after `require 'react_native_pods'`
+      //    only when it isn't already there.
+      if (!hasModule) {
+        const requireLine = "require 'react_native_pods'";
+        const requireIdx = contents.indexOf(requireLine);
+        if (requireIdx !== -1) {
+          const insertAt = requireIdx + requireLine.length;
+          contents =
+            contents.slice(0, insertAt) +
+            "\n" +
+            RUBY_MODULE +
+            contents.slice(insertAt);
+        } else {
+          // Fallback: prepend to the file when the require line is absent.
+          contents = RUBY_MODULE + contents;
+        }
       }
 
       // 2. Insert the prepend call inside post_install, before the first
-      //    occurrence of `react_native_post_install(installer`.  In a standard
-      //    Expo-generated Podfile this anchor appears exactly once, but we only
-      //    replace the first occurrence defensively.
-      const anchorIdx = contents.indexOf(POST_INSTALL_ANCHOR);
-      if (anchorIdx !== -1) {
-        contents =
-          contents.slice(0, anchorIdx) +
-          POST_INSTALL_PREPEND +
-          contents.slice(anchorIdx);
+      //    occurrence of `react_native_post_install(`.  In a standard
+      //    Expo-generated Podfile this anchor appears exactly once.
+      if (!hasPrepend) {
+        const anchorIdx = contents.indexOf(POST_INSTALL_ANCHOR);
+        if (anchorIdx !== -1) {
+          contents =
+            contents.slice(0, anchorIdx) +
+            POST_INSTALL_PREPEND +
+            contents.slice(anchorIdx);
+        }
       }
 
       fs.writeFileSync(podfilePath, contents, "utf8");
