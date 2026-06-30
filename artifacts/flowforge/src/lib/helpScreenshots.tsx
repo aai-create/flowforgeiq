@@ -326,7 +326,7 @@ export function TrackShipmentScreenshot() {
   const currentIdx = 7;
   return (
     <Frame h={210}>
-      <Bar label="My Orders — PO-2026-0041 Stage Tracker" />
+      <Bar label="My Orders — PO-2026-0041 Pipeline Stage Tracker" />
       <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 12 }}>
         {/* Progress bar */}
         <div style={{ position: "relative" }}>
