@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@workspace/api-client-react": "workspace:*",
+    "@expo/config-plugins": "~54.0.4",
     "@babel/core": "^7.29.6",
     "@clerk/expo": "^3.5.3",
     "@expo-google-fonts/inter": "^0.4.0",
