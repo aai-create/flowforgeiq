@@ -12,6 +12,7 @@ import {
   factoryQuotesTable,
   messagesTable,
   tasksTable,
+  stageEventsTable,
 } from "./schema";
 import * as path from "path";
 import * as fs from "fs";
@@ -263,7 +264,89 @@ async function main() {
     });
   }
 
-  console.log(`Seed complete: ${data.shipments.length} shipments, ${data.messages.length} messages, ${data.tasks.length} tasks`);
+  console.log("Inserting stage events...");
+
+  // Ordered stage ids matching their sortOrder in seed data
+  const ORDERED_STAGES = [
+    "spec", "quotes", "sample_ord", "sample_apr", "po_issued",
+    "production", "qc", "ex_factory", "in_transit", "payment", "delivered",
+  ];
+
+  // Human-readable notes for each transition (fromStageId → toStageId)
+  const TRANSITION_NOTES: Record<string, string> = {
+    "spec→quotes":       "Spec sheet finalized — requesting factory quotes",
+    "quotes→sample_ord": "Quotes reviewed and supplier selected — sample order placed",
+    "sample_ord→sample_apr": "Pre-production sample received for review",
+    "sample_apr→po_issued":  "Sample approved — PO issued to factory",
+    "po_issued→production":  "Factory confirmed production start date",
+    "production→qc":         "Production complete — QC inspection scheduled",
+    "qc→ex_factory":         "QC passed — goods ready for pickup",
+    "ex_factory→in_transit": "Cargo loaded and vessel departed",
+    "in_transit→payment":    "Shipment arrived at destination port",
+    "payment→delivered":     "Payment cleared — delivery confirmed by buyer",
+  };
+
+  // Extra notes for at-risk / delayed statuses on certain transitions
+  const DELAY_NOTES: Record<string, Record<string, string>> = {
+    "delayed": {
+      "sample_ord→sample_apr": "Sample delayed — factory quality issue under review",
+      "qc→ex_factory":         "QC failed first inspection — re-inspection required",
+      "in_transit→payment":    "Customs hold at destination port — awaiting clearance",
+    },
+    "at-risk": {
+      "po_issued→production":  "Production start pushed back 5 days — raw material shortage",
+      "production→qc":         "QC window at risk — production running 3 days behind",
+      "ex_factory→in_transit": "Booking missed — rescheduled to next available vessel",
+    },
+  };
+
+  let stageEventCount = 0;
+  for (const s of data.shipments) {
+    const dbShipmentId = shipmentIdMap.get(s.id);
+    if (!dbShipmentId) continue;
+
+    const currentIdx = ORDERED_STAGES.indexOf(s.currentStageId);
+    if (currentIdx <= 0) continue; // nothing to record for shipments still at first stage
+
+    // Build the list of transitions that have already happened (up to and including entry into currentStage)
+    const transitions: { from: string; to: string }[] = [];
+    for (let i = 0; i < currentIdx; i++) {
+      transitions.push({ from: ORDERED_STAGES[i], to: ORDERED_STAGES[i + 1] });
+    }
+
+    // Spread event timestamps across a ~120-day production window ending at exFactoryDate
+    const anchor = new Date(s.exFactoryDate);
+    const windowMs = 120 * 24 * 60 * 60 * 1000;
+    const startMs = anchor.getTime() - windowMs;
+
+    for (let i = 0; i < transitions.length; i++) {
+      const { from, to } = transitions[i];
+
+      // Each transition gets a proportional slice of the window
+      const fraction = (i + 1) / (ORDERED_STAGES.length - 1);
+      const eventMs = startMs + fraction * windowMs;
+      const createdAt = new Date(eventMs);
+
+      // Pick the most specific note available
+      const key = `${from}→${to}`;
+      let note = TRANSITION_NOTES[key] ?? null;
+      if (s.status in DELAY_NOTES && key in DELAY_NOTES[s.status]) {
+        note = DELAY_NOTES[s.status][key];
+      }
+
+      await db.insert(stageEventsTable).values({
+        shipmentId: dbShipmentId,
+        fromStageId: from,
+        toStageId: to,
+        note,
+        createdAt,
+        orgId: DEFAULT_ORG_ID,
+      });
+      stageEventCount++;
+    }
+  }
+
+  console.log(`Seed complete: ${data.shipments.length} shipments, ${data.messages.length} messages, ${data.tasks.length} tasks, ${stageEventCount} stage events`);
   await pool.end();
 }
 
