@@ -1818,10 +1818,22 @@ function ChannelPickerView({ messages, onSelect }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
+const BANNER_RESURFACE_DAYS = 60;
+
 function GetTheAppBanner() {
-  const [dismissed, setDismissed] = useUserPref<"yes" | "no">("mobile-app-banner-dismissed", "no");
+  const [dismissedAt, setDismissedAt] = useUserPref<string>("mobile-app-banner-dismissed-at", "");
   const isInstalled = window.matchMedia("(display-mode: standalone)").matches;
-  if (dismissed === "yes" || isInstalled) return null;
+
+  const isSuppressed = (() => {
+    if (!dismissedAt || dismissedAt === "no") return false;
+    // Legacy "yes" flag — treat as dismissed at epoch 0 so it resurfaces immediately
+    const ts = dismissedAt === "yes" ? 0 : parseInt(dismissedAt, 10);
+    if (isNaN(ts)) return false;
+    const daysSince = (Date.now() - ts) / (1000 * 60 * 60 * 24);
+    return daysSince < BANNER_RESURFACE_DAYS;
+  })();
+
+  if (isSuppressed || isInstalled) return null;
   return (
     <div className="shrink-0 flex items-center gap-2.5 px-3 py-2 bg-[#9000FF]/5 border-b border-[#9000FF]/15">
       <div className="w-6 h-6 rounded-lg bg-[#9000FF]/10 flex items-center justify-center shrink-0">
@@ -1840,7 +1852,7 @@ function GetTheAppBanner() {
         Open app
       </a>
       <button
-        onClick={() => setDismissed("yes")}
+        onClick={() => setDismissedAt(String(Date.now()))}
         className="shrink-0 p-0.5 text-[#9E9FAE] hover:text-[#5E687B] transition-colors"
         aria-label="Dismiss"
       >
