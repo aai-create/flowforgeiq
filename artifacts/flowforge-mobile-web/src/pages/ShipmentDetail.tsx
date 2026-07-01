@@ -153,15 +153,18 @@ export default function ShipmentDetailPage() {
         </div>
 
         {/* Stage timeline */}
-        {!stageEventsError && stageEvents && stageEvents.length > 0 && (
+        {(stageEventsError || (stageEvents && stageEvents.length > 0)) && (
           <div className="rounded-xl border bg-card p-4 flex flex-col gap-3" style={{ borderColor: "hsl(var(--border))" }}>
             <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">Stage History</p>
+            {stageEventsError ? (
+              <p className="text-xs text-muted-foreground italic">History unavailable</p>
+            ) : (
             <div className="flex flex-col gap-3">
-              {stageEvents.slice(0, 5).map((ev, i) => (
+              {stageEvents!.slice(0, 5).map((ev, i) => (
                 <div key={ev.id} className="flex gap-3 items-start">
                   <div className="flex flex-col items-center">
                     <div className="w-2 h-2 rounded-full mt-1" style={{ backgroundColor: i === 0 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }} />
-                    {i < stageEvents.slice(0, 5).length - 1 && (
+                    {i < stageEvents!.slice(0, 5).length - 1 && (
                       <div className="w-px flex-1 mt-1 mb-0.5 min-h-[16px]" style={{ backgroundColor: "hsl(var(--border))" }} />
                     )}
                   </div>
@@ -173,6 +176,7 @@ export default function ShipmentDetailPage() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 

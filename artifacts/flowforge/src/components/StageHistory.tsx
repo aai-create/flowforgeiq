@@ -11,12 +11,20 @@ interface StageHistoryProps {
 
 export function StageHistory({ shipmentId, stageLabels }: StageHistoryProps) {
   const { t } = useTranslation();
-  const { data: events, isLoading } = useListShipmentStageEvents(shipmentId);
+  const { data: events, isLoading, isError } = useListShipmentStageEvents(shipmentId);
 
   if (isLoading) {
     return (
       <div className="py-3 flex items-center justify-center">
         <span className="w-3 h-3 border-2 border-[#9000FF]/30 border-t-[#9000FF] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="py-4 text-center text-[#9E9FAE] text-[11px] italic">
+        {t("orders.stageHistoryUnavailable", "History unavailable")}
       </div>
     );
   }
