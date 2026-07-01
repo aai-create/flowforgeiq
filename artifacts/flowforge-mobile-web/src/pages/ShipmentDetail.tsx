@@ -24,7 +24,7 @@ export default function ShipmentDetailPage() {
   const shipmentId = Number(id);
 
   const { data: shipments, isLoading } = useListShipments();
-  const { data: stageEvents } = useListShipmentStageEvents(shipmentId);
+  const { data: stageEvents, isError: stageEventsError } = useListShipmentStageEvents(shipmentId);
   const { data: messages } = useListMessages();
 
   const shipment = (shipments ?? []).find((s) => s.id === shipmentId) ?? null;
@@ -153,7 +153,7 @@ export default function ShipmentDetailPage() {
         </div>
 
         {/* Stage timeline */}
-        {stageEvents && stageEvents.length > 0 && (
+        {!stageEventsError && stageEvents && stageEvents.length > 0 && (
           <div className="rounded-xl border bg-card p-4 flex flex-col gap-3" style={{ borderColor: "hsl(var(--border))" }}>
             <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">Stage History</p>
             <div className="flex flex-col gap-3">
