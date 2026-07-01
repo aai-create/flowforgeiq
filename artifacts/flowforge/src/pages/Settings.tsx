@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearch, useLocation } from "wouter";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe } from "lucide-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download } from "lucide-react";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
@@ -684,6 +684,150 @@ function DefaultLandingPageSection() {
   );
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  readonly userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+function MobileAppSection() {
+  const { t } = useTranslation();
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isMobile = isIos || isAndroid;
+
+  const mobileUrl = (() => {
+    const base = window.location.origin;
+    return `${base}/mobile/`;
+  })();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleAndroidInstall = async () => {
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setInstalled(true);
+      setDeferredPrompt(null);
+    }
+  };
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(mobileUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      const ta = document.createElement("textarea");
+      ta.value = mobileUrl;
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand("copy"); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* ignore */ }
+      document.body.removeChild(ta);
+    });
+  };
+
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-[#9000FF]/8 border border-[#9000FF]/15 flex items-center justify-center shrink-0">
+          <Smartphone className="w-4.5 h-4.5 text-[#9000FF]" />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-[#212833] mb-0.5">{t("settings.general.mobileApp")}</h2>
+          <p className="text-xs text-[#5E687B] leading-relaxed">{t("settings.general.mobileAppDesc")}</p>
+        </div>
+      </div>
+
+      {/* Open button always shown */}
+      <a
+        href="/mobile/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors mb-4"
+      >
+        <Smartphone className="w-3.5 h-3.5" />
+        {t("settings.general.mobileAppOpen")}
+        <ExternalLink className="w-3 h-3 opacity-70" />
+      </a>
+
+      {/* iOS instructions */}
+      {isIos && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3.5 space-y-2.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">{t("settings.general.mobileAppInstallTitle")}</span>
+          </div>
+          <p className="text-[11px] text-blue-700">{t("settings.general.mobileAppIosNote")}</p>
+          <ol className="space-y-1.5">
+            {[
+              t("settings.general.mobileAppIosStep1"),
+              t("settings.general.mobileAppIosStep2"),
+              t("settings.general.mobileAppIosStep3"),
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-2 text-[11px] text-blue-800">
+                <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-800 text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                {step}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Android install */}
+      {isAndroid && deferredPrompt && !installed && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3.5">
+          <p className="text-[11px] text-emerald-700 mb-2.5">{t("settings.general.mobileAppAndroidDesc")}</p>
+          <button
+            onClick={() => void handleAndroidInstall()}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors"
+          >
+            <Download className="w-3 h-3" />
+            {t("settings.general.mobileAppInstallAndroid")}
+          </button>
+        </div>
+      )}
+
+      {isAndroid && installed && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center gap-2">
+          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <span className="text-[11px] text-emerald-700 font-medium">{t("settings.general.mobileAppInstalledAndroid")}</span>
+        </div>
+      )}
+
+      {/* Desktop / fallback — show copyable URL */}
+      {!isMobile && (
+        <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
+          <div className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-2">{t("settings.general.mobileAppUrl")}</div>
+          <p className="text-[11px] text-[#5E687B] mb-2">{t("settings.general.mobileAppDesktopDesc")}</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 font-mono text-[11px] text-[#212833] bg-white border border-[#E5EAF0] rounded px-2.5 py-1.5 truncate">
+              {mobileUrl}
+            </code>
+            <button
+              onClick={copyUrl}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-[#E5EAF0] rounded-md text-xs font-medium text-[#5E687B] hover:bg-white hover:text-[#212833] transition-colors shrink-0"
+            >
+              {copied ? <><Check className="w-3 h-3 text-emerald-500" />{t("common.copied")}</> : <><Copy className="w-3 h-3" />{t("common.copy")}</>}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function Settings() {
   const { t, i18n: i18nHook } = useTranslation();
   const { data: config, isLoading } = useGetPoNumberingConfig();
@@ -866,6 +1010,7 @@ export function Settings() {
                 </div>
               </section>
               <DefaultLandingPageSection />
+              <MobileAppSection />
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.general.poNumbering")}</h2>
                 <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">{t("settings.general.poNumberingDesc")}</p>
