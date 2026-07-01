@@ -89,7 +89,23 @@ interface SeedData {
 }
 
 async function main() {
+  const wipeOnly = process.argv.includes("--wipe-only");
   const preserveEvents = process.argv.includes("--preserve-events");
+
+  if (wipeOnly) {
+    console.log("Wiping business data (preserving users, org, stages, and config)...");
+    await db.execute(sql`
+      TRUNCATE TABLE
+        tasks, messages, factory_quotes, payments, deal_shipments, shipments,
+        deal_adjustments, deals, suppliers, buyers, rfqs, rfq_quotes, copilot_proposals,
+        autonomy_policies, shipment_predictions, stage_events, buyer_emails,
+        extraction_corrections, extractions, documents
+      RESTART IDENTITY CASCADE
+    `);
+    console.log("Wipe complete. Users, org, stages, push_tokens, gmail_credentials, and po_numbering_config are untouched.");
+    await pool.end();
+    process.exit(0);
+  }
 
   const seedPath = path.resolve(__dirname, "../../../scripts/src/seed-data.json");
   if (!fs.existsSync(seedPath)) {
