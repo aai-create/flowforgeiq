@@ -9,4 +9,5 @@
 - [Vite build env vars](vite-build-env-vars.md) — PORT and BASE_PATH are runtime-only; vite.config.ts must use async ({command}) form and skip PORT/BASE_PATH validation when command === "build".
 - [react-native-worklets root hoist](rn-worklets-root-hoist.md) — react-native-reanimated v4 Babel plugin requires react-native-worklets/plugin at workspace root; add to root package.json devDependencies or Babel can't find it from pnpm store.
 - [Mobile Metro build port](mobile-metro-build-port.md) — mobile build script uses METRO_BUILD_PORT=8083 for expo start during deploy builds; avoids conflict with dev workflow on 8081.
-- [EAS Clerk SPM nil target](eas-clerk-spm-nil-target.md) — @clerk/expo v3.x + RN 0.81.x + CocoaPods 1.16.x crashes spm.rb:80; correct fix is pnpm patch on react-native, NOT a config plugin.
+- [EAS Clerk SPM nil target](eas-clerk-spm-nil-target.md) — @clerk/expo v3.x + RN 0.81.x + CocoaPods 1.16.x: multi-layer fix needed; see topic file.
+- [EAS Clerk no such module ClerkExpo](eas-clerk-no-module-clerkexpo.md) — After nil-guard prevents crash, ClerkKit is never linked → import ClerkExpo fails; fix: wire ClerkKit to user project FlowForge target in post_install.
