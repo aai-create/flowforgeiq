@@ -1,11 +1,19 @@
 diff --git a/scripts/cocoapods/spm.rb b/scripts/cocoapods/spm.rb
 --- a/scripts/cocoapods/spm.rb
 +++ b/scripts/cocoapods/spm.rb
-@@ -66,6 +66,7 @@
+@@ -31,6 +31,7 @@
+         )
+         log " Adding workaround for Swift package not found issue"
+         target = project.targets.find { |t| t.name == pod_name}
++        next if target.nil?
+         target.build_configurations.each do |config|
+           target.build_settings(config.name)['SWIFT_INCLUDE_PATHS'] ||= ['$(inherited)']
+           search_path = '${SYMROOT}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/'
+@@ -66,6 +67,7 @@
    end
- 
+
    def add_spm_to_target(project, target, url, requirement, products)
-+    return if target.nil? # nil-target guard for CocoaPods 1.16.x + RN 0.81.x
++    return if target.nil?
      pkg_class = Xcodeproj::Project::Object::XCRemoteSwiftPackageReference
      ref_class = Xcodeproj::Project::Object::XCSwiftPackageProductDependency
      pkg = project.root_object.package_references.find { |p| p.class == pkg_class && p.repositoryURL == url }
