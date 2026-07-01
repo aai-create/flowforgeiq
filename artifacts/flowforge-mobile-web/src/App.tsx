@@ -18,6 +18,7 @@ import ShipmentDetailPage from "@/pages/ShipmentDetail";
 import SettingsPage from "@/pages/Settings";
 import RoutingResultPage from "@/pages/RoutingResult";
 import { IOSInstallPrompt } from "@/components/IOSInstallPrompt";
+import { AndroidInstallPrompt } from "@/components/AndroidInstallPrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -142,6 +143,7 @@ function ClerkProviderWithRoutes() {
         <ClerkQueryClientCacheInvalidator />
         <Router />
         <IOSInstallPrompt />
+        <AndroidInstallPrompt />
       </QueryClientProvider>
     </ClerkProvider>
   );
