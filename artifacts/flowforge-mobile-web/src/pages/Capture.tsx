@@ -206,21 +206,45 @@ export default function CapturePage() {
   return (
     <AppShell>
       <div
-        className="status-bar-pad px-5 pb-4 flex items-start justify-between shrink-0"
-        style={{ background: "hsl(var(--primary))" }}
+        className="status-bar-pad px-5 pb-4 flex items-center justify-between shrink-0"
+        style={{
+          background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+          boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
+        }}
       >
-        <div>
-          <p className="text-white font-bold text-xl tracking-tight">FlowForgeIQ</p>
-          <p className="text-white/70 text-xs mt-0.5 tracking-wide">Capture</p>
+        <div className="flex items-center gap-2.5">
+          <img
+            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+            alt="FlowForgeIQ"
+            style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+          />
+          <div>
+            <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
+            <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">Capture</p>
+          </div>
         </div>
         {hasContent && (
-          <button onClick={handleClear} className="mt-1 p-1 text-white/80">
+          <button onClick={handleClear} className="p-1 text-white/80">
             <X size={22} />
           </button>
         )}
       </div>
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
+        {/* AI hint banner */}
+        <div
+          className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+          style={{
+            background: "hsl(var(--accent))",
+            border: "1px solid hsl(var(--primary) / 0.15)",
+          }}
+        >
+          <Zap size={13} fill="hsl(var(--primary))" strokeWidth={0} className="mt-0.5 shrink-0" />
+          <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--accent-foreground))" }}>
+            Paste a chat export and AI will extract the shipment details
+          </p>
+        </div>
+
         {/* Auto-detected channel pill */}
         {autoDetectedLabel && (
           <div
@@ -436,11 +460,14 @@ export default function CapturePage() {
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="flex items-center justify-center gap-2.5 rounded-xl py-4 transition-opacity font-semibold text-base"
+          className="flex items-center justify-center gap-2.5 rounded-[14px] py-4 transition-all font-semibold text-base"
           style={{
-            backgroundColor: canSubmit ? "hsl(var(--primary))" : "hsl(var(--muted))",
+            background: canSubmit
+              ? "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)"
+              : "hsl(var(--muted))",
             color: canSubmit ? "white" : "hsl(var(--muted-foreground))",
             opacity: isPending ? 0.7 : 1,
+            boxShadow: canSubmit ? "0 4px 14px hsl(var(--primary) / 0.4)" : "none",
           }}
         >
           {isPending ? (

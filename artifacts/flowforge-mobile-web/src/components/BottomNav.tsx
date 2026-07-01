@@ -14,7 +14,7 @@ export function BottomNav() {
   return (
     <nav
       className="safe-bottom shrink-0 border-t bg-card"
-      style={{ borderColor: "hsl(var(--border))" }}
+      style={{ borderColor: "hsl(var(--border))", boxShadow: "0 -1px 6px rgba(0,0,0,0.05)" }}
     >
       <div className="flex">
         {TABS.map(({ href, icon: Icon, label }) => {
@@ -23,10 +23,23 @@ export function BottomNav() {
             <button
               key={href}
               onClick={() => navigate(href)}
-              className="flex-1 flex flex-col items-center gap-1 py-2 transition-opacity active:opacity-60"
+              className="flex-1 flex flex-col items-center gap-0.5 pt-2 pb-1 transition-opacity active:opacity-60"
               style={{ color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}
             >
-              <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: active ? "hsl(var(--accent))" : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "background 0.15s",
+                }}
+              >
+                <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+              </div>
               <span className="text-[10px] font-medium">{label}</span>
             </button>
           );
