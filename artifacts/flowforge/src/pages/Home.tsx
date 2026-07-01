@@ -1653,9 +1653,9 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
           <div className="font-bold flex items-center gap-1"><AlertCircle size={10} className="text-amber-500"/>Postmark webhook setup required</div>
           <div>In the Postmark dashboard, set your inbound webhook URL to:</div>
           <div className="font-mono bg-white border border-amber-200 rounded px-2 py-1 break-all select-all">
-            https://flowforgeiq.com/api/webhooks/email?token=<span className="text-amber-600">[POSTMARK_WEBHOOK_TOKEN]</span>
+            https://flow-forge-sourcing.replit.app/api/webhooks/email?token=<span className="text-amber-600">[POSTMARK_WEBHOOK_TOKEN]</span>
           </div>
-          <div className="text-amber-700">Replace <span className="font-mono font-bold">[POSTMARK_WEBHOOK_TOKEN]</span> with the value of your <span className="font-mono font-bold">POSTMARK_WEBHOOK_TOKEN</span> secret.</div>
+          <div className="text-amber-700">Or with your custom domain: <span className="font-mono font-bold">https://flowforgeiq.com/api/webhooks/email?token=…</span> — replace <span className="font-mono font-bold">[POSTMARK_WEBHOOK_TOKEN]</span> with your secret value.</div>
         </div>
       </div>
     </div>
