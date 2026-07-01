@@ -81,7 +81,7 @@ export default function HomePage() {
         className="status-bar-pad px-5 pb-4 shrink-0"
         style={{ background: "hsl(var(--primary))" }}
       >
-        <p className="text-white font-bold text-xl tracking-tight">FlowForge</p>
+        <p className="text-white font-bold text-xl tracking-tight">FlowForgeIQ</p>
         <p className="text-white/70 text-xs mt-0.5 tracking-wide">
           {user ? `Welcome, ${user.firstName ?? user.primaryEmailAddress?.emailAddress?.split("@")[0] ?? ""}` : "Active Shipments"}
         </p>

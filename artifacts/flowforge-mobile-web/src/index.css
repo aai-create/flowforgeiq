@@ -29,7 +29,8 @@
   --border: 220 15% 90%;
   --card: 0 0% 100%;
   --card-foreground: 222 20% 15%;
-  --primary: 270 100% 53%;
+  --primary: 274 100% 50%;
+  --primary-hover: 274 100% 43%;
   --primary-foreground: 0 0% 100%;
   --muted: 220 15% 94%;
   --muted-foreground: 220 10% 50%;

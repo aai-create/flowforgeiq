@@ -44,12 +44,11 @@ function SignInPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
       <div className="flex items-center gap-2 mb-8">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-          style={{ background: "hsl(var(--primary))" }}
-        >
-          FF
-        </div>
+        <img
+          src={`${basePath}/flowforge-logo.png`}
+          alt="FlowForgeIQ"
+          className="w-8 h-8 rounded-lg object-contain"
+        />
         <span className="font-bold text-lg tracking-tight" style={{ color: "hsl(var(--primary))" }}>
           FlowForgeIQ
         </span>

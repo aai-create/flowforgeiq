@@ -112,7 +112,7 @@ export default function CapturePage() {
         style={{ background: "hsl(var(--primary))" }}
       >
         <div>
-          <p className="text-white font-bold text-xl tracking-tight">FlowForge</p>
+          <p className="text-white font-bold text-xl tracking-tight">FlowForgeIQ</p>
           <p className="text-white/70 text-xs mt-0.5 tracking-wide">Capture</p>
         </div>
         {hasContent && (

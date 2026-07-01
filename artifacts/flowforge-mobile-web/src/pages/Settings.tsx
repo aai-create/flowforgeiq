@@ -17,7 +17,7 @@ export default function SettingsPage() {
     : navigator.language?.startsWith("zh") ? "zh-CN" : "en";
 
   async function handleSignOut() {
-    if (!window.confirm("Sign out of FlowForge?")) return;
+    if (!window.confirm("Sign out of FlowForgeIQ?")) return;
     await signOut();
     navigate("/sign-in");
   }
@@ -28,7 +28,7 @@ export default function SettingsPage() {
         className="status-bar-pad px-5 pb-4 shrink-0"
         style={{ background: "hsl(var(--primary))" }}
       >
-        <p className="text-white font-bold text-xl tracking-tight">FlowForge</p>
+        <p className="text-white font-bold text-xl tracking-tight">FlowForgeIQ</p>
         <p className="text-white/70 text-xs mt-0.5 tracking-wide">Settings</p>
       </div>
 
@@ -103,15 +103,14 @@ export default function SettingsPage() {
         <div className="rounded-xl border bg-card p-4" style={{ borderColor: "hsl(var(--border))" }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground">FlowForge Mobile</p>
+              <p className="text-sm font-semibold text-foreground">FlowForgeIQ</p>
               <p className="text-xs text-muted-foreground mt-0.5">Supply-chain communication hub</p>
             </div>
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold"
-              style={{ backgroundColor: "hsl(var(--primary))" }}
-            >
-              FF
-            </div>
+            <img
+              src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+              alt="FlowForgeIQ"
+              className="w-10 h-10 rounded-xl object-contain"
+            />
           </div>
           <p className="text-xs text-muted-foreground mt-3 leading-[1.5]">
             Install to your home screen via your browser's "Add to Home Screen" option for the best mobile experience.

@@ -1,11 +1,11 @@
 {
-  "name": "FlowForge Mobile",
-  "short_name": "FlowForge",
+  "name": "FlowForgeIQ",
+  "short_name": "FlowForgeIQ",
   "description": "Supply-chain communication hub — manage shipments, capture chats, review documents.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#8800ff",
+  "theme_color": "#9000ff",
   "orientation": "portrait",
   "icons": [
     {
