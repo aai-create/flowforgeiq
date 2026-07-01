@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download } from "lucide-react";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
@@ -806,11 +807,27 @@ function MobileAppSection() {
         </div>
       )}
 
-      {/* Desktop / fallback — show copyable URL */}
+      {/* Desktop / fallback — show QR code + copyable URL */}
       {!isMobile && (
-        <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
-          <div className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-2">{t("settings.general.mobileAppUrl")}</div>
-          <p className="text-[11px] text-[#5E687B] mb-2">{t("settings.general.mobileAppDesktopDesc")}</p>
+        <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5 space-y-3">
+          <div className="text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider">{t("settings.general.mobileAppUrl")}</div>
+          <p className="text-[11px] text-[#5E687B]">{t("settings.general.mobileAppDesktopDesc")}</p>
+
+          {/* QR code */}
+          <div className="flex justify-center py-2">
+            <div className="bg-white border border-[#E5EAF0] rounded-lg p-3 inline-flex flex-col items-center gap-2 shadow-sm">
+              <QRCodeSVG
+                value={mobileUrl}
+                size={120}
+                bgColor="#ffffff"
+                fgColor="#212833"
+                level="M"
+              />
+              <span className="text-[9px] text-[#9E9FAE] font-medium tracking-wide">Scan to install</span>
+            </div>
+          </div>
+
+          {/* Copyable URL */}
           <div className="flex items-center gap-2">
             <code className="flex-1 font-mono text-[11px] text-[#212833] bg-white border border-[#E5EAF0] rounded px-2.5 py-1.5 truncate">
               {mobileUrl}
