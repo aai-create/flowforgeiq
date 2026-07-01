@@ -2,15 +2,70 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Mobile redirect guard: send handset visitors to the PWA before React loads.
-         isMobileHandset = mobile UA *and* narrow viewport (<768 px).
-         Tablets (iPad, Android tablet ≥768 px) are intentionally treated as desktop. -->
+    <!-- Routing guard (runs before React):
+         • Phones (< 768 px, mobile UA)  → hard redirect to /mobile/
+         • Tablets (768–1024 px, no pref) → show choice banner
+         • Stored pref "mobile"           → silent redirect to /mobile/
+         • Everything else (> 1024 px)   → stay on desktop -->
+    <style>
+      #ff-tablet-banner {
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
+        background: #1a1a2e; color: #e2e8f0;
+        font-family: Inter, system-ui, sans-serif; font-size: 14px;
+        padding: 12px 16px; display: flex; align-items: center;
+        justify-content: space-between; gap: 12px;
+        box-shadow: 0 -2px 12px rgba(0,0,0,0.35);
+        border-top: 1px solid rgba(144,0,255,0.35);
+      }
+      #ff-tablet-banner p { margin: 0; line-height: 1.4; }
+      #ff-tablet-banner .ff-tb-btns { display: flex; gap: 8px; flex-shrink: 0; }
+      #ff-tablet-banner button {
+        padding: 7px 14px; border-radius: 6px; border: none;
+        cursor: pointer; font-size: 13px; font-weight: 500;
+        font-family: inherit;
+      }
+      #ff-tb-desktop { background: #9000ff; color: #fff; }
+      #ff-tb-mobile  { background: #2d2d4a; color: #c4b5fd; border: 1px solid #9000ff55; }
+      #ff-tb-dismiss {
+        background: transparent; color: #64748b; font-size: 18px;
+        padding: 4px 8px; line-height: 1;
+      }
+    </style>
     <script>
       (function () {
+        var w = window.innerWidth;
         var mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        var isMobileHandset = mobileUA && window.innerWidth < 768;
-        if (isMobileHandset) {
-          window.location.replace('/mobile/');
+        var pref = '';
+        try { pref = localStorage.getItem('ff_preferred_view') || ''; } catch (e) {}
+
+        if (pref === 'mobile') { window.location.replace('/mobile/'); return; }
+        if (mobileUA && w < 768) { window.location.replace('/mobile/'); return; }
+
+        if (!pref && w >= 768 && w <= 1024) {
+          document.addEventListener('DOMContentLoaded', function () {
+            var banner = document.createElement('div');
+            banner.id = 'ff-tablet-banner';
+            banner.innerHTML =
+              '<p>Looks like you\'re on a tablet. Which version works best for you?</p>' +
+              '<div class="ff-tb-btns">' +
+                '<button id="ff-tb-desktop">Full desktop app</button>' +
+                '<button id="ff-tb-mobile">Stay on mobile</button>' +
+                '<button id="ff-tb-dismiss" title="Dismiss">×</button>' +
+              '</div>';
+            document.body.appendChild(banner);
+
+            document.getElementById('ff-tb-desktop').addEventListener('click', function () {
+              try { localStorage.setItem('ff_preferred_view', 'desktop'); } catch (e) {}
+              banner.remove();
+            });
+            document.getElementById('ff-tb-mobile').addEventListener('click', function () {
+              try { localStorage.setItem('ff_preferred_view', 'mobile'); } catch (e) {}
+              window.location.replace('/mobile/');
+            });
+            document.getElementById('ff-tb-dismiss').addEventListener('click', function () {
+              banner.remove();
+            });
+          });
         }
       })();
     </script>
