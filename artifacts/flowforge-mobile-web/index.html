@@ -2,11 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Desktop redirect guard: send non-mobile visitors to the desktop app before React loads -->
+    <!-- Desktop redirect guard: send non-handset visitors to the desktop app before React loads.
+         isMobileHandset = mobile UA *and* narrow viewport (<768 px).
+         Tablets (iPad, Android tablet ≥768 px) are intentionally treated as desktop. -->
     <script>
       (function () {
-        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (!isMobile && window.innerWidth >= 768) {
+        var mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        var isMobileHandset = mobileUA && window.innerWidth < 768;
+        if (!isMobileHandset) {
           window.location.replace('/');
         }
       })();
