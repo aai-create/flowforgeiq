@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCreateMessage, useListShipments } from "@workspace/api-client-react";
 import type { Shipment } from "@workspace/api-client-react";
-import { ArrowLeft, Check, CheckCircle, AlertCircle, HelpCircle, Package, Search, ChevronRight, Edit2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle, AlertCircle, HelpCircle, Package, Search, ChevronRight, Edit2, Zap } from "lucide-react";
 
 interface IngestResult {
   routingStatus: "routed" | "needs-review";
@@ -93,6 +93,17 @@ function ShipmentPicker({
   );
 }
 
+const GRADIENT_HEADER = {
+  background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+  boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
+};
+
+const GRADIENT_BTN = {
+  background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+  boxShadow: "0 4px 14px hsl(var(--primary) / 0.4)",
+  color: "white",
+};
+
 export default function RoutingResultPage() {
   const [, navigate] = useLocation();
   const [payload, setPayload] = useState<RoutingPayload | null>(null);
@@ -181,12 +192,19 @@ export default function RoutingResultPage() {
   if (payloadError || (!payload && !result)) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div
-          className="status-bar-pad px-5 pb-4 flex items-center gap-3 shrink-0"
-          style={{ background: "hsl(var(--primary))" }}
-        >
+        <div className="status-bar-pad px-5 pb-4 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
           <button onClick={goBack}><ArrowLeft size={20} color="white" /></button>
-          <p className="text-white font-bold text-lg">Routing Result</p>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+              alt="FlowForgeIQ"
+              style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+            />
+            <div>
+              <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
+              <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">Routing Result</p>
+            </div>
+          </div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
           <p className="text-muted-foreground text-center">
@@ -196,8 +214,8 @@ export default function RoutingResultPage() {
           </p>
           <button
             onClick={goBack}
-            className="px-5 py-2.5 rounded-xl text-white font-semibold"
-            style={{ backgroundColor: "hsl(var(--primary))" }}
+            className="px-5 py-3 rounded-[14px] font-semibold text-base"
+            style={GRADIENT_BTN}
           >
             Go back to Capture
           </button>
@@ -214,24 +232,47 @@ export default function RoutingResultPage() {
     );
   }
 
-  const headerColor = isHighConf ? "hsl(var(--primary))" : isMedConf ? "#d97706" : "#e63946";
+  const bannerText = isHighConf
+    ? "AI routed this message with high confidence — confirm to save"
+    : isMedConf
+    ? "AI found a possible match — please confirm the right shipment"
+    : "AI couldn't match automatically — pick a shipment or send to triage";
 
   return (
     <div className="flex flex-col h-full max-w-lg mx-auto overflow-hidden">
-      <div
-        className="status-bar-pad px-5 pb-4 flex items-start gap-3 shrink-0"
-        style={{ background: headerColor }}
-      >
-        <button onClick={goBack} className="mt-0.5"><ArrowLeft size={20} color="white" /></button>
-        <div>
-          <p className="text-white font-bold text-lg">Routing Result</p>
-          <p className="text-white/70 text-xs">
-            {isHighConf ? "Auto-routed" : isMedConf ? "Needs confirmation" : "Needs review"}
-          </p>
+      {/* Gradient header */}
+      <div className="status-bar-pad px-5 pb-4 flex items-start gap-3 shrink-0" style={GRADIENT_HEADER}>
+        <button onClick={goBack} className="mt-1"><ArrowLeft size={20} color="white" /></button>
+        <div className="flex items-center gap-2.5">
+          <img
+            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+            alt="FlowForgeIQ"
+            style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+          />
+          <div>
+            <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
+            <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">
+              {isHighConf ? "Auto-routed" : isMedConf ? "Confirm routing" : "Needs review"}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-3">
+        {/* Accent banner */}
+        <div
+          className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+          style={{
+            background: "hsl(var(--accent))",
+            border: "1px solid hsl(var(--primary) / 0.15)",
+          }}
+        >
+          <Zap size={13} fill="hsl(var(--primary))" strokeWidth={0} className="mt-0.5 shrink-0" />
+          <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--accent-foreground))" }}>
+            {bannerText}
+          </p>
+        </div>
+
         {/* Confidence card */}
         <div
           className="rounded-2xl border bg-card p-4 flex flex-col gap-2"
@@ -280,8 +321,8 @@ export default function RoutingResultPage() {
                 <button
                   onClick={() => handleConfirm(suggestedId)}
                   disabled={isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-semibold"
-                  style={{ backgroundColor: "hsl(var(--primary))" }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-[14px] font-semibold text-base transition-all"
+                  style={GRADIENT_BTN}
                 >
                   {isPending
                     ? <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
@@ -289,7 +330,7 @@ export default function RoutingResultPage() {
                 </button>
                 <button
                   onClick={() => setShowChange(true)}
-                  className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border font-medium"
+                  className="flex items-center gap-1.5 px-4 py-3.5 rounded-[14px] border font-medium"
                   style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--primary))" }}
                 >
                   <Edit2 size={14} /> Change
@@ -338,8 +379,8 @@ export default function RoutingResultPage() {
                 <button
                   onClick={() => handleConfirm(suggestedId)}
                   disabled={isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-semibold"
-                  style={{ backgroundColor: "hsl(var(--primary))" }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-[14px] font-semibold text-base transition-all"
+                  style={GRADIENT_BTN}
                 >
                   {isPending
                     ? <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
@@ -347,7 +388,7 @@ export default function RoutingResultPage() {
                 </button>
                 <button
                   onClick={() => setShowChange(true)}
-                  className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border font-medium"
+                  className="flex items-center gap-1.5 px-4 py-3.5 rounded-[14px] border font-medium"
                   style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--primary))" }}
                 >
                   <Search size={14} /> Pick another
@@ -392,15 +433,15 @@ export default function RoutingResultPage() {
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => setShowChange(true)}
-                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl border font-semibold"
-                  style={{ borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" }}
+                  className="flex items-center justify-center gap-2 py-3.5 rounded-[14px] font-semibold text-base transition-all"
+                  style={GRADIENT_BTN}
                 >
                   <Search size={15} /> Pick a shipment manually
                 </button>
                 <button
                   onClick={() => handleConfirm(null)}
                   disabled={isPending}
-                  className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold"
+                  className="flex items-center justify-center gap-2 py-3.5 rounded-[14px] font-semibold"
                   style={{ backgroundColor: "hsl(var(--muted))", color: "hsl(var(--foreground))" }}
                 >
                   {isPending
