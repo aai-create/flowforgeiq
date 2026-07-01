@@ -22,7 +22,7 @@ import {
   FileSpreadsheet, Video, Download, Eye, Bot, MessageSquare, ChevronLeft,
   Table2, FilePlus, Link2, ArrowUpRight, ShieldAlert, BrainCircuit, BarChart3,
   Pencil, Package, Hash, Bookmark, Settings, ExternalLink, Wifi, WifiOff, Clipboard, Copy, Circle,
-  Factory, Tag,
+  Factory, Tag, Smartphone,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { Atelier } from "./Atelier";
@@ -51,6 +51,7 @@ import {
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding, SupplierSummary } from "@workspace/api-client-react";
 import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED, BODY_SM_MUTED } from "@/lib/typography";
+import { useUserPref } from "@/lib/useUserPref";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate, relativeAge,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
@@ -1817,6 +1818,38 @@ function ChannelPickerView({ messages, onSelect }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main ConversationHub
 // ─────────────────────────────────────────────────────────────────────────────
+function GetTheAppBanner() {
+  const [dismissed, setDismissed] = useUserPref<"yes" | "no">("mobile-app-banner-dismissed", "no");
+  const isInstalled = window.matchMedia("(display-mode: standalone)").matches;
+  if (dismissed === "yes" || isInstalled) return null;
+  return (
+    <div className="shrink-0 flex items-center gap-2.5 px-3 py-2 bg-[#9000FF]/5 border-b border-[#9000FF]/15">
+      <div className="w-6 h-6 rounded-lg bg-[#9000FF]/10 flex items-center justify-center shrink-0">
+        <Smartphone className="w-3.5 h-3.5 text-[#9000FF]" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-semibold text-[#212833] leading-tight">Get the FlowForge mobile app</p>
+        <p className="text-[10px] text-[#5E687B] truncate leading-tight">Capture supplier chats on the go</p>
+      </div>
+      <a
+        href="/mobile/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 px-2.5 py-1 text-[10px] font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors whitespace-nowrap"
+      >
+        Open app
+      </a>
+      <button
+        onClick={() => setDismissed("yes")}
+        className="shrink-0 p-0.5 text-[#9E9FAE] hover:text-[#5E687B] transition-colors"
+        aria-label="Dismiss"
+      >
+        <X size={12} />
+      </button>
+    </div>
+  );
+}
+
 export default function Home() {
   const { isLoaded, isSignedIn } = useUser();
   const { signOut } = useClerk();
@@ -3093,6 +3126,7 @@ export default function Home() {
                   <button className="p-1 hover:bg-[#F0F4F8] rounded text-[#5E687B]"><MoreHorizontal size={13}/></button>
                 </div>
               </div>
+              <GetTheAppBanner />
               <div className="flex-1 overflow-y-auto">
                 {visibleMessages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full py-12 px-6 text-center select-none">
