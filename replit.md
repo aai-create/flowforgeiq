@@ -58,7 +58,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - **Orders grid** (`/orders`): shipments with supplier PO + buyer PO side-by-side, PO search with highlight, spread badge per shipment, task checklist.
 - **RFQs** (`/rfqs`): collect factory quotes, compare spread vs target price, convert winner to PO, generate proforma PDF.
 - **Settings**: team management (invite colleagues, admin/member roles), Chat Channels (Postmark inbound address, Beeper), Gmail integration.
-- **Mobile companion** (`artifacts/flowforge-mobile`): Expo app for pasting and previewing chat exports on-device.
+- **Mobile PWA** (`artifacts/flowforge-mobile-web`, path `/mobile/`): Progressive Web App companion — Home (shipments list), Capture (chat paste + AI routing), Documents, Shipment Detail, and Settings screens. Clerk auth, bottom nav bar, installable via "Add to Home Screen". The legacy Expo app (`artifacts/flowforge-mobile`) is superseded and inactive.
 
 ## User preferences
 

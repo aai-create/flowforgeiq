@@ -1,0 +1,19 @@
+{
+  "name": "FlowForge Mobile",
+  "short_name": "FlowForge",
+  "description": "Supply-chain communication hub — manage shipments, capture chats, review documents.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8800ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}
