@@ -89,11 +89,41 @@ interface SeedData {
 }
 
 async function main() {
+  const preserveEvents = process.argv.includes("--preserve-events");
+
   const seedPath = path.resolve(__dirname, "../../../scripts/src/seed-data.json");
   if (!fs.existsSync(seedPath)) {
     throw new Error(`Seed data not found at ${seedPath}. Run scripts/src/build-seed-data.ts first.`);
   }
   const data: SeedData = JSON.parse(fs.readFileSync(seedPath, "utf-8"));
+
+  // When --preserve-events is set, snapshot existing stage_events before the
+  // full truncate (which cascades through shipments → stage_events), then
+  // restore them afterwards. Shipment IDs are deterministic across re-seeds
+  // because RESTART IDENTITY resets sequences to 1 and insertion order is
+  // fixed by the seed-data.json file.
+  type SavedEvent = {
+    shipmentId: number;
+    fromStageId: string;
+    toStageId: string;
+    note: string | null;
+    createdBy: string | null;
+    createdAt: Date;
+    orgId: number;
+  };
+  let savedEvents: SavedEvent[] = [];
+  if (preserveEvents) {
+    savedEvents = await db.select({
+      shipmentId: stageEventsTable.shipmentId,
+      fromStageId: stageEventsTable.fromStageId,
+      toStageId: stageEventsTable.toStageId,
+      note: stageEventsTable.note,
+      createdBy: stageEventsTable.createdBy,
+      createdAt: stageEventsTable.createdAt,
+      orgId: stageEventsTable.orgId,
+    }).from(stageEventsTable);
+    console.log(`Snapshotted ${savedEvents.length} stage events for restoration after re-seed.`);
+  }
 
   console.log("Clearing existing data...");
   await db.execute(sql`
@@ -301,49 +331,65 @@ async function main() {
   };
 
   let stageEventCount = 0;
-  for (const s of data.shipments) {
-    const dbShipmentId = shipmentIdMap.get(s.id);
-    if (!dbShipmentId) continue;
-
-    const currentIdx = ORDERED_STAGES.indexOf(s.currentStageId);
-    if (currentIdx <= 0) continue; // nothing to record for shipments still at first stage
-
-    // Build the list of transitions that have already happened (up to and including entry into currentStage)
-    const transitions: { from: string; to: string }[] = [];
-    for (let i = 0; i < currentIdx; i++) {
-      transitions.push({ from: ORDERED_STAGES[i], to: ORDERED_STAGES[i + 1] });
+  if (preserveEvents) {
+    // Restore the snapshotted stage events. Shipment IDs are deterministic
+    // because RESTART IDENTITY resets sequences to 1 and insertion order is
+    // fixed, so a saved shipment_id of N still refers to the same shipment
+    // after re-seeding the same seed-data.json.
+    if (savedEvents.length > 0) {
+      for (const ev of savedEvents) {
+        await db.insert(stageEventsTable).values(ev);
+        stageEventCount++;
+      }
+      console.log(`Restored ${stageEventCount} stage events.`);
+    } else {
+      console.log("No existing stage events to restore.");
     }
+  } else {
+    for (const s of data.shipments) {
+      const dbShipmentId = shipmentIdMap.get(s.id);
+      if (!dbShipmentId) continue;
 
-    // Spread event timestamps across a ~120-day production window ending at exFactoryDate
-    const anchor = new Date(s.exFactoryDate);
-    const windowMs = 120 * 24 * 60 * 60 * 1000;
-    const startMs = anchor.getTime() - windowMs;
+      const currentIdx = ORDERED_STAGES.indexOf(s.currentStageId);
+      if (currentIdx <= 0) continue; // nothing to record for shipments still at first stage
 
-    for (let i = 0; i < transitions.length; i++) {
-      const { from, to } = transitions[i];
-
-      // Each transition gets a proportional slice of the window
-      const fraction = (i + 1) / (ORDERED_STAGES.length - 1);
-      const eventMs = startMs + fraction * windowMs;
-      const createdAt = new Date(eventMs);
-
-      // Pick the most specific note available
-      const key = `${from}→${to}`;
-      let note = TRANSITION_NOTES[key] ?? null;
-      if (s.status in DELAY_NOTES && key in DELAY_NOTES[s.status]) {
-        note = DELAY_NOTES[s.status][key];
+      // Build the list of transitions that have already happened (up to and including entry into currentStage)
+      const transitions: { from: string; to: string }[] = [];
+      for (let i = 0; i < currentIdx; i++) {
+        transitions.push({ from: ORDERED_STAGES[i], to: ORDERED_STAGES[i + 1] });
       }
 
-      await db.insert(stageEventsTable).values({
-        shipmentId: dbShipmentId,
-        fromStageId: from,
-        toStageId: to,
-        note,
-        createdAt,
-        createdBy: "System",
-        orgId: DEFAULT_ORG_ID,
-      });
-      stageEventCount++;
+      // Spread event timestamps across a ~120-day production window ending at exFactoryDate
+      const anchor = new Date(s.exFactoryDate);
+      const windowMs = 120 * 24 * 60 * 60 * 1000;
+      const startMs = anchor.getTime() - windowMs;
+
+      for (let i = 0; i < transitions.length; i++) {
+        const { from, to } = transitions[i];
+
+        // Each transition gets a proportional slice of the window
+        const fraction = (i + 1) / (ORDERED_STAGES.length - 1);
+        const eventMs = startMs + fraction * windowMs;
+        const createdAt = new Date(eventMs);
+
+        // Pick the most specific note available
+        const key = `${from}→${to}`;
+        let note = TRANSITION_NOTES[key] ?? null;
+        if (s.status in DELAY_NOTES && key in DELAY_NOTES[s.status]) {
+          note = DELAY_NOTES[s.status][key];
+        }
+
+        await db.insert(stageEventsTable).values({
+          shipmentId: dbShipmentId,
+          fromStageId: from,
+          toStageId: to,
+          note,
+          createdAt,
+          createdBy: "System",
+          orgId: DEFAULT_ORG_ID,
+        });
+        stageEventCount++;
+      }
     }
   }
 

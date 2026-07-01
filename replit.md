@@ -13,6 +13,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - `pnpm --filter @workspace/db run stamp` — mark all existing migrations as applied without running SQL (one-time use when switching an already-synced DB from push to migrate)
 - `pnpm --filter @workspace/db run push` — push DB schema changes directly (dev only, requires interactive TTY)
 - `pnpm --filter @workspace/db run seed` — reseed all tables from seed-data.json (wipes first)
+- `pnpm --filter @workspace/db run seed -- --preserve-events` — reseed but skip truncating/re-seeding `stage_events`; use in shared demo or staging environments to keep manually-recorded stage progressions intact
 - Required env: `DATABASE_URL` — Postgres connection string
 - Optional env: `INBOUND_EMAIL_BASE` — base inbound address for Postmark webhook (production value: `iq@inbound.flowforgeiq.com`; per-user addresses are assembled as `iq+{token}@inbound.flowforgeiq.com` and surfaced via `GET /settings/inbound-email`). This is the **only app-side knob** for switching inbound domains — no code changes required. Two external steps are needed to go live: (1) add an MX record in your DNS provider: `inbound.flowforgeiq.com MX 10 inbound.postmarkapp.com`; (2) update the Postmark inbound server in the Postmark dashboard to use `inbound.flowforgeiq.com`.
 - Optional env: `CHAT_ROUTING_THRESHOLD` — confidence threshold (0.0–1.0) for auto-routing chat-forward messages; defaults to `0.65`
