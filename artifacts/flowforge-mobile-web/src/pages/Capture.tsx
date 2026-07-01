@@ -1,11 +1,11 @@
 import { useRef, useState, useEffect } from "react";
-import { useListShipments, useIngestChat } from "@workspace/api-client-react";
+import { useListShipments, useIngestChat, ChatIngestInputChannel } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation, useSearch } from "wouter";
 import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Paperclip } from "lucide-react";
 import { detectChannel } from "@/lib/detectChannel";
 
-type Channel = "whatsapp" | "wechat" | "imessage" | "sms" | "email" | "other";
+type Channel = ChatIngestInputChannel;
 
 const CHANNELS: { id: Channel; label: string; color: string; emoji: string }[] = [
   { id: "whatsapp", label: "WhatsApp", color: "#25D366", emoji: "📱" },
