@@ -1,0 +1,231 @@
+require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
+require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
+
+require 'json'
+podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
+
+# ---- SPM nil-target patch (react-native 0.81.x + CocoaPods 1.16.x + Clerk) ----
+#
+# Problem: Clerk's ClerkExpo pod registers ClerkKit/ClerkKitUI via spm_dependency().
+# spm.rb's apply_on_post_install does:
+#   target = project.targets.find { |t| t.name == pod_name }   # → nil
+#   target.build_configurations.each …                          # → NoMethodError (build 2)
+#   target.package_product_dependencies << dep                  # → NoMethodError (build 2)
+#
+# Our fixes:
+#  1. SPMManagerNilPatch: guards BOTH crash sites in apply_on_post_install and
+#     add_spm_to_target so pod install completes without crashing.
+#  2. ensure_clerk_spm_linked (called after react_native_post_install): detects when
+#     ClerkKit was NOT wired into the Pods project (because the target was nil) and
+#     adds it directly to the user project's FlowForge target so it resolves in the
+#     workspace and is importable by ClerkExpo's Swift sources.
+
+module SPMManagerNilPatch
+  def apply_on_post_install(installer)
+    project = installer.pods_project
+
+    Pod::UI.puts '[SPM] Cleaning old SPM dependencies from Pods project'
+    project.root_object.package_references.delete_if do |pkg|
+      pkg.class == Xcodeproj::Project::Object::XCRemoteSwiftPackageReference
+    end
+
+    all_target_names = project.targets.map(&:name).sort
+    Pod::UI.puts "[SPM] Pods project targets (#{all_target_names.size}): #{all_target_names.first(40).inspect}"
+
+    Pod::UI.puts '[SPM] Adding SPM dependencies to Pods project'
+    @dependencies_by_pod.each do |pod_name, dependencies|
+      dependencies.each do |spm_spec|
+        Pod::UI.puts "[SPM] pod='#{pod_name}' products=#{spm_spec[:products].inspect}"
+        target = project.targets.find { |t| t.name == pod_name }
+        if target.nil?
+          Pod::UI.warn "[SPM nil-guard] No Pods target '#{pod_name}' — SPM link will be added to user project by ensure_clerk_spm_linked"
+        end
+        add_spm_to_target(project, target, spm_spec[:url], spm_spec[:requirement], spm_spec[:products])
+        Pod::UI.puts '[SPM]  Adding workaround for Swift package not found issue'
+        target = project.targets.find { |t| t.name == pod_name }
+        next if target.nil?
+        target.build_configurations.each do |config|
+          target.build_settings(config.name)['SWIFT_INCLUDE_PATHS'] ||= ['$(inherited)']
+          search_path = '${SYMROOT}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/'
+          unless target.build_settings(config.name)['SWIFT_INCLUDE_PATHS'].include?(search_path)
+            target.build_settings(config.name)['SWIFT_INCLUDE_PATHS'].push(search_path)
+          end
+        end
+      end
+    end
+
+    unless @dependencies_by_pod.empty?
+      Pod::UI.puts "\n\n[SPM] WARNING!!! If you're using Xcode 15 or earlier you might need to close and reopen the Xcode workspace\n\n"
+      unless ENV['USE_FRAMEWORKS'] == 'dynamic'
+        @dependencies_by_pod.each do |pod_name, dependencies|
+          pkgs = dependencies.map { |i| i[:products] }.flatten.uniq.join(', ')
+          Pod::UI.puts "\n\n[SPM] WARNING!!! Pod #{pod_name} is using swift package(s) #{pkgs} with static linking, this might cause linker errors. Consider using USE_FRAMEWORKS=dynamic\n\n"
+        end
+      end
+    end
+  end
+
+  def add_spm_to_target(project, target, url, requirement, products)
+    return if target.nil?
+    super
+  end
+end
+SPMManager.prepend(SPMManagerNilPatch)
+
+# After react_native_post_install, if ClerkKit was not added to the Pods project
+# (because the ClerkExpo target was nil), wire it into the user project's FlowForge
+# target so the workspace can resolve and compile ClerkKit/ClerkKitUI. This makes
+# the modules importable by ClerkExpo's Swift sources and by ExpoModulesProvider.swift.
+def ensure_clerk_spm_linked(installer)
+  clerk_url     = 'https://github.com/clerk/clerk-ios.git'
+  clerk_version = '1.2.4'
+  clerk_products = ['ClerkKit', 'ClerkKitUI']
+
+  pkg_class = Xcodeproj::Project::Object::XCRemoteSwiftPackageReference
+  ref_class = Xcodeproj::Project::Object::XCSwiftPackageProductDependency
+
+  pods_project = installer.pods_project
+  clerk_in_pods = pods_project.root_object.package_references.any? do |p|
+    p.class == pkg_class && p.repositoryURL == clerk_url
+  end
+
+  if clerk_in_pods
+    Pod::UI.puts '[SPM ClerkKit] Already linked in Pods project — nothing extra needed'
+    return
+  end
+
+  Pod::UI.puts '[SPM ClerkKit] Not found in Pods project (target was nil) — adding to user project FlowForge target'
+
+  installer.aggregate_targets.each do |agg_target|
+    user_proj = agg_target.user_project
+    next unless user_proj
+
+    ff_target = user_proj.targets.find { |t| t.name == 'FlowForge' }
+    next unless ff_target
+
+    pkg = user_proj.root_object.package_references.find do |p|
+      p.class == pkg_class && p.repositoryURL == clerk_url
+    end
+
+    unless pkg
+      pkg = user_proj.new(pkg_class)
+      pkg.repositoryURL = clerk_url
+      pkg.requirement = { :kind => 'exactVersion', :version => clerk_version }
+      user_proj.root_object.package_references << pkg
+      Pod::UI.puts "[SPM ClerkKit] Created package reference in #{user_proj.path}"
+    end
+
+    clerk_products.each do |product|
+      already = ff_target.package_product_dependencies.any? { |d| d.product_name == product }
+      next if already
+      dep = user_proj.new(ref_class)
+      dep.package = pkg
+      dep.product_name = product
+      ff_target.package_product_dependencies << dep
+      Pod::UI.puts "[SPM ClerkKit] Linked #{product} → FlowForge target"
+    end
+
+    user_proj.save
+    Pod::UI.puts '[SPM ClerkKit] User project saved'
+  end
+
+  # Now that ClerkKit is an SPM dep of the FlowForge user-project target,
+  # Xcode will build it and place the framework in $(BUILT_PRODUCTS_DIR)/PackageFrameworks/.
+  #
+  # However, pod targets compiled from Pods.xcodeproj don't automatically get
+  # that directory in their FRAMEWORK_SEARCH_PATHS — Xcode only adds it to the
+  # target that explicitly declares the SPM dependency.  ClerkExpo's pod target
+  # needs to be able to `import ClerkKit` at compile time, so we add the path
+  # to every native pod target.  This is safe: targets that don't use SPM just
+  # search an extra empty directory; there is no collision risk.
+  pods_project = installer.pods_project
+  pkg_frameworks_path = '$(BUILT_PRODUCTS_DIR)/PackageFrameworks'
+  symroot_path        = '${SYMROOT}/${CONFIGURATION}${EFFECTIVE_PLATFORM_NAME}/'
+
+  modified = false
+  pods_project.native_targets.each do |target|
+    target.build_configurations.each do |config|
+      s = config.build_settings
+
+      # IMPORTANT: always keep $(inherited) so CocoaPods xcconfig values are
+      # not shadowed.  When the build_settings entry is nil it means "use
+      # xcconfig only"; once we write any value we must re-include $(inherited)
+      # or the xcconfig path list is silently dropped.
+
+      fw_paths = Array(s['FRAMEWORK_SEARCH_PATHS'])
+      fw_paths.unshift('$(inherited)') unless fw_paths.include?('$(inherited)')
+      unless fw_paths.include?(pkg_frameworks_path)
+        s['FRAMEWORK_SEARCH_PATHS'] = fw_paths + [pkg_frameworks_path]
+        modified = true
+      end
+
+      sw_paths = Array(s['SWIFT_INCLUDE_PATHS'])
+      sw_paths.unshift('$(inherited)') unless sw_paths.include?('$(inherited)')
+      unless sw_paths.include?(symroot_path)
+        s['SWIFT_INCLUDE_PATHS'] = sw_paths + [symroot_path]
+        modified = true
+      end
+    end
+  end
+
+  if modified
+    pods_project.save
+    Pod::UI.puts '[SPM ClerkKit] Added PackageFrameworks path to all pod native targets'
+  end
+end
+# ---- end SPM nil-target patch ----
+
+def ccache_enabled?(podfile_properties)
+  return ENV['USE_CCACHE'] == '1' if ENV['USE_CCACHE']
+  podfile_properties['apple.ccacheEnabled'] == 'true'
+end
+
+ENV['RCT_NEW_ARCH_ENABLED'] ||= '0' if podfile_properties['newArchEnabled'] == 'false'
+ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] ||= podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
+ENV['RCT_USE_RN_DEP'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+ENV['RCT_USE_PREBUILT_RNCORE'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
+
+prepare_react_native_project!
+
+target 'FlowForge' do
+  use_expo_modules!
+
+  if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
+    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"]
+  else
+    config_command = [
+      'node',
+      '--no-warnings',
+      '--eval',
+      'require(\'expo/bin/autolinking\')',
+      'expo-modules-autolinking',
+      'react-native-config',
+      '--json',
+      '--platform',
+      'ios'
+    ]
+  end
+
+  config = use_native_modules!(config_command)
+
+  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => podfile_properties['expo.jsEngine'] == nil || podfile_properties['expo.jsEngine'] == 'hermes',
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      :ccache_enabled => ccache_enabled?(podfile_properties),
+    )
+    ensure_clerk_spm_linked(installer)
+  end
+end
