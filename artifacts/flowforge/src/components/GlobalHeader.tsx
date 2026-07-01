@@ -33,11 +33,11 @@ export interface GlobalHeaderProps {
   breadcrumbSegments?: BreadcrumbSegment[];
 }
 
-type Channel = "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
+type Channel = "email" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 
 function chIcon(ch: Channel, sz = 12) {
   if (ch === "whatsapp") return <MessageCircle size={sz} className="text-emerald-500" />;
-  if (ch === "gmail")    return <Mail size={sz} className="text-blue-500" />;
+  if (ch === "email")    return <Mail size={sz} className="text-blue-500" />;
   if (ch === "wechat")   return <MessageSquare size={sz} className="text-teal-500" />;
   if (ch === "imessage") return <MessageCircle size={sz} className="text-blue-400" />;
   if (ch === "sms")      return <MessageCircle size={sz} className="text-slate-400" />;

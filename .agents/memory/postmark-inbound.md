@@ -1,14 +1,18 @@
 ---
 name: Postmark inbound setup
-description: How Postmark inbound email connects to the FlowForge webhook — no custom domain needed
+description: How Postmark inbound email webhooks work and why HMAC auth doesn't apply.
 ---
 
-Postmark provides a free `@inbound.postmarkapp.com` address with no custom domain required. The current address is stored in `INBOUND_EMAIL_ADDRESS` (shared env var) and surfaced by `GET /settings/inbound-email`.
+Postmark inbound webhooks do NOT sign the request body. Only outbound-event webhooks (bounces, opens, etc.) support HMAC signing. For inbound mail, the recommended auth mechanism is embedding a secret token in the webhook URL as a query parameter:
 
-**Why:** Users can forward WhatsApp/WeChat/iMessage chat exports to the Postmark address and have them auto-ingested via `POST /api/webhooks/email` → `detectChatForward()` → `normaliseChat()` → DB insert.
+  POST https://flowforgeiq.com/api/webhooks/email?token=POSTMARK_WEBHOOK_TOKEN
+
+The server uses `timingSafeEqual` to compare the query token against the env var. The old HMAC path (`X-Postmark-Signature`) is kept as a first-pass check so outbound-event webhooks still work if ever wired up.
+
+**Why:** Postmark inbound sends no signature header — every request was hitting `reason: "missing-signature"` → 401 → all emails silently dropped. Confirmed in production logs.
 
 **How to apply:**
-- The webhook URL in Postmark must point to the **deployed** app: `https://flow-forge-sourcing.replit.app/api/webhooks/email` — not localhost (Postmark can't reach dev servers).
-- The correct deployed domain is `flow-forge-sourcing.replit.app` (not `flow-forge-souricing` — note the typo in the original setup).
-- `INBOUND_EMAIL_ADDRESS` is display-only; changing it does not affect which emails Postmark delivers — that is controlled by the Postmark inbound server address itself.
-- The webhook has no Postmark signature verification — acceptable for prototype, worth adding before production hardening.
+- Postmark dashboard → Servers → your server → Inbound → Webhook URL must be set to `https://flowforgeiq.com/api/webhooks/email?token=POSTMARK_WEBHOOK_TOKEN` (replace with actual secret value).
+- The Settings page (Email Integrations → Inbound Email Routing) shows this instruction with an amber callout box.
+- The webhook URL must point to the **deployed** domain (`flowforgeiq.com`), not a dev localhost — Postmark cannot reach dev servers.
+- Inbound messages are now stored with `channel: "email"` (previously "gmail"). The adapter normalizes legacy "gmail" DB records to "email" for backward compat.

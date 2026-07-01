@@ -67,7 +67,7 @@ function getChannel(): BroadcastChannel | null {
 // Channel icon
 // ─────────────────────────────────────────────────────────────────────────────
 function ChannelIcon({ channel, size = 14 }: { channel: string; size?: number }) {
-  if (channel === "gmail")    return <Mail size={size} className="text-blue-500" />;
+  if (channel === "email" || channel === "gmail") return <Mail size={size} className="text-blue-500" />;
   if (channel === "whatsapp") return <MessageCircle size={size} className="text-emerald-500" />;
   if (channel === "wechat")   return <MessageSquare size={size} className="text-teal-500" />;
   if (channel === "imessage") return <MessageCircle size={size} className="text-blue-400" />;
@@ -135,7 +135,7 @@ function useNotifications(): NotificationItem[] {
       if (new Date(msg.receivedAt).getTime() < msgCutoff) continue;
 
       const channelLabel =
-        msg.channel === "gmail"    ? "Email"    :
+        (msg.channel === "email" || msg.channel === "gmail") ? "Email" :
         msg.channel === "whatsapp" ? "WhatsApp" :
         msg.channel === "wechat"   ? "WeChat"   :
         msg.channel === "imessage" ? "iMessage" :

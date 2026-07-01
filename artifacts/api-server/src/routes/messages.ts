@@ -277,7 +277,7 @@ router.post("/messages/:id/send-reply", async (req, res) => {
       supplierId: msg.supplierId ?? null,
       sender: cred.gmailAddress,
       recipient: recipientEmail,
-      channel: "gmail",
+      channel: "email",
       subject,
       direction: "outbound",
       snippet: input.body.slice(0, 200),

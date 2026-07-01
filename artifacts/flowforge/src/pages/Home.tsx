@@ -119,7 +119,7 @@ function CollapsibleSection({
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 type ActiveView = "inbox" | "import" | "copilot" | "needs-review" | "settings";
-type Channel    = "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
+type Channel    = "email" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
 interface Stage { id: string; label: string; }
@@ -282,7 +282,7 @@ const INIT_SHIPMENTS: Shipment[] = [
 
 const INIT_MESSAGES: Message[] = [
   { id:"m1", sender:"Guangzhou Metalworks", channel:"whatsapp", timestamp:"10:42 AM", snippet:"Strike-off finish coat needs +2 days, polishing line backed up. Please advise.", fullBody:"Hi team, quick update. The sample approval finish coat needs +2 days — our polishing line is backed up. Please advise if we can proceed. If we push this, Ex-Factory moves to May 17.", unread:true,  aiTags:["risk: delay 2d","milestone: sample approval"], shipmentId:"s1", supplierId:"Guangzhou Metalworks", aiDraft:"Understood — please proceed with the delay. We'll update PO-2026-0142 ex-factory to May 17. Please confirm revised schedule in writing.", aiAction:"Approve delay and update PO-2026-0142 timeline" },
-  { id:"m2", sender:"Shenzhen LEDPro",      channel:"gmail",    timestamp:"Yesterday", snippet:"Production update: PCB soldering complete, entering housing assembly. On track for May 18.", fullBody:"Hello,\n\nProduction update on PO-2026-0157. PCB soldering is complete and units are now entering housing assembly. We are currently on track for May 18 ex-factory.\n\nBalance payment of $11,900 will be due before release.\n\nBest,\nDavid Chen", unread:false, aiTags:["milestone: production","payment: balance due"], shipmentId:"s2", supplierId:"Shenzhen LEDPro", aiDraft:"Thanks David — noted on progress. Please send final QC photos before ex-factory release. We'll arrange balance wire transfer once inspection passes.", aiAction:"Acknowledge update and schedule QC inspection" },
+  { id:"m2", sender:"Shenzhen LEDPro",      channel:"email",    timestamp:"Yesterday", snippet:"Production update: PCB soldering complete, entering housing assembly. On track for May 18.", fullBody:"Hello,\n\nProduction update on PO-2026-0157. PCB soldering is complete and units are now entering housing assembly. We are currently on track for May 18 ex-factory.\n\nBalance payment of $11,900 will be due before release.\n\nBest,\nDavid Chen", unread:false, aiTags:["milestone: production","payment: balance due"], shipmentId:"s2", supplierId:"Shenzhen LEDPro", aiDraft:"Thanks David — noted on progress. Please send final QC photos before ex-factory release. We'll arrange balance wire transfer once inspection passes.", aiAction:"Acknowledge update and schedule QC inspection" },
   { id:"m3", sender:"Tianjin Wire Works",   channel:"whatsapp", timestamp:"Yesterday", snippet:"Port congestion at Tianjin — export delay 4 days. Revised ex-factory June 6.", fullBody:"Hi! Heads up — major port congestion at Tianjin terminal. Our freight forwarder has revised our export slot by 4 days. New ex-factory date: June 6. Please advise Marlowe & Sons and update their expected delivery.", unread:true,  aiTags:["risk: port congestion","delay: 4d"], shipmentId:"s4", supplierId:"Tianjin Wire Works", aiDraft:"Hi — understood on the Tianjin congestion. Please send revised packing schedule. We'll notify Marlowe & Sons and update the tracker accordingly.", aiAction:"Approve 4-day delay and notify Marlowe & Sons" },
   { id:"m4", sender:"Cost Sheet — PO-0168",channel:"sheets",   timestamp:"Tue",       snippet:"Cell D18 updated: Grid panel unit price $6.10 (Foshan quote selected). Margin: 34.2%", fullBody:"Automated update from Google Sheets — Costing Tracker:\nCell D18 updated: Grid panel unit price $6.10 (Foshan Grid Factory selected).\nSelling price: $9.25. Margin: 34.2%.\nTotal PO value: $7,500 (1,250 units).", unread:false, aiTags:["update: quote selected","margin: 34.2%"], shipmentId:"s5", supplierId:"Guangzhou Metalworks", aiDraft:"", aiAction:"Acknowledge quote selection and issue deposit invoice" },
   { id:"m5", sender:"Hangzhou Timber Co.", channel:"pdf",     timestamp:"Mon",       snippet:"QC inspection passed — 840 sqm, AQL 2.5. SGS report attached. Ex-factory cleared May 22.", fullBody:"Please find attached the SGS inspection report.\n\nQC result: PASSED\nAQL 2.5 standard · 840 sqm inspected · 2 minor defects · 0 major\nEx-factory date confirmed: May 22, 2026.\n\nBalance payment of $21,700 required before container release.", unread:false, aiTags:["milestone: QC passed","payment: balance due"], shipmentId:"s3", supplierId:"Hangzhou Timber Co.", aiDraft:"Thank you — SGS report received and QC pass confirmed. We will arrange balance wire of $21,700 by May 20. Please send commercial invoice and packing list.", aiAction:"Confirm QC pass and schedule balance payment" },
@@ -293,7 +293,7 @@ const INIT_TASKS: Task[] = [
   { id:"t2", title:"Balance payment overdue — PO-2026-0142 ($8,960) was due May 15",source:"Payment tracker",                 sourceAge:"Today",     urgency:"high",   shipmentId:"s1",              action:"Send Payment"  },
   { id:"t3", title:"Port congestion reply needed — Tianjin Wire Works (PO-0165)",   source:"WhatsApp · Tianjin Wire Works",   sourceAge:"Yesterday", urgency:"high",   shipmentId:"s4", messageId:"m3", action:"Reply"         },
   { id:"t4", title:"Select factory quote — PO-2026-0168 (Grid Panel Display)",      source:"Costing Sheet update",            sourceAge:"2d ago",    urgency:"medium", shipmentId:"s5", messageId:"m4", action:"Review Quotes"  },
-  { id:"t5", title:"Schedule QC inspection — Shenzhen LEDPro entering final assembly",source:"Gmail · Shenzhen LEDPro",       sourceAge:"Yesterday", urgency:"medium", shipmentId:"s2", messageId:"m2", action:"Book Inspection"},
+  { id:"t5", title:"Schedule QC inspection — Shenzhen LEDPro entering final assembly",source:"Email · Shenzhen LEDPro",       sourceAge:"Yesterday", urgency:"medium", shipmentId:"s2", messageId:"m2", action:"Book Inspection"},
   { id:"t6", title:"Arrange balance wire $21,700 — Hangzhou Timber (PO-0160)",      source:"PDF · SGS Report",                sourceAge:"Mon",       urgency:"medium", shipmentId:"s3", messageId:"m5", action:"Initiate Wire"  },
 ];
 
@@ -303,7 +303,7 @@ const INIT_TASKS: Task[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 const chIcon = (ch: Channel, sz = 12) => {
   if (ch === "whatsapp") return <MessageCircle size={sz} className="text-emerald-500" />;
-  if (ch === "gmail")    return <Mail size={sz} className="text-blue-500" />;
+  if (ch === "email")    return <Mail size={sz} className="text-blue-500" />;
   if (ch === "wechat")   return <MessageSquare size={sz} className="text-teal-500" />;
   if (ch === "imessage") return <MessageCircle size={sz} className="text-blue-400" />;
   if (ch === "sms")      return <MessageCircle size={sz} className="text-slate-400" />;
@@ -1640,7 +1640,6 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
         </div>
         <div className="space-y-1.5 text-xs text-[#5E687B]">
           {[
-            { label: "Ingest endpoint", value: "POST /api/webhooks/email" },
             { label: "Confidence threshold", value: "65% — below this goes to Needs Review" },
             { label: "AI model", value: "gpt-5-mini (shipment matching + draft generation)" },
           ].map(row => (
@@ -1649,6 +1648,14 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
               <span className="font-mono font-semibold text-[#212833]">{row.value}</span>
             </div>
           ))}
+        </div>
+        <div className="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
+          <div className="font-bold flex items-center gap-1"><AlertCircle size={10} className="text-amber-500"/>Postmark webhook setup required</div>
+          <div>In the Postmark dashboard, set your inbound webhook URL to:</div>
+          <div className="font-mono bg-white border border-amber-200 rounded px-2 py-1 break-all select-all">
+            https://flowforgeiq.com/api/webhooks/email?token=<span className="text-amber-600">[POSTMARK_WEBHOOK_TOKEN]</span>
+          </div>
+          <div className="text-amber-700">Replace <span className="font-mono font-bold">[POSTMARK_WEBHOOK_TOKEN]</span> with the value of your <span className="font-mono font-bold">POSTMARK_WEBHOOK_TOKEN</span> secret.</div>
         </div>
       </div>
     </div>
@@ -1756,11 +1763,11 @@ function POEntityList({ shipments, stages, messages, onSelect }: {
   );
 }
 
-type ChannelId = "all" | "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
+type ChannelId = "all" | "email" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
 
 // Channel options used by both the dropdown filter and ChannelPickerView
 const CHANNEL_FILTER_OPTIONS: FilterOption[] = [
-  { id: "gmail",    label: "Gmail",     icon: <Mail    size={11} className="text-blue-500"    /> },
+  { id: "email",    label: "Email",     icon: <Mail    size={11} className="text-blue-500"    /> },
   { id: "whatsapp", label: "WhatsApp",  icon: <MessageCircle size={11} className="text-emerald-500" /> },
   { id: "wechat",   label: "WeChat",    icon: <MessageSquare size={11} className="text-teal-500"   /> },
   { id: "imessage", label: "iMessage",  icon: <MessageCircle size={11} className="text-blue-400"   /> },
@@ -1775,7 +1782,7 @@ function ChannelPickerView({ messages, onSelect }: {
 }) {
   const channels: Array<{ id: ChannelId; label: string; color: string; icon: React.ReactNode }> = [
     { id: "all",       label: "All Channels", color: "text-[#9000FF]", icon: <Inbox className="w-5 h-5 text-[#9000FF]" /> },
-    { id: "gmail",     label: "Gmail",        color: "text-red-500",   icon: <Mail className="w-5 h-5 text-red-500" /> },
+    { id: "email",     label: "Email",        color: "text-red-500",   icon: <Mail className="w-5 h-5 text-red-500" /> },
     { id: "whatsapp",  label: "WhatsApp",     color: "text-green-600", icon: <MessageCircle className="w-5 h-5 text-green-600" /> },
     { id: "wechat",    label: "WeChat",       color: "text-teal-500",  icon: <MessageSquare className="w-5 h-5 text-teal-500" /> },
     { id: "imessage",  label: "iMessage",     color: "text-blue-400",  icon: <MessageCircle className="w-5 h-5 text-blue-400" /> },
@@ -1967,7 +1974,7 @@ export default function Home() {
     const initParams = new URLSearchParams(initialSearchRef.current);
     // Read ?channel= directly — works alone or alongside supplier/PO params
     const channelParam = initParams.get("channel");
-    const VALID_CHANNELS_LIST = ["gmail", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
+    const VALID_CHANNELS_LIST = ["email", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
     if (channelParam && VALID_CHANNELS_LIST.includes(channelParam)) return channelParam as Channel;
     // If other primary URL filters are present (no channel) start at "all" — don't bleed sessionStorage into a URL-driven deep-link
     if (initParams.has("shipment") || initParams.has("po") || initParams.has("supplier") || initParams.has("buyerId")) return "all";
@@ -2099,7 +2106,7 @@ export default function Home() {
     const customerParam = params.get("buyerId");
     const tabParam = params.get("tab");
     const channelParam = params.get("channel");
-    const VALID_CH = ["gmail", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
+    const VALID_CH = ["email", "whatsapp", "wechat", "imessage", "sms", "sheets", "pdf"] as string[];
     if (!supplierParam && !shipmentParam && !customerParam && !tabParam && !channelParam) return;
     // All filter state (selectedShipmentId, supplierFilter, channelFilter, customerFilter) is already
     // hydrated from the URL in their respective useState initialisers. This effect only needs to:
@@ -3601,7 +3608,7 @@ export default function Home() {
                     <div className="min-w-0">
                       <div className="font-bold text-sm text-[#212833]">{activeMessage.sender}</div>
                       <div className="text-[11px] text-[#5E687B] flex items-center gap-1 flex-wrap">
-                        {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="gmail"?"Gmail":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
+                        {chIcon(activeMessage.channel,9)}via {activeMessage.channel==="whatsapp"?"WhatsApp":activeMessage.channel==="email"?"Email":activeMessage.channel==="wechat"?"WeChat":activeMessage.channel==="imessage"?"iMessage":activeMessage.channel==="sms"?"SMS":activeMessage.channel==="sheets"?"Google Sheets":"PDF"}<span className="text-[#C0C8D4]">·</span>{activeMessage.timestamp}
                         {activeMessage.rawChatText && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold text-[11px] uppercase tracking-wide">
                             <MessageSquare size={8}/>Forwarded chat
@@ -3751,7 +3758,7 @@ export default function Home() {
                         <button onClick={()=>{setComposeText(activeMessage.aiDraft??"");setComposeFocused(true);}} className="p-1 hover:bg-[#E5EAF0] rounded" title="AI draft"><Sparkles size={13} className="text-[#9000FF]"/></button>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        {activeMessage.channel==="gmail"&&gmailStatus?.connected&&(
+                        {activeMessage.channel==="email"&&gmailStatus?.connected&&(
                           <button onClick={()=>{if(composeText.trim())sendViaGmail(activeMessage.messageId,composeText.trim());}} disabled={!composeText.trim()||sendReplyMutation.isPending}
                             title="Send reply through your connected Gmail account"
                             className={`px-2.5 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${composeText.trim()&&!sendReplyMutation.isPending?"bg-blue-600 text-white hover:bg-blue-700":"bg-[#F0F4F8] text-[#9E9FAE] cursor-not-allowed"}`}>

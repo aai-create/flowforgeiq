@@ -73,7 +73,7 @@ export interface UiMessage {
   id: string;
   messageId: number;
   sender: string;
-  channel: "gmail" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
+  channel: "email" | "whatsapp" | "wechat" | "imessage" | "sms" | "sheets" | "pdf";
   timestamp: string;
   snippet: string;
   fullBody: string;
@@ -180,7 +180,7 @@ export function adaptMessages(rows: ApiMessage[], shipments: UiShipment[]): UiMe
       id: `m${m.id}`,
       messageId: m.id,
       sender: m.sender,
-      channel: m.channel as UiMessage["channel"],
+      channel: (m.channel === "gmail" ? "email" : m.channel) as UiMessage["channel"],
       timestamp: relativeAge(m.receivedAt),
       snippet: m.snippet,
       fullBody: m.fullBody,

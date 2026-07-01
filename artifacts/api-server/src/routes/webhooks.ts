@@ -716,24 +716,43 @@ router.post("/webhooks/email", async (req, res) => {
     res.status(500).json({ error: "Webhook token not configured" });
     return;
   }
+
+  // Auth: two supported modes.
+  // 1. HMAC — X-Postmark-Signature: base64(HMAC-SHA256(body, token)).
+  //    Used for outbound-event webhooks that sign the body.
+  // 2. Query-token — ?token=TOKEN embedded in the Postmark inbound webhook URL.
+  //    Postmark inbound webhooks do NOT sign the body, so embed the token in
+  //    the URL directly: POST /api/webhooks/email?token=<POSTMARK_WEBHOOK_TOKEN>.
+  //    Both paths use timing-safe comparison to prevent timing attacks.
   const signature = req.headers["x-postmark-signature"];
+  const queryToken = typeof req.query["token"] === "string" ? req.query["token"] : null;
   const reqBodyBuf = req.rawBody;
-  if (!signature || !reqBodyBuf) {
-    req.log.warn({ reason: "missing-signature" }, "Rejected unsigned Postmark webhook");
-    res.status(401).json({ error: "Missing signature" });
-    return;
+
+  let authenticated = false;
+
+  if (signature && reqBodyBuf) {
+    const expected = createHmac("sha256", webhookToken)
+      .update(reqBodyBuf)
+      .digest("base64");
+    const provided = Buffer.from(Array.isArray(signature) ? signature[0] : signature, "utf8");
+    const expectedBuf = Buffer.from(expected, "utf8");
+    if (provided.length === expectedBuf.length && timingSafeEqual(provided, expectedBuf)) {
+      authenticated = true;
+    }
   }
-  const expected = createHmac("sha256", webhookToken)
-    .update(reqBodyBuf)
-    .digest("base64");
-  const provided = Buffer.from(Array.isArray(signature) ? signature[0] : signature, "utf8");
-  const expectedBuf = Buffer.from(expected, "utf8");
-  if (
-    provided.length !== expectedBuf.length ||
-    !timingSafeEqual(provided, expectedBuf)
-  ) {
-    req.log.warn({ reason: "invalid-signature" }, "Rejected Postmark webhook with bad signature");
-    res.status(401).json({ error: "Invalid signature" });
+
+  if (!authenticated && queryToken) {
+    const qBuf = Buffer.from(queryToken, "utf8");
+    const tBuf = Buffer.from(webhookToken, "utf8");
+    if (qBuf.length === tBuf.length && timingSafeEqual(qBuf, tBuf)) {
+      authenticated = true;
+    }
+  }
+
+  if (!authenticated) {
+    const reason = !signature && !queryToken ? "missing-credentials" : "invalid-credentials";
+    req.log.warn({ reason }, "Rejected Postmark webhook: authentication failed");
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
@@ -779,7 +798,7 @@ router.post("/webhooks/email", async (req, res) => {
       shipmentId: null,
       supplierId: null,
       sender: From ?? "Unknown Sender",
-      channel: "gmail",
+      channel: "email",
       subject: Subject ?? null,
       direction: "inbound",
       snippet: snippet || "(empty email)",
@@ -811,7 +830,7 @@ router.post("/webhooks/email", async (req, res) => {
       shipmentId: null,
       supplierId: null,
       sender: From ?? "Unknown Sender",
-      channel: "gmail",
+      channel: "email",
       subject: Subject ?? null,
       direction: "inbound",
       snippet: snippet || "(empty email)",
@@ -1027,7 +1046,7 @@ router.post("/webhooks/email", async (req, res) => {
       supplierId: ctx.supplierId,
       sender: senderLabel,
       recipient: toAddress || null,
-      channel: "gmail",
+      channel: "email",
       subject: Subject ?? null,
       direction: "inbound",
       snippet: snippet || "(empty email)",

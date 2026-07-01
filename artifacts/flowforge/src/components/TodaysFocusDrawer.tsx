@@ -21,6 +21,7 @@ const URGENCY_DOT: Record<string, string> = {
 
 const SOURCE_ICON: Record<string, string> = {
   WhatsApp: "💬",
+  Email: "✉️",
   Gmail: "✉️",
   Tracker: "🗂️",
   Sheets: "📊",
