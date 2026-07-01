@@ -17,4 +17,6 @@ export const ChatIngestInputChannel = {
   wechat: 'wechat',
   imessage: 'imessage',
   sms: 'sms',
+  email: 'email',
+  other: 'other',
 } as const;

@@ -305,7 +305,7 @@ const CHAT_ROUTING_THRESHOLD = 0.65;
 
 const IngestChatBody = z.object({
   rawText: z.string().min(1),
-  channel: z.enum(["whatsapp", "wechat", "imessage", "sms"]),
+  channel: z.enum(["whatsapp", "wechat", "imessage", "sms", "email", "other"]),
   senderHint: z.string().optional(),
 });
 

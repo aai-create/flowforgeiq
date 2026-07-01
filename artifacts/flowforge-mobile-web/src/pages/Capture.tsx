@@ -1,11 +1,11 @@
 import { useRef, useState, useEffect } from "react";
 import { useListShipments, useIngestChat } from "@workspace/api-client-react";
-import type { Shipment } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation, useSearch } from "wouter";
 import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Paperclip } from "lucide-react";
+import { detectChannel } from "@/lib/detectChannel";
 
-type Channel = "whatsapp" | "wechat" | "imessage" | "sms" | "email";
+type Channel = "whatsapp" | "wechat" | "imessage" | "sms" | "email" | "other";
 
 const CHANNELS: { id: Channel; label: string; color: string; emoji: string }[] = [
   { id: "whatsapp", label: "WhatsApp", color: "#25D366", emoji: "📱" },
@@ -13,7 +13,39 @@ const CHANNELS: { id: Channel; label: string; color: string; emoji: string }[] =
   { id: "imessage", label: "iMessage", color: "#007AFF", emoji: "🔵" },
   { id: "sms", label: "SMS", color: "#5856D6", emoji: "✉️" },
   { id: "email", label: "Email", color: "#FF6B35", emoji: "📧" },
+  { id: "other", label: "Other", color: "#888888", emoji: "📝" },
 ];
+
+const CHANNEL_COLORS: Record<Channel, string> = {
+  whatsapp: "#25D366",
+  wechat: "#09B83E",
+  imessage: "#007AFF",
+  sms: "#5856D6",
+  email: "#FF6B35",
+  other: "#888888",
+};
+
+const SHARE_FILE_CACHE_KEY = "/__ff_share_file";
+const SHARE_CACHE_NAME = "flowforge-mobile-v1";
+
+/** Read a shared file from Cache API (written by the service worker POST handler). */
+async function readSharedFileFromCache(): Promise<File | null> {
+  if (!("caches" in self)) return null;
+  try {
+    const cache = await caches.open(SHARE_CACHE_NAME);
+    const response = await cache.match(SHARE_FILE_CACHE_KEY);
+    if (!response) return null;
+    const blob = await response.blob();
+    const rawName = response.headers.get("X-File-Name") ?? "shared-file";
+    const name = decodeURIComponent(rawName);
+    const mimeType = response.headers.get("Content-Type") ?? blob.type;
+    // Clear from cache so refresh is a no-op
+    await cache.delete(SHARE_FILE_CACHE_KEY);
+    return new File([blob], name, { type: mimeType });
+  } catch {
+    return null;
+  }
+}
 
 export default function CapturePage() {
   const rawSearch = useSearch();
@@ -31,10 +63,72 @@ export default function CapturePage() {
   );
   const [showPicker, setShowPicker] = useState(false);
   const [shipSearch, setShipSearch] = useState("");
-  const [attachedFile, setAttachedFile] = useState<{ name: string; size?: number } | null>(null);
+  const [attachedFile, setAttachedFile] = useState<{ name: string; size?: number; file?: File } | null>(null);
+  const [autoDetectedLabel, setAutoDetectedLabel] = useState<string | null>(null);
 
   const { data: shipments } = useListShipments();
   const { mutate: ingestChat, isPending } = useIngestChat();
+
+  // Read incoming share data on mount (GET params from share target or SW redirect)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viaShare = params.get("via") === "share";
+    const sharedText = params.get("text") ?? "";
+    const sharedUrl = params.get("url") ?? "";
+    const sharedTitle = params.get("title") ?? "";
+
+    if (viaShare || sharedText || sharedUrl || sharedTitle) {
+      // Compose pre-fill text from title + text + url
+      const composed = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n").trim();
+      if (composed) setRawText(composed);
+
+      // Auto-detect channel; fall back to "other" whenever share params are present
+      // but no heuristic matches. This covers both iOS GET shares (no via=share param)
+      // and Android POST-redirected shares (via=share present).
+      const detected = detectChannel(sharedText, sharedUrl, sharedTitle);
+      if (detected) {
+        setChannel(detected.channel);
+        setAutoDetectedLabel(detected.label);
+      } else if (sharedText || sharedUrl || sharedTitle || viaShare) {
+        setChannel("other");
+        // No auto-detected label pill when channel is unknown — just let user pick
+      }
+
+      // Clean up URL so refresh doesn't re-inject data
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    // Also check Cache API for a file that the service worker persisted (cold-start path)
+    if (viaShare) {
+      readSharedFileFromCache().then((file) => {
+        if (file) {
+          setAttachedFile({ name: file.name, size: file.size, file });
+        }
+      });
+    }
+  }, []);
+
+  // Listen for file messages broadcast directly from the service worker (warm/fast path)
+  useEffect(() => {
+    function onServiceWorkerMessage(event: MessageEvent) {
+      if (event.data?.type === "share-file") {
+        const { name, size, mimeType, buffer } = event.data as {
+          type: string;
+          name: string;
+          size: number;
+          mimeType: string;
+          buffer: ArrayBuffer;
+        };
+        const blob = new Blob([buffer], { type: mimeType });
+        const file = new File([blob], name, { type: mimeType });
+        setAttachedFile({ name, size, file });
+      }
+    }
+    navigator.serviceWorker?.addEventListener("message", onServiceWorkerMessage);
+    return () => {
+      navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
+    };
+  }, []);
 
   useEffect(() => {
     if (preSelectedId) {
@@ -47,7 +141,11 @@ export default function CapturePage() {
     .filter((s) => {
       if (!shipSearch.trim()) return true;
       const q = shipSearch.toLowerCase();
-      return s.poNumber?.toLowerCase().includes(q) || s.product?.toLowerCase().includes(q) || s.supplierName?.toLowerCase().includes(q);
+      return (
+        s.poNumber?.toLowerCase().includes(q) ||
+        s.product?.toLowerCase().includes(q) ||
+        s.supplierName?.toLowerCase().includes(q)
+      );
     })
     .slice(0, 20);
 
@@ -56,7 +154,7 @@ export default function CapturePage() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
-    if (f) setAttachedFile({ name: f.name, size: f.size });
+    if (f) setAttachedFile({ name: f.name, size: f.size, file: f });
     e.target.value = "";
   }
 
@@ -64,7 +162,7 @@ export default function CapturePage() {
     if (!canSubmit) return;
     const text = rawText.trim() || (attachedFile ? `[Attached: ${attachedFile.name}]` : "");
     ingestChat(
-      { data: { rawText: text, channel: channel as any, senderHint: senderHint.trim() || undefined } },
+      { data: { rawText: text, channel, senderHint: senderHint.trim() || undefined } },
       {
         onSuccess: (result) => {
           const payload = {
@@ -77,7 +175,6 @@ export default function CapturePage() {
           try {
             sessionStorage.setItem("ff_routing_payload", JSON.stringify(payload));
           } catch {
-            // sessionStorage full — fall back gracefully by truncating rawText
             try {
               sessionStorage.setItem(
                 "ff_routing_payload",
@@ -101,6 +198,7 @@ export default function CapturePage() {
     setSenderHint("");
     setAttachedFile(null);
     setSelectedShipment(null);
+    setAutoDetectedLabel(null);
   }
 
   const activeCh = CHANNELS.find((c) => c.id === channel)!;
@@ -123,6 +221,32 @@ export default function CapturePage() {
       </div>
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
+        {/* Auto-detected channel pill */}
+        {autoDetectedLabel && (
+          <div
+            className="flex items-center gap-2 px-3 py-2 rounded-full self-start"
+            style={{
+              backgroundColor: `${CHANNEL_COLORS[channel]}18`,
+              border: `1px solid ${CHANNEL_COLORS[channel]}40`,
+            }}
+          >
+            <span
+              className="text-[12px] font-semibold"
+              style={{ color: CHANNEL_COLORS[channel] }}
+            >
+              Shared from {autoDetectedLabel}
+            </span>
+            <button
+              onClick={() => setAutoDetectedLabel(null)}
+              className="ml-0.5 opacity-60 hover:opacity-100"
+              style={{ color: CHANNEL_COLORS[channel] }}
+              aria-label="Dismiss"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
         {/* Channel selector */}
         <div className="flex flex-col gap-2">
           <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Source Channel</p>
@@ -132,7 +256,10 @@ export default function CapturePage() {
               return (
                 <button
                   key={id}
-                  onClick={() => setChannel(id)}
+                  onClick={() => {
+                    setChannel(id);
+                    setAutoDetectedLabel(null);
+                  }}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full border-[1.5px] shrink-0 transition-all"
                   style={{
                     borderColor: active ? color : "hsl(var(--border))",
@@ -190,7 +317,7 @@ export default function CapturePage() {
             >
               <Paperclip size={14} color="hsl(var(--primary))" />
               <span className="flex-1 text-sm truncate text-foreground">{attachedFile.name}</span>
-              {attachedFile.size && (
+              {attachedFile.size !== undefined && (
                 <span className="text-xs text-muted-foreground">{(attachedFile.size / 1024).toFixed(0)} KB</span>
               )}
               <button onClick={() => setAttachedFile(null)}>
@@ -243,7 +370,11 @@ export default function CapturePage() {
             >
               <Search size={15} color="hsl(var(--muted-foreground))" />
               <span className="flex-1 text-left text-sm text-muted-foreground">Search shipments…</span>
-              {showPicker ? <ChevronUp size={15} color="hsl(var(--muted-foreground))" /> : <ChevronDown size={15} color="hsl(var(--muted-foreground))" />}
+              {showPicker ? (
+                <ChevronUp size={15} color="hsl(var(--muted-foreground))" />
+              ) : (
+                <ChevronDown size={15} color="hsl(var(--muted-foreground))" />
+              )}
             </button>
           )}
 
@@ -287,7 +418,11 @@ export default function CapturePage() {
                             {s.product}{s.supplierName ? ` · ${s.supplierName}` : ""}
                           </p>
                         </div>
-                        <ChevronDown size={14} color="hsl(var(--muted-foreground))" className="rotate-[-90deg]" />
+                        <ChevronDown
+                          size={14}
+                          color="hsl(var(--muted-foreground))"
+                          className="rotate-[-90deg]"
+                        />
                       </button>
                     ))}
                   </div>
@@ -312,7 +447,11 @@ export default function CapturePage() {
             <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
           ) : (
             <>
-              <Zap size={18} fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"} strokeWidth={0} />
+              <Zap
+                size={18}
+                fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"}
+                strokeWidth={0}
+              />
               Submit for Routing
             </>
           )}

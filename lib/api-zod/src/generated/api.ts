@@ -1920,7 +1920,7 @@ export const UpdateInboundEmailHandleResponse = zod.object({
  */
 export const IngestChatBody = zod.object({
   "rawText": zod.string().describe('Raw pasted chat text (WhatsApp export, WeChat transcript, iMessage forward, etc.)'),
-  "channel": zod.enum(['whatsapp', 'wechat', 'imessage', 'sms']).describe('Source messaging platform'),
+  "channel": zod.enum(['whatsapp', 'wechat', 'imessage', 'sms', 'email', 'other']).describe('Source messaging platform'),
   "senderHint": zod.string().optional().describe('Optional hint for the supplier\/contact name when auto-detection may be ambiguous')
 })
 

@@ -11,7 +11,18 @@
     <title>FlowForgeIQ</title>
     <meta name="description" content="FlowForgeIQ — manage shipments, capture supplier chats, and review documents on the go." />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="manifest" href="manifest.json" />
+    <!-- Platform-specific manifest:
+         iOS Safari only supports GET share_target; Android Chrome 76+ supports POST + files.
+         We detect the platform at parse time and swap the manifest href accordingly. -->
+    <script>
+      (function () {
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        var manifestEl = document.createElement('link');
+        manifestEl.rel = 'manifest';
+        manifestEl.href = isIOS ? 'manifest-ios.json' : 'manifest.json';
+        document.currentScript.parentNode.appendChild(manifestEl);
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />

@@ -2754,7 +2754,7 @@ components:
       required: [rawText, channel]
       properties:
         rawText:    { type: string, description: "Raw pasted chat text (WhatsApp export, WeChat transcript, iMessage forward, etc.)" }
-        channel:    { type: string, enum: [whatsapp, wechat, imessage, sms], description: "Source messaging platform" }
+        channel:    { type: string, enum: [whatsapp, wechat, imessage, sms, email, other], description: "Source messaging platform" }
         senderHint: { type: string, description: "Optional hint for the supplier/contact name when auto-detection may be ambiguous" }
 
     ChatExtractedFields:
