@@ -340,6 +340,7 @@ async function main() {
         toStageId: to,
         note,
         createdAt,
+        createdBy: "System",
         orgId: DEFAULT_ORG_ID,
       });
       stageEventCount++;

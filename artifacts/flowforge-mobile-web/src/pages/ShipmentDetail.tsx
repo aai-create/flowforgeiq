@@ -1,6 +1,6 @@
 import { useLocation, useParams } from "wouter";
 import { useListShipments, useListShipmentStageEvents, useListMessages } from "@workspace/api-client-react";
-import { ArrowLeft, Package, MessageSquare, Zap } from "lucide-react";
+import { ArrowLeft, Package, MessageSquare, Zap, User } from "lucide-react";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -171,7 +171,15 @@ export default function ShipmentDetailPage() {
                   <div className="flex-1 pb-1">
                     <p className="text-sm font-medium text-foreground">{ev.toStageId}</p>
                     {ev.note && <p className="text-xs text-muted-foreground mt-0.5">{ev.note}</p>}
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{formatDate(ev.createdAt)}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <p className="text-[11px] text-muted-foreground">{formatDate(ev.createdAt)}</p>
+                      {ev.createdBy && (
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <User size={9} />
+                          <span>{ev.createdBy}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
