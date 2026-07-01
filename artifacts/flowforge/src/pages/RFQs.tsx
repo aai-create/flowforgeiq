@@ -250,7 +250,9 @@ export function RFQs() {
 
   const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
   const [showConvert, setShowConvert] = useState(false);
-  const [showAddQuote, setShowAddQuote] = useState(false);
+  const [showAddQuote, setShowAddQuote] = useState(() => {
+    try { return !!sessionStorage.getItem("rfq_quote_draft"); } catch {} return false;
+  });
   const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [convertedPoNumber, setConvertedPoNumber] = useState<string | null>(null);
@@ -287,8 +289,17 @@ export function RFQs() {
   });
   const [convertError, setConvertError] = useState<string | null>(null);
 
-  const [newQuoteForm, setNewQuoteForm] = useState<NewQuoteFormState>({
-    factoryName: "", country: "CN", unitPriceUsd: "", leadTimeDays: "", moq: "", notes: "", supplierId: "",
+  const QUOTE_DRAFT_KEY = "rfq_quote_draft";
+
+  const [newQuoteForm, setNewQuoteForm] = useState<NewQuoteFormState>(() => {
+    try {
+      const stored = sessionStorage.getItem("rfq_quote_draft");
+      if (stored) {
+        const parsed = JSON.parse(stored) as { form: NewQuoteFormState; rfqId: number };
+        return parsed.form;
+      }
+    } catch {}
+    return { factoryName: "", country: "CN", unitPriceUsd: "", leadTimeDays: "", moq: "", notes: "", supplierId: "" };
   });
   const [editQuoteForm, setEditQuoteForm] = useState<NewQuoteFormState>({
     factoryName: "", country: "CN", unitPriceUsd: "", leadTimeDays: "", moq: "", notes: "", supplierId: "",
@@ -303,6 +314,16 @@ export function RFQs() {
 
   useEffect(() => {
     if (rfqs.length > 0 && selectedRfqId === null) {
+      try {
+        const stored = sessionStorage.getItem(QUOTE_DRAFT_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as { form: NewQuoteFormState; rfqId: number };
+          if (rfqs.some(r => r.id === parsed.rfqId)) {
+            setSelectedRfqId(parsed.rfqId);
+            return;
+          }
+        }
+      } catch {}
       setSelectedRfqId(rfqs[0].id);
     }
   }, [rfqs, selectedRfqId]);
@@ -312,6 +333,12 @@ export function RFQs() {
       try { sessionStorage.setItem(RFQ_DRAFT_KEY, JSON.stringify(newRfqForm)); } catch {}
     }
   }, [showNewRfq, newRfqForm]);
+
+  useEffect(() => {
+    if (showAddQuote && selectedRfqId !== null) {
+      try { sessionStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({ form: newQuoteForm, rfqId: selectedRfqId })); } catch {}
+    }
+  }, [showAddQuote, newQuoteForm, selectedRfqId]);
 
   const submitNewRfq = async () => {
     setNewRfqError(null);
@@ -361,6 +388,7 @@ export function RFQs() {
       queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
       setShowAddQuote(false);
       setNewQuoteForm({ factoryName: "", country: "CN", unitPriceUsd: "", leadTimeDays: "", moq: "", notes: "", supplierId: "" });
+      try { sessionStorage.removeItem(QUOTE_DRAFT_KEY); } catch {}
       showToast("Quote added");
     } catch {
       showToast("Failed to add quote");
@@ -973,61 +1001,67 @@ export function RFQs() {
           <DialogHeader>
             <DialogTitle>{t("rfqs.dialogAddQuoteTitle")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldFactoryName")} *</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  placeholder="e.g. Guangzhou Metalworks"
-                  value={newQuoteForm.factoryName} onChange={e => setNewQuoteForm(f => ({ ...f, factoryName: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldCountry")}</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  placeholder="CN"
-                  value={newQuoteForm.country} onChange={e => setNewQuoteForm(f => ({ ...f, country: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldSupplierLink")}</label>
-                <select className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 bg-white"
-                  value={newQuoteForm.supplierId} onChange={e => setNewQuoteForm(f => ({ ...f, supplierId: e.target.value }))}>
-                  <option value="">— None —</option>
-                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldUnitPrice")} *</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  type="number" step="0.01" placeholder="0.00"
-                  value={newQuoteForm.unitPriceUsd} onChange={e => setNewQuoteForm(f => ({ ...f, unitPriceUsd: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldLeadTime")} *</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  type="number" placeholder="e.g. 45"
-                  value={newQuoteForm.leadTimeDays} onChange={e => setNewQuoteForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldMoq")} *</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  type="number" placeholder="e.g. 1000"
-                  value={newQuoteForm.moq} onChange={e => setNewQuoteForm(f => ({ ...f, moq: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldNotes")}</label>
-                <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
-                  placeholder="Any conditions, validity, remarks..."
-                  value={newQuoteForm.notes} onChange={e => setNewQuoteForm(f => ({ ...f, notes: e.target.value }))} />
+          <form onSubmit={e => { e.preventDefault(); void submitAddQuote(); }}>
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldFactoryName")} *</label>
+                  <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                    placeholder="e.g. Guangzhou Metalworks"
+                    value={newQuoteForm.factoryName} onChange={e => setNewQuoteForm(f => ({ ...f, factoryName: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldCountry")}</label>
+                  <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                    placeholder="CN"
+                    value={newQuoteForm.country} onChange={e => setNewQuoteForm(f => ({ ...f, country: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldSupplierLink")}</label>
+                  <select className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20 bg-white"
+                    value={newQuoteForm.supplierId} onChange={e => setNewQuoteForm(f => ({ ...f, supplierId: e.target.value }))}>
+                    <option value="">— None —</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldUnitPrice")} *</label>
+                  <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                    type="number" step="0.01" placeholder="0.00"
+                    value={newQuoteForm.unitPriceUsd} onChange={e => setNewQuoteForm(f => ({ ...f, unitPriceUsd: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldLeadTime")} *</label>
+                  <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                    type="number" placeholder="e.g. 45"
+                    value={newQuoteForm.leadTimeDays} onChange={e => setNewQuoteForm(f => ({ ...f, leadTimeDays: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldMoq")} *</label>
+                  <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                    type="number" placeholder="e.g. 1000"
+                    value={newQuoteForm.moq} onChange={e => setNewQuoteForm(f => ({ ...f, moq: e.target.value }))} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-[#5E687B] mb-1">{t("rfqs.fieldNotes")}</label>
+                  <input className="w-full border border-[#E5EAF0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#9000FF]/20"
+                    placeholder="Any conditions, validity, remarks..."
+                    value={newQuoteForm.notes} onChange={e => setNewQuoteForm(f => ({ ...f, notes: e.target.value }))} />
+                </div>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setShowAddQuote(false)}>{t("common.cancel")}</Button>
-            <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitAddQuote}
-              disabled={addQuoteMutation.isPending}>
-              {addQuoteMutation.isPending ? t("common.adding") : t("rfqs.addQuote")}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="ghost" size="sm" onClick={() => {
+                setShowAddQuote(false);
+                setNewQuoteForm({ factoryName: "", country: "CN", unitPriceUsd: "", leadTimeDays: "", moq: "", notes: "", supplierId: "" });
+                try { sessionStorage.removeItem(QUOTE_DRAFT_KEY); } catch {}
+              }}>{t("common.cancel")}</Button>
+              <Button type="submit" size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white"
+                disabled={addQuoteMutation.isPending}>
+                {addQuoteMutation.isPending ? t("common.adding") : t("rfqs.addQuote")}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
