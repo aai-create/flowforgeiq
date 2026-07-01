@@ -50,6 +50,13 @@
       "when": 1782700000000,
       "tag": "0006_fix_stage_events_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782927600000,
+      "tag": "0007_add_clerk_user_id_to_buyer_emails",
+      "breakpoints": true
     }
   ]
 }
