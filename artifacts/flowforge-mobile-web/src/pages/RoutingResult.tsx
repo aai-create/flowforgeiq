@@ -25,7 +25,7 @@ interface RoutingPayload {
   preSelectedShipmentId?: number | null;
 }
 
-function ConfidenceBar({ confidence }: { confidence: number }) {
+function ConfidenceBar({ confidence, animated }: { confidence: number; animated: boolean }) {
   const pct = Math.round(confidence * 100);
   const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#e63946";
   return (
@@ -33,9 +33,25 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
       <span className="text-xs font-medium text-muted-foreground w-20">Confidence</span>
       <div className="flex-1 flex items-center gap-2">
         <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: animated ? `${pct}%` : "0%",
+              backgroundColor: color,
+              transition: "width 0.7s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          />
         </div>
-        <span className="text-xs font-semibold w-9 text-right" style={{ color }}>{pct}%</span>
+        <span
+          className="text-xs font-semibold w-9 text-right"
+          style={{
+            color,
+            opacity: animated ? 1 : 0,
+            transition: "opacity 0.4s ease 0.5s",
+          }}
+        >
+          {pct}%
+        </span>
       </div>
     </div>
   );
@@ -104,10 +120,19 @@ const GRADIENT_BTN = {
   color: "white",
 };
 
+function fadeSlide(animated: boolean, delayMs = 0): React.CSSProperties {
+  return {
+    opacity: animated ? 1 : 0,
+    transform: animated ? "translateY(0)" : "translateY(14px)",
+    transition: `opacity 0.38s ease ${delayMs}ms, transform 0.38s cubic-bezier(0.22, 1, 0.36, 1) ${delayMs}ms`,
+  };
+}
+
 export default function RoutingResultPage() {
   const [, navigate] = useLocation();
   const [payload, setPayload] = useState<RoutingPayload | null>(null);
   const [payloadError, setPayloadError] = useState(false);
+  const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
     try {
@@ -122,6 +147,14 @@ export default function RoutingResultPage() {
       setPayloadError(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!payload) return;
+    const frame = requestAnimationFrame(() => {
+      setTimeout(() => setAnimated(true), 30);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [payload]);
 
   const { data: shipments } = useListShipments();
   const { mutate: createMessage, isPending } = useCreateMessage();
@@ -259,12 +292,13 @@ export default function RoutingResultPage() {
       </div>
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-3">
-        {/* Accent banner */}
+        {/* Accent banner — fades in first */}
         <div
           className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
           style={{
             background: "hsl(var(--accent))",
             border: "1px solid hsl(var(--primary) / 0.15)",
+            ...fadeSlide(animated, 0),
           }}
         >
           <Zap size={13} fill="hsl(var(--primary))" strokeWidth={0} className="mt-0.5 shrink-0" />
@@ -273,12 +307,15 @@ export default function RoutingResultPage() {
           </p>
         </div>
 
-        {/* Confidence card */}
+        {/* Confidence card — slides up 60ms after banner */}
         <div
           className="rounded-2xl border bg-card p-4 flex flex-col gap-2"
-          style={{ borderColor: "hsl(var(--border))" }}
+          style={{
+            borderColor: "hsl(var(--border))",
+            ...fadeSlide(animated, 60),
+          }}
         >
-          <ConfidenceBar confidence={confidence} />
+          <ConfidenceBar confidence={confidence} animated={animated} />
           {result.matchMethod && (
             <p className="text-xs text-muted-foreground">Match: {result.matchMethod}</p>
           )}
@@ -290,9 +327,14 @@ export default function RoutingResultPage() {
         {/* High confidence */}
         {isHighConf && (
           <>
+            {/* Result card — slides up 140ms */}
             <div
               className="rounded-2xl border p-4 flex flex-col gap-3"
-              style={{ backgroundColor: "#22c55e12", borderColor: "#22c55e40" }}
+              style={{
+                backgroundColor: "#22c55e12",
+                borderColor: "#22c55e40",
+                ...fadeSlide(animated, 140),
+              }}
             >
               <div className="flex items-start gap-3">
                 <CheckCircle size={26} color="#22c55e" />
@@ -316,8 +358,9 @@ export default function RoutingResultPage() {
                 </div>
               )}
             </div>
+            {/* CTA buttons — staggered 290ms (card + 150ms) */}
             {!showChange ? (
-              <div className="flex gap-2">
+              <div className="flex gap-2" style={fadeSlide(animated, 290)}>
                 <button
                   onClick={() => handleConfirm(suggestedId)}
                   disabled={isPending}
@@ -350,9 +393,14 @@ export default function RoutingResultPage() {
         {/* Medium confidence */}
         {isMedConf && (
           <>
+            {/* Result card — slides up 140ms */}
             <div
               className="rounded-2xl border p-4 flex flex-col gap-3"
-              style={{ backgroundColor: "#d9770612", borderColor: "#d9770640" }}
+              style={{
+                backgroundColor: "#d9770612",
+                borderColor: "#d9770640",
+                ...fadeSlide(animated, 140),
+              }}
             >
               <div className="flex items-start gap-3">
                 <AlertCircle size={26} color="#d97706" />
@@ -374,8 +422,9 @@ export default function RoutingResultPage() {
                 </div>
               )}
             </div>
+            {/* CTA buttons — staggered 290ms */}
             {!showChange ? (
-              <div className="flex gap-2">
+              <div className="flex gap-2" style={fadeSlide(animated, 290)}>
                 <button
                   onClick={() => handleConfirm(suggestedId)}
                   disabled={isPending}
@@ -402,10 +451,12 @@ export default function RoutingResultPage() {
                 onSelect={(id) => { setOverrideId(id); setShowChange(false); setShipSearch(""); }}
               />
             )}
+            {/* Tertiary action staggered 370ms */}
             <button
               onClick={() => handleConfirm(null)}
               disabled={isPending}
               className="text-sm text-center text-muted-foreground py-2"
+              style={fadeSlide(animated, 370)}
             >
               None of these — send to web queue
             </button>
@@ -415,9 +466,14 @@ export default function RoutingResultPage() {
         {/* Low confidence */}
         {isLowConf && (
           <>
+            {/* Result card — slides up 140ms */}
             <div
               className="rounded-2xl border p-4"
-              style={{ backgroundColor: "#e6394610", borderColor: "#e6394640" }}
+              style={{
+                backgroundColor: "#e6394610",
+                borderColor: "#e6394640",
+                ...fadeSlide(animated, 140),
+              }}
             >
               <div className="flex items-start gap-3">
                 <HelpCircle size={26} color="#e63946" />
@@ -429,8 +485,9 @@ export default function RoutingResultPage() {
                 </div>
               </div>
             </div>
+            {/* CTA buttons — staggered 290ms */}
             {!showChange ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" style={fadeSlide(animated, 290)}>
                 <button
                   onClick={() => setShowChange(true)}
                   className="flex items-center justify-center gap-2 py-3.5 rounded-[14px] font-semibold text-base transition-all"
@@ -468,11 +525,14 @@ export default function RoutingResultPage() {
           </>
         )}
 
-        {/* AI draft */}
+        {/* AI draft — staggered 370ms */}
         {result.aiDraft && (
           <div
             className="rounded-2xl border bg-card p-4 flex flex-col gap-2"
-            style={{ borderColor: "hsl(var(--border))" }}
+            style={{
+              borderColor: "hsl(var(--border))",
+              ...fadeSlide(animated, 370),
+            }}
           >
             <div className="flex items-center gap-2">
               <Edit2 size={14} color="hsl(var(--primary))" />
@@ -482,9 +542,9 @@ export default function RoutingResultPage() {
           </div>
         )}
 
-        {/* Tags */}
+        {/* Tags — staggered 430ms */}
         {result.aiTags && result.aiTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" style={fadeSlide(animated, 430)}>
             {result.aiTags.map((tag, i) => (
               <span
                 key={i}
