@@ -112,11 +112,21 @@ export default function DocumentsPage() {
   return (
     <AppShell>
       <div
-        className="status-bar-pad px-5 pb-4 shrink-0"
-        style={{ background: "hsl(var(--primary))" }}
+        className="status-bar-pad px-5 pb-4 flex items-center gap-2.5 shrink-0"
+        style={{
+          background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+          boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
+        }}
       >
-        <p className="text-white font-bold text-xl tracking-tight">FlowForgeIQ</p>
-        <p className="text-white/70 text-xs mt-0.5 tracking-wide">Documents</p>
+        <img
+          src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+          alt="FlowForgeIQ"
+          style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+        />
+        <div>
+          <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
+          <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">Documents</p>
+        </div>
       </div>
 
       <div className="px-4 pt-3 pb-2 shrink-0 flex flex-col gap-2">
