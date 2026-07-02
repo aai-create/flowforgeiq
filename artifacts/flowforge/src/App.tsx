@@ -3,6 +3,7 @@ import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wo
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, SignIn as ClerkSignIn, SignUp as ClerkSignUp, Show, useClerk, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
+import { useTour } from "@/hooks/useTour";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CopilotProvider } from "@/lib/CopilotContext";
@@ -137,11 +138,27 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function TourAutoLauncher() {
+  const { isSignedIn, isLoaded } = useUser();
+  const { hasSeenTour, startTour } = useTour();
+  const launched = useRef(false);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || hasSeenTour || launched.current) return;
+    launched.current = true;
+    const t = setTimeout(() => startTour(), 1800);
+    return () => clearTimeout(t);
+  }, [isLoaded, isSignedIn, hasSeenTour, startTour]);
+
+  return null;
+}
+
 function AppLayout() {
   useProvisionUser();
   return (
     <TooltipProvider>
       <CopilotProvider>
+        <TourAutoLauncher />
         <Router />
         <Toaster />
       </CopilotProvider>

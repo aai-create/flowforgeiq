@@ -128,7 +128,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
   const hasConversation = conversationHistory.length > 0;
 
   return (
-    <div className={`relative${className ? ` ${className}` : ""}`}>
+    <div id="copilot-input" className={`relative${className ? ` ${className}` : ""}`}>
       {visible ? (
         <div className="relative w-full animate-in fade-in slide-in-from-top-1 duration-150">
           {hasLeftNode ? (

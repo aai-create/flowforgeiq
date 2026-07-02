@@ -25,6 +25,7 @@ export function BottomNav() {
           return (
             <button
               key={href}
+              id={`bottom-nav-${label.toLowerCase()}`}
               onClick={() => navigate(href)}
               className="flex-1 flex flex-col items-center pt-2.5 pb-2 gap-1 transition-opacity active:opacity-60"
               aria-current={active ? "page" : undefined}

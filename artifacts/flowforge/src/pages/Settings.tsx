@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download } from "lucide-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle } from "lucide-react";
+import { useTour } from "@/hooks/useTour";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
@@ -845,6 +846,32 @@ function MobileAppSection() {
   );
 }
 
+function HelpOnboardingSection() {
+  const { replayTour } = useTour();
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-[#9000FF]/8 border border-[#9000FF]/15 flex items-center justify-center shrink-0">
+          <PlayCircle className="w-4.5 h-4.5 text-[#9000FF]" />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-[#212833] mb-0.5">Help &amp; Onboarding</h2>
+          <p className="text-xs text-[#5E687B] leading-relaxed">
+            New to FlowForge? The product tour walks you through every key feature in under 2 minutes.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={replayTour}
+        className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
+      >
+        <PlayCircle className="w-3.5 h-3.5" />
+        Take the tour again
+      </button>
+    </section>
+  );
+}
+
 export function Settings() {
   const { t, i18n: i18nHook } = useTranslation();
   const { data: config, isLoading } = useGetPoNumberingConfig();
@@ -1028,6 +1055,7 @@ export function Settings() {
               </section>
               <DefaultLandingPageSection />
               <MobileAppSection />
+              <HelpOnboardingSection />
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.general.poNumbering")}</h2>
                 <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">{t("settings.general.poNumberingDesc")}</p>

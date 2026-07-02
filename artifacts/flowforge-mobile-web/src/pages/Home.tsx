@@ -271,7 +271,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-2.5">
+            <div id="shipment-list" className="flex flex-col gap-2.5">
               {active.map((s) => (
                 <ShipmentCard
                   key={s.id}

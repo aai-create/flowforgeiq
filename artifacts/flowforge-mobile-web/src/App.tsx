@@ -7,7 +7,9 @@ import {
   Show,
   useClerk,
   useAuth,
+  useUser,
 } from "@clerk/react";
+import { useTour } from "@/hooks/useTour";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import HomePage from "@/pages/Home";
@@ -97,11 +99,27 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function TourAutoLauncher() {
+  const { isSignedIn, isLoaded } = useUser();
+  const { hasSeenTour, startTour } = useTour();
+  const launched = useRef(false);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || hasSeenTour || launched.current) return;
+    launched.current = true;
+    const t = setTimeout(() => startTour(), 1800);
+    return () => clearTimeout(t);
+  }, [isLoaded, isSignedIn, hasSeenTour, startTour]);
+
+  return null;
+}
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return (
     <>
       <Show when="signed-in">
         <AuthTokenSyncer />
+        <TourAutoLauncher />
         <Component />
       </Show>
       <Show when="signed-out">

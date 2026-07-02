@@ -723,7 +723,7 @@ export function Atelier() {
 
           <ScrollArea className="flex-1">
             <div className="p-5 space-y-4">
-              {visibleShipments.map(shipment => {
+              {visibleShipments.map((shipment, shipIdx) => {
                 const stageIdx  = stages.findIndex(s => s.id === shipment.currentStageId);
                 const stagePct  = stages.length > 1 ? (Math.max(0, stageIdx) / (stages.length - 1)) * 100 : 0;
                 const isActive  = activeShipmentId === shipment.id;
@@ -862,7 +862,7 @@ export function Atelier() {
                     </div>
 
                     {/* Stage tracker header */}
-                    <div className="flex items-center justify-between mb-1 mt-1">
+                    <div id={shipIdx === 0 ? "stage-tracker-pill" : undefined} className="flex items-center justify-between mb-1 mt-1">
                       <span className={SECTION_LABEL_MUTED}>{t("orders.stageTracker")}</span>
                       <Popover>
                         <PopoverTrigger asChild>

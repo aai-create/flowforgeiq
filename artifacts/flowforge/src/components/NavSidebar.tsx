@@ -85,6 +85,7 @@ export function NavSidebar({
           return (
             <Link
               key={id}
+              id={`nav-${id}`}
               href={to}
               aria-current={active ? "page" : undefined}
               className={itemClassName(active)}

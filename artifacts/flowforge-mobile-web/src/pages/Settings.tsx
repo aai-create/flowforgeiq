@@ -1,7 +1,8 @@
 import { useUser, useClerk } from "@clerk/react";
 import { AppShell } from "@/components/AppShell";
-import { Globe, User, LogOut, Check, Shield } from "lucide-react";
+import { Globe, User, LogOut, Check, Shield, PlayCircle } from "lucide-react";
 import { useLocation } from "wouter";
+import { useTour } from "@/hooks/useTour";
 
 const LANGUAGES = [
   { code: "en", label: "English", sub: "English" },
@@ -13,6 +14,7 @@ export default function SettingsPage() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [, navigate] = useLocation();
+  const { replayTour } = useTour();
   const currentLang = navigator.language?.startsWith("zh-TW") ? "zh-TW"
     : navigator.language?.startsWith("zh") ? "zh-CN" : "en";
 
@@ -115,6 +117,35 @@ export default function SettingsPage() {
               );
             })}
           </div>
+        </div>
+
+        {/* Onboarding tour */}
+        <div className="section-panel p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}
+            >
+              <PlayCircle size={13} color="hsl(var(--primary))" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">Onboarding</p>
+          </div>
+          <button
+            onClick={replayTour}
+            className="flex items-center gap-3 w-full px-3.5 py-3.5 rounded-xl transition-all active:opacity-75 btn-press text-left"
+            style={{
+              border: "1.5px solid hsl(var(--primary) / 0.3)",
+              backgroundColor: "hsl(var(--primary) / 0.06)",
+            }}
+          >
+            <PlayCircle size={18} color="hsl(var(--primary))" strokeWidth={2} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "hsl(var(--primary))" }}>Take the tour</p>
+              <p className="text-[11px] mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                Replay the interactive product walkthrough
+              </p>
+            </div>
+          </button>
         </div>
 
         {/* Account actions */}
