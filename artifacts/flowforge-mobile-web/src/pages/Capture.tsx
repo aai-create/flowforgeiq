@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useListShipments, useIngestChat, ChatIngestInputChannel } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation, useSearch } from "wouter";
-import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Paperclip } from "lucide-react";
+import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Paperclip, CheckCircle2 } from "lucide-react";
 import { detectChannel } from "@/lib/detectChannel";
 
 type Channel = ChatIngestInputChannel;
@@ -39,12 +39,17 @@ async function readSharedFileFromCache(): Promise<File | null> {
     const rawName = response.headers.get("X-File-Name") ?? "shared-file";
     const name = decodeURIComponent(rawName);
     const mimeType = response.headers.get("Content-Type") ?? blob.type;
-    // Clear from cache so refresh is a no-op
     await cache.delete(SHARE_FILE_CACHE_KEY);
     return new File([blob], name, { type: mimeType });
   } catch {
     return null;
   }
+}
+
+/** Truncate text to a preview length. */
+function previewText(text: string, maxLen = 160): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen).trimEnd() + "…";
 }
 
 export default function CapturePage() {
@@ -65,11 +70,12 @@ export default function CapturePage() {
   const [shipSearch, setShipSearch] = useState("");
   const [attachedFile, setAttachedFile] = useState<{ name: string; size?: number; file?: File } | null>(null);
   const [autoDetectedLabel, setAutoDetectedLabel] = useState<string | null>(null);
+  const [isShareEntry, setIsShareEntry] = useState(false);
+  const [showManualEdit, setShowManualEdit] = useState(false);
 
   const { data: shipments } = useListShipments();
   const { mutate: ingestChat, isPending } = useIngestChat();
 
-  // Read incoming share data on mount (GET params from share target or SW redirect)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const viaShare = params.get("via") === "share";
@@ -78,37 +84,32 @@ export default function CapturePage() {
     const sharedTitle = params.get("title") ?? "";
 
     if (viaShare || sharedText || sharedUrl || sharedTitle) {
-      // Compose pre-fill text from title + text + url
       const composed = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n").trim();
       if (composed) setRawText(composed);
 
-      // Auto-detect channel; fall back to "other" whenever share params are present
-      // but no heuristic matches. This covers both iOS GET shares (no via=share param)
-      // and Android POST-redirected shares (via=share present).
+      setIsShareEntry(true);
+
       const detected = detectChannel(sharedText, sharedUrl, sharedTitle);
       if (detected) {
         setChannel(detected.channel);
         setAutoDetectedLabel(detected.label);
       } else if (sharedText || sharedUrl || sharedTitle || viaShare) {
         setChannel("other");
-        // No auto-detected label pill when channel is unknown — just let user pick
       }
 
-      // Clean up URL so refresh doesn't re-inject data
       window.history.replaceState({}, "", window.location.pathname);
     }
 
-    // Also check Cache API for a file that the service worker persisted (cold-start path)
     if (viaShare) {
       readSharedFileFromCache().then((file) => {
         if (file) {
           setAttachedFile({ name: file.name, size: file.size, file });
+          setIsShareEntry(true);
         }
       });
     }
   }, []);
 
-  // Listen for file messages broadcast directly from the service worker (warm/fast path)
   useEffect(() => {
     function onServiceWorkerMessage(event: MessageEvent) {
       if (event.data?.type === "share-file") {
@@ -122,6 +123,7 @@ export default function CapturePage() {
         const blob = new Blob([buffer], { type: mimeType });
         const file = new File([blob], name, { type: mimeType });
         setAttachedFile({ name, size, file });
+        setIsShareEntry(true);
       }
     }
     navigator.serviceWorker?.addEventListener("message", onServiceWorkerMessage);
@@ -199,6 +201,8 @@ export default function CapturePage() {
     setAttachedFile(null);
     setSelectedShipment(null);
     setAutoDetectedLabel(null);
+    setIsShareEntry(false);
+    setShowManualEdit(false);
   }
 
   const activeCh = CHANNELS.find((c) => c.id === channel)!;
@@ -231,47 +235,109 @@ export default function CapturePage() {
       </div>
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
-        {/* AI hint banner */}
-        <div
-          className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
-          style={{
-            background: "hsl(var(--accent))",
-            border: "1px solid hsl(var(--primary) / 0.15)",
-          }}
-        >
-          <Zap size={13} fill="hsl(var(--primary))" strokeWidth={0} className="mt-0.5 shrink-0" />
-          <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--accent-foreground))" }}>
-            Paste a chat export and AI will extract the shipment details
-          </p>
-        </div>
 
-        {/* Auto-detected channel pill */}
-        {autoDetectedLabel && (
+        {/* ── Share-entry hero card ── */}
+        {isShareEntry && hasContent ? (
           <div
-            className="flex items-center gap-2 px-3 py-2 rounded-full self-start"
+            className="rounded-xl border overflow-hidden"
+            style={{ borderColor: "hsl(var(--primary) / 0.3)" }}
+          >
+            {/* Header bar */}
+            <div
+              className="flex items-center gap-2.5 px-3.5 py-2.5"
+              style={{
+                background: "linear-gradient(90deg, hsl(var(--primary) / 0.12) 0%, hsl(var(--primary) / 0.05) 100%)",
+                borderBottom: "1px solid hsl(var(--primary) / 0.15)",
+              }}
+            >
+              <CheckCircle2 size={15} style={{ color: "hsl(var(--primary))", flexShrink: 0 }} />
+              <p className="text-[13px] font-semibold" style={{ color: "hsl(var(--primary))" }}>
+                Shared content received
+              </p>
+              {autoDetectedLabel && (
+                <span
+                  className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                  style={{
+                    color: CHANNEL_COLORS[channel],
+                    backgroundColor: `${CHANNEL_COLORS[channel]}18`,
+                    border: `1px solid ${CHANNEL_COLORS[channel]}40`,
+                  }}
+                >
+                  {autoDetectedLabel}
+                </span>
+              )}
+            </div>
+
+            {/* Content preview */}
+            {rawText && (
+              <div
+                className="px-3.5 py-3"
+                style={{ background: "hsl(var(--card))" }}
+              >
+                <p
+                  className="text-[12px] leading-relaxed font-mono whitespace-pre-wrap break-words"
+                  style={{ color: "hsl(var(--foreground) / 0.75)" }}
+                >
+                  {previewText(rawText)}
+                </p>
+                {rawText.length > 160 && (
+                  <p className="text-[11px] mt-1.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    {rawText.length} characters total
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Attached file badge */}
+            {attachedFile && (
+              <div
+                className="flex items-center gap-2 px-3.5 py-2.5"
+                style={{
+                  borderTop: rawText ? "1px solid hsl(var(--border))" : undefined,
+                  background: "hsl(var(--card))",
+                }}
+              >
+                <Paperclip size={13} style={{ color: "hsl(var(--primary))" }} />
+                <span className="text-[12px] text-foreground font-medium truncate flex-1">{attachedFile.name}</span>
+                {attachedFile.size !== undefined && (
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {(attachedFile.size / 1024).toFixed(0)} KB
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Edit toggle */}
+            <button
+              onClick={() => setShowManualEdit((v) => !v)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium active:opacity-60"
+              style={{
+                color: "hsl(var(--muted-foreground))",
+                borderTop: "1px solid hsl(var(--border))",
+                background: "hsl(var(--accent) / 0.5)",
+              }}
+            >
+              {showManualEdit ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {showManualEdit ? "Hide editor" : "Edit content"}
+            </button>
+          </div>
+        ) : (
+          /* ── Normal (manual paste) AI hint banner ── */
+          <div
+            className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
             style={{
-              backgroundColor: `${CHANNEL_COLORS[channel]}18`,
-              border: `1px solid ${CHANNEL_COLORS[channel]}40`,
+              background: "hsl(var(--accent))",
+              border: "1px solid hsl(var(--primary) / 0.15)",
             }}
           >
-            <span
-              className="text-[12px] font-semibold"
-              style={{ color: CHANNEL_COLORS[channel] }}
-            >
-              Shared from {autoDetectedLabel}
-            </span>
-            <button
-              onClick={() => setAutoDetectedLabel(null)}
-              className="ml-0.5 opacity-60 hover:opacity-100"
-              style={{ color: CHANNEL_COLORS[channel] }}
-              aria-label="Dismiss"
-            >
-              <X size={12} />
-            </button>
+            <Zap size={13} fill="hsl(var(--primary))" strokeWidth={0} className="mt-0.5 shrink-0" />
+            <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--accent-foreground))" }}>
+              Paste a chat export and AI will extract the shipment details
+            </p>
           </div>
         )}
 
-        {/* Channel selector */}
+        {/* Channel selector — always shown so user can correct auto-detection */}
         <div className="flex flex-col gap-2">
           <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Source Channel</p>
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
@@ -298,58 +364,64 @@ export default function CapturePage() {
           </div>
         </div>
 
-        {/* Text area */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Paste or Type Message</p>
-          <div
-            className="rounded-xl border bg-card p-3.5"
-            style={{ borderColor: "hsl(var(--border))" }}
-          >
-            <textarea
-              ref={textRef}
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              className="w-full bg-transparent text-sm text-foreground resize-none outline-none leading-relaxed min-h-[110px]"
-              placeholder={`Paste your ${activeCh.label} export or type a message…\n\nE.g.:\n[06/10/26, 10:22] Supplier: Production is 85% done…`}
-              style={{ color: "hsl(var(--foreground))" }}
-            />
-            {rawText.length > 0 && (
-              <p className="text-[11px] text-right mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-                {rawText.length} chars
-              </p>
+        {/* Text area — always shown for manual entry; collapsible when share entry */}
+        {(!isShareEntry || showManualEdit) && (
+          <div className="flex flex-col gap-2">
+            <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">
+              {isShareEntry ? "Edit Content" : "Paste or Type Message"}
+            </p>
+            <div
+              className="rounded-xl border bg-card p-3.5"
+              style={{ borderColor: "hsl(var(--border))" }}
+            >
+              <textarea
+                ref={textRef}
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                className="w-full bg-transparent text-sm text-foreground resize-none outline-none leading-relaxed min-h-[110px]"
+                placeholder={`Paste your ${activeCh.label} export or type a message…\n\nE.g.:\n[06/10/26, 10:22] Supplier: Production is 85% done…`}
+                style={{ color: "hsl(var(--foreground))" }}
+              />
+              {rawText.length > 0 && (
+                <p className="text-[11px] text-right mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  {rawText.length} chars
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* File attach — collapsed in share mode unless no file yet */}
+        {(!isShareEntry || !attachedFile) && (
+          <div className="flex flex-col gap-2">
+            <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Attach</p>
+            <label
+              className="flex items-center justify-center gap-2 border rounded-xl py-3 bg-card cursor-pointer active:opacity-70"
+              style={{ borderColor: "hsl(var(--border))" }}
+            >
+              <Paperclip size={16} color="hsl(var(--primary))" />
+              <span className="text-sm font-medium text-foreground">
+                {attachedFile ? attachedFile.name : "Choose file"}
+              </span>
+              <input type="file" className="hidden" onChange={handleFileChange} />
+            </label>
+            {attachedFile && (
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+                style={{ borderColor: "hsl(var(--primary))40" }}
+              >
+                <Paperclip size={14} color="hsl(var(--primary))" />
+                <span className="flex-1 text-sm truncate text-foreground">{attachedFile.name}</span>
+                {attachedFile.size !== undefined && (
+                  <span className="text-xs text-muted-foreground">{(attachedFile.size / 1024).toFixed(0)} KB</span>
+                )}
+                <button onClick={() => setAttachedFile(null)}>
+                  <X size={14} color="hsl(var(--muted-foreground))" />
+                </button>
+              </div>
             )}
           </div>
-        </div>
-
-        {/* File attach */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Attach</p>
-          <label
-            className="flex items-center justify-center gap-2 border rounded-xl py-3 bg-card cursor-pointer active:opacity-70"
-            style={{ borderColor: "hsl(var(--border))" }}
-          >
-            <Paperclip size={16} color="hsl(var(--primary))" />
-            <span className="text-sm font-medium text-foreground">
-              {attachedFile ? attachedFile.name : "Choose file"}
-            </span>
-            <input type="file" className="hidden" onChange={handleFileChange} />
-          </label>
-          {attachedFile && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-              style={{ borderColor: "hsl(var(--primary))40" }}
-            >
-              <Paperclip size={14} color="hsl(var(--primary))" />
-              <span className="flex-1 text-sm truncate text-foreground">{attachedFile.name}</span>
-              {attachedFile.size !== undefined && (
-                <span className="text-xs text-muted-foreground">{(attachedFile.size / 1024).toFixed(0)} KB</span>
-              )}
-              <button onClick={() => setAttachedFile(null)}>
-                <X size={14} color="hsl(var(--muted-foreground))" />
-              </button>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Sender hint */}
         <div className="flex flex-col gap-2">
@@ -479,7 +551,7 @@ export default function CapturePage() {
                 fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"}
                 strokeWidth={0}
               />
-              Submit for Routing
+              {isShareEntry ? "Analyse with AI" : "Submit for Routing"}
             </>
           )}
         </button>

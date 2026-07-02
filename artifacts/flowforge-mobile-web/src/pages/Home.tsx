@@ -1,8 +1,21 @@
+import { useState } from "react";
 import { useListShipments } from "@workspace/api-client-react";
 import type { Shipment } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation } from "wouter";
-import { CheckCircle, AlertTriangle, AlertCircle, Archive, Package, ChevronRight, Zap, WifiOff } from "lucide-react";
+import {
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  Archive,
+  Package,
+  ChevronRight,
+  Zap,
+  WifiOff,
+  Share2,
+  X,
+} from "lucide-react";
+
 const STATUS_CONFIG: Record<string, { color: string; Icon: React.ComponentType<{ size?: number; color?: string }> }> = {
   "on-track": { color: "#22c55e", Icon: CheckCircle },
   "at-risk": { color: "#f59e0b", Icon: AlertTriangle },
@@ -16,6 +29,97 @@ function statusLabel(status: string) {
   if (status === "delayed") return "Delayed";
   if (status === "completed") return "Completed";
   return status;
+}
+
+function isStandaloneMode(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    ("standalone" in window.navigator &&
+      (window.navigator as { standalone?: boolean }).standalone === true)
+  );
+}
+
+const SHARE_BANNER_KEY = "ff:share-banner-dismissed";
+
+function ShareInstallBanner() {
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SHARE_BANNER_KEY) === "yes";
+    } catch {
+      return false;
+    }
+  });
+
+  if (isStandaloneMode() || dismissed) return null;
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  function handleDismiss() {
+    try {
+      localStorage.setItem(SHARE_BANNER_KEY, "yes");
+    } catch {
+      // ignore
+    }
+    setDismissed(true);
+  }
+
+  return (
+    <div
+      className="rounded-xl border px-3.5 py-3 mb-3 flex flex-col gap-2"
+      style={{
+        background: "linear-gradient(135deg, hsl(var(--primary) / 0.07) 0%, hsl(var(--primary) / 0.03) 100%)",
+        borderColor: "hsl(var(--primary) / 0.25)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "hsl(var(--primary) / 0.12)" }}
+          >
+            <Share2 size={14} style={{ color: "hsl(var(--primary))" }} />
+          </div>
+          <p className="text-[13px] font-semibold text-foreground leading-tight">
+            Share directly from WhatsApp
+          </p>
+        </div>
+        <button
+          onClick={handleDismiss}
+          className="p-0.5 shrink-0 active:opacity-60"
+          style={{ color: "hsl(var(--muted-foreground))" }}
+          aria-label="Dismiss"
+        >
+          <X size={15} />
+        </button>
+      </div>
+
+      <p className="text-[12px] text-muted-foreground leading-relaxed">
+        Install this app on your home screen to send chat exports straight to FlowForgeIQ — no copy-paste needed.
+      </p>
+
+      <div
+        className="rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
+        style={{ background: "hsl(var(--accent))" }}
+      >
+        {isIOS ? (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              <span className="font-semibold text-foreground">Safari only</span> — tap the{" "}
+              <span className="font-semibold text-foreground">Share</span> button in the toolbar,
+              then <span className="font-semibold text-foreground">Add to Home Screen</span>.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] text-muted-foreground">
+              Tap <span className="font-semibold text-foreground">⋮ Menu → Add to Home Screen</span> in Chrome
+              to install. Then use Android's share sheet from any app.
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ShipmentCard({ shipment, onPress }: { shipment: Shipment; onPress: () => void }) {
@@ -118,17 +222,21 @@ export default function HomePage() {
         )}
 
         {!isLoading && !isError && active.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <Package size={36} color="hsl(var(--muted-foreground))" />
-            <p className="font-semibold text-foreground text-center">No active shipments</p>
-            <p className="text-sm text-muted-foreground text-center leading-5">
-              Use the Capture tab to submit messages and route them to shipments.
-            </p>
-          </div>
+          <>
+            <ShareInstallBanner />
+            <div className="flex flex-col items-center justify-center gap-3 py-20">
+              <Package size={36} color="hsl(var(--muted-foreground))" />
+              <p className="font-semibold text-foreground text-center">No active shipments</p>
+              <p className="text-sm text-muted-foreground text-center leading-5">
+                Use the Capture tab to submit messages and route them to shipments.
+              </p>
+            </div>
+          </>
         )}
 
         {!isError && active.length > 0 && (
           <>
+            <ShareInstallBanner />
             <div
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl border mb-3"
               style={{ backgroundColor: "hsl(var(--accent))", borderColor: "hsl(var(--border))" }}
