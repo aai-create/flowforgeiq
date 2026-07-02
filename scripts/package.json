@@ -7,12 +7,17 @@
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build-seed-data": "tsx ./src/build-seed-data.ts",
-    "capture-docs": "tsx ./src/capture-docs-screenshots.ts"
+    "capture-docs": "tsx ./src/capture-docs-screenshots.ts",
+    "verify-wipe": "tsx ./src/verify-wipe.ts"
   },
   "devDependencies": {
     "@e965/xlsx": "^0.20.3",
     "@types/node": "catalog:",
     "playwright": "^1.60.0",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0"
   }
 }
