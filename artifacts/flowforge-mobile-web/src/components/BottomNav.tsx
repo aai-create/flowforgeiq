@@ -13,8 +13,11 @@ export function BottomNav() {
 
   return (
     <nav
-      className="safe-bottom shrink-0 border-t bg-card"
-      style={{ borderColor: "hsl(var(--border))", boxShadow: "0 -1px 6px rgba(0,0,0,0.05)" }}
+      className="safe-bottom shrink-0 bg-card"
+      style={{
+        borderTop: "1px solid hsl(var(--border))",
+        boxShadow: "0 -2px 12px rgba(0,0,0,0.06)",
+      }}
     >
       <div className="flex">
         {TABS.map(({ href, icon: Icon, label }) => {
@@ -23,24 +26,32 @@ export function BottomNav() {
             <button
               key={href}
               onClick={() => navigate(href)}
-              className="flex-1 flex flex-col items-center gap-0.5 pt-2 pb-1 transition-opacity active:opacity-60"
-              style={{ color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}
+              className="flex-1 flex flex-col items-center pt-2.5 pb-2 gap-1 transition-opacity active:opacity-60"
+              aria-current={active ? "page" : undefined}
             >
               <div
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: active ? "hsl(var(--accent))" : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "background 0.15s",
+                  padding: "5px 14px",
+                  borderRadius: 999,
+                  background: active ? "hsl(var(--primary) / 0.12)" : "transparent",
+                  transition: "background 0.18s ease",
                 }}
               >
-                <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+                <Icon
+                  size={20}
+                  strokeWidth={active ? 2.5 : 1.8}
+                  color={active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+                />
               </div>
-              <span className="text-[10px] font-medium">{label}</span>
+              <span
+                className="text-[10px] font-semibold tracking-wide"
+                style={{
+                  color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                  transition: "color 0.18s ease",
+                }}
+              >
+                {label}
+              </span>
             </button>
           );
         })}

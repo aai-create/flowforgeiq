@@ -129,40 +129,43 @@ function ShipmentCard({ shipment, onPress }: { shipment: Shipment; onPress: () =
   return (
     <button
       onClick={onPress}
-      className="w-full text-left rounded-xl border bg-card p-3.5 flex flex-col gap-2.5 active:opacity-75 transition-opacity"
-      style={{ borderColor: "hsl(var(--border))" }}
+      className="w-full text-left rounded-2xl bg-card p-4 flex flex-col gap-3 active:opacity-75 transition-all btn-press card-elevated"
+      style={{ border: "1px solid hsl(var(--border))" }}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
-          style={{ backgroundColor: `${cfg.color}18` }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{
+            backgroundColor: `${cfg.color}1a`,
+            border: `1.5px solid ${cfg.color}30`,
+          }}
         >
-          <Icon size={18} color={cfg.color} />
+          <Icon size={19} color={cfg.color} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-foreground truncate">PO {shipment.poNumber}</p>
           <p className="text-xs text-muted-foreground truncate mt-0.5">{shipment.product}</p>
         </div>
-        <ChevronRight size={16} color="hsl(var(--muted-foreground))" />
+        <ChevronRight size={15} color="hsl(var(--muted-foreground))" strokeWidth={2} />
       </div>
       <div className="flex flex-wrap gap-1.5 items-center">
         <span
-          className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+          className="text-[11px] font-bold px-2.5 py-[3px] rounded-full"
           style={{ color: cfg.color, backgroundColor: `${cfg.color}18` }}
         >
           {statusLabel(shipment.status ?? "")}
         </span>
         {shipment.supplierName && (
           <span
-            className="text-[11px] px-2 py-0.5 rounded-full truncate max-w-[140px]"
+            className="text-[11px] font-medium px-2.5 py-[3px] rounded-full truncate max-w-[145px]"
             style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}
           >
             {shipment.supplierName}
           </span>
         )}
         {shipment.buyerPoNumber && (
-          <span className="text-[11px] text-muted-foreground truncate">
-            Buyer: {shipment.buyerPoNumber}
+          <span className="text-[11px] text-muted-foreground">
+            Buyer {shipment.buyerPoNumber}
           </span>
         )}
       </div>
@@ -178,74 +181,96 @@ export default function HomePage() {
 
   return (
     <AppShell>
+      {/* Page header */}
       <div
-        className="status-bar-pad px-5 pb-4 flex items-center gap-2.5 shrink-0"
-        style={{
-          background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-          boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
-        }}
+        className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0 page-header-gradient"
       >
         <img
           src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
           alt="FlowForgeIQ"
-          style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+          style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
         />
         <div>
-          <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
-          <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">Home</p>
+          <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
+          <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">Home</p>
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 pt-3 pb-2">
+      <div className="flex-1 scroll-area px-4 pt-3.5 pb-2">
+        {/* Loading */}
         {isLoading && !isRefetching && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <div
-              className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }}
-            />
+          <div className="flex flex-col items-center justify-center gap-3 py-24">
+            <div className="app-spinner" />
             <p className="text-sm text-muted-foreground">Loading shipments…</p>
           </div>
         )}
 
+        {/* Error */}
         {isError && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <WifiOff size={32} color="hsl(var(--muted-foreground))" />
-            <p className="text-sm text-muted-foreground text-center">Could not load shipments</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-24">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "hsl(var(--muted))" }}
+            >
+              <WifiOff size={26} color="hsl(var(--muted-foreground))" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Can't load shipments</p>
+            <p className="text-xs text-muted-foreground text-center">Check your connection and try again</p>
             <button
               onClick={() => refetch()}
-              className="px-5 py-2 rounded-lg text-sm font-semibold text-white"
-              style={{ backgroundColor: "hsl(var(--primary))" }}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white btn-press"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+                boxShadow: "0 4px 12px hsl(var(--primary) / 0.35)",
+              }}
             >
               Retry
             </button>
           </div>
         )}
 
+        {/* Empty */}
         {!isLoading && !isError && active.length === 0 && (
           <>
             <ShareInstallBanner />
-            <div className="flex flex-col items-center justify-center gap-3 py-20">
-              <Package size={36} color="hsl(var(--muted-foreground))" />
+            <div className="flex flex-col items-center justify-center gap-3 py-24">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: "hsl(var(--accent))" }}
+              >
+                <Package size={30} color="hsl(var(--primary))" />
+              </div>
               <p className="font-semibold text-foreground text-center">No active shipments</p>
-              <p className="text-sm text-muted-foreground text-center leading-5">
+              <p className="text-sm text-muted-foreground text-center leading-relaxed max-w-[240px]">
                 Use the Capture tab to submit messages and route them to shipments.
               </p>
             </div>
           </>
         )}
 
+        {/* List */}
         {!isError && active.length > 0 && (
           <>
             <ShareInstallBanner />
+            {/* Hint banner */}
             <div
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border mb-3"
-              style={{ backgroundColor: "hsl(var(--accent))", borderColor: "hsl(var(--border))" }}
+              className="flex items-center gap-3 px-3.5 py-3 rounded-2xl mb-3.5 card-elevated"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(270 60% 97%) 100%)",
+                border: "1px solid hsl(var(--primary) / 0.12)",
+              }}
             >
-              <Zap size={13} color="hsl(var(--primary))" />
-              <p className="text-xs text-muted-foreground leading-[1.4]">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "hsl(var(--primary) / 0.12)" }}
+              >
+                <Zap size={14} fill="hsl(var(--primary))" strokeWidth={0} />
+              </div>
+              <p className="text-xs leading-[1.45]" style={{ color: "hsl(var(--accent-foreground))" }}>
                 Tap a shipment to view details and capture new updates
               </p>
             </div>
+
             <div className="flex flex-col gap-2.5">
               {active.map((s) => (
                 <ShipmentCard
@@ -255,7 +280,7 @@ export default function HomePage() {
                 />
               ))}
             </div>
-            <div className="h-4" />
+            <div className="h-5" />
           </>
         )}
       </div>

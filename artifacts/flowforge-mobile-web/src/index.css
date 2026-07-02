@@ -24,24 +24,29 @@
 }
 
 :root {
-  --background: 0 0% 98%;
-  --foreground: 222 20% 15%;
-  --border: 220 15% 90%;
+  --background: 0 0% 97%;
+  --foreground: 222 22% 13%;
+  --border: 220 15% 88%;
   --card: 0 0% 100%;
-  --card-foreground: 222 20% 15%;
+  --card-foreground: 222 22% 13%;
   --primary: 274 100% 50%;
   --primary-hover: 274 100% 43%;
   --primary-foreground: 0 0% 100%;
-  --muted: 220 15% 94%;
-  --muted-foreground: 220 10% 50%;
-  --accent: 270 50% 96%;
-  --accent-foreground: 270 60% 40%;
+  --muted: 220 15% 93%;
+  --muted-foreground: 220 10% 52%;
+  --accent: 270 55% 96%;
+  --accent-foreground: 270 65% 38%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
   --success: 142 71% 45%;
   --warning: 38 92% 50%;
   --app-font-sans: 'Inter', sans-serif;
   --radius: 0.75rem;
+
+  /* Design tokens */
+  --page-header-pb: 1rem;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 10px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
 @layer base {
@@ -74,4 +79,85 @@
 /* Status bar area fix */
 .status-bar-pad {
   padding-top: max(env(safe-area-inset-top, 0px), 16px);
+}
+
+/* ─── Shared card elevation ─────────────────────────────────── */
+.card-elevated {
+  box-shadow: var(--card-shadow);
+}
+.card-elevated:active {
+  box-shadow: none;
+}
+
+/* ─── Consistent section label ──────────────────────────────── */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ─── Page header gradient ──────────────────────────────────── */
+.page-header-gradient {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%);
+  box-shadow: 0 2px 16px hsl(var(--primary) / 0.3);
+}
+
+/* ─── Channel / filter pill row — right fade mask ───────────── */
+.pill-scroll-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
+}
+.pill-scroll-row::-webkit-scrollbar { display: none; }
+
+/* ─── Dashed upload zone ────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.upload-zone:hover,
+.upload-zone:active {
+  border-color: hsl(var(--primary) / 0.5);
+  background: hsl(var(--accent));
+}
+
+/* ─── Consistent loading spinner ───────────────────────────── */
+.app-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid hsl(var(--primary) / 0.2);
+  border-top-color: hsl(var(--primary));
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Press scale for primary CTA buttons ───────────────────── */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* ─── Section panel ─────────────────────────────────────────── */
+.section-panel {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: var(--card-shadow);
 }

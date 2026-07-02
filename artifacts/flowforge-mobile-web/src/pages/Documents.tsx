@@ -51,13 +51,16 @@ function DocCard({ doc, onClick }: { doc: DocumentWithExtraction; onClick: () =>
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-xl border bg-card p-3.5 flex flex-col gap-2.5 active:opacity-75 transition-opacity"
-      style={{ borderColor: "hsl(var(--border))" }}
+      className="w-full text-left rounded-2xl bg-card p-4 flex flex-col gap-3 active:opacity-75 transition-all btn-press card-elevated"
+      style={{ border: "1px solid hsl(var(--border))" }}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
-          style={{ backgroundColor: "hsl(var(--accent))" }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{
+            backgroundColor: "hsl(var(--accent))",
+            border: "1.5px solid hsl(var(--primary) / 0.12)",
+          }}
         >
           <FileIcon size={18} color="hsl(var(--primary))" />
         </div>
@@ -67,23 +70,29 @@ function DocCard({ doc, onClick }: { doc: DocumentWithExtraction; onClick: () =>
             {formatBytes(doc.fileSize)} · {doc.sourceChannel} · {formatDate(doc.createdAt)}
           </p>
         </div>
-        <ChevronRight size={16} color="hsl(var(--muted-foreground))" />
+        <ChevronRight size={15} color="hsl(var(--muted-foreground))" strokeWidth={2} />
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <span
-          className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+          className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-[3px] rounded-full"
           style={{ color, backgroundColor: `${color}18` }}
         >
           <Icon size={11} />
           {STATUS_LABELS[doc.status] ?? doc.status}
         </span>
         {doc.shipmentId != null && (
-          <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+          <span
+            className="text-[11px] font-medium px-2.5 py-[3px] rounded-full"
+            style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}
+          >
             PO #{doc.shipmentId}
           </span>
         )}
         {findings > 0 && (
-          <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ color: "#f59e0b", backgroundColor: "#f59e0b18" }}>
+          <span
+            className="text-[11px] font-medium px-2.5 py-[3px] rounded-full"
+            style={{ color: "#d97706", backgroundColor: "#f59e0b18" }}
+          >
             ⚠ {findings} finding{findings !== 1 ? "s" : ""}
           </span>
         )}
@@ -111,29 +120,26 @@ export default function DocumentsPage() {
 
   return (
     <AppShell>
+      {/* Header */}
       <div
-        className="status-bar-pad px-5 pb-4 flex items-center gap-2.5 shrink-0"
-        style={{
-          background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-          boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
-        }}
+        className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0 page-header-gradient"
       >
         <img
           src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
           alt="FlowForgeIQ"
-          style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+          style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
         />
         <div>
-          <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
-          <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">Documents</p>
+          <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
+          <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">Documents</p>
         </div>
       </div>
 
-      <div className="px-4 pt-3 pb-2 shrink-0 flex flex-col gap-2">
-        {/* Search */}
+      {/* Search + filter bar */}
+      <div className="px-4 pt-3 pb-2 shrink-0 flex flex-col gap-2.5">
         <div
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border bg-card"
-          style={{ borderColor: "hsl(var(--border))" }}
+          className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-card card-elevated"
+          style={{ border: "1px solid hsl(var(--border))" }}
         >
           <Search size={15} color="hsl(var(--muted-foreground))" />
           <input
@@ -143,14 +149,14 @@ export default function DocumentsPage() {
             placeholder="Search documents…"
           />
           {search && (
-            <button onClick={() => setSearch("")}>
+            <button onClick={() => setSearch("")} className="active:opacity-60">
               <X size={14} color="hsl(var(--muted-foreground))" />
             </button>
           )}
         </div>
 
-        {/* Filter pills */}
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        {/* Filter pill-tabs */}
+        <div className="pill-scroll-row">
           {FILTER_KEYS.map((f) => {
             const active = filter === f;
             const count = f === "all" ? (docs?.length ?? 0) : (docs ?? []).filter((d) => d.status === f).length;
@@ -158,9 +164,9 @@ export default function DocumentsPage() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className="text-xs px-3 py-1.5 rounded-full border shrink-0 font-medium"
+                className="text-xs px-3.5 py-2 rounded-full shrink-0 transition-all font-semibold"
                 style={{
-                  borderColor: active ? "hsl(var(--primary))" : "hsl(var(--border))",
+                  border: `1.5px solid ${active ? "hsl(var(--primary))" : "hsl(var(--border))"}`,
                   backgroundColor: active ? "hsl(var(--primary))" : "hsl(var(--card))",
                   color: active ? "white" : "hsl(var(--muted-foreground))",
                 }}
@@ -173,30 +179,58 @@ export default function DocumentsPage() {
       </div>
 
       <div className="flex-1 scroll-area px-4 pb-4">
+        {/* Loading */}
         {isLoading && !isRefetching && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }} />
+          <div className="flex flex-col items-center justify-center gap-3 py-24">
+            <div className="app-spinner" />
             <p className="text-sm text-muted-foreground">Loading documents…</p>
           </div>
         )}
+
+        {/* Error */}
         {isError && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <WifiOff size={32} color="hsl(var(--muted-foreground))" />
-            <p className="text-sm text-muted-foreground text-center">Could not load documents</p>
-            <button onClick={() => refetch()} className="px-5 py-2 rounded-lg text-sm font-semibold text-white" style={{ backgroundColor: "hsl(var(--primary))" }}>Retry</button>
+          <div className="flex flex-col items-center justify-center gap-3 py-24">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "hsl(var(--muted))" }}
+            >
+              <WifiOff size={26} color="hsl(var(--muted-foreground))" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Can't load documents</p>
+            <button
+              onClick={() => refetch()}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white btn-press"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+                boxShadow: "0 4px 12px hsl(var(--primary) / 0.35)",
+              }}
+            >
+              Retry
+            </button>
           </div>
         )}
+
+        {/* Empty */}
         {!isLoading && !isError && filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <Inbox size={36} color="hsl(var(--muted-foreground))" />
+          <div className="flex flex-col items-center justify-center gap-3 py-24">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "hsl(var(--accent))" }}
+            >
+              <Inbox size={28} color="hsl(var(--primary))" />
+            </div>
             <p className="font-semibold text-foreground text-center">
               {search || filter !== "all" ? "No matching documents" : "No documents yet"}
             </p>
-            <p className="text-sm text-muted-foreground text-center leading-5">
-              {search || filter !== "all" ? "Try adjusting your search or filter." : "Documents shared via email will appear here."}
+            <p className="text-sm text-muted-foreground text-center leading-relaxed max-w-[240px]">
+              {search || filter !== "all"
+                ? "Try adjusting your search or filter."
+                : "Documents shared via email will appear here."}
             </p>
           </div>
         )}
+
+        {/* List */}
         {!isError && filtered.length > 0 && (
           <div className="flex flex-col gap-2.5 pt-1">
             {filtered.map((d) => <DocCard key={d.id} doc={d} onClick={() => navigate(`/documents/${d.id}`)} />)}

@@ -2,18 +2,18 @@ import { useRef, useState, useEffect } from "react";
 import { useListShipments, useIngestChat, ChatIngestInputChannel } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation, useSearch } from "wouter";
-import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Paperclip, CheckCircle2 } from "lucide-react";
+import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Upload, Paperclip, CheckCircle2 } from "lucide-react";
 import { detectChannel } from "@/lib/detectChannel";
 
 type Channel = ChatIngestInputChannel;
 
-const CHANNELS: { id: Channel; label: string; color: string; emoji: string }[] = [
-  { id: "whatsapp", label: "WhatsApp", color: "#25D366", emoji: "📱" },
-  { id: "wechat", label: "WeChat", color: "#09B83E", emoji: "💬" },
-  { id: "imessage", label: "iMessage", color: "#007AFF", emoji: "🔵" },
-  { id: "sms", label: "SMS", color: "#5856D6", emoji: "✉️" },
-  { id: "email", label: "Email", color: "#FF6B35", emoji: "📧" },
-  { id: "other", label: "Other", color: "#888888", emoji: "📝" },
+const CHANNELS: { id: Channel; label: string; color: string }[] = [
+  { id: "whatsapp", label: "WhatsApp", color: "#25D366" },
+  { id: "wechat", label: "WeChat", color: "#09B83E" },
+  { id: "imessage", label: "iMessage", color: "#007AFF" },
+  { id: "sms", label: "SMS", color: "#5856D6" },
+  { id: "email", label: "Email", color: "#FF6B35" },
+  { id: "other", label: "Other", color: "#888888" },
 ];
 
 const CHANNEL_COLORS: Record<Channel, string> = {
@@ -28,7 +28,6 @@ const CHANNEL_COLORS: Record<Channel, string> = {
 const SHARE_FILE_CACHE_KEY = "/__ff_share_file";
 const SHARE_CACHE_NAME = "flowforge-mobile-v1";
 
-/** Read a shared file from Cache API (written by the service worker POST handler). */
 async function readSharedFileFromCache(): Promise<File | null> {
   if (!("caches" in self)) return null;
   try {
@@ -88,7 +87,6 @@ export default function CapturePage() {
       if (composed) setRawText(composed);
 
       setIsShareEntry(true);
-
       const detected = detectChannel(sharedText, sharedUrl, sharedTitle);
       if (detected) {
         setChannel(detected.channel);
@@ -96,7 +94,6 @@ export default function CapturePage() {
       } else if (sharedText || sharedUrl || sharedTitle || viaShare) {
         setChannel("other");
       }
-
       window.history.replaceState({}, "", window.location.pathname);
     }
 
@@ -114,11 +111,7 @@ export default function CapturePage() {
     function onServiceWorkerMessage(event: MessageEvent) {
       if (event.data?.type === "share-file") {
         const { name, size, mimeType, buffer } = event.data as {
-          type: string;
-          name: string;
-          size: number;
-          mimeType: string;
-          buffer: ArrayBuffer;
+          type: string; name: string; size: number; mimeType: string; buffer: ArrayBuffer;
         };
         const blob = new Blob([buffer], { type: mimeType });
         const file = new File([blob], name, { type: mimeType });
@@ -127,9 +120,7 @@ export default function CapturePage() {
       }
     }
     navigator.serviceWorker?.addEventListener("message", onServiceWorkerMessage);
-    return () => {
-      navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
-    };
+    return () => { navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage); };
   }, []);
 
   useEffect(() => {
@@ -168,9 +159,7 @@ export default function CapturePage() {
       {
         onSuccess: (result) => {
           const payload = {
-            result,
-            rawText: text,
-            channel,
+            result, rawText: text, channel,
             senderHint: senderHint.trim(),
             preSelectedShipmentId: selectedShipment?.id ?? null,
           };
@@ -178,19 +167,12 @@ export default function CapturePage() {
             sessionStorage.setItem("ff_routing_payload", JSON.stringify(payload));
           } catch {
             try {
-              sessionStorage.setItem(
-                "ff_routing_payload",
-                JSON.stringify({ ...payload, rawText: text.slice(0, 1000) })
-              );
-            } catch {
-              // ignore
-            }
+              sessionStorage.setItem("ff_routing_payload", JSON.stringify({ ...payload, rawText: text.slice(0, 1000) }));
+            } catch { /* ignore */ }
           }
           navigate("/routing-result");
         },
-        onError: () => {
-          alert("Analysis failed. Please try again.");
-        },
+        onError: () => { alert("Analysis failed. Please try again."); },
       }
     );
   }
@@ -209,27 +191,26 @@ export default function CapturePage() {
 
   return (
     <AppShell>
-      <div
-        className="status-bar-pad px-5 pb-4 flex items-center justify-between shrink-0"
-        style={{
-          background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-          boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
-        }}
-      >
-        <div className="flex items-center gap-2.5">
+      {/* Header */}
+      <div className="status-bar-pad px-5 pb-5 flex items-center justify-between shrink-0 page-header-gradient">
+        <div className="flex items-center gap-3">
           <img
             src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
             alt="FlowForgeIQ"
-            style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+            style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
           />
           <div>
-            <p className="text-white font-bold text-lg tracking-tight leading-tight">FlowForgeIQ</p>
-            <p className="text-white/60 text-[10px] tracking-[0.8px] uppercase mt-0.5">Capture</p>
+            <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
+            <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">Capture</p>
           </div>
         </div>
         {hasContent && (
-          <button onClick={handleClear} className="p-1 text-white/80">
-            <X size={22} />
+          <button
+            onClick={handleClear}
+            className="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+          >
+            <X size={16} color="white" strokeWidth={2.5} />
           </button>
         )}
       </div>
@@ -324,40 +305,46 @@ export default function CapturePage() {
         ) : (
           /* ── Normal (manual paste) AI hint banner ── */
           <div
-            className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+            className="flex items-center gap-3 px-4 py-3.5 rounded-2xl card-elevated"
             style={{
-              background: "hsl(var(--accent))",
-              border: "1px solid hsl(var(--primary) / 0.15)",
+              background: "linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(270 60% 97%) 100%)",
+              border: "1px solid hsl(var(--primary) / 0.12)",
             }}
           >
-            <Zap size={13} fill="hsl(var(--primary))" strokeWidth={0} className="mt-0.5 shrink-0" />
-            <p className="text-[11px] leading-relaxed" style={{ color: "hsl(var(--accent-foreground))" }}>
-              Paste a chat export and AI will extract the shipment details
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+              }}
+            >
+              <Zap size={15} fill="white" strokeWidth={0} />
+            </div>
+            <p className="text-xs leading-relaxed flex-1" style={{ color: "hsl(var(--accent-foreground))" }}>
+              Paste a chat export and AI will extract the shipment details automatically
             </p>
           </div>
         )}
 
         {/* Channel selector — always shown so user can correct auto-detection */}
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Source Channel</p>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-0.5 px-0.5">
+          <p className="section-label">Source Channel</p>
+          <div className="pill-scroll-row">
             {CHANNELS.map(({ id, label, color }) => {
               const active = channel === id;
               return (
                 <button
                   key={id}
-                  onClick={() => {
-                    setChannel(id);
-                    setAutoDetectedLabel(null);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-full border-[1.5px] shrink-0 transition-all"
+                  onClick={() => { setChannel(id); setAutoDetectedLabel(null); }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full shrink-0 transition-all"
                   style={{
-                    borderColor: active ? color : "hsl(var(--border))",
+                    border: `1.5px solid ${active ? color : "hsl(var(--border))"}`,
                     backgroundColor: active ? `${color}18` : "hsl(var(--card))",
                     color: active ? color : "hsl(var(--muted-foreground))",
+                    fontWeight: active ? 600 : 500,
+                    fontSize: 13,
                   }}
                 >
-                  <span className="text-[13px] font-medium">{label}</span>
+                  {label}
                 </button>
               );
             })}
@@ -367,12 +354,10 @@ export default function CapturePage() {
         {/* Text area — always shown for manual entry; collapsible when share entry */}
         {(!isShareEntry || showManualEdit) && (
           <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">
-              {isShareEntry ? "Edit Content" : "Paste or Type Message"}
-            </p>
+            <p className="section-label">{isShareEntry ? "Edit Content" : "Paste or Type Message"}</p>
             <div
-              className="rounded-xl border bg-card p-3.5"
-              style={{ borderColor: "hsl(var(--border))" }}
+              className="rounded-2xl bg-card p-3.5 card-elevated"
+              style={{ border: "1px solid hsl(var(--border))" }}
             >
               <textarea
                 ref={textRef}
@@ -380,10 +365,9 @@ export default function CapturePage() {
                 onChange={(e) => setRawText(e.target.value)}
                 className="w-full bg-transparent text-sm text-foreground resize-none outline-none leading-relaxed min-h-[110px]"
                 placeholder={`Paste your ${activeCh.label} export or type a message…\n\nE.g.:\n[06/10/26, 10:22] Supplier: Production is 85% done…`}
-                style={{ color: "hsl(var(--foreground))" }}
               />
               {rawText.length > 0 && (
-                <p className="text-[11px] text-right mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <p className="text-[11px] text-right mt-1 text-muted-foreground">
                   {rawText.length} chars
                 </p>
               )}
@@ -391,48 +375,76 @@ export default function CapturePage() {
           </div>
         )}
 
-        {/* File attach — collapsed in share mode unless no file yet */}
+        {/* File attach — proper upload zone; collapsed in share mode unless no file yet */}
         {(!isShareEntry || !attachedFile) && (
           <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">Attach</p>
-            <label
-              className="flex items-center justify-center gap-2 border rounded-xl py-3 bg-card cursor-pointer active:opacity-70"
-              style={{ borderColor: "hsl(var(--border))" }}
-            >
-              <Paperclip size={16} color="hsl(var(--primary))" />
-              <span className="text-sm font-medium text-foreground">
-                {attachedFile ? attachedFile.name : "Choose file"}
-              </span>
-              <input type="file" className="hidden" onChange={handleFileChange} />
-            </label>
-            {attachedFile && (
+            <p className="section-label">Attach File</p>
+            {!attachedFile ? (
+              <label className="upload-zone flex flex-col items-center justify-center gap-2 py-5 px-4 active:opacity-70">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: "hsl(var(--accent))" }}
+                >
+                  <Upload size={18} color="hsl(var(--primary))" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">Choose a file</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Images, PDFs, spreadsheets</p>
+                </div>
+                <input type="file" className="hidden" onChange={handleFileChange} />
+              </label>
+            ) : (
               <div
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-                style={{ borderColor: "hsl(var(--primary))40" }}
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl card-elevated"
+                style={{
+                  border: "1.5px solid hsl(var(--primary) / 0.3)",
+                  backgroundColor: "hsl(var(--accent))",
+                }}
               >
-                <Paperclip size={14} color="hsl(var(--primary))" />
-                <span className="flex-1 text-sm truncate text-foreground">{attachedFile.name}</span>
-                {attachedFile.size !== undefined && (
-                  <span className="text-xs text-muted-foreground">{(attachedFile.size / 1024).toFixed(0)} KB</span>
-                )}
-                <button onClick={() => setAttachedFile(null)}>
-                  <X size={14} color="hsl(var(--muted-foreground))" />
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: "hsl(var(--primary) / 0.12)" }}
+                >
+                  <Upload size={16} color="hsl(var(--primary))" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{attachedFile.name}</p>
+                  {attachedFile.size !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{(attachedFile.size / 1024).toFixed(0)} KB</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setAttachedFile(null)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60"
+                  style={{ backgroundColor: "hsl(var(--muted))" }}
+                >
+                  <X size={13} color="hsl(var(--muted-foreground))" />
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* Sender hint */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">
-            Sender Hint <span className="font-normal normal-case">(optional)</span>
-          </p>
-          <div
-            className="flex items-center gap-2.5 px-3 py-3 rounded-xl border bg-card"
-            style={{ borderColor: "hsl(var(--border))" }}
+        {/* ── Optional section divider ─────────────────────────── */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px" style={{ backgroundColor: "hsl(var(--border))" }} />
+          <span
+            className="text-[11px] font-medium px-2.5 py-0.5 rounded-full"
+            style={{ color: "hsl(var(--muted-foreground))", backgroundColor: "hsl(var(--muted))" }}
           >
-            <User size={16} color="hsl(var(--muted-foreground))" />
+            Optional
+          </span>
+          <div className="flex-1 h-px" style={{ backgroundColor: "hsl(var(--border))" }} />
+        </div>
+
+        {/* Sender hint — optional */}
+        <div className="flex flex-col gap-2">
+          <p className="section-label" style={{ opacity: 0.7 }}>Sender Hint</p>
+          <div
+            className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-card"
+            style={{ border: "1px solid hsl(var(--border))" }}
+          >
+            <User size={15} color="hsl(var(--muted-foreground))" />
             <input
               className="flex-1 bg-transparent text-sm outline-none text-foreground"
               value={senderHint}
@@ -442,27 +454,32 @@ export default function CapturePage() {
           </div>
         </div>
 
-        {/* Shipment picker */}
+        {/* Shipment picker — optional */}
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase">
-            Shipment <span className="font-normal normal-case">(optional — helps routing)</span>
-          </p>
+          <p className="section-label" style={{ opacity: 0.7 }}>Hint to Shipment</p>
           {selectedShipment ? (
             <div
-              className="flex items-center gap-2.5 px-3 py-3 rounded-xl border-[1.5px]"
-              style={{ backgroundColor: "hsl(var(--accent))", borderColor: "hsl(var(--primary))60" }}
+              className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl"
+              style={{
+                backgroundColor: "hsl(var(--accent))",
+                border: "1.5px solid hsl(var(--primary) / 0.25)",
+              }}
             >
               <Package size={15} color="hsl(var(--primary))" />
-              <span className="flex-1 text-sm font-medium text-foreground truncate">{selectedShipment.name}</span>
-              <button onClick={() => { setSelectedShipment(null); setShowPicker(false); }}>
-                <X size={14} color="hsl(var(--muted-foreground))" />
+              <span className="flex-1 text-sm font-semibold text-foreground truncate">{selectedShipment.name}</span>
+              <button
+                onClick={() => { setSelectedShipment(null); setShowPicker(false); }}
+                className="w-6 h-6 flex items-center justify-center rounded-full active:opacity-60"
+                style={{ backgroundColor: "hsl(var(--muted))" }}
+              >
+                <X size={12} color="hsl(var(--muted-foreground))" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setShowPicker((v) => !v)}
-              className="flex items-center gap-2.5 px-3 py-3 rounded-xl border bg-card w-full"
-              style={{ borderColor: "hsl(var(--border))" }}
+              className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-card w-full active:opacity-75"
+              style={{ border: "1px solid hsl(var(--border))" }}
             >
               <Search size={15} color="hsl(var(--muted-foreground))" />
               <span className="flex-1 text-left text-sm text-muted-foreground">Search shipments…</span>
@@ -477,8 +494,8 @@ export default function CapturePage() {
           {showPicker && !selectedShipment && (
             <div className="flex flex-col gap-2">
               <div
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl border bg-card"
-                style={{ borderColor: "hsl(var(--border))" }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-card"
+                style={{ border: "1px solid hsl(var(--border))" }}
               >
                 <Search size={14} color="hsl(var(--muted-foreground))" />
                 <input
@@ -490,8 +507,8 @@ export default function CapturePage() {
                 />
               </div>
               <div
-                className="rounded-xl border bg-card overflow-hidden"
-                style={{ borderColor: "hsl(var(--border))", maxHeight: 220 }}
+                className="rounded-xl bg-card overflow-hidden"
+                style={{ border: "1px solid hsl(var(--border))", maxHeight: 220 }}
               >
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center p-4">No shipments found</p>
@@ -514,11 +531,7 @@ export default function CapturePage() {
                             {s.product}{s.supplierName ? ` · ${s.supplierName}` : ""}
                           </p>
                         </div>
-                        <ChevronDown
-                          size={14}
-                          color="hsl(var(--muted-foreground))"
-                          className="rotate-[-90deg]"
-                        />
+                        <ChevronDown size={14} color="hsl(var(--muted-foreground))" className="rotate-[-90deg]" />
                       </button>
                     ))}
                   </div>
@@ -532,32 +545,33 @@ export default function CapturePage() {
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="flex items-center justify-center gap-2.5 rounded-[14px] py-4 transition-all font-semibold text-base"
+          className="flex items-center justify-center gap-2.5 rounded-[16px] py-4 font-bold text-base btn-press"
           style={{
             background: canSubmit
               ? "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)"
               : "hsl(var(--muted))",
             color: canSubmit ? "white" : "hsl(var(--muted-foreground))",
-            opacity: isPending ? 0.7 : 1,
-            boxShadow: canSubmit ? "0 4px 14px hsl(var(--primary) / 0.4)" : "none",
+            boxShadow: canSubmit ? "0 4px 16px hsl(var(--primary) / 0.45)" : "none",
+            transition: "background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease",
           }}
         >
           {isPending ? (
-            <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            <>
+              <div
+                className="w-[18px] h-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin shrink-0"
+              />
+              <span>Analysing…</span>
+            </>
           ) : (
             <>
-              <Zap
-                size={18}
-                fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"}
-                strokeWidth={0}
-              />
+              <Zap size={18} fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"} strokeWidth={0} />
               {isShareEntry ? "Analyse with AI" : "Submit for Routing"}
             </>
           )}
         </button>
 
-        <p className="text-xs text-center text-muted-foreground leading-[1.5] -mt-2">
-          AI will extract details and route to the best-matching shipment
+        <p className="text-xs text-center text-muted-foreground leading-relaxed -mt-2">
+          AI extracts details and routes to the best-matching shipment
         </p>
 
         <div className="h-2" />

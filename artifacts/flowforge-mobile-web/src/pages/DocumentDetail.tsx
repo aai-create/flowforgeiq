@@ -26,11 +26,7 @@ import {
 import { useState } from "react";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatBytes(bytes: number) {
@@ -41,14 +37,10 @@ function formatBytes(bytes: number) {
 
 function getStatusConfig(status: string) {
   switch (status) {
-    case "extracted":
-      return { color: "#22c55e", Icon: CheckCircle, label: "Extracted" };
-    case "processing":
-      return { color: "#f59e0b", Icon: Clock, label: "Processing" };
-    case "failed":
-      return { color: "#e63946", Icon: AlertCircle, label: "Failed" };
-    default:
-      return { color: "#8896a7", Icon: HelpCircle, label: status };
+    case "extracted": return { color: "#22c55e", Icon: CheckCircle, label: "Extracted" };
+    case "processing": return { color: "#f59e0b", Icon: Clock, label: "Processing" };
+    case "failed": return { color: "#e63946", Icon: AlertCircle, label: "Failed" };
+    default: return { color: "#8896a7", Icon: HelpCircle, label: status };
   }
 }
 
@@ -61,23 +53,24 @@ function getFileIcon(fileType: string) {
   }
 }
 
-function FieldRow({ label, value }: { label: string; value: string | number | null | undefined }) {
-  if (value == null || value === "") return null;
+const GRADIENT_HEADER = {
+  background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+  boxShadow: "0 2px 16px hsl(var(--primary) / 0.3)",
+};
+
+function SectionPanel({ title, children, badge }: { title: string; children: React.ReactNode; badge?: string }) {
   return (
-    <div className="flex justify-between items-start gap-3 py-2 border-b last:border-b-0" style={{ borderColor: "hsl(var(--border))" }}>
-      <span className="text-xs text-muted-foreground flex-shrink-0 w-32">{label}</span>
-      <span className="text-xs font-medium text-foreground text-right break-all">{String(value)}</span>
+    <div className="section-panel p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="section-label">{title}</p>
+        {badge && <span className="text-[10px] text-muted-foreground">{badge}</span>}
+      </div>
+      {children}
     </div>
   );
 }
 
-function ShipmentPickerSheet({
-  onSelect,
-  onClose,
-}: {
-  onSelect: (id: number) => void;
-  onClose: () => void;
-}) {
+function ShipmentPickerSheet({ onSelect, onClose }: { onSelect: (id: number) => void; onClose: () => void }) {
   const { data: shipments } = useListShipments();
   const [q, setQ] = useState("");
   const filtered = (shipments ?? [])
@@ -93,15 +86,30 @@ function ShipmentPickerSheet({
     .slice(0, 20);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: "rgba(0,0,0,0.4)" }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: "rgba(0,0,0,0.45)" }}>
       <div className="flex-1" onClick={onClose} />
-      <div className="bg-card rounded-t-2xl max-h-[70vh] flex flex-col" style={{ borderTop: "1px solid hsl(var(--border))" }}>
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-          <p className="font-semibold text-foreground text-base">Link to Shipment</p>
-          <button onClick={onClose}><X size={20} color="hsl(var(--muted-foreground))" /></button>
+      <div
+        className="bg-card rounded-t-3xl max-h-[72vh] flex flex-col"
+        style={{ borderTop: "1px solid hsl(var(--border))" }}
+      >
+        <div
+          className="flex items-center justify-between px-5 pt-4 pb-3"
+          style={{ borderBottom: "1px solid hsl(var(--border))" }}
+        >
+          <p className="font-bold text-foreground text-base">Link to Shipment</p>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+            style={{ backgroundColor: "hsl(var(--muted))" }}
+          >
+            <X size={16} color="hsl(var(--muted-foreground))" />
+          </button>
         </div>
         <div className="px-4 pt-3 pb-2">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border bg-background" style={{ borderColor: "hsl(var(--border))" }}>
+          <div
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-background"
+            style={{ border: "1px solid hsl(var(--border))" }}
+          >
             <Search size={14} color="hsl(var(--muted-foreground))" />
             <input
               autoFocus
@@ -139,27 +147,11 @@ function ShipmentPickerSheet({
   );
 }
 
-interface FieldEditState {
-  key: string;
-  draft: string;
-}
-
 function EditableFieldRow({
-  label,
-  fieldKey,
-  value,
-  docId,
-  documentType,
-  editingKey,
-  setEditingKey,
+  label, fieldKey, value, docId, documentType, editingKey, setEditingKey,
 }: {
-  label: string;
-  fieldKey: string;
-  value: string | number | null | undefined;
-  docId: number;
-  documentType: string;
-  editingKey: string | null;
-  setEditingKey: (k: string | null) => void;
+  label: string; fieldKey: string; value: string | number | null | undefined;
+  docId: number; documentType: string; editingKey: string | null; setEditingKey: (k: string | null) => void;
 }) {
   const [draft, setDraft] = useState(value != null ? String(value) : "");
   const [savedKey, setSavedKey] = useState<string | null>(null);
@@ -170,12 +162,7 @@ function EditableFieldRow({
     saveCorrection(
       {
         id: docId,
-        data: {
-          fieldPath: fieldKey,
-          correctedValue: draft,
-          documentType,
-          originalValue: value != null ? String(value) : undefined,
-        },
+        data: { fieldPath: fieldKey, correctedValue: draft, documentType, originalValue: value != null ? String(value) : undefined },
       },
       {
         onSuccess: () => {
@@ -188,26 +175,29 @@ function EditableFieldRow({
   }
 
   return (
-    <div className="py-2.5 border-b last:border-b-0" style={{ borderColor: "hsl(var(--border))" }}>
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="text-xs text-muted-foreground">{label}</span>
+    <div
+      className="py-2.5"
+      style={{ borderBottom: "1px solid hsl(var(--border) / 0.7)" }}
+    >
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
         {savedKey === fieldKey ? (
-          <span className="text-[11px] font-medium flex items-center gap-1" style={{ color: "#22c55e" }}>
-            <Check size={11} /> Saved
+          <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "#22c55e" }}>
+            <Check size={11} strokeWidth={2.5} /> Saved
           </span>
         ) : isEditing ? (
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setEditingKey(null)}
-              className="text-[11px] text-muted-foreground px-2 py-0.5 rounded-md border"
-              style={{ borderColor: "hsl(var(--border))" }}
+              className="text-[11px] text-muted-foreground px-2 py-0.5 rounded-lg"
+              style={{ border: "1px solid hsl(var(--border))" }}
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={isPending}
-              className="text-[11px] font-semibold px-2 py-0.5 rounded-md text-white"
+              className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white"
               style={{ backgroundColor: "hsl(var(--primary))" }}
             >
               {isPending ? "Saving…" : "Save"}
@@ -228,11 +218,13 @@ function EditableFieldRow({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setEditingKey(null); }}
-          className="w-full text-sm text-foreground bg-background border rounded-lg px-3 py-2 outline-none focus:ring-1"
-          style={{ borderColor: "hsl(var(--primary))", "--tw-ring-color": "hsl(var(--primary))" } as React.CSSProperties}
+          className="w-full text-sm text-foreground bg-background border rounded-xl px-3 py-2.5 outline-none"
+          style={{ borderColor: "hsl(var(--primary))", boxShadow: "0 0 0 3px hsl(var(--primary) / 0.12)" }}
         />
       ) : (
-        <p className="text-sm font-medium text-foreground break-all">{value != null && value !== "" ? String(value) : <span className="text-muted-foreground italic text-xs">—</span>}</p>
+        <p className="text-sm font-semibold text-foreground break-all leading-snug">
+          {value != null && value !== "" ? String(value) : <span className="text-muted-foreground italic text-xs font-normal">—</span>}
+        </p>
       )}
     </div>
   );
@@ -252,12 +244,14 @@ export default function DocumentDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-4 flex items-center gap-3" style={{ background: "hsl(var(--primary))" }}>
-          <button onClick={() => navigate("/documents")}><ArrowLeft size={20} color="white" /></button>
-          <p className="text-white font-bold text-lg">Document</p>
+        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
+          <button onClick={() => navigate("/documents")} className="active:opacity-60">
+            <ArrowLeft size={20} color="white" />
+          </button>
+          <p className="text-white font-bold text-[17px]">Document</p>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }} />
+          <div className="app-spinner" />
         </div>
       </div>
     );
@@ -266,13 +260,22 @@ export default function DocumentDetailPage() {
   if (isError || !doc) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-4 flex items-center gap-3" style={{ background: "hsl(var(--primary))" }}>
-          <button onClick={() => navigate("/documents")}><ArrowLeft size={20} color="white" /></button>
-          <p className="text-white font-bold text-lg">Document</p>
+        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
+          <button onClick={() => navigate("/documents")} className="active:opacity-60">
+            <ArrowLeft size={20} color="white" />
+          </button>
+          <p className="text-white font-bold text-[17px]">Document</p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
           <p className="text-muted-foreground text-center">Could not load document.</p>
-          <button onClick={() => navigate("/documents")} className="px-5 py-2.5 rounded-xl text-white font-semibold" style={{ backgroundColor: "hsl(var(--primary))" }}>
+          <button
+            onClick={() => navigate("/documents")}
+            className="px-5 py-2.5 rounded-xl text-white font-semibold btn-press"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+              boxShadow: "0 4px 12px hsl(var(--primary) / 0.35)",
+            }}
+          >
             Back to Documents
           </button>
         </div>
@@ -310,52 +313,75 @@ export default function DocumentDetailPage() {
   return (
     <>
       <div className="flex flex-col h-full max-w-lg mx-auto overflow-hidden">
-        <div className="status-bar-pad px-5 pb-4 flex items-start gap-3 shrink-0" style={{ background: "hsl(var(--primary))" }}>
-          <button onClick={() => navigate("/documents")} className="mt-0.5">
+        {/* Header */}
+        <div className="status-bar-pad px-5 pb-5 flex items-start gap-3 shrink-0" style={GRADIENT_HEADER}>
+          <button onClick={() => navigate("/documents")} className="mt-0.5 active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-lg leading-tight truncate">{doc.fileName}</p>
-            <p className="text-white/70 text-xs mt-0.5">
+            <p className="text-white font-bold text-[17px] leading-tight truncate">{doc.fileName}</p>
+            <p className="text-white/65 text-xs mt-0.5">
               {formatBytes(doc.fileSize)} · {doc.sourceChannel} · {formatDate(doc.createdAt)}
             </p>
           </div>
         </div>
 
         <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
-          {/* Status + file type */}
-          <div className="rounded-xl border bg-card p-4 flex items-center gap-3" style={{ borderColor: "hsl(var(--border))" }}>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "hsl(var(--accent))" }}>
-              <FileIcon size={20} color="hsl(var(--primary))" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                {doc.fileType.toUpperCase()} · {doc.mimeType}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Icon size={13} color={color} />
-                <span className="text-xs font-semibold" style={{ color }}>{label}</span>
-                {extraction?.confidence != null && extraction.confidence > 0 && (
-                  <span className="text-xs text-muted-foreground ml-1">
-                    ({Math.round(extraction.confidence * 100)}% conf.)
-                  </span>
-                )}
+
+          {/* File type + status */}
+          <SectionPanel title="File Info">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                style={{
+                  backgroundColor: "hsl(var(--accent))",
+                  border: "1.5px solid hsl(var(--primary) / 0.12)",
+                }}
+              >
+                <FileIcon size={22} color="hsl(var(--primary))" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  {doc.fileType.toUpperCase()} · {doc.mimeType}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div
+                    className="flex items-center gap-1.5 px-2.5 py-[3px] rounded-full"
+                    style={{ backgroundColor: `${color}18` }}
+                  >
+                    <Icon size={12} color={color} />
+                    <span className="text-[11px] font-bold" style={{ color }}>{label}</span>
+                  </div>
+                  {extraction?.confidence != null && extraction.confidence > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(extraction.confidence * 100)}% conf.
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </SectionPanel>
 
           {/* Shipment linking */}
-          <div className="rounded-xl border bg-card p-4 flex flex-col gap-3" style={{ borderColor: "hsl(var(--border))" }}>
-            <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">Linked Shipment</p>
+          <SectionPanel title="Linked Shipment">
             {linkedSuccess && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: "#22c55e18" }}>
-                <Check size={14} color="#22c55e" />
-                <span className="text-xs text-[#22c55e] font-medium">Shipment linked successfully</span>
+              <div
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                style={{ backgroundColor: "#22c55e12", border: "1px solid #22c55e25" }}
+              >
+                <Check size={14} color="#22c55e" strokeWidth={2.5} />
+                <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>Shipment linked successfully</span>
               </div>
             )}
             {linkedShipment ? (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl" style={{ backgroundColor: "hsl(var(--accent))" }}>
+                <div
+                  className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "hsl(var(--accent))",
+                    border: "1.5px solid hsl(var(--primary) / 0.2)",
+                  }}
+                >
                   <Package size={15} color="hsl(var(--primary))" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">PO {linkedShipment.poNumber}</p>
@@ -365,16 +391,23 @@ export default function DocumentDetailPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowPicker(true)}
-                    className="flex-1 text-xs font-medium py-2.5 rounded-xl border"
-                    style={{ borderColor: "hsl(var(--primary))50", color: "hsl(var(--primary))" }}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-center transition-all active:opacity-75"
+                    style={{
+                      border: "1.5px solid hsl(var(--primary) / 0.4)",
+                      color: "hsl(var(--primary))",
+                      backgroundColor: "hsl(var(--primary) / 0.05)",
+                    }}
                   >
                     Change
                   </button>
                   <button
                     onClick={handleUnlink}
                     disabled={isLinking}
-                    className="flex-1 text-xs font-medium py-2.5 rounded-xl border"
-                    style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-center active:opacity-75"
+                    style={{
+                      border: "1px solid hsl(var(--border))",
+                      color: "hsl(var(--muted-foreground))",
+                    }}
                   >
                     Unlink
                   </button>
@@ -383,58 +416,66 @@ export default function DocumentDetailPage() {
             ) : (
               <button
                 onClick={() => setShowPicker(true)}
-                className="flex items-center justify-center gap-2 py-3 rounded-xl border font-medium"
-                style={{ borderColor: "hsl(var(--primary))50", color: "hsl(var(--primary))" }}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold active:opacity-75 btn-press"
+                style={{
+                  border: "1.5px solid hsl(var(--primary) / 0.35)",
+                  color: "hsl(var(--primary))",
+                  backgroundColor: "hsl(var(--primary) / 0.05)",
+                }}
               >
                 <Search size={15} />
                 Link to shipment
               </button>
             )}
-          </div>
+          </SectionPanel>
 
           {/* Extraction error */}
           {extraction?.errorMessage && (
-            <div className="rounded-xl border p-4 flex gap-3" style={{ backgroundColor: "#e6394610", borderColor: "#e6394640" }}>
-              <AlertCircle size={18} color="#e63946" />
+            <div
+              className="rounded-2xl p-4 flex gap-3"
+              style={{ backgroundColor: "#e6394610", border: "1px solid #e6394635" }}
+            >
+              <AlertCircle size={18} color="#e63946" className="shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-foreground">Extraction failed</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-[1.5]">{extraction.errorMessage}</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{extraction.errorMessage}</p>
               </div>
             </div>
           )}
 
-          {/* Extracted fields — editable with correction support */}
+          {/* Extracted fields */}
           {fields && Object.keys(fields).length > 0 && (
-            <div className="rounded-xl border bg-card p-4 flex flex-col" style={{ borderColor: "hsl(var(--border))" }}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">Extracted Fields</p>
-                <span className="text-[10px] text-muted-foreground">Tap Edit to correct</span>
+            <SectionPanel title="Extracted Fields" badge="Tap Edit to correct">
+              <div>
+                {Object.entries(fields).map(([key, val]) => (
+                  <EditableFieldRow
+                    key={key}
+                    label={key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    fieldKey={key}
+                    value={val as string | number | null}
+                    docId={docId}
+                    documentType={doc.fileType}
+                    editingKey={editingFieldKey}
+                    setEditingKey={setEditingFieldKey}
+                  />
+                ))}
               </div>
-              {Object.entries(fields).map(([key, val]) => (
-                <EditableFieldRow
-                  key={key}
-                  label={key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                  fieldKey={key}
-                  value={val as string | number | null}
-                  docId={docId}
-                  documentType={doc.fileType}
-                  editingKey={editingFieldKey}
-                  setEditingKey={setEditingFieldKey}
-                />
-              ))}
-            </div>
+            </SectionPanel>
           )}
 
           {/* Line items */}
           {lineItems.length > 0 && (
-            <div className="rounded-xl border bg-card p-4 flex flex-col gap-2" style={{ borderColor: "hsl(var(--border))" }}>
-              <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">Line Items</p>
-              <div className="overflow-x-auto">
+            <SectionPanel title="Line Items">
+              <div className="overflow-x-auto -mx-1 px-1">
                 <table className="w-full text-xs">
                   <thead>
                     <tr>
                       {Object.keys(lineItems[0] ?? {}).map((h) => (
-                        <th key={h} className="text-left text-muted-foreground font-medium pb-2 pr-3 whitespace-nowrap">
+                        <th
+                          key={h}
+                          className="text-left font-semibold pb-2.5 pr-3 whitespace-nowrap"
+                          style={{ color: "hsl(var(--muted-foreground))", borderBottom: "1px solid hsl(var(--border))" }}
+                        >
                           {h.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                         </th>
                       ))}
@@ -442,47 +483,51 @@ export default function DocumentDetailPage() {
                   </thead>
                   <tbody>
                     {lineItems.map((row, i) => (
-                      <tr key={i} style={{ borderTop: i > 0 ? "1px solid hsl(var(--border))" : undefined }}>
+                      <tr key={i} style={{ borderTop: i > 0 ? "1px solid hsl(var(--border) / 0.6)" : undefined }}>
                         {Object.values(row as Record<string, unknown>).map((v, j) => (
-                          <td key={j} className="py-2 pr-3 text-foreground whitespace-nowrap">{String(v ?? "—")}</td>
+                          <td key={j} className="py-2 pr-3 text-foreground whitespace-nowrap font-medium">
+                            {String(v ?? "—")}
+                          </td>
                         ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </SectionPanel>
           )}
 
           {/* Reconciliation findings */}
           {findings.length > 0 && (
-            <div className="rounded-xl border bg-card p-4 flex flex-col gap-2" style={{ borderColor: "hsl(var(--border))" }}>
-              <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">
-                Reconciliation Findings ({findings.length})
-              </p>
+            <SectionPanel title={`Reconciliation Findings (${findings.length})`}>
               <div className="flex flex-col gap-2">
                 {findings.map((f, i) => (
                   <div
                     key={i}
-                    className="px-3 py-2.5 rounded-xl"
-                    style={{ backgroundColor: "#f59e0b14", borderLeft: "3px solid #f59e0b" }}
+                    className="px-3.5 py-3 rounded-xl"
+                    style={{
+                      backgroundColor: "#f59e0b10",
+                      borderLeft: "3px solid #f59e0b",
+                      border: "1px solid #f59e0b25",
+                    }}
                   >
-                    <p className="text-xs font-medium text-foreground">{(f as any).field ?? `Finding ${i + 1}`}</p>
+                    <p className="text-xs font-bold text-foreground">{(f as any).field ?? `Finding ${i + 1}`}</p>
                     {(f as any).description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-[1.4]">{(f as any).description}</p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{(f as any).description}</p>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
+            </SectionPanel>
           )}
 
           {/* Transcript */}
           {extraction?.transcriptText && (
-            <div className="rounded-xl border bg-card p-4 flex flex-col gap-2" style={{ borderColor: "hsl(var(--border))" }}>
-              <p className="text-xs font-semibold text-muted-foreground tracking-widest uppercase">Transcript</p>
-              <p className="text-xs text-muted-foreground leading-[1.6] whitespace-pre-wrap">{extraction.transcriptText}</p>
-            </div>
+            <SectionPanel title="Transcript">
+              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {extraction.transcriptText}
+              </p>
+            </SectionPanel>
           )}
 
           <div className="h-2" />
