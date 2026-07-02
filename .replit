@@ -90,7 +90,7 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-INBOUND_EMAIL_BASE = "87cee55b9d17b827c147706d9725bf89@inbound.postmarkapp.com"
+INBOUND_EMAIL_BASE = "iq@inbound.flowforgeiq.com"
 
 [userenv.production]
 APP_URL = "https://flowforgeiq.com"
