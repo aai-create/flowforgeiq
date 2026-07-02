@@ -115,6 +115,35 @@ interface Failure {
 async function main(): Promise<void> {
   const failures: Failure[] = [];
 
+  // ── 0. Drift guard: every public table must be accounted for ───────────────
+  // If a developer adds a schema table but forgets to add it to WIPED_TABLES
+  // or PRESERVED_TABLES the wipe will silently leave rows behind.  Query
+  // information_schema first so we fail loudly before touching any data.
+  console.log("\n━━━  Step 0: Check for unlisted tables  ━━━");
+  {
+    const known = new Set<string>([
+      ...(WIPED_TABLES as readonly string[]),
+      ...(PRESERVED_TABLES as readonly string[]),
+    ]);
+    const res = await pool.query<{ table_name: string }>(
+      `SELECT table_name
+       FROM information_schema.tables
+       WHERE table_schema = 'public'
+         AND table_type = 'BASE TABLE'
+       ORDER BY table_name`,
+    );
+    const unlisted = (res.rows as { table_name: string }[]).map((r) => r.table_name).filter((t) => !known.has(t));
+    if (unlisted.length > 0) {
+      const msg =
+        `Table(s) not listed in WIPED_TABLES or PRESERVED_TABLES: ${unlisted.join(", ")}. ` +
+        `Add each to the appropriate constant in verify-wipe.ts (and seed.ts) before running wipe.`;
+      failures.push({ check: "schema:unlisted-tables", reason: msg });
+      console.error(`  ✗  ${msg}`);
+    } else {
+      console.log(`  ✓  All ${res.rows.length} public table(s) are accounted for`);
+    }
+  }
+
   // ── 1. Snapshot pre-wipe counts ────────────────────────────────────────────
   console.log("\n━━━  Step 1: Snapshot pre-wipe row counts  ━━━");
   const preCounts: Record<string, number> = {};
