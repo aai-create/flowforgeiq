@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useListShipments, useIngestChat, ChatIngestInputChannel } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation, useSearch } from "wouter";
+import { useTranslation } from "react-i18next";
 import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Upload, Paperclip, CheckCircle2 } from "lucide-react";
 import { detectChannel } from "@/lib/detectChannel";
 
@@ -58,6 +59,7 @@ export default function CapturePage() {
   const preSelectedName = searchParams.get("shipmentName") ?? "";
 
   const [, navigate] = useLocation();
+  const { t } = useTranslation();
   const textRef = useRef<HTMLTextAreaElement>(null);
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [rawText, setRawText] = useState("");
@@ -172,7 +174,7 @@ export default function CapturePage() {
           }
           navigate("/routing-result");
         },
-        onError: () => { alert("Analysis failed. Please try again."); },
+        onError: () => { alert(t("capture.analysisFailed")); },
       }
     );
   }
@@ -201,7 +203,7 @@ export default function CapturePage() {
           />
           <div>
             <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-            <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">Capture</p>
+            <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("capture.title")}</p>
           </div>
         </div>
         {hasContent && (
@@ -233,7 +235,7 @@ export default function CapturePage() {
             >
               <CheckCircle2 size={15} style={{ color: "hsl(var(--primary))", flexShrink: 0 }} />
               <p className="text-[13px] font-semibold" style={{ color: "hsl(var(--primary))" }}>
-                Shared content received
+                {t("capture.sharedReceived")}
               </p>
               {autoDetectedLabel && (
                 <span
@@ -263,7 +265,7 @@ export default function CapturePage() {
                 </p>
                 {rawText.length > 160 && (
                   <p className="text-[11px] mt-1.5" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {rawText.length} characters total
+                    {rawText.length} {t("common.characters")} {t("capture.totalChars")}
                   </p>
                 )}
               </div>
@@ -299,7 +301,7 @@ export default function CapturePage() {
               }}
             >
               {showManualEdit ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              {showManualEdit ? "Hide editor" : "Edit content"}
+              {showManualEdit ? t("capture.editToggleHide") : t("capture.editToggleShow")}
             </button>
           </div>
         ) : (
@@ -320,14 +322,14 @@ export default function CapturePage() {
               <Zap size={15} fill="white" strokeWidth={0} />
             </div>
             <p className="text-xs leading-relaxed flex-1" style={{ color: "hsl(var(--accent-foreground))" }}>
-              Paste a chat export and AI will extract the shipment details automatically
+              {t("capture.aiHint")}
             </p>
           </div>
         )}
 
-        {/* Channel selector — always shown so user can correct auto-detection */}
+        {/* Channel selector */}
         <div className="flex flex-col gap-2">
-          <p className="section-label">Source Channel</p>
+          <p className="section-label">{t("capture.sourceChannel")}</p>
           <div className="pill-scroll-row">
             {CHANNELS.map(({ id, label, color }) => {
               const active = channel === id;
@@ -351,10 +353,10 @@ export default function CapturePage() {
           </div>
         </div>
 
-        {/* Text area — always shown for manual entry; collapsible when share entry */}
+        {/* Text area */}
         {(!isShareEntry || showManualEdit) && (
           <div className="flex flex-col gap-2">
-            <p className="section-label">{isShareEntry ? "Edit Content" : "Paste or Type Message"}</p>
+            <p className="section-label">{isShareEntry ? t("capture.editContent") : t("capture.pasteOrType")}</p>
             <div
               className="rounded-2xl bg-card p-3.5 card-elevated"
               style={{ border: "1px solid hsl(var(--border))" }}
@@ -368,17 +370,17 @@ export default function CapturePage() {
               />
               {rawText.length > 0 && (
                 <p className="text-[11px] text-right mt-1 text-muted-foreground">
-                  {rawText.length} chars
+                  {rawText.length} {t("common.characters")}
                 </p>
               )}
             </div>
           </div>
         )}
 
-        {/* File attach — proper upload zone; collapsed in share mode unless no file yet */}
+        {/* File attach */}
         {(!isShareEntry || !attachedFile) && (
           <div className="flex flex-col gap-2">
-            <p className="section-label">Attach File</p>
+            <p className="section-label">{t("capture.attachFile")}</p>
             {!attachedFile ? (
               <label className="upload-zone flex flex-col items-center justify-center gap-2 py-5 px-4 active:opacity-70">
                 <div
@@ -388,8 +390,8 @@ export default function CapturePage() {
                   <Upload size={18} color="hsl(var(--primary))" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">Choose a file</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Images, PDFs, spreadsheets</p>
+                  <p className="text-sm font-medium text-foreground">{t("capture.chooseFile")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("capture.fileTypes")}</p>
                 </div>
                 <input type="file" className="hidden" onChange={handleFileChange} />
               </label>
@@ -425,21 +427,21 @@ export default function CapturePage() {
           </div>
         )}
 
-        {/* ── Optional section divider ─────────────────────────── */}
+        {/* Optional divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px" style={{ backgroundColor: "hsl(var(--border))" }} />
           <span
             className="text-[11px] font-medium px-2.5 py-0.5 rounded-full"
             style={{ color: "hsl(var(--muted-foreground))", backgroundColor: "hsl(var(--muted))" }}
           >
-            Optional
+            {t("capture.optional")}
           </span>
           <div className="flex-1 h-px" style={{ backgroundColor: "hsl(var(--border))" }} />
         </div>
 
-        {/* Sender hint — optional */}
+        {/* Sender hint */}
         <div className="flex flex-col gap-2">
-          <p className="section-label" style={{ opacity: 0.7 }}>Sender Hint</p>
+          <p className="section-label" style={{ opacity: 0.7 }}>{t("capture.senderHint")}</p>
           <div
             className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-card"
             style={{ border: "1px solid hsl(var(--border))" }}
@@ -449,14 +451,14 @@ export default function CapturePage() {
               className="flex-1 bg-transparent text-sm outline-none text-foreground"
               value={senderHint}
               onChange={(e) => setSenderHint(e.target.value)}
-              placeholder="Supplier or contact name…"
+              placeholder={t("capture.senderPlaceholder")}
             />
           </div>
         </div>
 
-        {/* Shipment picker — optional */}
+        {/* Shipment picker */}
         <div className="flex flex-col gap-2">
-          <p className="section-label" style={{ opacity: 0.7 }}>Hint to Shipment</p>
+          <p className="section-label" style={{ opacity: 0.7 }}>{t("capture.hintToShipment")}</p>
           {selectedShipment ? (
             <div
               className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl"
@@ -482,7 +484,7 @@ export default function CapturePage() {
               style={{ border: "1px solid hsl(var(--border))" }}
             >
               <Search size={15} color="hsl(var(--muted-foreground))" />
-              <span className="flex-1 text-left text-sm text-muted-foreground">Search shipments…</span>
+              <span className="flex-1 text-left text-sm text-muted-foreground">{t("capture.searchShipments")}</span>
               {showPicker ? (
                 <ChevronUp size={15} color="hsl(var(--muted-foreground))" />
               ) : (
@@ -511,7 +513,7 @@ export default function CapturePage() {
                 style={{ border: "1px solid hsl(var(--border))", maxHeight: 220 }}
               >
                 {filtered.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center p-4">No shipments found</p>
+                  <p className="text-sm text-muted-foreground text-center p-4">{t("common.noShipmentsFound")}</p>
                 ) : (
                   <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
                     {filtered.map((s, i) => (
@@ -550,31 +552,22 @@ export default function CapturePage() {
             background: canSubmit
               ? "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)"
               : "hsl(var(--muted))",
+            boxShadow: canSubmit ? "0 4px 16px hsl(var(--primary) / 0.4)" : "none",
             color: canSubmit ? "white" : "hsl(var(--muted-foreground))",
-            boxShadow: canSubmit ? "0 4px 16px hsl(var(--primary) / 0.45)" : "none",
-            transition: "background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease",
+            opacity: canSubmit ? 1 : 0.7,
           }}
         >
           {isPending ? (
-            <>
-              <div
-                className="w-[18px] h-[18px] rounded-full border-2 border-white/30 border-t-white animate-spin shrink-0"
-              />
-              <span>Analysing…</span>
-            </>
+            <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
           ) : (
             <>
               <Zap size={18} fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"} strokeWidth={0} />
-              {isShareEntry ? "Analyse with AI" : "Submit for Routing"}
+              {isPending ? t("capture.analyzing") : t("capture.analyzeAi")}
             </>
           )}
         </button>
 
-        <p className="text-xs text-center text-muted-foreground leading-relaxed -mt-2">
-          AI extracts details and routes to the best-matching shipment
-        </p>
-
-        <div className="h-2" />
+        <div className="h-4" />
       </div>
     </AppShell>
   );

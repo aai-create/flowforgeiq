@@ -24,9 +24,10 @@ import {
   Edit2,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatBytes(bytes: number) {
@@ -37,10 +38,10 @@ function formatBytes(bytes: number) {
 
 function getStatusConfig(status: string) {
   switch (status) {
-    case "extracted": return { color: "#22c55e", Icon: CheckCircle, label: "Extracted" };
-    case "processing": return { color: "#f59e0b", Icon: Clock, label: "Processing" };
-    case "failed": return { color: "#e63946", Icon: AlertCircle, label: "Failed" };
-    default: return { color: "#8896a7", Icon: HelpCircle, label: status };
+    case "extracted": return { color: "#22c55e", Icon: CheckCircle, labelKey: "documents.filterExtracted" };
+    case "processing": return { color: "#f59e0b", Icon: Clock, labelKey: "documents.filterProcessing" };
+    case "failed": return { color: "#e63946", Icon: AlertCircle, labelKey: "documents.filterFailed" };
+    default: return { color: "#8896a7", Icon: HelpCircle, labelKey: null };
   }
 }
 
@@ -71,6 +72,7 @@ function SectionPanel({ title, children, badge }: { title: string; children: Rea
 }
 
 function ShipmentPickerSheet({ onSelect, onClose }: { onSelect: (id: number) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const { data: shipments } = useListShipments();
   const [q, setQ] = useState("");
   const filtered = (shipments ?? [])
@@ -96,7 +98,7 @@ function ShipmentPickerSheet({ onSelect, onClose }: { onSelect: (id: number) => 
           className="flex items-center justify-between px-5 pt-4 pb-3"
           style={{ borderBottom: "1px solid hsl(var(--border))" }}
         >
-          <p className="font-bold text-foreground text-base">Link to Shipment</p>
+          <p className="font-bold text-foreground text-base">{t("docDetail.linkToShipment")}</p>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
@@ -116,13 +118,13 @@ function ShipmentPickerSheet({ onSelect, onClose }: { onSelect: (id: number) => 
               className="flex-1 bg-transparent text-sm outline-none"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="PO number, product, supplier…"
+              placeholder={t("docDetail.searchPlaceholder")}
             />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 pb-6">
           {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No shipments found</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("common.noShipmentsFound")}</p>
           ) : (
             filtered.map((s, i) => (
               <button
@@ -153,6 +155,7 @@ function EditableFieldRow({
   label: string; fieldKey: string; value: string | number | null | undefined;
   docId: number; documentType: string; editingKey: string | null; setEditingKey: (k: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(value != null ? String(value) : "");
   const [savedKey, setSavedKey] = useState<string | null>(null);
   const { mutate: saveCorrection, isPending } = useSaveExtractionCorrection();
@@ -183,7 +186,7 @@ function EditableFieldRow({
         <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
         {savedKey === fieldKey ? (
           <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "#22c55e" }}>
-            <Check size={11} strokeWidth={2.5} /> Saved
+            <Check size={11} strokeWidth={2.5} /> {t("common.saved")}
           </span>
         ) : isEditing ? (
           <div className="flex items-center gap-1.5">
@@ -192,7 +195,7 @@ function EditableFieldRow({
               className="text-[11px] text-muted-foreground px-2 py-0.5 rounded-lg"
               style={{ border: "1px solid hsl(var(--border))" }}
             >
-              Cancel
+              {t("docDetail.cancel")}
             </button>
             <button
               onClick={handleSave}
@@ -200,7 +203,7 @@ function EditableFieldRow({
               className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white"
               style={{ backgroundColor: "hsl(var(--primary))" }}
             >
-              {isPending ? "Saving…" : "Save"}
+              {isPending ? t("docDetail.savingEllipsis") : t("common.save")}
             </button>
           </div>
         ) : (
@@ -208,7 +211,7 @@ function EditableFieldRow({
             onClick={() => { setDraft(value != null ? String(value) : ""); setEditingKey(fieldKey); }}
             className="flex items-center gap-1 text-[11px] text-muted-foreground active:opacity-60"
           >
-            <Edit2 size={11} /> Edit
+            <Edit2 size={11} /> {t("common.edit")}
           </button>
         )}
       </div>
@@ -233,6 +236,7 @@ function EditableFieldRow({
 export default function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { t } = useTranslation();
   const docId = Number(id);
   const { data: doc, isLoading, isError } = useGetDocument(docId);
   const { mutate: updateDoc, isPending: isLinking } = useUpdateDocument();
@@ -248,7 +252,7 @@ export default function DocumentDetailPage() {
           <button onClick={() => navigate("/documents")} className="active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
-          <p className="text-white font-bold text-[17px]">Document</p>
+          <p className="text-white font-bold text-[17px]">{t("docDetail.title")}</p>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="app-spinner" />
@@ -264,10 +268,10 @@ export default function DocumentDetailPage() {
           <button onClick={() => navigate("/documents")} className="active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
-          <p className="text-white font-bold text-[17px]">Document</p>
+          <p className="text-white font-bold text-[17px]">{t("docDetail.title")}</p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
-          <p className="text-muted-foreground text-center">Could not load document.</p>
+          <p className="text-muted-foreground text-center">{t("docDetail.couldNotLoad")}</p>
           <button
             onClick={() => navigate("/documents")}
             className="px-5 py-2.5 rounded-xl text-white font-semibold btn-press"
@@ -276,14 +280,15 @@ export default function DocumentDetailPage() {
               boxShadow: "0 4px 12px hsl(var(--primary) / 0.35)",
             }}
           >
-            Back to Documents
+            {t("docDetail.backToDocuments")}
           </button>
         </div>
       </div>
     );
   }
 
-  const { color, Icon, label } = getStatusConfig(doc.status);
+  const { color, Icon, labelKey } = getStatusConfig(doc.status);
+  const statusLabel = labelKey ? t(labelKey as any) : doc.status;
   const FileIcon = getFileIcon(doc.fileType);
   const extraction = doc.extraction;
   const linkedShipment = doc.shipmentId != null
@@ -329,7 +334,7 @@ export default function DocumentDetailPage() {
         <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
 
           {/* File type + status */}
-          <SectionPanel title="File Info">
+          <SectionPanel title={t("docDetail.fileInfo")}>
             <div className="flex items-center gap-3">
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
@@ -350,7 +355,7 @@ export default function DocumentDetailPage() {
                     style={{ backgroundColor: `${color}18` }}
                   >
                     <Icon size={12} color={color} />
-                    <span className="text-[11px] font-bold" style={{ color }}>{label}</span>
+                    <span className="text-[11px] font-bold" style={{ color }}>{statusLabel}</span>
                   </div>
                   {extraction?.confidence != null && extraction.confidence > 0 && (
                     <span className="text-xs text-muted-foreground">
@@ -363,14 +368,14 @@ export default function DocumentDetailPage() {
           </SectionPanel>
 
           {/* Shipment linking */}
-          <SectionPanel title="Linked Shipment">
+          <SectionPanel title={t("docDetail.linkedShipment")}>
             {linkedSuccess && (
               <div
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
                 style={{ backgroundColor: "#22c55e12", border: "1px solid #22c55e25" }}
               >
                 <Check size={14} color="#22c55e" strokeWidth={2.5} />
-                <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>Shipment linked successfully</span>
+                <span className="text-xs font-semibold" style={{ color: "#22c55e" }}>{t("docDetail.linkSuccess")}</span>
               </div>
             )}
             {linkedShipment ? (
@@ -398,7 +403,7 @@ export default function DocumentDetailPage() {
                       backgroundColor: "hsl(var(--primary) / 0.05)",
                     }}
                   >
-                    Change
+                    {t("docDetail.change")}
                   </button>
                   <button
                     onClick={handleUnlink}
@@ -409,7 +414,7 @@ export default function DocumentDetailPage() {
                       color: "hsl(var(--muted-foreground))",
                     }}
                   >
-                    Unlink
+                    {t("docDetail.unlink")}
                   </button>
                 </div>
               </div>
@@ -424,7 +429,7 @@ export default function DocumentDetailPage() {
                 }}
               >
                 <Search size={15} />
-                Link to shipment
+                {t("docDetail.linkShipmentBtn")}
               </button>
             )}
           </SectionPanel>
@@ -437,7 +442,7 @@ export default function DocumentDetailPage() {
             >
               <AlertCircle size={18} color="#e63946" className="shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-foreground">Extraction failed</p>
+                <p className="text-sm font-semibold text-foreground">{t("docDetail.extractionFailed")}</p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{extraction.errorMessage}</p>
               </div>
             </div>
@@ -445,7 +450,7 @@ export default function DocumentDetailPage() {
 
           {/* Extracted fields */}
           {fields && Object.keys(fields).length > 0 && (
-            <SectionPanel title="Extracted Fields" badge="Tap Edit to correct">
+            <SectionPanel title={t("docDetail.extractedFields")} badge={t("docDetail.tapEditCorrect")}>
               <div>
                 {Object.entries(fields).map(([key, val]) => (
                   <EditableFieldRow
@@ -465,7 +470,7 @@ export default function DocumentDetailPage() {
 
           {/* Line items */}
           {lineItems.length > 0 && (
-            <SectionPanel title="Line Items">
+            <SectionPanel title={t("docDetail.lineItems")}>
               <div className="overflow-x-auto -mx-1 px-1">
                 <table className="w-full text-xs">
                   <thead>
@@ -499,7 +504,7 @@ export default function DocumentDetailPage() {
 
           {/* Reconciliation findings */}
           {findings.length > 0 && (
-            <SectionPanel title={`Reconciliation Findings (${findings.length})`}>
+            <SectionPanel title={`${t("docDetail.reconciliation")} (${findings.length})`}>
               <div className="flex flex-col gap-2">
                 {findings.map((f, i) => (
                   <div
@@ -523,7 +528,7 @@ export default function DocumentDetailPage() {
 
           {/* Transcript */}
           {extraction?.transcriptText && (
-            <SectionPanel title="Transcript">
+            <SectionPanel title={t("docDetail.transcript")}>
               <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {extraction.transcriptText}
               </p>

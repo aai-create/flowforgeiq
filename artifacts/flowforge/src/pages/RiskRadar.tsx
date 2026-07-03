@@ -17,6 +17,7 @@ import type { RiskRadarItem } from "@workspace/api-client-react";
 import { shortDate } from "@/lib/adapters";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 function riskColor(score: number) {
   if (score >= 70) return { bg: "bg-red-500",   text: "text-red-600",   light: "bg-red-50 border-red-100",   badge: "bg-red-50 text-red-700 border-red-100" };
@@ -24,10 +25,10 @@ function riskColor(score: number) {
   return               { bg: "bg-emerald-500", text: "text-emerald-600", light: "bg-emerald-50 border-emerald-100", badge: "bg-emerald-50 text-emerald-700 border-emerald-100" };
 }
 
-function riskLabel(score: number) {
-  if (score >= 70) return "High";
-  if (score >= 45) return "Medium";
-  return "Low";
+function riskLabel(score: number, t?: (key: string) => string) {
+  if (score >= 70) return t ? t("riskRadar.high") : "High";
+  if (score >= 45) return t ? t("riskRadar.medium") : "Medium";
+  return t ? t("riskRadar.low") : "Low";
 }
 
 function fmt(usd: number) {
@@ -56,6 +57,7 @@ function RiskGauge({ score }: { score: number }) {
         <span className={`text-lg font-bold leading-none ${c.text}`}>{score}</span>
         <span className="text-[8px] text-[#9E9FAE] font-medium mt-0.5">risk</span>
       </div>
+      
     </div>
   );
 }
@@ -74,6 +76,7 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
 
 export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po: string) => void }) {
   const [location, navigate] = useLocation();
+  const { t } = useTranslation();
   const { data: radarData, isLoading: radarLoading, refetch } = useGetRiskRadar();
   const { data: accuracyData, isLoading: accuracyLoading } = useGetPredictionAccuracy();
 
@@ -121,7 +124,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
   return (
     <div className="h-full flex flex-col bg-[#FAFBFC] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
-      <GlobalHeader breadcrumb="Risk Radar" />
+      <GlobalHeader breadcrumb={t("riskRadar.breadcrumb")} />
 
       <div className="flex-1 flex overflow-hidden">
       <NavSidebar showBrand={false} />
@@ -132,10 +135,10 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
       {/* Summary cards */}
       <div className="shrink-0 bg-white border-b border-[#E5EAF0] px-4 py-3">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Portfolio Summary</span>
+          <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">{t("riskRadar.portfolioSummary")}</span>
           <button onClick={() => refetch()}
             className="flex items-center gap-1.5 text-[11px] font-medium text-[#5E687B] hover:text-[#212833] border border-[#E5EAF0] px-3 py-1.5 rounded-md hover:bg-[#F0F4F8] transition-colors">
-            <RefreshCw className="w-3 h-3" /> Refresh
+            <RefreshCw className="w-3 h-3" /> {t("riskRadar.refresh")}
           </button>
         </div>
         <div className="grid grid-cols-4 gap-3">
@@ -144,7 +147,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3 text-left cursor-pointer hover:border-[#9000FF]/40 hover:bg-[#F5F0FF] transition-all">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign className="w-3.5 h-3.5 text-[#9000FF]" />
-              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">Risk Exposure</span>
+              <span className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide">{t("riskRadar.riskExposure")}</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <span className="text-[#C0C8D4] hover:text-[#9000FF] transition-colors ml-auto" onClick={e => e.stopPropagation()}>
@@ -152,8 +155,8 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                   </span>
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-3 text-[12px]" align="end">
-                  <p className="font-semibold text-[#212833] mb-1">Risk Exposure</p>
-                  <p className="text-[#5E687B] leading-relaxed">Total financial exposure weighted by each shipment's risk score — the higher the risk score, the more of the PO value is counted. Use this to prioritise which delays to address first.</p>
+                  <p className="font-semibold text-[#212833] mb-1">{t("riskRadar.riskExposure")}</p>
+                  <p className="text-[#5E687B] leading-relaxed">{t("riskRadar.riskExposureDesc")}</p>
                   <Link to="/help#handle-delays" className="mt-2 inline-flex items-center gap-1 text-[#9000FF] hover:underline text-[11px] font-medium">
                     Learn more →
                   </Link>
@@ -161,7 +164,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
               </Popover>
             </div>
             <div className="text-xl font-bold text-[#212833]">{fmt(radarData?.totalExposureUsd ?? 0)}</div>
-            <div className="text-[10px] text-[#5E687B] mt-0.5">{activeTiers.size > 0 ? "click to show all" : "weighted by risk score"}</div>
+            <div className="text-[10px] text-[#5E687B] mt-0.5">{activeTiers.size > 0 ? t("riskRadar.showAll") : t("riskRadar.weightedByScore")}</div>
           </button>
           <button
             onClick={() => toggleTier("high")}
@@ -172,10 +175,10 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             }`}>
             <div className="flex items-center gap-2 mb-1">
               <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-              <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide">High Risk</span>
+              <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide">{t("riskRadar.highRisk")}</span>
             </div>
             <div className="text-xl font-bold text-red-600">{highCount}</div>
-            <div className="text-[10px] text-red-500 mt-0.5">shipments score ≥70</div>
+            <div className="text-[10px] text-red-500 mt-0.5">{t("riskRadar.highScoreSuffix")}</div>
           </button>
           <button
             onClick={() => toggleTier("medium")}
@@ -186,10 +189,10 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             }`}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Medium Risk</span>
+              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">{t("riskRadar.mediumRisk")}</span>
             </div>
             <div className="text-xl font-bold text-amber-600">{medCount}</div>
-            <div className="text-[10px] text-amber-600 mt-0.5">shipments score 45–69</div>
+            <div className="text-[10px] text-amber-600 mt-0.5">{t("riskRadar.medScoreSuffix")}</div>
           </button>
           <button
             onClick={() => toggleTier("low")}
@@ -200,10 +203,10 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             }`}>
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">On Track</span>
+              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">{t("riskRadar.lowRisk")}</span>
             </div>
             <div className="text-xl font-bold text-emerald-600">{lowCount}</div>
-            <div className="text-[10px] text-emerald-600 mt-0.5">shipments score &lt;45</div>
+            <div className="text-[10px] text-emerald-600 mt-0.5">{t("riskRadar.lowScoreSuffix")}</div>
           </button>
         </div>
       </div>
@@ -217,18 +220,18 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9E9FAE]" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search PO, product, supplier..."
+                placeholder={t("riskRadar.searchPlaceholder")}
                 className="w-full h-8 bg-[#F0F4F8] border border-transparent rounded-md pl-8 pr-3 text-[12px] focus:outline-none focus:border-[#9000FF]/30 focus:bg-white transition-colors" />
             </div>
             <div className="ml-auto flex items-center gap-2 text-[11px] text-[#5E687B]">
-              <span>Sort:</span>
+              <span>{t("riskRadar.sort")}</span>
               <button onClick={() => setSortBy("exposure")}
                 className={`px-2 py-1 rounded border text-[10px] font-semibold transition-colors ${sortBy === "exposure" ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20" : "border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}>
-                Exposure
+                {t("riskRadar.sortExposure")}
               </button>
               <button onClick={() => setSortBy("score")}
                 className={`px-2 py-1 rounded border text-[10px] font-semibold transition-colors ${sortBy === "score" ? "bg-[#9000FF]/10 text-[#9000FF] border-[#9000FF]/20" : "border-[#E5EAF0] hover:bg-[#F0F4F8]"}`}>
-                Risk Score
+                {t("riskRadar.sortScore")}
               </button>
             </div>
           </div>
@@ -238,11 +241,11 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
               {radarLoading && (
                 <div className="flex items-center justify-center py-12 text-[#9E9FAE] gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Computing risk predictions...</span>
+                  <span className="text-sm">{t("riskRadar.computing")}</span>
                 </div>
               )}
               {!radarLoading && filtered.length === 0 && (
-                <div className="text-center py-12 text-[#9E9FAE] text-sm">No shipments match the current filter.</div>
+                <div className="text-center py-12 text-[#9E9FAE] text-sm">{t("riskRadar.noShipments")}</div>
               )}
               {filtered.map((item, rank) => {
                 const c = riskColor(item.riskScore);
@@ -262,7 +265,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                             {item.poNumber}
                           </span>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${c.badge}`}>
-                            {riskLabel(item.riskScore)} Risk
+                            {riskLabel(item.riskScore, t)} {t("riskRadar.riskSuffix")}
                           </span>
                           <span className="text-[10px] bg-[#F0F4F8] text-[#5E687B] border border-[#E5EAF0] px-1.5 py-0.5 rounded font-medium">
                             {item.customerName}
@@ -280,8 +283,8 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="text-base font-bold text-[#212833]">{fmt(item.riskExposureUsd)}</div>
-                        <div className="text-[10px] text-[#5E687B]">risk exposure</div>
-                        <div className="text-[10px] text-[#9E9FAE] mt-0.5">{fmt(item.financialExposureUsd)} total</div>
+                        <div className="text-[10px] text-[#5E687B]">{t("riskRadar.riskExposureLabel")}</div>
+                        <div className="text-[10px] text-[#9E9FAE] mt-0.5">{fmt(item.financialExposureUsd)} {t("riskRadar.totalLabel")}</div>
                         <ConfidenceBar confidence={item.confidence} />
                       </div>
                       <ChevronRight className={`w-4 h-4 text-[#9E9FAE] shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
@@ -294,7 +297,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                             onClick={e => { e.stopPropagation(); navigate("/risk-radar"); }}
                             className="text-xs font-medium text-[#9000FF] hover:text-[#7A00D9] transition-colors"
                           >
-                            Risk Radar
+                            {t("riskRadar.breadcrumb")}
                           </button>
                           <span className="text-[#C0C8D4] text-xs select-none">/</span>
                           <button
@@ -307,7 +310,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2 flex items-center gap-1">
-                              <Zap className="w-3 h-3 text-[#9000FF]" /> Top Risk Signal
+                              <Zap className="w-3 h-3 text-[#9000FF]" /> {t("riskRadar.topRiskSignal")}
                             </div>
                             <div className="p-2.5 bg-[#FAFBFC] rounded-lg border border-[#E5EAF0] text-[12px] text-[#212833]">
                               {item.topSignal}
@@ -315,11 +318,11 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                           </div>
                           <div>
                             <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2 flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-[#9000FF]" /> Predicted ETA Range
+                              <Calendar className="w-3 h-3 text-[#9000FF]" /> {t("riskRadar.predictedEtaRange")}
                             </div>
                             <div className="p-2.5 bg-[#FAFBFC] rounded-lg border border-[#E5EAF0] text-[12px] text-[#212833]">
                               {shortDate(item.predictedEtaMin)} – {shortDate(item.predictedEtaMax)}
-                              <span className="text-[11px] text-[#9E9FAE] ml-1">({Math.round(item.confidence * 100)}% conf.)</span>
+                              <span className="text-[11px] text-[#9E9FAE] ml-1">({Math.round(item.confidence * 100)}% {t("riskRadar.conf")})</span>
                             </div>
                           </div>
                         </div>
@@ -327,10 +330,10 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                           <button
                             onClick={e => { e.stopPropagation(); navigate(`/orders?shipment=${item.shipmentId}&from=risk-radar`); }}
                             className="text-[10px] bg-[#9000FF] text-white px-3 py-1.5 rounded-md font-semibold hover:bg-[#7A00D9] transition-colors flex items-center gap-1.5">
-                            <ArrowUpRight className="w-3 h-3" /> Open Shipment
+                            <ArrowUpRight className="w-3 h-3" /> {t("riskRadar.openShipment")}
                           </button>
                           <span className="text-[10px] text-[#9E9FAE]">
-                            Computed {shortDate(item.computedAt)}
+                            {t("riskRadar.computed")} {shortDate(item.computedAt)}
                           </span>
                         </div>
                       </div>
@@ -346,7 +349,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
         <div className="w-[300px] shrink-0 flex flex-col bg-white overflow-hidden">
           <div className="h-10 border-b border-[#E5EAF0] flex items-center px-4 shrink-0">
             <span className="text-[11px] font-bold text-[#212833] uppercase tracking-wide flex items-center gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5 text-[#9000FF]" /> Model Accuracy
+              <BarChart3 className="w-3.5 h-3.5 text-[#9000FF]" /> {t("riskRadar.modelAccuracy")}
             </span>
           </div>
           <ScrollArea className="flex-1">
@@ -354,7 +357,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
               {accuracyLoading ? (
                 <div className="flex items-center justify-center py-8 text-[#9E9FAE] gap-2">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span className="text-xs">Loading...</span>
+                  <span className="text-xs">{t("riskRadar.loading")}</span>
                 </div>
               ) : accuracyData ? (
                 <>
@@ -362,7 +365,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                   <div className="space-y-2">
                     <div className="p-3 bg-[#FAFBFC] rounded-lg border border-[#E5EAF0]">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[11px] font-semibold text-[#212833]">Within 3 days</span>
+                        <span className="text-[11px] font-semibold text-[#212833]">{t("riskRadar.withinDays3")}</span>
                         <span className="text-sm font-bold text-[#9000FF]">{accuracyData.overallWithinThreeDaysPct}%</span>
                       </div>
                       <div className="h-1.5 bg-[#E5EAF0] rounded-full overflow-hidden">
@@ -371,7 +374,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                     </div>
                     <div className="p-3 bg-[#FAFBFC] rounded-lg border border-[#E5EAF0]">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[11px] font-semibold text-[#212833]">Within 7 days</span>
+                        <span className="text-[11px] font-semibold text-[#212833]">{t("riskRadar.withinDays7")}</span>
                         <span className="text-sm font-bold text-emerald-600">{accuracyData.overallWithinSevenDaysPct}%</span>
                       </div>
                       <div className="h-1.5 bg-[#E5EAF0] rounded-full overflow-hidden">
@@ -382,7 +385,7 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
 
                   {/* Bucket breakdown */}
                   <div>
-                    <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">By Lead Time</div>
+                    <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-2">{t("riskRadar.byLeadTime")}</div>
                     <div className="space-y-2">
                       {accuracyData.buckets.map(b => {
                         const within3Pct = b.totalPredictions > 0 ? Math.round((b.withinThreeDayCount / b.totalPredictions) * 100) : 0;
@@ -404,11 +407,11 @@ export function RiskRadar({ onNavigateToShipment }: { onNavigateToShipment?: (po
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="p-2 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg">
                       <div className="text-base font-bold text-[#212833]">{accuracyData.totalPredictions}</div>
-                      <div className="text-[9px] text-[#5E687B]">total predictions</div>
+                      <div className="text-[9px] text-[#5E687B]">{t("riskRadar.totalPredictions")}</div>
                     </div>
                     <div className="p-2 bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg">
                       <div className="text-base font-bold text-[#212833]">{accuracyData.resolvedPredictions}</div>
-                      <div className="text-[9px] text-[#5E687B]">resolved POs</div>
+                      <div className="text-[9px] text-[#5E687B]">{t("riskRadar.resolvedPOs")}</div>
                     </div>
                   </div>
 

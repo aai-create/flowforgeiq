@@ -3,6 +3,7 @@ import { useListShipments } from "@workspace/api-client-react";
 import type { Shipment } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircle,
   AlertTriangle,
@@ -23,14 +24,6 @@ const STATUS_CONFIG: Record<string, { color: string; Icon: React.ComponentType<{
   completed: { color: "#8896a7", Icon: Archive },
 };
 
-function statusLabel(status: string) {
-  if (status === "on-track") return "On Track";
-  if (status === "at-risk") return "At Risk";
-  if (status === "delayed") return "Delayed";
-  if (status === "completed") return "Completed";
-  return status;
-}
-
 function isStandaloneMode(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -42,6 +35,7 @@ function isStandaloneMode(): boolean {
 const SHARE_BANNER_KEY = "ff:share-banner-dismissed";
 
 function ShareInstallBanner() {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SHARE_BANNER_KEY) === "yes";
@@ -80,21 +74,21 @@ function ShareInstallBanner() {
             <Share2 size={14} style={{ color: "hsl(var(--primary))" }} />
           </div>
           <p className="text-[13px] font-semibold text-foreground leading-tight">
-            Share directly from WhatsApp
+            {t("home.shareBannerTitle")}
           </p>
         </div>
         <button
           onClick={handleDismiss}
           className="p-0.5 shrink-0 active:opacity-60"
           style={{ color: "hsl(var(--muted-foreground))" }}
-          aria-label="Dismiss"
+          aria-label={t("common.dismiss")}
         >
           <X size={15} />
         </button>
       </div>
 
       <p className="text-[12px] text-muted-foreground leading-relaxed">
-        Install this app on your home screen to send chat exports straight to FlowForgeIQ — no copy-paste needed.
+        {t("home.shareBannerDesc")}
       </p>
 
       <div
@@ -104,16 +98,15 @@ function ShareInstallBanner() {
         {isIOS ? (
           <>
             <p className="text-[11px] text-muted-foreground">
-              <span className="font-semibold text-foreground">Safari only</span> — tap the{" "}
-              <span className="font-semibold text-foreground">Share</span> button in the toolbar,
-              then <span className="font-semibold text-foreground">Add to Home Screen</span>.
+              <span className="font-semibold text-foreground">{t("home.iosSafariOnly")}</span> — {t("home.iosTapShare")}{" "}
+              <span className="font-semibold text-foreground">{t("home.iosShare")}</span> {t("home.iosThen")}{" "}
+              <span className="font-semibold text-foreground">{t("home.iosAddHome")}</span>.
             </p>
           </>
         ) : (
           <>
             <p className="text-[11px] text-muted-foreground">
-              Tap <span className="font-semibold text-foreground">⋮ Menu → Add to Home Screen</span> in Chrome
-              to install. Then use Android's share sheet from any app.
+              {t("home.androidTap")} <span className="font-semibold text-foreground">{t("home.androidMenu")}</span> {t("home.androidInstall")}
             </p>
           </>
         )}
@@ -123,8 +116,17 @@ function ShareInstallBanner() {
 }
 
 function ShipmentCard({ shipment, onPress }: { shipment: Shipment; onPress: () => void }) {
+  const { t } = useTranslation();
   const cfg = STATUS_CONFIG[shipment.status ?? ""] ?? STATUS_CONFIG["on-track"];
   const { Icon } = cfg;
+
+  function statusLabel(status: string) {
+    if (status === "on-track") return t("status.onTrack");
+    if (status === "at-risk") return t("status.atRisk");
+    if (status === "delayed") return t("status.delayed");
+    if (status === "completed") return t("status.completed");
+    return status;
+  }
 
   return (
     <button
@@ -165,7 +167,7 @@ function ShipmentCard({ shipment, onPress }: { shipment: Shipment; onPress: () =
         )}
         {shipment.buyerPoNumber && (
           <span className="text-[11px] text-muted-foreground">
-            Buyer {shipment.buyerPoNumber}
+            {t("home.buyerLabel")} {shipment.buyerPoNumber}
           </span>
         )}
       </div>
@@ -175,6 +177,7 @@ function ShipmentCard({ shipment, onPress }: { shipment: Shipment; onPress: () =
 
 export default function HomePage() {
   const [, navigate] = useLocation();
+  const { t } = useTranslation();
   const { data: shipments, isLoading, isRefetching, refetch, isError } = useListShipments();
 
   const active = (shipments ?? []).filter((s) => s.status !== "completed").slice(0, 30);
@@ -192,7 +195,7 @@ export default function HomePage() {
         />
         <div>
           <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-          <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">Home</p>
+          <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("home.title")}</p>
         </div>
       </div>
 
@@ -201,7 +204,7 @@ export default function HomePage() {
         {isLoading && !isRefetching && (
           <div className="flex flex-col items-center justify-center gap-3 py-24">
             <div className="app-spinner" />
-            <p className="text-sm text-muted-foreground">Loading shipments…</p>
+            <p className="text-sm text-muted-foreground">{t("home.loadingShipments")}</p>
           </div>
         )}
 
@@ -214,8 +217,8 @@ export default function HomePage() {
             >
               <WifiOff size={26} color="hsl(var(--muted-foreground))" />
             </div>
-            <p className="text-sm font-medium text-foreground">Can't load shipments</p>
-            <p className="text-xs text-muted-foreground text-center">Check your connection and try again</p>
+            <p className="text-sm font-medium text-foreground">{t("home.cantLoad")}</p>
+            <p className="text-xs text-muted-foreground text-center">{t("home.checkConnection")}</p>
             <button
               onClick={() => refetch()}
               className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white btn-press"
@@ -224,7 +227,7 @@ export default function HomePage() {
                 boxShadow: "0 4px 12px hsl(var(--primary) / 0.35)",
               }}
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         )}
@@ -240,9 +243,9 @@ export default function HomePage() {
               >
                 <Package size={30} color="hsl(var(--primary))" />
               </div>
-              <p className="font-semibold text-foreground text-center">No active shipments</p>
+              <p className="font-semibold text-foreground text-center">{t("home.noActiveShipments")}</p>
               <p className="text-sm text-muted-foreground text-center leading-relaxed max-w-[240px]">
-                Use the Capture tab to submit messages and route them to shipments.
+                {t("home.noActiveDesc")}
               </p>
             </div>
           </>
@@ -267,7 +270,7 @@ export default function HomePage() {
                 <Zap size={14} fill="hsl(var(--primary))" strokeWidth={0} />
               </div>
               <p className="text-xs leading-[1.45]" style={{ color: "hsl(var(--accent-foreground))" }}>
-                Tap a shipment to view details and capture new updates
+                {t("home.tapHint")}
               </p>
             </div>
 

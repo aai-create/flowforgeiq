@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useCreateMessage, useListShipments } from "@workspace/api-client-react";
 import type { Shipment } from "@workspace/api-client-react";
 import { ArrowLeft, Check, CheckCircle, AlertCircle, HelpCircle, Package, Search, ChevronRight, Edit2, Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface IngestResult {
   routingStatus: "routed" | "needs-review";
@@ -45,13 +46,13 @@ function fadeSlide(animated: boolean, delayMs = 0): React.CSSProperties {
 }
 
 function ConfidenceDisplay({ confidence, animated }: { confidence: number; animated: boolean }) {
+  const { t } = useTranslation();
   const pct = Math.round(confidence * 100);
   const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#e63946";
-  const label = pct >= 75 ? "High confidence" : pct >= 50 ? "Medium confidence" : "Low confidence";
+  const label = pct >= 75 ? t("routing.highConfidence") : pct >= 50 ? t("routing.medConfidence") : t("routing.lowConfidence");
 
   return (
     <div className="flex items-center gap-4">
-      {/* Large score circle */}
       <div
         className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center shrink-0"
         style={{
@@ -69,7 +70,6 @@ function ConfidenceDisplay({ confidence, animated }: { confidence: number; anima
         </span>
         <span className="text-[10px] font-bold" style={{ color: `${color}cc` }}>%</span>
       </div>
-      {/* Bar + label */}
       <div className="flex-1 flex flex-col gap-2">
         <div className="flex justify-between items-baseline">
           <span className="text-xs font-bold" style={{ color }}>{label}</span>
@@ -94,6 +94,7 @@ function ShipmentPicker({
 }: {
   shipments: Shipment[]; search: string; onSearch: (v: string) => void; onSelect: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-2 mt-2">
       <div
@@ -106,12 +107,12 @@ function ShipmentPicker({
           className="flex-1 bg-transparent text-sm outline-none text-foreground"
           value={search}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="PO number, product, supplier…"
+          placeholder={t("routing.searchPlaceholder")}
         />
       </div>
       <div className="section-panel overflow-hidden" style={{ maxHeight: 240 }}>
         {shipments.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center p-4">No shipments found</p>
+          <p className="text-sm text-muted-foreground text-center p-4">{t("common.noShipmentsFound")}</p>
         ) : (
           <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
             {shipments.map((s, i) => (
@@ -159,6 +160,7 @@ function ShipmentChip({ shipment }: { shipment: Shipment }) {
 
 export default function RoutingResultPage() {
   const [, navigate] = useLocation();
+  const { t } = useTranslation();
   const [payload, setPayload] = useState<RoutingPayload | null>(null);
   const [payloadError, setPayloadError] = useState(false);
   const [animated, setAnimated] = useState(false);
@@ -244,10 +246,10 @@ export default function RoutingResultPage() {
   function handleConfirm(shipmentId: number | null) {
     createMessage(buildPayload(shipmentId, shipmentId ? "routed" : "needs-review"), {
       onSuccess: () => {
-        alert(shipmentId ? "Message routed and saved!" : "Sent to triage queue.");
+        alert(shipmentId ? t("routing.savedSuccess") : t("routing.savedTriage"));
         navigate("/home");
       },
-      onError: () => alert("Save failed. Please try again."),
+      onError: () => alert(t("routing.saveFailed")),
     });
   }
 
@@ -264,16 +266,16 @@ export default function RoutingResultPage() {
             />
             <div>
               <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-              <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">Routing Result</p>
+              <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("routing.title")}</p>
             </div>
           </div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
           <p className="text-muted-foreground text-center">
-            {payloadError ? "No routing result found. Please go back and try again." : "Loading…"}
+            {payloadError ? t("routing.noResult") : t("common.loading")}
           </p>
           <button onClick={goBack} className="px-5 py-3.5 rounded-[16px] font-bold text-base btn-press" style={GRADIENT_BTN}>
-            Go back to Capture
+            {t("routing.goBackCapture")}
           </button>
         </div>
       </div>
@@ -288,11 +290,10 @@ export default function RoutingResultPage() {
     );
   }
 
-  const bannerText = isHighConf
-    ? "AI routed this message with high confidence — confirm to save"
-    : isMedConf
-    ? "AI found a possible match — please confirm the right shipment"
-    : "AI couldn't match automatically — pick a shipment or send to triage";
+  const headerSubtitle = isHighConf ? t("routing.autoRouted") : isMedConf ? t("routing.confirmRouting") : t("routing.needsReview");
+  const bannerText = isHighConf ? t("routing.bannerHigh")
+    : isMedConf ? t("routing.bannerMedium")
+    : t("routing.bannerLow");
 
   return (
     <div className="flex flex-col h-full max-w-lg mx-auto overflow-hidden">
@@ -308,7 +309,7 @@ export default function RoutingResultPage() {
           <div>
             <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
             <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">
-              {isHighConf ? "Auto-routed" : isMedConf ? "Confirm routing" : "Needs review"}
+              {headerSubtitle}
             </p>
           </div>
         </div>
@@ -341,7 +342,7 @@ export default function RoutingResultPage() {
           className="section-panel p-4 flex flex-col gap-3"
           style={fadeSlide(animated, 60)}
         >
-          <p className="section-label">AI Confidence</p>
+          <p className="section-label">{t("routing.aiConfidence")}</p>
           <ConfidenceDisplay confidence={confidence} animated={animated} />
           {(result.matchMethod || result.sender) && (
             <div
@@ -350,12 +351,12 @@ export default function RoutingResultPage() {
             >
               {result.matchMethod && (
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">Match:</span> {result.matchMethod}
+                  <span className="font-semibold text-foreground">{t("routing.matchLabel")}:</span> {result.matchMethod}
                 </p>
               )}
               {result.sender && (
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">From:</span> {result.sender}
+                  <span className="font-semibold text-foreground">{t("routing.fromLabel")}:</span> {result.sender}
                 </p>
               )}
             </div>
@@ -381,8 +382,8 @@ export default function RoutingResultPage() {
                   <CheckCircle size={22} color="#22c55e" />
                 </div>
                 <div>
-                  <p className="font-bold text-foreground">Auto-routed successfully</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">High confidence — ready to confirm and save</p>
+                  <p className="font-bold text-foreground">{t("routing.autoRoutedSuccess")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("routing.autoRoutedDesc")}</p>
                 </div>
               </div>
               {suggestedShipment && <ShipmentChip shipment={suggestedShipment} />}
@@ -398,7 +399,7 @@ export default function RoutingResultPage() {
                 >
                   {isPending
                     ? <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    : <><Check size={17} strokeWidth={2.5} /><span>Confirm &amp; Save</span></>}
+                    : <><Check size={17} strokeWidth={2.5} /><span>{t("routing.confirmSave")}</span></>}
                 </button>
                 <button
                   onClick={() => setShowChange(true)}
@@ -409,7 +410,7 @@ export default function RoutingResultPage() {
                     backgroundColor: "hsl(var(--primary) / 0.04)",
                   }}
                 >
-                  <Edit2 size={14} /> Change
+                  <Edit2 size={14} /> {t("routing.change")}
                 </button>
               </div>
             ) : (
@@ -442,8 +443,8 @@ export default function RoutingResultPage() {
                   <AlertCircle size={22} color="#d97706" />
                 </div>
                 <div>
-                  <p className="font-bold text-foreground">Possible match found</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Is this the right shipment?</p>
+                  <p className="font-bold text-foreground">{t("routing.possibleMatch")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("routing.possibleMatchDesc")}</p>
                 </div>
               </div>
               {suggestedShipment && <ShipmentChip shipment={suggestedShipment} />}
@@ -459,7 +460,7 @@ export default function RoutingResultPage() {
                 >
                   {isPending
                     ? <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    : <><Check size={17} strokeWidth={2.5} /><span>Yes, confirm</span></>}
+                    : <><Check size={17} strokeWidth={2.5} /><span>{t("routing.yesConfirm")}</span></>}
                 </button>
                 <button
                   onClick={() => setShowChange(true)}
@@ -470,7 +471,7 @@ export default function RoutingResultPage() {
                     backgroundColor: "hsl(var(--primary) / 0.04)",
                   }}
                 >
-                  <Search size={14} /> Pick
+                  <Search size={14} /> {t("routing.pick")}
                 </button>
               </div>
             ) : (
@@ -488,7 +489,7 @@ export default function RoutingResultPage() {
               className="text-sm text-center text-muted-foreground py-2 active:opacity-60"
               style={fadeSlide(animated, 370)}
             >
-              None of these — send to web queue
+              {t("routing.noneOfThese")}
             </button>
           </>
         )}
@@ -512,9 +513,9 @@ export default function RoutingResultPage() {
                   <HelpCircle size={22} color="#e63946" />
                 </div>
                 <div>
-                  <p className="font-bold text-foreground">Could not match automatically</p>
+                  <p className="font-bold text-foreground">{t("routing.couldNotMatch")}</p>
                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                    Pick a shipment manually or send to triage queue.
+                    {t("routing.couldNotMatchDesc")}
                   </p>
                 </div>
               </div>
@@ -527,7 +528,7 @@ export default function RoutingResultPage() {
                   className="flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-base btn-press"
                   style={GRADIENT_BTN}
                 >
-                  <Search size={16} /> Pick a shipment manually
+                  <Search size={16} /> {t("routing.pickManually")}
                 </button>
                 <button
                   onClick={() => handleConfirm(null)}
@@ -540,7 +541,7 @@ export default function RoutingResultPage() {
                 >
                   {isPending
                     ? <div className="w-5 h-5 rounded-full border-2 border-current/30 border-t-current animate-spin" />
-                    : "Send to web triage queue"}
+                    : t("routing.sendToTriage")}
                 </button>
               </div>
             ) : (
@@ -555,7 +556,7 @@ export default function RoutingResultPage() {
                   onClick={() => setShowChange(false)}
                   className="text-sm text-center text-muted-foreground py-2 active:opacity-60"
                 >
-                  Cancel
+                  {t("routing.cancel")}
                 </button>
               </>
             )}
@@ -575,7 +576,7 @@ export default function RoutingResultPage() {
               >
                 <Edit2 size={13} color="hsl(var(--primary))" />
               </div>
-              <p className="text-sm font-bold text-foreground">AI Draft Reply</p>
+              <p className="text-sm font-bold text-foreground">{t("routing.aiDraftReply")}</p>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{result.aiDraft}</p>
           </div>
@@ -588,7 +589,11 @@ export default function RoutingResultPage() {
               <span
                 key={i}
                 className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}
+                style={{
+                  backgroundColor: "hsl(var(--accent))",
+                  color: "hsl(var(--accent-foreground))",
+                  border: "1px solid hsl(var(--border))",
+                }}
               >
                 {tag}
               </span>
@@ -596,7 +601,7 @@ export default function RoutingResultPage() {
           </div>
         )}
 
-        <div className="h-2" />
+        <div className="h-4" />
       </div>
     </div>
   );

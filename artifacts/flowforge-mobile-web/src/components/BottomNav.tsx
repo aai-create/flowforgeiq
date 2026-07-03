@@ -1,15 +1,17 @@
 import { useLocation } from "wouter";
 import { Home, Zap, FileText, Settings } from "lucide-react";
-
-const TABS = [
-  { href: "/home", icon: Home, label: "Home" },
-  { href: "/capture", icon: Zap, label: "Capture" },
-  { href: "/documents", icon: FileText, label: "Docs" },
-  { href: "/settings", icon: Settings, label: "Settings" },
-];
+import { useTranslation } from "react-i18next";
 
 export function BottomNav() {
   const [location, navigate] = useLocation();
+  const { t } = useTranslation();
+
+  const TABS = [
+    { href: "/home", icon: Home, label: t("nav.home") },
+    { href: "/capture", icon: Zap, label: t("nav.capture") },
+    { href: "/documents", icon: FileText, label: t("nav.docs") },
+    { href: "/settings", icon: Settings, label: t("nav.settings") },
+  ];
 
   return (
     <nav
@@ -25,7 +27,7 @@ export function BottomNav() {
           return (
             <button
               key={href}
-              id={`bottom-nav-${label.toLowerCase()}`}
+              id={`bottom-nav-${href.replace("/", "")}`}
               onClick={() => navigate(href)}
               className="flex-1 flex flex-col items-center pt-2.5 pb-2 gap-1 transition-opacity active:opacity-60"
               aria-current={active ? "page" : undefined}

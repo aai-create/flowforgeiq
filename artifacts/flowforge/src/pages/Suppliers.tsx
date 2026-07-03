@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
@@ -153,6 +154,7 @@ interface DetailPanelProps {
 }
 
 function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }: DetailPanelProps) {
+  const { t } = useTranslation();
   const stageLabel = useMemo(() => {
     const map = new Map(stages.map(st => [st.id, st.label]));
     return (id: string) => map.get(id) ?? id;
@@ -211,47 +213,47 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
         <div className="p-4 space-y-5">
           {/* Contact details */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-3">Contact Details</div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-3">{t("suppliers.contactDetails")}</div>
             <div className="space-y-3">
               <EditableField
-                label="Contact Name"
+                label={t("suppliers.contactName")}
                 value={localSupplier.contactName}
                 icon={User}
-                placeholder="Add contact name"
+                placeholder={t("suppliers.addContactName")}
                 onSave={v => void saveField({ contactName: v })}
                 saving={saving}
               />
               <EditableField
-                label="Email"
+                label={t("suppliers.email")}
                 value={localSupplier.contactEmail}
                 icon={Mail}
-                placeholder="Add email address"
+                placeholder={t("suppliers.addEmail")}
                 type="email"
                 onSave={v => void saveField({ contactEmail: v })}
                 saving={saving}
               />
               <EditableField
-                label="WhatsApp"
+                label={t("suppliers.whatsapp")}
                 value={localSupplier.whatsAppNumber}
                 icon={MessageCircle}
-                placeholder="Add WhatsApp number"
+                placeholder={t("suppliers.addWhatsapp")}
                 type="tel"
                 onSave={v => void saveField({ whatsAppNumber: v })}
                 saving={saving}
               />
               <EditableField
-                label="Country"
+                label={t("suppliers.country")}
                 value={localSupplier.country}
                 icon={Globe}
-                placeholder="Country code (e.g. CN)"
+                placeholder={t("suppliers.countryCodeHint")}
                 onSave={v => void saveField({ country: v ?? "CN" })}
                 saving={saving}
               />
               <EditableField
-                label="Payment Terms"
+                label={t("suppliers.paymentTerms")}
                 value={localSupplier.paymentTerms}
                 icon={CreditCard}
-                placeholder="e.g. 30% deposit, 70% on B/L"
+                placeholder={t("suppliers.paymentTermsHint")}
                 onSave={v => void saveField({ paymentTerms: v })}
                 saving={saving}
               />
@@ -264,11 +266,11 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2 flex items-center gap-1.5">
               <Package className="w-3 h-3" />
-              Active POs
+              {t("suppliers.activePOs")}
               <span className="text-[#9E9FAE] font-normal">({active.length})</span>
             </div>
             {active.length === 0 ? (
-              <p className="text-xs text-[#9E9FAE]">No active purchase orders.</p>
+              <p className="text-xs text-[#9E9FAE]">{t("suppliers.noActivePOs")}</p>
             ) : (
               <div className="space-y-1.5">
                 {active.map(s => {
@@ -465,6 +467,7 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
 // Main page
 // ---------------------------------------------------------------------------
 export function Suppliers() {
+  const { t } = useTranslation();
   useCopilotHint("Search suppliers or check on-time performance", [
     "Who has the best on-time delivery rate?",
     "Which supplier has the most delayed shipments?",
@@ -536,7 +539,7 @@ export function Suppliers() {
     <>
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
 
-        <GlobalHeader breadcrumb="Suppliers" />
+        <GlobalHeader breadcrumb={t("suppliers.title")} />
 
         <div className="flex-1 flex overflow-hidden">
 
@@ -558,7 +561,7 @@ export function Suppliers() {
           {/* Toolbar */}
           <div className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-sm font-bold text-[#212833]">Suppliers</h1>
+              <h1 className="text-sm font-bold text-[#212833]">{t("suppliers.title")}</h1>
               <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
                 {sorted.length} of {suppliers.length}
               </span>
@@ -570,7 +573,7 @@ export function Suppliers() {
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search suppliers…"
+                  placeholder={t("suppliers.searchPlaceholder")}
                   className="h-8 pl-8 pr-3 text-[12px] bg-[#F0F4F8] border border-transparent focus:border-[#9000FF]/30 focus:bg-white rounded-md outline-none w-52 transition-all placeholder:text-[#9E9FAE]"
                 />
                 {search && (
@@ -583,7 +586,7 @@ export function Suppliers() {
                 onClick={() => setShowNewDialog(true)}
                 className="flex items-center gap-1.5 text-[11px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-3 py-1.5 rounded-md transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" /> New Supplier
+                <Plus className="w-3.5 h-3.5" /> {t("suppliers.addSupplier")}
               </button>
             </div>
           </div>
@@ -620,8 +623,8 @@ export function Suppliers() {
                   {sorted.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <Building2 className="w-8 h-8 text-[#D6E3EB] mb-3" />
-                      <p className="text-sm text-[#5E687B] font-medium">No suppliers found</p>
-                      <p className="text-xs text-[#9E9FAE] mt-1">Try adjusting your search or add a new supplier.</p>
+                      <p className="text-sm text-[#5E687B] font-medium">{t("suppliers.noResults")}</p>
+                      <p className="text-xs text-[#9E9FAE] mt-1">{t("suppliers.noSuppliers")}</p>
                     </div>
                   ) : (
                     sorted.map(s => {

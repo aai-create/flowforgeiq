@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
 import { CheckCircle2, XCircle, Clock, RefreshCw, UserX } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -11,6 +12,7 @@ export function AcceptInvite() {
   const [, navigate] = useLocation();
   const { user, isLoaded } = useUser();
   const clerk = useClerk();
+  const { t } = useTranslation();
   const [status, setStatus] = useState<InviteStatus>("loading");
   const [message, setMessage] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
@@ -22,7 +24,7 @@ export function AcceptInvite() {
     const tok = params.get("token");
     if (!tok) {
       setStatus("error");
-      setMessage("No invitation token found in the URL.");
+      setMessage(t("acceptInvite.noToken"));
       return;
     }
     setToken(tok);
@@ -61,13 +63,13 @@ export function AcceptInvite() {
             setStatus("wrong_account");
           } else {
             setStatus("error");
-            setMessage(code || "Failed to accept invitation.");
+            setMessage(code || t("acceptInvite.failedToAccept"));
           }
         }
       })
       .catch(() => {
         setStatus("error");
-        setMessage("Network error. Please try again.");
+        setMessage(t("acceptInvite.networkError"));
       });
   }, [isLoaded, user]);
 
@@ -90,31 +92,29 @@ export function AcceptInvite() {
           {status === "loading" && (
             <>
               <RefreshCw className="w-8 h-8 text-[#9000FF] animate-spin mx-auto mb-4" />
-              <h2 className="text-sm font-bold text-[#212833] mb-2">Accepting invitation…</h2>
-              <p className="text-xs text-[#5E687B]">Please wait while we set up your access.</p>
+              <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.accepting")}</h2>
+              <p className="text-xs text-[#5E687B]">{t("acceptInvite.acceptingDesc")}</p>
             </>
           )}
 
           {status === "success" && (
             <>
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-4" />
-              <h2 className="text-sm font-bold text-[#212833] mb-2">Welcome to the team!</h2>
-              <p className="text-xs text-[#5E687B]">You've joined the team! Redirecting to FlowForgeIQ…</p>
+              <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.welcome")}</h2>
+              <p className="text-xs text-[#5E687B]">{t("acceptInvite.welcomeDesc")}</p>
             </>
           )}
 
           {status === "expired" && (
             <>
               <Clock className="w-8 h-8 text-amber-500 mx-auto mb-4" />
-              <h2 className="text-sm font-bold text-[#212833] mb-2">This invite has expired</h2>
-              <p className="text-xs text-[#5E687B] mb-4">
-                Invite links are valid for 7 days. Ask your team admin to send a new invitation.
-              </p>
+              <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.expired")}</h2>
+              <p className="text-xs text-[#5E687B] mb-4">{t("acceptInvite.expiredDesc")}</p>
               <button
                 onClick={() => navigate("/")}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
               >
-                Go to FlowForgeIQ
+                {t("acceptInvite.goCta")}
               </button>
             </>
           )}
@@ -122,15 +122,13 @@ export function AcceptInvite() {
           {status === "already_accepted" && (
             <>
               <CheckCircle2 className="w-8 h-8 text-[#9000FF] mx-auto mb-4" />
-              <h2 className="text-sm font-bold text-[#212833] mb-2">This invite has already been accepted</h2>
-              <p className="text-xs text-[#5E687B] mb-4">
-                This invitation link has already been used. If you need access, contact your team admin.
-              </p>
+              <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.alreadyAccepted")}</h2>
+              <p className="text-xs text-[#5E687B] mb-4">{t("acceptInvite.alreadyAcceptedDesc")}</p>
               <button
                 onClick={() => navigate("/")}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
               >
-                Go to FlowForgeIQ
+                {t("acceptInvite.goCta")}
               </button>
             </>
           )}
@@ -138,17 +136,17 @@ export function AcceptInvite() {
           {status === "wrong_account" && (
             <>
               <UserX className="w-8 h-8 text-amber-500 mx-auto mb-4" />
-              <h2 className="text-sm font-bold text-[#212833] mb-2">Wrong account</h2>
+              <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.wrongAccount")}</h2>
               <p className="text-xs text-[#5E687B] mb-4">
-                You're signed in as the wrong account.{maskedEmail ? (
-                  <> This invite was sent to <span className="font-semibold text-[#212833]">{maskedEmail}</span>.</>
-                ) : " Please sign in with the email address this invite was sent to."}
+                {maskedEmail ? (
+                  <>{t("acceptInvite.wrongAccountDescWithEmail")} <span className="font-semibold text-[#212833]">{maskedEmail}</span>.</>
+                ) : t("acceptInvite.wrongAccountDesc")}
               </p>
               <button
                 onClick={handleSwitchAccount}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
               >
-                Switch account
+                {t("acceptInvite.switchAccount")}
               </button>
             </>
           )}
@@ -156,13 +154,13 @@ export function AcceptInvite() {
           {status === "error" && (
             <>
               <XCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
-              <h2 className="text-sm font-bold text-[#212833] mb-2">Invitation error</h2>
+              <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.error")}</h2>
               <p className="text-xs text-[#5E687B] mb-4">{message}</p>
               <button
                 onClick={() => navigate("/")}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
               >
-                Go to FlowForgeIQ
+                {t("acceptInvite.goCta")}
               </button>
             </>
           )}

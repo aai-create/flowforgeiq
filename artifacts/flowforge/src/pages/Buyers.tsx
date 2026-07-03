@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
@@ -430,6 +431,7 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
 // Main page
 // ---------------------------------------------------------------------------
 export function Buyers() {
+  const { t } = useTranslation();
   useCopilotHint("Browse buyers and their active orders", [
     "Which buyer has the most at-risk orders?",
     "Show me all active POs for Marlowe & Sons",
@@ -505,7 +507,7 @@ export function Buyers() {
 
   return (
     <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
-      <GlobalHeader breadcrumb="Buyers" />
+      <GlobalHeader breadcrumb={t("buyers.title")} />
 
       <div className="flex-1 flex overflow-hidden">
         <NavSidebar
@@ -522,7 +524,7 @@ export function Buyers() {
               {/* Toolbar */}
               <div className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
                 <div className="flex items-center gap-3">
-                  <h1 className="text-sm font-bold text-[#212833]">Buyers</h1>
+                  <h1 className="text-sm font-bold text-[#212833]">{t("buyers.title")}</h1>
                   <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
                     {filtered.length} of {buyers.length}
                   </span>
@@ -533,7 +535,7 @@ export function Buyers() {
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Search buyers…"
+                    placeholder={t("buyers.searchPlaceholder")}
                     className="h-8 pl-8 pr-3 text-[12px] bg-[#F0F4F8] border border-transparent focus:border-[#9000FF]/30 focus:bg-white rounded-md outline-none w-52 transition-all placeholder:text-[#9E9FAE]"
                   />
                   {search && (
@@ -550,11 +552,11 @@ export function Buyers() {
                     <div className="min-w-[640px]">
                       {/* Table header */}
                       <div className="sticky top-0 z-10 bg-[#F7F9FA] border-b border-[#E5EAF0] grid grid-cols-[2fr_1fr_1fr_1.2fr_1fr_auto] px-5 py-2">
-                        <SortableHeader label="Buyer" col="name" />
-                        <SortableHeader label="Active POs" col="activePOs" />
-                        <SortableHeader label="At Risk" col="atRisk" />
-                        <SortableHeader label="Total Spend" col="spend" />
-                        <SortableHeader label="On-Time %" col="onTime" />
+                        <SortableHeader label={t("buyers.sortName")} col="name" />
+                        <SortableHeader label={t("buyers.activePOs")} col="activePOs" />
+                        <SortableHeader label={t("buyers.atRisk")} col="atRisk" />
+                        <SortableHeader label={t("buyers.totalSpend")} col="spend" />
+                        <SortableHeader label={t("buyers.sortOnTime")} col="onTime" />
                         <span />
                       </div>
 
@@ -562,8 +564,8 @@ export function Buyers() {
                       {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center">
                           <Users className="w-8 h-8 text-[#D6E3EB] mb-3" />
-                          <p className="text-sm text-[#5E687B] font-medium">No buyers found</p>
-                          <p className="text-xs text-[#9E9FAE] mt-1">Try adjusting your search.</p>
+                          <p className="text-sm text-[#5E687B] font-medium">{t("buyers.noBuyers")}</p>
+                          <p className="text-xs text-[#9E9FAE] mt-1">{t("buyers.noResults")}</p>
                         </div>
                       ) : (
                         filtered.map(b => {
