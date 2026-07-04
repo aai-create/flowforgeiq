@@ -286,7 +286,7 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                             {s.poNumber}
                           </span>
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${statusCls(s.status)}`}>
-                            {s.status === "on-track" ? "On Track" : s.status === "delayed" ? "Delayed" : "At Risk"}
+                            {s.status === "on-track" ? t("status.onTrack") : s.status === "delayed" ? t("status.delayed") : t("status.atRisk")}
                           </span>
                         </div>
                         <p className="text-[11px] text-[#212833] font-medium truncate">{s.product}</p>
@@ -294,7 +294,7 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                           <span className="text-[10px] text-[#7A00D9] bg-[#9000FF]/8 px-1.5 py-0.5 rounded truncate max-w-[140px]">
                             {stageLabel(s.currentStageId)}
                           </span>
-                          <span className="text-[10px] text-[#9E9FAE]">Due {shortDate(s.dueDate)}{days < 0 ? ` · ${Math.abs(days)}d late` : days <= 7 ? ` · ${days}d` : ""}</span>
+                          <span className="text-[10px] text-[#9E9FAE]">{t("common.duePrefix")} {shortDate(s.dueDate)}{days < 0 ? ` ${t("common.daysLate", { days: Math.abs(days) })}` : days <= 7 ? ` ${t("common.daysDue", { days })}` : ""}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -303,14 +303,14 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                           className="flex items-center gap-1 text-[10px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <ArrowRight className="w-2.5 h-2.5" />
-                          Inbox
+                          {t("nav.inbox")}
                         </button>
                         <button
                           onClick={() => navigate(`/orders?po=${encodeURIComponent(s.poNumber)}`)}
                           className="flex items-center gap-1 text-[10px] font-medium text-[#5E687B] bg-[#F0F4F8] hover:bg-[#E5EAF0] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <Package className="w-2.5 h-2.5" />
-                          Orders
+                          {t("common.orders")}
                         </button>
                       </div>
                     </div>
@@ -324,7 +324,7 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
             <>
               <Separator />
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">Recent POs</div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">{t("suppliers.recentPOs")}</div>
                 <div className="space-y-1">
                   {recent.map(s => (
                     <div
@@ -341,14 +341,14 @@ function SupplierDetailPanel({ supplier, shipments, stages, onClose, onUpdate }:
                           className="flex items-center gap-1 text-[10px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <ArrowRight className="w-2.5 h-2.5" />
-                          Inbox
+                          {t("nav.inbox")}
                         </button>
                         <button
                           onClick={() => navigate(`/orders?po=${encodeURIComponent(s.poNumber)}`)}
                           className="flex items-center gap-1 text-[10px] font-medium text-[#5E687B] bg-[#F0F4F8] hover:bg-[#E5EAF0] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <Package className="w-2.5 h-2.5" />
-                          Orders
+                          {t("common.orders")}
                         </button>
                       </div>
                     </div>
@@ -373,6 +373,7 @@ interface NewSupplierDialogProps {
 }
 
 function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) {
+  const { t } = useTranslation();
   const createMutation = useCreateSupplier();
   const [form, setForm] = useState({ name: "", country: "CN", contactName: "", contactEmail: "" });
   const [error, setError] = useState<string | null>(null);
@@ -391,12 +392,12 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
 
   async function handleSubmit() {
     setError(null);
-    if (!form.name.trim()) { setError("Supplier name is required."); return; }
-    if (!form.country.trim()) { setError("Country is required."); return; }
-    if (!form.contactName.trim()) { setError("Contact name is required."); return; }
+    if (!form.name.trim()) { setError(t("suppliers.errNameRequired")); return; }
+    if (!form.country.trim()) { setError(t("suppliers.errCountryRequired")); return; }
+    if (!form.contactName.trim()) { setError(t("suppliers.errContactRequired")); return; }
     const emailTrimmed = form.contactEmail.trim();
-    if (!emailTrimmed) { setError("Email is required."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) { setError("Please enter a valid email address."); return; }
+    if (!emailTrimmed) { setError(t("suppliers.errEmailRequired")); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) { setError(t("suppliers.errEmailInvalid")); return; }
     setLoading(true);
     try {
       const created = await createMutation.mutateAsync({
@@ -410,7 +411,7 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
       onCreate(created);
       handleClose();
     } catch {
-      setError("Failed to create supplier. Name may already exist.");
+      setError(t("suppliers.errCreateFailed"));
     } finally {
       setLoading(false);
     }
@@ -420,14 +421,14 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
     <Dialog open={open} onOpenChange={v => { if (!v) handleClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[#212833]">New Supplier</DialogTitle>
+          <DialogTitle className="text-[#212833]">{t("suppliers.newSupplierName")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
           {[
-            { label: "Supplier Name *", key: "name", placeholder: "e.g. Guangzhou Metalworks" },
-            { label: "Country *", key: "country", placeholder: "e.g. CN, VN, BD" },
-            { label: "Contact Name *", key: "contactName", placeholder: "e.g. Wei Zhang" },
-            { label: "Email *", key: "contactEmail", placeholder: "e.g. wei@supplier.com" },
+            { label: t("suppliers.fieldNameLabel"), key: "name", placeholder: t("suppliers.placeholderName") },
+            { label: t("suppliers.fieldCountryLabel"), key: "country", placeholder: t("suppliers.placeholderCountry") },
+            { label: t("suppliers.fieldContactLabel"), key: "contactName", placeholder: t("suppliers.placeholderContactName") },
+            { label: t("suppliers.fieldEmailLabel"), key: "contactEmail", placeholder: t("suppliers.placeholderEmail") },
           ].map(({ label, key, placeholder }) => (
             <div key={key}>
               <label className="block text-[10px] font-bold text-[#5E687B] mb-1 uppercase tracking-wide">{label}</label>
@@ -449,13 +450,13 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={loading} className="text-[13px]">Cancel</Button>
+          <Button variant="outline" onClick={handleClose} disabled={loading} className="text-[13px]">{t("common.cancel")}</Button>
           <Button
             onClick={() => void handleSubmit()}
             disabled={loading}
             className="bg-[#9000FF] hover:bg-[#7A00D9] text-white text-[13px]"
           >
-            {loading ? "Creating…" : "Create Supplier"}
+            {loading ? t("suppliers.creating") : t("suppliers.createSupplier")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -600,11 +601,11 @@ export function Suppliers() {
                   <div className="sticky top-0 z-10 bg-[#F7F9FA] border-b border-[#E5EAF0] grid grid-cols-[2fr_1fr_1fr_1fr_1fr] px-5 py-2">
                     {(
                       [
-                        { label: "Supplier", col: "name" },
-                        { label: "Country", col: "country" },
-                        { label: "Active POs", col: "active" },
-                        { label: "On-Time %", col: "onTime" },
-                        { label: "Contact", col: null },
+                        { label: t("suppliers.colSupplier"), col: "name" },
+                        { label: t("suppliers.colCountry"), col: "country" },
+                        { label: t("suppliers.activePOs"), col: "active" },
+                        { label: t("suppliers.colOnTime"), col: "onTime" },
+                        { label: t("suppliers.colContact"), col: null },
                       ] as const
                     ).map(({ label, col }) => (
                       <button
@@ -688,11 +689,11 @@ export function Suppliers() {
                           <div className="flex items-center justify-between">
                             {s.primaryContact === "WhatsApp" ? (
                               <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-                                <MessageCircle className="w-3 h-3" /> WhatsApp
+                                <MessageCircle className="w-3 h-3" /> {t("suppliers.whatsapp")}
                               </span>
                             ) : s.primaryContact === "Email" ? (
                               <span className="flex items-center gap-1 text-[11px] text-blue-600 font-medium">
-                                <Mail className="w-3 h-3" /> Email
+                                <Mail className="w-3 h-3" /> {t("suppliers.email")}
                               </span>
                             ) : (
                               <span className="text-[11px] text-[#9E9FAE]">—</span>

@@ -156,6 +156,7 @@ interface DetailPanelProps {
 }
 
 function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelProps) {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { data: messagesData } = useListMessages();
   const now = useMemo(() => new Date(), []);
@@ -221,23 +222,23 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
           {/* Summary stats */}
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
-              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">Active POs</div>
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">{t("buyers.activePOs")}</div>
               <div className="text-xl font-bold text-[#212833]">{active.length}</div>
             </div>
             <div className={`border rounded-lg p-3 ${buyer.atRiskCount > 0 ? "bg-red-50 border-red-100" : "bg-[#FAFBFC] border-[#E5EAF0]"}`}>
-              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">At Risk</div>
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">{t("buyers.atRisk")}</div>
               <div className={`text-xl font-bold ${buyer.atRiskCount > 0 ? "text-red-600" : "text-[#9E9FAE]"}`}>
                 {buyer.atRiskCount}
               </div>
             </div>
             <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
-              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">Spend This Year</div>
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">{t("buyers.spendThisYear")}</div>
               <div className="text-xl font-bold text-[#212833]">
                 {buyer.spendThisYearUsd > 0 ? fmtUsd(buyer.spendThisYearUsd) : <span className="text-[#9E9FAE]">—</span>}
               </div>
             </div>
             <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-lg p-3">
-              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">On-Time %</div>
+              <div className="text-[10px] font-bold text-[#5E687B] uppercase tracking-wide mb-1">{t("buyers.onTimePct")}</div>
               <div className={`text-xl font-bold ${
                 buyer.onTimePct === null ? "text-[#9E9FAE]"
                 : buyer.onTimePct >= 70 ? "text-emerald-600"
@@ -253,36 +254,36 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
 
           {/* Contact details — editable inline, persisted via API */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-3">Contact Details</div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-3">{t("buyers.contactDetails")}</div>
             <div className="space-y-3">
               <EditableField
-                label="Contact Name"
+                label={t("buyers.contactName")}
                 value={buyer.contactName ?? ""}
                 icon={User}
-                placeholder="Add contact name"
+                placeholder={t("buyers.addContactName")}
                 onSave={v => onFieldSave("contactName", v)}
               />
               <EditableField
-                label="Email"
+                label={t("buyers.email")}
                 value={buyer.email ?? ""}
                 icon={Mail}
-                placeholder="Add email address"
+                placeholder={t("buyers.addEmail")}
                 type="email"
                 onSave={v => onFieldSave("email", v)}
               />
               <EditableField
-                label="Phone"
+                label={t("buyers.phone")}
                 value={buyer.phone ?? ""}
                 icon={Phone}
-                placeholder="Add phone number"
+                placeholder={t("buyers.addPhone")}
                 type="tel"
                 onSave={v => onFieldSave("phone", v)}
               />
               <EditableField
-                label="Region"
+                label={t("buyers.region")}
                 value={buyer.region ?? ""}
                 icon={Globe}
-                placeholder="e.g. North America"
+                placeholder={t("buyers.addRegion")}
                 onSave={v => onFieldSave("region", v)}
               />
             </div>
@@ -294,11 +295,11 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2 flex items-center gap-1.5">
               <Package className="w-3 h-3" />
-              Active POs
+              {t("buyers.activePOs")}
               <span className="text-[#9E9FAE] font-normal">({active.length})</span>
             </div>
             {active.length === 0 ? (
-              <p className="text-xs text-[#9E9FAE]">No active purchase orders.</p>
+              <p className="text-xs text-[#9E9FAE]">{t("buyers.noActivePOs")}</p>
             ) : (
               <div className="space-y-1.5">
                 {active.map(s => {
@@ -314,7 +315,7 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
                             {s.poNumber}
                           </span>
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${statusCls(s.status)}`}>
-                            {s.status === "on-track" ? "On Track" : s.status === "delayed" ? "Delayed" : "At Risk"}
+                            {s.status === "on-track" ? t("status.onTrack") : s.status === "delayed" ? t("status.delayed") : t("status.atRisk")}
                           </span>
                         </div>
                         <p className="text-[11px] text-[#212833] font-medium truncate">{s.product}</p>
@@ -323,7 +324,7 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
                             {stageLabel(s.currentStageId)}
                           </span>
                           <span className="text-[10px] text-[#9E9FAE]">
-                            Due {shortDate(s.dueDate)}{days < 0 ? ` · ${Math.abs(days)}d late` : days <= 7 ? ` · ${days}d` : ""}
+                            {t("common.duePrefix")} {shortDate(s.dueDate)}{days < 0 ? ` ${t("common.daysLate", { days: Math.abs(days) })}` : days <= 7 ? ` ${t("common.daysDue", { days })}` : ""}
                           </span>
                         </div>
                       </div>
@@ -333,14 +334,14 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
                           className="flex items-center gap-1 text-[10px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <ArrowRight className="w-2.5 h-2.5" />
-                          Inbox
+                          {t("nav.inbox")}
                         </button>
                         <button
                           onClick={() => navigate(`/orders?po=${encodeURIComponent(s.poNumber)}`)}
                           className="flex items-center gap-1 text-[10px] font-medium text-[#5E687B] bg-[#F0F4F8] hover:bg-[#E5EAF0] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <Package className="w-2.5 h-2.5" />
-                          Orders
+                          {t("common.orders")}
                         </button>
                       </div>
                     </div>
@@ -354,7 +355,7 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
             <>
               <Separator />
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">Recent POs</div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B] mb-2">{t("buyers.recentPOs")}</div>
                 <div className="space-y-1">
                   {recent.map(s => (
                     <div
@@ -371,14 +372,14 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
                           className="flex items-center gap-1 text-[10px] font-medium text-white bg-[#9000FF] hover:bg-[#7A00D9] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <ArrowRight className="w-2.5 h-2.5" />
-                          Inbox
+                          {t("nav.inbox")}
                         </button>
                         <button
                           onClick={() => navigate(`/orders?po=${encodeURIComponent(s.poNumber)}`)}
                           className="flex items-center gap-1 text-[10px] font-medium text-[#5E687B] bg-[#F0F4F8] hover:bg-[#E5EAF0] px-2 py-0.5 rounded-full transition-colors"
                         >
                           <Package className="w-2.5 h-2.5" />
-                          Orders
+                          {t("common.orders")}
                         </button>
                       </div>
                     </div>
@@ -393,12 +394,12 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
               <Separator />
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B]">Recent Messages</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-[#5E687B]">{t("buyers.recentMessages")}</div>
                   <button
                     onClick={() => navigate(`/inbox?buyerId=${buyer.id}`)}
                     className="flex items-center gap-1 text-[10px] font-semibold text-[#9000FF] hover:text-[#7000CC] transition-colors"
                   >
-                    View all in Inbox
+                    {t("buyers.viewAllInbox")}
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>
