@@ -4,6 +4,7 @@ import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
 import { useTranslation } from "react-i18next";
+import { fmtCountry } from "@/lib/locale";
 import {
   useListRfqs,
   useCreateRfq,
@@ -223,7 +224,7 @@ interface NewQuoteFormState {
 }
 
 export function RFQs() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useLocation();
   useCopilotHint("Ask about RFQ status or factory quote comparisons", [
     "Which RFQs are awaiting quotes?",
@@ -778,7 +779,7 @@ export function RFQs() {
                                         {isLowest && q.status !== "accepted" && <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/10 px-1.5 rounded">{t("rfqs.badgeLowest")}</span>}
                                         <div>
                                           <div className="font-semibold text-[#212833]">{q.factoryName}</div>
-                                          <div className="text-[10px] text-[#5E687B]">{q.country}</div>
+                                          <div className="text-[10px] text-[#5E687B]">{fmtCountry(q.country, i18n.language)}</div>
                                         </div>
                                       </div>
                                     </td>

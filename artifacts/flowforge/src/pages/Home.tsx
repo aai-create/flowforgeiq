@@ -52,6 +52,7 @@ import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding, SupplierSummary } from "@workspace/api-client-react";
 import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED, BODY_SM_MUTED } from "@/lib/typography";
 import { useUserPref } from "@/lib/useUserPref";
+import { fmtCountry } from "@/lib/locale";
 import {
   adaptStages, adaptShipments, adaptMessages, adaptTasks, shortDate, relativeAge,
   type UiStage, type UiShipment, type UiMessage, type UiTask,
@@ -395,6 +396,7 @@ function PaymentStatus({ payments }: { payments: Payment[] }) {
 // Quote panel
 // ─────────────────────────────────────────────────────────────────────────────
 function QuotePanel({ quotes, shipmentId, onSelect }: { quotes: FactoryQuote[]; shipmentId: string; onSelect: (sid: string, idx: number) => void }) {
+  const { i18n } = useTranslation();
   return (
     <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl p-3.5 mb-4">
       <div className="flex items-center gap-2 mb-3"><Sparkles size={12} className="text-[#9000FF]"/><span className="text-xs font-bold text-[#9000FF] uppercase tracking-wider">Factory Quotes</span><span className="text-[11px] text-[#5E687B] ml-auto">Click to select</span></div>
@@ -404,7 +406,7 @@ function QuotePanel({ quotes, shipmentId, onSelect }: { quotes: FactoryQuote[]; 
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${q.selected?"border-[#9000FF]/40 bg-white shadow-sm":"border-[#E5EAF0] bg-white hover:border-[#9000FF]/20"}`}>
             <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${q.selected?"border-[#9000FF] bg-[#9000FF]":"border-[#D6E3EB]"}`}>{q.selected&&<Check size={9} className="text-white"/>}</div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-[#212833] flex items-center gap-1.5">{q.factory}<span className="text-[11px] bg-[#F0F4F8] text-[#5E687B] px-1 rounded border border-[#E5EAF0] font-normal">{q.country}</span>{q.selected&&<span className="text-[11px] bg-[#9000FF]/10 text-[#9000FF] px-1.5 rounded font-semibold">Selected</span>}</div>
+              <div className="text-xs font-semibold text-[#212833] flex items-center gap-1.5">{q.factory}<span className="text-[11px] bg-[#F0F4F8] text-[#5E687B] px-1 rounded border border-[#E5EAF0] font-normal">{fmtCountry(q.country, i18n.language)}</span>{q.selected&&<span className="text-[11px] bg-[#9000FF]/10 text-[#9000FF] px-1.5 rounded font-semibold">Selected</span>}</div>
               <div className="flex gap-3 mt-0.5 text-[11px] text-[#5E687B]"><span>MOQ {q.moq.toLocaleString()}</span><span>{q.leadDays}d lead</span></div>
             </div>
             <div className={`text-sm font-bold shrink-0 ${q.selected?"text-[#9000FF]":"text-[#212833]"}`}>${q.unitPrice.toFixed(2)}</div>
@@ -1674,6 +1676,7 @@ function SupplierEntityList({ suppliers, apiSuppliers, messages, onSelect }: {
   messages: UiMessage[];
   onSelect: (supplierId: string) => void;
 }) {
+  const { i18n } = useTranslation();
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="h-10 bg-white border-b border-[#E5EAF0] flex items-center px-4 shrink-0 gap-2">
@@ -1695,7 +1698,7 @@ function SupplierEntityList({ suppliers, apiSuppliers, messages, onSelect }: {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-sm font-semibold text-[#212833] truncate">{s.label}</span>
-                    {apiSup?.country && <span className="text-[9px] text-[#9E9FAE] shrink-0 bg-[#F0F4F8] px-1.5 rounded">{apiSup.country}</span>}
+                    {apiSup?.country && <span className="text-[9px] text-[#9E9FAE] shrink-0 bg-[#F0F4F8] px-1.5 rounded">{fmtCountry(apiSup.country, i18n.language)}</span>}
                   </div>
                   {lastMsg && <div className="text-[10px] text-[#9E9FAE] truncate">{lastMsg.snippet}</div>}
                   {!lastMsg && <div className="text-[10px] text-[#C0C8D4]">{s.count} message{s.count !== 1 ? "s" : ""}</div>}

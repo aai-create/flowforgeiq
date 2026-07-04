@@ -31,7 +31,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { shortDate } from "@/lib/adapters";
-import { getDisplayLocale } from "@/lib/locale";
+import { getDisplayLocale, fmtCountry } from "@/lib/locale";
+import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -776,6 +777,7 @@ interface SupplierRow {
 function SuppliersCardContent({
   shipments, tasks, suppliers,
 }: { shipments: Shipment[]; tasks: Task[]; suppliers: SupplierSummary[] }) {
+  const { i18n } = useTranslation();
   const [, navigate] = useLocation();
   const [sort, setSort] = useState<{ col: string; dir: SortDir }>({ col: "active", dir: "desc" });
 
@@ -891,7 +893,7 @@ function SuppliersCardContent({
               <td className="px-3 py-2.5 font-medium text-[#212833]">
                 <span className="flex items-center gap-1.5">
                   {row.name}
-                  <span className="ml-0.5 text-[9px] text-[#9E9FAE] font-normal">{row.country}</span>
+                  <span className="ml-0.5 text-[9px] text-[#9E9FAE] font-normal">{fmtCountry(row.country, i18n.language)}</span>
                   <ArrowRight className="w-3 h-3 text-[#9000FF] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
               </td>

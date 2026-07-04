@@ -29,7 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ShipmentDrawer, type MarkPaidForm } from "@/components/ShipmentDrawer";
 import { useTranslation } from "react-i18next";
-import { getDisplayLocale } from "@/lib/locale";
+import { getDisplayLocale, fmtCountry } from "@/lib/locale";
 import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED } from "@/lib/typography";
 
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
@@ -125,7 +125,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 // Component
 // ---------------------------------------------------------------------------
 export function Atelier() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useLocation();
   useCopilotHint("Ask about PO status or draft a quick update", [
     "Which POs need attention today?",
@@ -1797,7 +1797,7 @@ export function Atelier() {
                             setSupplierOpen(false);
                           }} className="w-full text-left px-3 py-2 text-sm text-[#212833] hover:bg-[#F7F9FA] flex items-center gap-2">
                             {s.name}
-                            <span className="text-xs text-[#9E9FAE] ml-auto">{s.country}</span>
+                            <span className="text-xs text-[#9E9FAE] ml-auto">{fmtCountry(s.country, i18n.language)}</span>
                           </button>
                         ))}
                         {supplierQuery.trim() && !exactMatch && (

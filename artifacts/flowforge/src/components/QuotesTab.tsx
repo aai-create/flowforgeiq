@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { useCreateFactoryQuote, useSelectFactoryQuote } from "@workspace/api-client-react";
 import type { FactoryQuote } from "@workspace/api-client-react";
-import { getDisplayLocale } from "@/lib/locale";
+import { getDisplayLocale, fmtCountry } from "@/lib/locale";
 import { useTranslation } from "react-i18next";
 
 interface QuotesTabProps {
@@ -57,7 +57,7 @@ function fmt(n: number) {
 }
 
 export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQuotesChange }: QuotesTabProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<AddQuoteForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -210,7 +210,7 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
                         {q.selected && <Award className="w-3 h-3 text-[#9000FF] shrink-0" />}
                         <div>
                           <div className={`font-semibold truncate max-w-[110px] ${q.selected ? "text-[#9000FF]" : "text-[#212833]"}`}>{q.factory}</div>
-                          <div className="text-[9px] text-[#9E9FAE]">{q.country}</div>
+                          <div className="text-[9px] text-[#9E9FAE]">{fmtCountry(q.country, i18n.language)}</div>
                         </div>
                       </div>
                     </td>
@@ -275,7 +275,7 @@ export function QuotesTab({ shipmentId, quotes, currentStage, supplierNames, onQ
               {quotes[0].selected && <Award className="w-4 h-4 text-[#9000FF] shrink-0" />}
               <div>
                 <div className={`text-xs font-bold ${quotes[0].selected ? "text-[#9000FF]" : "text-[#212833]"}`}>{quotes[0].factory}</div>
-                <div className="text-[10px] text-[#9E9FAE]">{quotes[0].country}</div>
+                <div className="text-[10px] text-[#9E9FAE]">{fmtCountry(quotes[0].country, i18n.language)}</div>
               </div>
             </div>
             {quotes[0].selected ? (

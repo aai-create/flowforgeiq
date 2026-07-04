@@ -23,16 +23,9 @@ import {
   Building2, User, AlertCircle,
 } from "lucide-react";
 import { shortDate } from "@/lib/adapters";
+import { fmtCountry } from "@/lib/locale";
 
 const TODAY = new Date("2026-05-18T00:00:00Z");
-
-function fmtCountry(code: string, locale = "en") {
-  try {
-    return new Intl.DisplayNames([locale], { type: "region" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
 
 function activePOs(shipments: Shipment[], supplierId: number) {
   return shipments.filter(
