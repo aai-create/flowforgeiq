@@ -8,13 +8,13 @@ import { detectChannel } from "@/lib/detectChannel";
 
 type Channel = ChatIngestInputChannel;
 
-const CHANNELS: { id: Channel; label: string; color: string }[] = [
-  { id: "whatsapp", label: "WhatsApp", color: "#25D366" },
-  { id: "wechat", label: "WeChat", color: "#09B83E" },
-  { id: "imessage", label: "iMessage", color: "#007AFF" },
-  { id: "sms", label: "SMS", color: "#5856D6" },
-  { id: "email", label: "Email", color: "#FF6B35" },
-  { id: "other", label: "Other", color: "#888888" },
+const CHANNEL_CONFIGS: { id: Channel; staticLabel?: string; color: string }[] = [
+  { id: "whatsapp", staticLabel: "WhatsApp", color: "#25D366" },
+  { id: "wechat", staticLabel: "WeChat", color: "#09B83E" },
+  { id: "imessage", staticLabel: "iMessage", color: "#007AFF" },
+  { id: "sms", staticLabel: "SMS", color: "#5856D6" },
+  { id: "email", color: "#FF6B35" },
+  { id: "other", color: "#888888" },
 ];
 
 const CHANNEL_COLORS: Record<Channel, string> = {
@@ -73,6 +73,11 @@ export default function CapturePage() {
   const [autoDetectedLabel, setAutoDetectedLabel] = useState<string | null>(null);
   const [isShareEntry, setIsShareEntry] = useState(false);
   const [showManualEdit, setShowManualEdit] = useState(false);
+
+  const CHANNELS = CHANNEL_CONFIGS.map((cfg) => ({
+    ...cfg,
+    label: cfg.staticLabel ?? (cfg.id === "email" ? t("capture.channelEmail") : t("capture.channelOther")),
+  }));
 
   const { data: shipments } = useListShipments();
   const { mutate: ingestChat, isPending } = useIngestChat();
@@ -366,7 +371,7 @@ export default function CapturePage() {
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 className="w-full bg-transparent text-sm text-foreground resize-none outline-none leading-relaxed min-h-[110px]"
-                placeholder={`Paste your ${activeCh.label} export or type a message…\n\nE.g.:\n[06/10/26, 10:22] Supplier: Production is 85% done…`}
+                placeholder={t("capture.textareaPlaceholder", { channel: activeCh.label })}
               />
               {rawText.length > 0 && (
                 <p className="text-[11px] text-right mt-1 text-muted-foreground">
@@ -505,7 +510,7 @@ export default function CapturePage() {
                   className="flex-1 bg-transparent text-sm outline-none text-foreground"
                   value={shipSearch}
                   onChange={(e) => setShipSearch(e.target.value)}
-                  placeholder="PO number, product, supplier…"
+                  placeholder={t("capture.shipSearchPlaceholder")}
                 />
               </div>
               <div

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Download } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useUserPref } from "@/hooks/useUserPref";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -12,6 +13,7 @@ function isInStandaloneMode(): boolean {
 }
 
 export function AndroidInstallPrompt() {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useUserPref<"yes" | "no">(
     "android-install-prompt-dismissed",
     "no",
@@ -76,10 +78,10 @@ export function AndroidInstallPrompt() {
             />
             <div>
               <p className="text-sm font-bold text-foreground leading-tight">
-                Add to Home Screen
+                {t("install.addToHomeScreen")}
               </p>
               <p className="text-xs text-muted-foreground leading-tight mt-0.5">
-                Install FlowForgeIQ for the best experience
+                {t("install.installDesc")}
               </p>
             </div>
           </div>
@@ -87,7 +89,7 @@ export function AndroidInstallPrompt() {
             onClick={handleDismiss}
             className="shrink-0 p-1 rounded-lg active:opacity-60 transition-opacity"
             style={{ color: "hsl(var(--muted-foreground))" }}
-            aria-label="Dismiss"
+            aria-label={t("common.dismiss")}
           >
             <X size={16} />
           </button>
@@ -99,7 +101,7 @@ export function AndroidInstallPrompt() {
           style={{ background: "hsl(var(--primary))" }}
         >
           <Download size={15} />
-          Install App
+          {t("install.androidInstallBtn")}
         </button>
       </div>
     </div>

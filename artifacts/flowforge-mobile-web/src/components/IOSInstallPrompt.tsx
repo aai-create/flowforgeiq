@@ -1,4 +1,5 @@
 import { X, Share, Plus } from "lucide-react";
+import { useTranslation, Trans } from "react-i18next";
 import { useUserPref } from "@/hooks/useUserPref";
 
 function isIOS(): boolean {
@@ -13,6 +14,7 @@ function isInStandaloneMode(): boolean {
 }
 
 export function IOSInstallPrompt() {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useUserPref<"yes" | "no">("ios-install-prompt-dismissed", "no");
 
   if (!isIOS() || isInStandaloneMode() || dismissed === "yes") {
@@ -39,9 +41,9 @@ export function IOSInstallPrompt() {
               className="w-9 h-9 rounded-xl object-contain shrink-0"
             />
             <div>
-              <p className="text-sm font-bold text-foreground leading-tight">Add to Home Screen</p>
+              <p className="text-sm font-bold text-foreground leading-tight">{t("install.addToHomeScreen")}</p>
               <p className="text-xs text-muted-foreground leading-tight mt-0.5">
-                Install FlowForgeIQ for the best experience
+                {t("install.installDesc")}
               </p>
             </div>
           </div>
@@ -49,7 +51,7 @@ export function IOSInstallPrompt() {
             onClick={() => setDismissed("yes")}
             className="shrink-0 p-1 rounded-lg active:opacity-60 transition-opacity"
             style={{ color: "hsl(var(--muted-foreground))" }}
-            aria-label="Dismiss"
+            aria-label={t("common.dismiss")}
           >
             <X size={16} />
           </button>
@@ -59,20 +61,12 @@ export function IOSInstallPrompt() {
           <Step
             number={1}
             icon={<Share size={14} />}
-            text={
-              <>
-                Tap the <strong>Share</strong> button in Safari's toolbar
-              </>
-            }
+            text={<Trans i18nKey="install.iosStep1" components={{ bold: <strong /> }} />}
           />
           <Step
             number={2}
             icon={<Plus size={14} />}
-            text={
-              <>
-                Scroll down and tap <strong>Add to Home Screen</strong>
-              </>
-            }
+            text={<Trans i18nKey="install.iosStep2" components={{ bold: <strong /> }} />}
           />
           <Step
             number={3}
@@ -81,7 +75,7 @@ export function IOSInstallPrompt() {
                 ✓
               </span>
             }
-            text={<>Tap <strong>Add</strong> — done!</>}
+            text={<Trans i18nKey="install.iosStep3" components={{ bold: <strong /> }} />}
           />
         </div>
       </div>

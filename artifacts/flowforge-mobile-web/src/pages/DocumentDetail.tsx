@@ -359,7 +359,7 @@ export default function DocumentDetailPage() {
                   </div>
                   {extraction?.confidence != null && extraction.confidence > 0 && (
                     <span className="text-xs text-muted-foreground">
-                      {Math.round(extraction.confidence * 100)}% conf.
+                      {Math.round(extraction.confidence * 100)}% {t("docDetail.confidenceAbbr")}
                     </span>
                   )}
                 </div>

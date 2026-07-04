@@ -77,6 +77,9 @@ const zhTW: MobileTranslation = {
     noShipmentsFound: "未找到貨件",
     textareaPlaceholder: "貼上您的 {{channel}} 聊天記錄或輸入訊息…\n\n例如：\n[2026/06/10, 10:22] 供應商：生產已完成 85%…",
     analysisFailed: "分析失敗，請重試。",
+    channelEmail: "電子郵件",
+    channelOther: "其他",
+    shipSearchPlaceholder: "PO 號碼、產品、供應商…",
   },
   documents: {
     title: "文件",
@@ -115,6 +118,7 @@ const zhTW: MobileTranslation = {
     cancel: "取消",
     savingEllipsis: "儲存中…",
     searchPlaceholder: "PO 號碼、產品、供應商…",
+    confidenceAbbr: "置信度",
   },
   shipmentDetail: {
     title: "貨件",
@@ -189,6 +193,14 @@ const zhTW: MobileTranslation = {
     saveFailed: "儲存失敗，請重試。",
     cancel: "取消",
     searchPlaceholder: "PO 號碼、產品、供應商…",
+  },
+  install: {
+    addToHomeScreen: "加入主畫面",
+    installDesc: "安裝 FlowForgeIQ 以獲得最佳體驗",
+    iosStep1: "點擊 Safari 工具列中的 <bold>分享</bold> 按鈕",
+    iosStep2: "向下捲動，點擊 <bold>加入主畫面</bold>",
+    iosStep3: "點擊 <bold>加入</bold> — 完成！",
+    androidInstallBtn: "安裝應用程式",
   },
 };
 

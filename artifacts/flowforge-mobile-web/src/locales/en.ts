@@ -75,6 +75,9 @@ const en = {
     noShipmentsFound: "No shipments found",
     textareaPlaceholder: "Paste your {{channel}} export or type a message…\n\nE.g.:\n[06/10/26, 10:22] Supplier: Production is 85% done…",
     analysisFailed: "Analysis failed. Please try again.",
+    channelEmail: "Email",
+    channelOther: "Other",
+    shipSearchPlaceholder: "PO number, product, supplier…",
   },
   documents: {
     title: "Documents",
@@ -113,6 +116,7 @@ const en = {
     cancel: "Cancel",
     savingEllipsis: "Saving…",
     searchPlaceholder: "PO number, product, supplier…",
+    confidenceAbbr: "conf.",
   },
   shipmentDetail: {
     title: "Shipment",
@@ -187,6 +191,14 @@ const en = {
     saveFailed: "Save failed. Please try again.",
     cancel: "Cancel",
     searchPlaceholder: "PO number, product, supplier…",
+  },
+  install: {
+    addToHomeScreen: "Add to Home Screen",
+    installDesc: "Install FlowForgeIQ for the best experience",
+    iosStep1: "Tap the <bold>Share</bold> button in Safari's toolbar",
+    iosStep2: "Scroll down and tap <bold>Add to Home Screen</bold>",
+    iosStep3: "Tap <bold>Add</bold> — done!",
+    androidInstallBtn: "Install App",
   },
 };
 
