@@ -26,9 +26,9 @@ import { shortDate } from "@/lib/adapters";
 
 const TODAY = new Date("2026-05-18T00:00:00Z");
 
-function fmtCountry(code: string) {
+function fmtCountry(code: string, locale = "en") {
   try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(code) ?? code;
+    return new Intl.DisplayNames([locale], { type: "region" }).of(code) ?? code;
   } catch {
     return code;
   }
@@ -468,7 +468,7 @@ function NewSupplierDialog({ open, onClose, onCreate }: NewSupplierDialogProps) 
 // Main page
 // ---------------------------------------------------------------------------
 export function Suppliers() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useCopilotHint("Search suppliers or check on-time performance", [
     "Who has the best on-time delivery rate?",
     "Which supplier has the most delayed shipments?",
@@ -505,15 +505,16 @@ export function Suppliers() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
+    const lang = i18n.language;
     return enriched.filter(s =>
       !q
       || s.name.toLowerCase().includes(q)
       || (s.country ?? "").toLowerCase().includes(q)
       || (s.contactEmail ?? "").toLowerCase().includes(q)
       || (s.contactName ?? "").toLowerCase().includes(q)
-      || fmtCountry(s.country).toLowerCase().includes(q),
+      || fmtCountry(s.country, lang).toLowerCase().includes(q),
     );
-  }, [enriched, search]);
+  }, [enriched, search, i18n.language]);
 
   const sorted = useMemo(() => {
     const mul = sortDir === "asc" ? 1 : -1;
@@ -655,7 +656,7 @@ export function Suppliers() {
 
                           {/* Country */}
                           <div className="flex items-center">
-                            <span className="text-[12px] text-[#5E687B]">{fmtCountry(s.country)}</span>
+                            <span className="text-[12px] text-[#5E687B]">{fmtCountry(s.country, i18n.language)}</span>
                           </div>
 
                           {/* Active POs */}
