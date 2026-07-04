@@ -790,6 +790,29 @@ const zhTW = {
     region: "地區",
     addRegion: "如：北美",
   },
+  header: {
+    aiMode: "AI 模式",
+    searchMode: "搜尋模式",
+    searchPlaceholder: "搜尋訊息、PO、供應商…",
+    searchResults_one: "「{{query}}」找到 {{count}} 筆結果",
+    searchResults_other: "「{{query}}」找到 {{count}} 筆結果",
+    searchCategory: "訊息",
+    searchNoResults: "沒有訊息符合「{{query}}」",
+    pasteChat: "貼上聊天訊息（WhatsApp / 微信 / iMessage）",
+  },
+  copilot: {
+    defaultHint: "隨時向 FlowForgeIQ 提問",
+    followUp: "繼續追問…",
+    suggestions: "建議",
+    recent: "最近",
+    connectError: "無法連線AI，請重試。",
+    newConversation: "新對話",
+    openTitle: "開啟AI助手（⌘K）",
+    askAi: "問AI",
+    chipDraftReply: "草擬回覆",
+    chipFlagPayment: "標記付款",
+    chipShowAllTasks: "顯示所有任務",
+  },
 };
 
 export default zhTW;

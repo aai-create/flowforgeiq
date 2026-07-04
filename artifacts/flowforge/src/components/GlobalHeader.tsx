@@ -6,6 +6,7 @@ import {
   MessageCircle, Mail, MessageSquare, FileText,
   Image, FileSpreadsheet, Video,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { AICopilotBar } from "@/components/AICopilotBar";
 import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
 import {
@@ -60,6 +61,7 @@ function SearchResults({
   shipments: UiShipment[];
   onOpen: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const shipmentMap = useMemo(
     () => new Map(shipments.map(s => [s.id, s])),
     [shipments],
@@ -88,12 +90,12 @@ function SearchResults({
     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5EAF0] rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.1)] z-50 mx-6 overflow-hidden max-h-[280px] overflow-y-auto">
       <div className="px-3 py-2 border-b border-[#E5EAF0] bg-[#FAFBFC] flex items-center justify-between">
         <span className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wider">
-          {matched.length} result{matched.length !== 1 ? "s" : ""} for "{query}"
+          {t("header.searchResults", { count: matched.length, query })}
         </span>
-        <span className="text-[11px] text-[#9E9FAE]">messages</span>
+        <span className="text-[11px] text-[#9E9FAE]">{t("header.searchCategory")}</span>
       </div>
       {matched.length === 0 ? (
-        <div className="py-6 text-center text-xs text-[#9E9FAE]">No messages match "{query}"</div>
+        <div className="py-6 text-center text-xs text-[#9E9FAE]">{t("header.searchNoResults", { query })}</div>
       ) : matched.map(m => {
         const poMatch = getPoMatch(m);
         return (
@@ -126,6 +128,7 @@ export function GlobalHeader({
   onOpenMessage,
   breadcrumbSegments = [],
 }: GlobalHeaderProps) {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -195,12 +198,12 @@ export function GlobalHeader({
               <div className="flex items-center gap-1 absolute left-2 top-1/2 -translate-y-1/2 z-10">
                 <button
                   onClick={() => { setSearchMode(false); setSearchQuery(""); }}
-                  title="AI mode"
+                  title={t("header.aiMode")}
                   className="p-0.5 rounded transition-colors text-[#C0C8D4] hover:text-[#5E687B]"
                 >
                   <Sparkles size={12} />
                 </button>
-                <button title="Search mode" className="p-0.5 rounded transition-colors text-[#9000FF]">
+                <button title={t("header.searchMode")} className="p-0.5 rounded transition-colors text-[#9000FF]">
                   <Search size={12} />
                 </button>
               </div>
@@ -209,7 +212,7 @@ export function GlobalHeader({
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search messages, POs, suppliers..."
+                placeholder={t("header.searchPlaceholder")}
                 className="w-full pl-14 pr-3 py-1.5 bg-[#F0F4F8] border border-transparent rounded-full text-xs text-[#212833] placeholder-[#9E9FAE] focus:bg-white focus:border-[#9000FF]/30 focus:ring-2 focus:ring-[#9000FF]/10 transition-all outline-none"
               />
               {searchQuery && (
@@ -227,12 +230,12 @@ export function GlobalHeader({
               alwaysOpen
               leftNode={
                 <div className="flex items-center gap-1">
-                  <button title="AI mode" className="p-0.5 rounded transition-colors text-[#9000FF]">
+                  <button title={t("header.aiMode")} className="p-0.5 rounded transition-colors text-[#9000FF]">
                     <Sparkles size={12} />
                   </button>
                   <button
                     onClick={() => setSearchMode(true)}
-                    title="Search mode"
+                    title={t("header.searchMode")}
                     className="p-0.5 rounded transition-colors text-[#C0C8D4] hover:text-[#5E687B]"
                   >
                     <Search size={12} />
@@ -249,7 +252,7 @@ export function GlobalHeader({
             <button
               onClick={onPasteChat}
               className="hover:text-[#212833] p-1"
-              title="Paste chat message (WhatsApp / WeChat / iMessage)"
+              title={t("header.pasteChat")}
             >
               <Clipboard size={15} />
             </button>

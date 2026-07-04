@@ -790,6 +790,29 @@ const zhCN = {
     region: "地区",
     addRegion: "如：北美",
   },
+  header: {
+    aiMode: "AI 模式",
+    searchMode: "搜索模式",
+    searchPlaceholder: "搜索消息、PO、供应商…",
+    searchResults_one: "\"{{query}}\" 找到 {{count}} 条结果",
+    searchResults_other: "\"{{query}}\" 找到 {{count}} 条结果",
+    searchCategory: "消息",
+    searchNoResults: "没有消息匹配\"{{query}}\"",
+    pasteChat: "粘贴聊天消息（WhatsApp / 微信 / iMessage）",
+  },
+  copilot: {
+    defaultHint: "随时向 FlowForgeIQ 提问",
+    followUp: "继续追问…",
+    suggestions: "建议",
+    recent: "最近",
+    connectError: "无法连接AI，请重试。",
+    newConversation: "新对话",
+    openTitle: "打开AI助手（⌘K）",
+    askAi: "问AI",
+    chipDraftReply: "草拟回复",
+    chipFlagPayment: "标记付款",
+    chipShowAllTasks: "显示所有任务",
+  },
 };
 
 export default zhCN;

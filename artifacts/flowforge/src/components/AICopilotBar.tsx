@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Sparkles, X, AlertCircle, Clock, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useCopilot } from "@/lib/CopilotContext";
 
 interface AICopilotBarProps {
@@ -8,9 +9,8 @@ interface AICopilotBarProps {
   alwaysOpen?: boolean;
 }
 
-const ACTION_CHIPS = ["Draft reply", "Flag payment", "Show all tasks"];
-
 export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopilotBarProps) {
+  const { t } = useTranslation();
   const {
     contextHint, suggestions, inputRef, history, addToHistory, isOpen, setOpen,
     conversationHistory, setConversationHistory,
@@ -81,7 +81,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
       ]);
       setPendingMessage("");
     } catch {
-      setCopilotError("Couldn't connect to AI. Please try again.");
+      setCopilotError(t("copilot.connectError"));
       setPendingMessage("");
     } finally {
       setCopilotLoading(false);
@@ -154,7 +154,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
             }}
             placeholder={
               showResult && hasConversation
-                ? "Ask a follow-up…"
+                ? t("copilot.followUp")
                 : `${contextHint}  ⌘K`
             }
             className={`w-full h-8 bg-[#F0F4F8] hover:bg-[#E5EAF0] focus:bg-white border border-transparent focus:border-[#9000FF]/30 focus:ring-1 focus:ring-[#9000FF]/10 rounded-full ${hasLeftNode ? "pl-14" : "pl-9"} pr-4 text-xs outline-none transition-all placeholder:text-[#9E9FAE]`}
@@ -166,7 +166,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
               className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/15 rounded-xl shadow-lg z-50 py-2 overflow-hidden"
             >
               <p className="text-[10px] font-semibold text-[#9E9FAE] uppercase tracking-wide px-3 pt-0.5 pb-1.5">
-                Suggestions
+                {t("copilot.suggestions")}
               </p>
               {suggestions.map((suggestion, i) => (
                 <button
@@ -185,7 +185,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                 <>
                   <div className="mx-3 my-1.5 border-t border-[#F0F4F8]" />
                   <p className="text-[10px] font-semibold text-[#9E9FAE] uppercase tracking-wide px-3 pb-1">
-                    Recent
+                    {t("copilot.recent")}
                   </p>
                   {history.slice(0, 3).map((item, i) => (
                     <button
@@ -215,7 +215,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
               className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#9000FF]/15 rounded-xl shadow-lg z-50 py-1.5 overflow-hidden"
             >
               <p className="text-[10px] font-semibold text-[#9E9FAE] uppercase tracking-wide px-3 pt-1 pb-1.5">
-                Recent
+                {t("copilot.recent")}
               </p>
               {history.map((item, i) => (
                 <button
@@ -302,16 +302,20 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
 
               {!copilotLoading && !copilotError && hasConversation && (
                 <div className="px-4 py-2 border-t border-[#F0F4F8] flex flex-wrap items-center gap-2">
-                  {ACTION_CHIPS.map(chip => (
+                  {([
+                    "copilot.chipDraftReply",
+                    "copilot.chipFlagPayment",
+                    "copilot.chipShowAllTasks",
+                  ] as const).map((key) => (
                     <button
-                      key={chip}
+                      key={key}
                       onClick={() => {
-                        setQuery(chip);
+                        setQuery(t(key));
                         inputRef.current?.focus();
                       }}
                       className="text-[10px] bg-[#9000FF]/[0.08] text-[#9000FF] border border-[#9000FF]/20 px-2.5 py-1 rounded-full hover:bg-[#9000FF]/[0.15] font-semibold transition-colors"
                     >
-                      {chip}
+                      {t(key)}
                     </button>
                   ))}
                   {conversationHistory.length >= 4 && (
@@ -319,7 +323,7 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                       onClick={clearConversation}
                       className="ml-auto text-[10px] text-[#9E9FAE] hover:text-[#5E687B] transition-colors font-medium"
                     >
-                      New conversation
+                      {t("copilot.newConversation")}
                     </button>
                   )}
                 </div>
@@ -331,10 +335,10 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
         <button
           onClick={() => setOpen(true)}
           className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#F0F4F8] hover:bg-[#E5EAF0] text-[#9E9FAE] hover:text-[#5E687B] transition-all text-xs animate-in fade-in duration-150"
-          title="Open AI copilot (⌘K)"
+          title={t("copilot.openTitle")}
         >
           <Sparkles size={13} className="text-[#9000FF]/50" />
-          <span>Ask AI</span>
+          <span>{t("copilot.askAi")}</span>
           <kbd className="ml-1 text-[9px] font-mono bg-white border border-[#E5EAF0] rounded px-1 py-0.5 leading-none text-[#9E9FAE]">⌘K</kbd>
         </button>
       ) : null}

@@ -790,6 +790,29 @@ const en = {
     region: "Region",
     addRegion: "e.g. North America",
   },
+  header: {
+    aiMode: "AI mode",
+    searchMode: "Search mode",
+    searchPlaceholder: "Search messages, POs, suppliers…",
+    searchResults_one: "{{count}} result for \"{{query}}\"",
+    searchResults_other: "{{count}} results for \"{{query}}\"",
+    searchCategory: "messages",
+    searchNoResults: "No messages match \"{{query}}\"",
+    pasteChat: "Paste chat message (WhatsApp / WeChat / iMessage)",
+  },
+  copilot: {
+    defaultHint: "Ask FlowForgeIQ anything",
+    followUp: "Ask a follow-up…",
+    suggestions: "Suggestions",
+    recent: "Recent",
+    connectError: "Couldn't connect to AI. Please try again.",
+    newConversation: "New conversation",
+    openTitle: "Open AI copilot (⌘K)",
+    askAi: "Ask AI",
+    chipDraftReply: "Draft reply",
+    chipFlagPayment: "Flag payment",
+    chipShowAllTasks: "Show all tasks",
+  },
 };
 
 export default en;
