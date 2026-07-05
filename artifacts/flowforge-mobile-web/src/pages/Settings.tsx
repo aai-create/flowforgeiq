@@ -1,15 +1,129 @@
 import { useUser, useClerk } from "@clerk/react";
 import { AppShell } from "@/components/AppShell";
-import { Globe, User, LogOut, Check, Shield, PlayCircle } from "lucide-react";
+import { Globe, User, LogOut, Check, Shield, PlayCircle, Share2, Smartphone, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTour } from "@/hooks/useTour";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 
 const LANGUAGES = [
   { code: "en", label: "English", sub: "English" },
   { code: "zh-CN", label: "简体中文", sub: "Simplified Chinese" },
   { code: "zh-TW", label: "繁體中文", sub: "Traditional Chinese" },
 ];
+
+function isInStandaloneMode(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    ("standalone" in window.navigator &&
+      (window.navigator as { standalone?: boolean }).standalone === true)
+  );
+}
+
+function isIOSDevice(): boolean {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isAndroidDevice(): boolean {
+  return /android/i.test(navigator.userAgent);
+}
+
+function InstallForSharingSection() {
+  const { t } = useTranslation();
+  const installed = isInStandaloneMode();
+
+  if (installed) {
+    return (
+      <div
+        className="section-panel p-4 flex flex-col gap-3"
+        style={{ borderColor: "hsl(142 70% 45% / 0.35)" }}
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "hsl(142 70% 45% / 0.12)" }}
+          >
+            <CheckCircle2 size={13} color="hsl(142 70% 45%)" />
+          </div>
+          <p className="text-sm font-semibold text-foreground">{t("settings.installInstalledTitle")}</p>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t("settings.installInstalledDesc")}
+        </p>
+      </div>
+    );
+  }
+
+  const isIOS = isIOSDevice();
+  const isAndroid = isAndroidDevice();
+
+  return (
+    <div
+      className="section-panel p-4 flex flex-col gap-3"
+      style={{ borderColor: "hsl(var(--primary) / 0.3)" }}
+    >
+      <div className="flex items-center gap-2">
+        <div
+          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}
+        >
+          <Share2 size={13} color="hsl(var(--primary))" />
+        </div>
+        <p className="text-sm font-semibold text-foreground">{t("settings.installSection")}</p>
+      </div>
+
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        {t("settings.installSectionDesc")}
+      </p>
+
+      <div
+        className="rounded-xl p-3 flex flex-col gap-2.5"
+        style={{ backgroundColor: "hsl(var(--primary) / 0.06)", border: "1px solid hsl(var(--primary) / 0.15)" }}
+      >
+        <div className="flex items-center gap-2">
+          <Smartphone size={13} color="hsl(var(--primary))" />
+          <p className="text-xs font-semibold" style={{ color: "hsl(var(--primary))" }}>
+            {isIOS
+              ? t("settings.installIosTitle")
+              : isAndroid
+              ? t("settings.installAndroidTitle")
+              : t("settings.installOtherTitle")}
+          </p>
+        </div>
+
+        {isIOS ? (
+          <div className="flex flex-col gap-1.5">
+            <InstallStep number={1} text={<Trans i18nKey="install.iosStep1" components={{ bold: <strong /> }} />} />
+            <InstallStep number={2} text={<Trans i18nKey="install.iosStep2" components={{ bold: <strong /> }} />} />
+            <InstallStep number={3} text={<Trans i18nKey="install.iosStep3" components={{ bold: <strong /> }} />} />
+          </div>
+        ) : isAndroid ? (
+          <div className="flex flex-col gap-1.5">
+            <InstallStep number={1} text={<><strong>Chrome</strong>: tap the <strong>⋮ menu → Add to Home Screen</strong></>} />
+            <InstallStep number={2} text={<>Or tap the <strong>install prompt</strong> shown at the bottom of the screen</>} />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {t("settings.installOtherDesc")}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InstallStep({ number, text }: { number: number; text: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2">
+      <div
+        className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold text-white mt-0.5"
+        style={{ background: "hsl(var(--primary))" }}
+      >
+        {number}
+      </div>
+      <p className="text-xs text-foreground leading-snug flex-1">{text}</p>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -155,6 +269,9 @@ export default function SettingsPage() {
             </div>
           </button>
         </div>
+
+        {/* Install to share */}
+        <InstallForSharingSection />
 
         {/* Account actions */}
         <div className="section-panel p-4 flex flex-col gap-3">
