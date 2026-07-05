@@ -334,11 +334,37 @@ Authorization: Bearer &lt;your-device-token&gt;</pre>
     <li class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <div class="step-title">Add an If / notification action</div>
+        <div class="step-title">Enable "Continue on Error" to survive network failures</div>
         <div class="step-desc">
-          Optionally add an <strong>If</strong> action checking that the result is not empty,
-          then a <strong>Show Notification</strong> action with title <code>Captured!</code>
-          so you get confirmation on your wrist or lock screen.
+          Tap the <strong>••• (Details)</strong> button on the <strong>Get Contents of URL</strong>
+          action and turn on <strong>Continue on Error</strong> (iOS 16 +).<br/><br/>
+          Without this, a network timeout or connection failure will silently abort the shortcut
+          before any notification action can run — the capture is dropped with no feedback.
+          With it enabled, the shortcut keeps running so the next step can show you what happened.
+        </div>
+      </div>
+    </li>
+    <li class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">Branch on the HTTP status code and show a notification</div>
+        <div class="step-desc">
+          Add an <strong>If</strong> action after "Get Contents of URL". Tap the <em>Input</em>
+          field, insert the <strong>Contents of URL</strong> variable, then tap the variable chip
+          and select <strong>Status Code</strong> from the detail menu.<br/><br/>
+          Set the condition:
+          <pre>Status Code  is greater than or equal to  200
+AND
+Status Code  is less than  300</pre>
+          Inside the <strong>If</strong> block, add <strong>Show Notification</strong>:<br/>
+          Title: <code>✓ Captured!</code> &nbsp; Body: <code>Message forwarded to FlowForge</code><br/><br/>
+          Inside the <strong>Otherwise</strong> block, add a second <strong>Show Notification</strong>:<br/>
+          Title: <code>⚠️ Capture failed</code><br/>
+          Body: <code>Could not reach FlowForge — open the app to paste manually</code><br/><br/>
+          This branch fires for any non-2xx response (4xx, 5xx) <em>and</em> for transport-level
+          failures caught by "Continue on Error". Your message is safe in the source app — just
+          retry the shortcut. If the server returns a <code>503</code> it also sends a
+          <code>Retry-After: 30</code> header signalling a 30-second back-off before you retry.
         </div>
       </div>
     </li>

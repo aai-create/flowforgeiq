@@ -263,30 +263,40 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   const receivedAt = input.capturedAt ? new Date(input.capturedAt) : new Date();
   const snippet = input.messageText.slice(0, 200);
 
-  const [inserted] = await db
-    .insert(messagesTable)
-    .values({
-      sender: input.senderRaw,
-      channel: input.channel,
-      direction: "inbound",
-      snippet,
-      fullBody: input.messageText,
-      aiDraft: "",
-      aiAction: "",
-      aiTags: [],
-      unread: true,
-      isFlagged: false,
-      routingStatus: contact.routingStatus === "needs_review" ? "needs-review" : "routed",
-      supplierId: contact.supplierId,
-      rawChatText: input.messageText,
-      routedToClerkUserId: userId,
-      receivedAt,
-      orgId,
-    })
-    .returning();
+  let inserted: (typeof messagesTable.$inferSelect) | undefined;
+  try {
+    const rows = await db
+      .insert(messagesTable)
+      .values({
+        sender: input.senderRaw,
+        channel: input.channel,
+        direction: "inbound",
+        snippet,
+        fullBody: input.messageText,
+        aiDraft: "",
+        aiAction: "",
+        aiTags: [],
+        unread: true,
+        isFlagged: false,
+        routingStatus: contact.routingStatus === "needs_review" ? "needs-review" : "routed",
+        supplierId: contact.supplierId,
+        rawChatText: input.messageText,
+        routedToClerkUserId: userId,
+        receivedAt,
+        orgId,
+      })
+      .returning();
+    inserted = rows[0];
+  } catch (err) {
+    req.log.error({ err }, "capture/mobile: db insert failed");
+    res.set("Retry-After", "30");
+    res.status(503).json({ error: "Service temporarily unavailable — please retry" });
+    return;
+  }
 
   if (!inserted) {
-    res.status(500).json({ error: "Failed to insert message" });
+    res.set("Retry-After", "30");
+    res.status(503).json({ error: "Service temporarily unavailable — please retry" });
     return;
   }
 
