@@ -288,6 +288,31 @@ describe("POST /capture/mobile — device token authentication", () => {
     expect(res.body.messageId).toBe(99);
   });
 
+  it("does NOT suppress a message whose text prefix differs from the recent row (no false positive)", async () => {
+    // The recent row in DB has a snippet that does NOT start with the new payload's prefix.
+    // Dedup should pass through and insert a fresh message.
+    const differentRow = { id: 88, snippet: "Completely different text that shares no prefix" };
+    selectQueue = [
+      [DEVICE_TOKEN_ROW],
+      [TEAM_USER_ROW],
+      [differentRow], // dedup query returns a row, but its snippet doesn't match the prefix
+      [],             // suppliers contact resolution
+      [],             // buyers contact resolution
+    ];
+    mockInsertReturning.mockResolvedValue([INSERTED_MESSAGE]);
+
+    const app = await buildTestApp();
+
+    const res = await request(app)
+      .post("/capture/mobile")
+      .set("Authorization", "Bearer valid-device-token-for-alice")
+      .send(VALID_PAYLOAD);
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("captured");
+    expect(res.body.messageId).toBe(INSERTED_MESSAGE.id);
+  });
+
   it("returns 400 when the payload is missing required fields (senderRaw)", async () => {
     // Must still pass auth first — provide a valid token path
     selectQueue = [[DEVICE_TOKEN_ROW], [TEAM_USER_ROW]];
