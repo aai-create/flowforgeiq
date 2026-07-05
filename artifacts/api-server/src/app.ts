@@ -10,6 +10,8 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { renderShortcutsGuidePage } from "./routes/shortcuts-guide";
+import { resolveBaseUrl } from "./lib/resolveBaseUrl";
 
 const app: Express = express();
 
@@ -53,6 +55,13 @@ app.use(
     ),
   })),
 );
+
+app.get("/shortcuts", async (req, res) => {
+  const baseUrl = resolveBaseUrl(process.env) || `${req.protocol}://${req.hostname}`;
+  const html = await renderShortcutsGuidePage(baseUrl);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(html);
+});
 
 app.use("/api", router);
 

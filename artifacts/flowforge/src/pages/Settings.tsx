@@ -1188,6 +1188,26 @@ export function Settings() {
 
                 <BeeperSection />
 
+                {/* iOS Shortcut installer */}
+                <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5 mb-5">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Smartphone className="w-3 h-3 text-[#9000FF]"/>
+                    <span className={SECTION_LABEL}>iOS Shortcut</span>
+                  </div>
+                  <p className="text-[10px] text-[#9E9FAE] mb-2.5 leading-relaxed">
+                    Build a one-tap iOS Shortcut to forward supplier messages from WhatsApp, iMessage, or SMS directly into FlowForge.
+                  </p>
+                  <a
+                    href="/shortcuts"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Open Shortcut Installer
+                  </a>
+                </div>
+
                 <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3.5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Mail className="w-3 h-3 text-[#9000FF]"/>
