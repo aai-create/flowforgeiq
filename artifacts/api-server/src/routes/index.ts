@@ -19,6 +19,7 @@ import teamRouter from "./team";
 import focusRouter from "./focus";
 import pushTokensRouter from "./push-tokens";
 import captureRouter from "./capture";
+import shortcutsRouter from "./shortcuts";
 
 const router: IRouter = Router();
 
@@ -29,6 +30,7 @@ router.use(healthRouter);
 router.use(webhooksRouter);
 router.use(teamRouter); // handles its own auth (requireClerkAuth for provision-self, requireAuth for the rest)
 router.use(captureRouter); // handles its own auth (Clerk session OR Bearer device token)
+router.use(shortcutsRouter); // serves the pre-built .shortcut binary; no auth needed
 
 // Protected routes — require a valid JWT AND a provisioned team_users row
 const protectedRouter = Router();

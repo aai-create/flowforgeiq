@@ -10,7 +10,8 @@ export async function renderShortcutsGuidePage(baseUrl: string, isAuthenticated 
     color: { dark: "#212833", light: "#ffffff" },
   });
 
-  const openInShortcutsUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(guideUrl)}`;
+  const shortcutFileUrl = `${baseUrl}/api/shortcuts/capture.shortcut`;
+  const openInShortcutsUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(shortcutFileUrl)}`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -234,9 +235,10 @@ export async function renderShortcutsGuidePage(baseUrl: string, isAuthenticated 
     </a>
   </div>
   <div class="open-note">
-    <strong>Note:</strong> The "Open in Shortcuts" button uses a <code>shortcuts://import-shortcut?url=…</code>
-    deep link. iOS requires a binary <code>.shortcut</code> file at that URL to auto-import.
-    A pre-built shortcut file is not yet available — use the five-step guide below to build it manually (takes ~2 minutes).
+    <strong>Tap "Open in Shortcuts" on this iPhone.</strong> iOS will prompt you for your
+    FlowForge device token — paste it from <strong>Settings → Chat Channels</strong> and
+    tap <strong>Add Shortcut</strong>. The webhook URL is already pre-filled.
+    The five-step manual guide below is only needed if the one-tap button does not work on your device.
   </div>
 
   <hr class="divider" />
