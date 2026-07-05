@@ -9,6 +9,59 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Ingest a mobile-captured notification message (Clerk session or Bearer device token)
+ */
+export const MobileCaptureBody = zod.object({
+  "senderRaw": zod.string().describe('Raw sender identifier (phone number, name, or alias)'),
+  "messageText": zod.string().describe('Full text of the captured message'),
+  "channel": zod.enum(['whatsapp', 'wechat', 'imessage', 'sms', 'email', 'other']),
+  "capturedAt": zod.coerce.date().optional().describe('When the notification was captured on device'),
+  "appPackage": zod.string().nullish().describe('Source app package (e.g. com.whatsapp)'),
+  "deviceId": zod.string().nullish().describe('Opaque device identifier for dedup')
+})
+
+export const MobileCaptureResponse = zod.object({
+  "status": zod.enum(['captured', 'duplicate']),
+  "messageId": zod.number(),
+  "routingStatus": zod.string().nullish(),
+  "resolvedContactId": zod.number().nullish(),
+  "resolvedContactType": zod.union([zod.enum(['supplier', 'buyer']),zod.null()]).optional()
+})
+
+
+/**
+ * @summary List device tokens for the authenticated user
+ */
+export const ListDeviceTokensResponseItem = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "lastUsedAt": zod.coerce.date().nullish()
+})
+export const ListDeviceTokensResponse = zod.array(ListDeviceTokensResponseItem)
+
+
+/**
+ * @summary Create a new device token (raw value returned once)
+ */
+export const createDeviceTokenBodyLabelMax = 80;
+
+
+
+export const CreateDeviceTokenBody = zod.object({
+  "label": zod.string().max(createDeviceTokenBodyLabelMax).optional()
+})
+
+
+/**
+ * @summary Revoke a device token
+ */
+export const DeleteDeviceTokenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

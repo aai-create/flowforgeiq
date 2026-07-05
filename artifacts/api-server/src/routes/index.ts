@@ -18,6 +18,7 @@ import rfqsRouter from "./rfqs";
 import teamRouter from "./team";
 import focusRouter from "./focus";
 import pushTokensRouter from "./push-tokens";
+import captureRouter from "./capture";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ router.use(orgContextMiddleware);
 router.use(healthRouter);
 router.use(webhooksRouter);
 router.use(teamRouter); // handles its own auth (requireClerkAuth for provision-self, requireAuth for the rest)
+router.use(captureRouter); // handles its own auth (Clerk session OR Bearer device token)
 
 // Protected routes — require a valid JWT AND a provisioned team_users row
 const protectedRouter = Router();

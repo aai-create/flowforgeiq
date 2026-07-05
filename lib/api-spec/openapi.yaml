@@ -26,7 +26,86 @@ tags:
   - name: settings
   - name: integrations
   - name: team
+  - name: capture
 paths:
+  /capture/mobile:
+    post:
+      operationId: mobileCapture
+      tags: [capture]
+      summary: Ingest a mobile-captured notification message (Clerk session or Bearer device token)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileCapturePayload" }
+      responses:
+        "200":
+          description: Duplicate suppressed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileCaptureResponse" }
+        "201":
+          description: Message captured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileCaptureResponse" }
+        "401":
+          description: Unauthorized
+
+  /settings/device-tokens:
+    get:
+      operationId: listDeviceTokens
+      tags: [settings]
+      summary: List device tokens for the authenticated user
+      responses:
+        "200":
+          description: Device tokens
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DeviceToken" }
+        "401":
+          description: Unauthorized
+    post:
+      operationId: createDeviceToken
+      tags: [settings]
+      summary: Create a new device token (raw value returned once)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: { type: string, maxLength: 80 }
+      responses:
+        "201":
+          description: Created token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateDeviceTokenResponse" }
+        "401":
+          description: Unauthorized
+
+  /settings/device-tokens/{id}:
+    delete:
+      operationId: deleteDeviceToken
+      tags: [settings]
+      summary: Revoke a device token
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          description: Unauthorized
+        "404":
+          description: Token not found
+
   /healthz:
     get:
       operationId: healthCheck
@@ -2950,3 +3029,46 @@ components:
       required: [ok]
       properties:
         ok: { type: boolean }
+
+    MobileCapturePayload:
+      type: object
+      required: [senderRaw, messageText, channel]
+      properties:
+        senderRaw:   { type: string, description: "Raw sender identifier (phone number, name, or alias)" }
+        messageText: { type: string, description: "Full text of the captured message" }
+        channel:     { type: string, enum: [whatsapp, wechat, imessage, sms, email, other] }
+        capturedAt:  { type: string, format: date-time, description: "When the notification was captured on device" }
+        appPackage:  { type: ["string", "null"], description: "Source app package (e.g. com.whatsapp)" }
+        deviceId:    { type: ["string", "null"], description: "Opaque device identifier for dedup" }
+
+    MobileCaptureResponse:
+      type: object
+      required: [status, messageId]
+      properties:
+        status:              { type: string, enum: [captured, duplicate] }
+        messageId:           { type: integer }
+        routingStatus:       { type: ["string", "null"] }
+        resolvedContactId:   { type: ["integer", "null"] }
+        resolvedContactType:
+          oneOf:
+            - { type: string, enum: [supplier, buyer] }
+            - { type: "null" }
+
+    DeviceToken:
+      type: object
+      required: [id, label, createdAt]
+      properties:
+        id:          { type: integer }
+        label:       { type: string }
+        createdAt:   { type: string, format: date-time }
+        lastUsedAt:  { type: ["string", "null"], format: date-time }
+
+    CreateDeviceTokenResponse:
+      type: object
+      required: [id, label, createdAt, token]
+      properties:
+        id:         { type: integer }
+        label:      { type: string }
+        createdAt:  { type: string, format: date-time }
+        lastUsedAt: { type: ["string", "null"], format: date-time }
+        token:      { type: string, description: "Raw token value — returned only once at creation" }

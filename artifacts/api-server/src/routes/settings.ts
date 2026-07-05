@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { db, poNumberingConfigTable, teamUsersTable, messagesTable } from "@workspace/db";
+import { db, poNumberingConfigTable, teamUsersTable, messagesTable, deviceTokensTable } from "@workspace/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
+import { randomBytes, createHash } from "crypto";
 import { resolveOrgId, requireAuth, requireAdmin } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -215,6 +216,91 @@ router.post("/settings/po-numbering/next", requireAdmin, async (req, res) => {
     supplierPo: buildPoNumber(cfg.prefix, cfg.sequenceFormat, consumedSeq) + cfg.supplierSuffix,
   };
   res.json(preview);
+});
+
+// ─── Device token routes ──────────────────────────────────────────────────────
+
+const CreateDeviceTokenBody = z.object({
+  label: z.string().max(80).default(""),
+});
+
+router.get("/settings/device-tokens", requireAuth, async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const rows = await db
+    .select({
+      id: deviceTokensTable.id,
+      label: deviceTokensTable.label,
+      createdAt: deviceTokensTable.createdAt,
+      lastUsedAt: deviceTokensTable.lastUsedAt,
+    })
+    .from(deviceTokensTable)
+    .where(eq(deviceTokensTable.clerkUserId, req.userId!));
+  res.json(rows);
+});
+
+router.post("/settings/device-tokens", requireAuth, async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  let body: z.infer<typeof CreateDeviceTokenBody>;
+  try {
+    body = CreateDeviceTokenBody.parse(req.body);
+  } catch {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const rawToken = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+
+  const [inserted] = await db
+    .insert(deviceTokensTable)
+    .values({
+      clerkUserId: req.userId!,
+      orgId,
+      tokenHash,
+      label: body.label,
+    })
+    .returning({
+      id: deviceTokensTable.id,
+      label: deviceTokensTable.label,
+      createdAt: deviceTokensTable.createdAt,
+      lastUsedAt: deviceTokensTable.lastUsedAt,
+    });
+
+  req.log.info({ tokenId: inserted?.id }, "settings/device-tokens: created");
+
+  res.status(201).json({
+    id: inserted!.id,
+    label: inserted!.label,
+    createdAt: inserted!.createdAt,
+    lastUsedAt: inserted!.lastUsedAt,
+    token: rawToken,
+  });
+});
+
+router.delete("/settings/device-tokens/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [deleted] = await db
+    .delete(deviceTokensTable)
+    .where(
+      and(
+        eq(deviceTokensTable.id, id),
+        eq(deviceTokensTable.clerkUserId, req.userId!),
+      ),
+    )
+    .returning({ id: deviceTokensTable.id });
+
+  if (!deleted) {
+    res.status(404).json({ error: "Token not found or does not belong to you" });
+    return;
+  }
+
+  req.log.info({ tokenId: id }, "settings/device-tokens: revoked");
+  res.status(204).end();
 });
 
 export { buildPoNumber, getConfig };

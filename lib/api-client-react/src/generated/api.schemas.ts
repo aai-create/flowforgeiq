@@ -1400,6 +1400,79 @@ export interface SendRfqEmailResponse {
   ok: boolean;
 }
 
+export type MobileCapturePayloadChannel = typeof MobileCapturePayloadChannel[keyof typeof MobileCapturePayloadChannel];
+
+
+export const MobileCapturePayloadChannel = {
+  whatsapp: 'whatsapp',
+  wechat: 'wechat',
+  imessage: 'imessage',
+  sms: 'sms',
+  email: 'email',
+  other: 'other',
+} as const;
+
+export interface MobileCapturePayload {
+  /** Raw sender identifier (phone number, name, or alias) */
+  senderRaw: string;
+  /** Full text of the captured message */
+  messageText: string;
+  channel: MobileCapturePayloadChannel;
+  /** When the notification was captured on device */
+  capturedAt?: string;
+  /**
+     * Source app package (e.g. com.whatsapp)
+     * @nullable
+     */
+  appPackage?: string | null;
+  /**
+     * Opaque device identifier for dedup
+     * @nullable
+     */
+  deviceId?: string | null;
+}
+
+export type MobileCaptureResponseStatus = typeof MobileCaptureResponseStatus[keyof typeof MobileCaptureResponseStatus];
+
+
+export const MobileCaptureResponseStatus = {
+  captured: 'captured',
+  duplicate: 'duplicate',
+} as const;
+
+export interface MobileCaptureResponse {
+  status: MobileCaptureResponseStatus;
+  messageId: number;
+  /** @nullable */
+  routingStatus?: string | null;
+  /** @nullable */
+  resolvedContactId?: number | null;
+  resolvedContactType?: 'supplier' | 'buyer' | null;
+}
+
+export interface DeviceToken {
+  id: number;
+  label: string;
+  createdAt: string;
+  /** @nullable */
+  lastUsedAt?: string | null;
+}
+
+export interface CreateDeviceTokenResponse {
+  id: number;
+  label: string;
+  createdAt: string;
+  /** @nullable */
+  lastUsedAt?: string | null;
+  /** Raw token value — returned only once at creation */
+  token: string;
+}
+
+export type CreateDeviceTokenBody = {
+  /** @maxLength 80 */
+  label?: string;
+};
+
 export type ListShipmentsParams = {
 /**
  * When true, include archived shipments in the response. Defaults to false.

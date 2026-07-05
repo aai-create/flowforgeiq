@@ -34,10 +34,13 @@ import type {
   CopilotProposalUpdate,
   CopilotSummary,
   CopilotTriggerResult,
+  CreateDeviceTokenBody,
+  CreateDeviceTokenResponse,
   DealAdjustmentInput,
   DealAdjustmentUpdate,
   DealInput,
   DealWithSpread,
+  DeviceToken,
   DisconnectGmail200,
   DocumentUpdate,
   DocumentWithExtraction,
@@ -66,6 +69,8 @@ import type {
   MessageAssignInput,
   MessageInput,
   MessageUpdate,
+  MobileCapturePayload,
+  MobileCaptureResponse,
   NextPoNumbers,
   OrgResponse,
   PatchShipmentDealBody,
@@ -125,6 +130,295 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getMobileCaptureUrl = () => {
+
+
+
+
+  return `/api/capture/mobile`
+}
+
+/**
+ * @summary Ingest a mobile-captured notification message (Clerk session or Bearer device token)
+ */
+export const mobileCapture = async (mobileCapturePayload: MobileCapturePayload, options?: RequestInit): Promise<MobileCaptureResponse> => {
+
+  return customFetch<MobileCaptureResponse>(getMobileCaptureUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      mobileCapturePayload,)
+  }
+);}
+
+
+
+
+export const getMobileCaptureMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mobileCapture>>, TError,{data: BodyType<MobileCapturePayload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof mobileCapture>>, TError,{data: BodyType<MobileCapturePayload>}, TContext> => {
+
+const mutationKey = ['mobileCapture'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mobileCapture>>, {data: BodyType<MobileCapturePayload>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  mobileCapture(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MobileCaptureMutationResult = NonNullable<Awaited<ReturnType<typeof mobileCapture>>>
+    export type MobileCaptureMutationBody = BodyType<MobileCapturePayload>
+    export type MobileCaptureMutationError = ErrorType<void>
+
+    /**
+ * @summary Ingest a mobile-captured notification message (Clerk session or Bearer device token)
+ */
+export const useMobileCapture = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mobileCapture>>, TError,{data: BodyType<MobileCapturePayload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof mobileCapture>>,
+        TError,
+        {data: BodyType<MobileCapturePayload>},
+        TContext
+      > => {
+      return useMutation(getMobileCaptureMutationOptions(options));
+    }
+
+export const getListDeviceTokensUrl = () => {
+
+
+
+
+  return `/api/settings/device-tokens`
+}
+
+/**
+ * @summary List device tokens for the authenticated user
+ */
+export const listDeviceTokens = async ( options?: RequestInit): Promise<DeviceToken[]> => {
+
+  return customFetch<DeviceToken[]>(getListDeviceTokensUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeviceTokensQueryKey = () => {
+    return [
+    `/api/settings/device-tokens`
+    ] as const;
+    }
+
+
+export const getListDeviceTokensQueryOptions = <TData = Awaited<ReturnType<typeof listDeviceTokens>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeviceTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeviceTokensQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeviceTokens>>> = ({ signal }) => listDeviceTokens({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeviceTokens>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeviceTokensQueryResult = NonNullable<Awaited<ReturnType<typeof listDeviceTokens>>>
+export type ListDeviceTokensQueryError = ErrorType<void>
+
+
+/**
+ * @summary List device tokens for the authenticated user
+ */
+
+export function useListDeviceTokens<TData = Awaited<ReturnType<typeof listDeviceTokens>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeviceTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeviceTokensQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDeviceTokenUrl = () => {
+
+
+
+
+  return `/api/settings/device-tokens`
+}
+
+/**
+ * @summary Create a new device token (raw value returned once)
+ */
+export const createDeviceToken = async (createDeviceTokenBody?: CreateDeviceTokenBody, options?: RequestInit): Promise<CreateDeviceTokenResponse> => {
+
+  return customFetch<CreateDeviceTokenResponse>(getCreateDeviceTokenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createDeviceTokenBody,)
+  }
+);}
+
+
+
+
+export const getCreateDeviceTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDeviceToken>>, TError,{data?: BodyType<CreateDeviceTokenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDeviceToken>>, TError,{data?: BodyType<CreateDeviceTokenBody>}, TContext> => {
+
+const mutationKey = ['createDeviceToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDeviceToken>>, {data?: BodyType<CreateDeviceTokenBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDeviceToken(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDeviceTokenMutationResult = NonNullable<Awaited<ReturnType<typeof createDeviceToken>>>
+    export type CreateDeviceTokenMutationBody = BodyType<CreateDeviceTokenBody> | undefined
+    export type CreateDeviceTokenMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a new device token (raw value returned once)
+ */
+export const useCreateDeviceToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDeviceToken>>, TError,{data?: BodyType<CreateDeviceTokenBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDeviceToken>>,
+        TError,
+        {data?: BodyType<CreateDeviceTokenBody>},
+        TContext
+      > => {
+      return useMutation(getCreateDeviceTokenMutationOptions(options));
+    }
+
+export const getDeleteDeviceTokenUrl = (id: number,) => {
+
+
+
+
+  return `/api/settings/device-tokens/${id}`
+}
+
+/**
+ * @summary Revoke a device token
+ */
+export const deleteDeviceToken = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDeviceTokenUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDeviceTokenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDeviceToken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDeviceToken>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteDeviceToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDeviceToken>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDeviceToken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDeviceTokenMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDeviceToken>>>
+
+    export type DeleteDeviceTokenMutationError = ErrorType<void>
+
+    /**
+ * @summary Revoke a device token
+ */
+export const useDeleteDeviceToken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDeviceToken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDeviceToken>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDeviceTokenMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 
