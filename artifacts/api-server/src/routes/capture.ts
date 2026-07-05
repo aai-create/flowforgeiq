@@ -11,6 +11,8 @@ const MobileCapturePayload = z.object({
   senderRaw: z.string().min(1),
   messageText: z.string().min(1),
   channel: z.enum(["whatsapp", "wechat", "imessage", "sms", "email", "other"]),
+  contactType: z.enum(["supplier", "buyer"]).optional(),
+  confidence: z.number().min(0).max(1).optional(),
   capturedAt: z.string().datetime().optional(),
   appPackage: z.string().optional(),
   deviceId: z.string().optional(),

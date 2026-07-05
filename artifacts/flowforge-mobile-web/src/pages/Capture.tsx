@@ -1,12 +1,30 @@
-import { useRef, useState, useEffect } from "react";
-import { useListShipments, useIngestChat, ChatIngestInputChannel } from "@workspace/api-client-react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { useListShipments, useIngestChat } from "@workspace/api-client-react";
+import type { ChatIngestInputChannel } from "@workspace/api-client-react";
+import { useAuth } from "@clerk/react";
 import { AppShell } from "@/components/AppShell";
 import { useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
-import { X, User, Search, Package, ChevronUp, ChevronDown, Zap, Upload, Paperclip, CheckCircle2 } from "lucide-react";
+import {
+  X,
+  User,
+  Search,
+  Package,
+  ChevronUp,
+  ChevronDown,
+  Zap,
+  Upload,
+  Paperclip,
+  CheckCircle2,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  Loader2,
+} from "lucide-react";
 import { detectChannel } from "@/lib/detectChannel";
 
 type Channel = ChatIngestInputChannel;
+type ContactType = "supplier" | "buyer";
 
 const CHANNEL_CONFIGS: { id: Channel; staticLabel?: string; color: string }[] = [
   { id: "whatsapp", staticLabel: "WhatsApp", color: "#25D366" },
@@ -46,10 +64,70 @@ async function readSharedFileFromCache(): Promise<File | null> {
   }
 }
 
+async function computeDeviceId(): Promise<string> {
+  try {
+    const raw = `${navigator.userAgent}|${screen.width}|${screen.height}`;
+    const buf = await window.crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(raw),
+    );
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch {
+    return "unknown";
+  }
+}
+
 /** Truncate text to a preview length. */
 function previewText(text: string, maxLen = 160): string {
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen).trimEnd() + "…";
+}
+
+type IngestPreview = {
+  routingStatus: "routed" | "needs-review";
+  shipmentId?: number | null;
+  confidence: number;
+  sender?: string | null;
+};
+
+type CaptureResult = {
+  status: "captured" | "duplicate";
+  messageId: number;
+  routingStatus: "routed" | "needs_review" | null;
+  resolvedContactId: number | null;
+  resolvedContactType: "supplier" | "buyer" | null;
+};
+
+// ── Stateless capture API call ────────────────────────────────────────────────
+async function callCaptureApi(params: {
+  senderRaw: string;
+  messageText: string;
+  channel: Channel;
+  contactType: ContactType;
+  confidence: number;
+  deviceId: string;
+  token: string | null;
+}): Promise<CaptureResult> {
+  const resp = await fetch("/api/capture/mobile", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(params.token ? { Authorization: `Bearer ${params.token}` } : {}),
+    },
+    body: JSON.stringify({
+      senderRaw: params.senderRaw,
+      messageText: params.messageText,
+      channel: params.channel,
+      contactType: params.contactType,
+      confidence: params.confidence,
+      capturedAt: new Date().toISOString(),
+      deviceId: params.deviceId,
+    }),
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json() as Promise<CaptureResult>;
 }
 
 export default function CapturePage() {
@@ -57,11 +135,15 @@ export default function CapturePage() {
   const searchParams = new URLSearchParams(rawSearch);
   const preSelectedId = searchParams.get("shipmentId") ? Number(searchParams.get("shipmentId")) : null;
   const preSelectedName = searchParams.get("shipmentName") ?? "";
+  const preSelectedChannel = searchParams.get("channel") as Channel | null;
 
   const [, navigate] = useLocation();
   const { t } = useTranslation();
+  const { getToken } = useAuth();
   const textRef = useRef<HTMLTextAreaElement>(null);
-  const [channel, setChannel] = useState<Channel>("whatsapp");
+
+  const [channel, setChannel] = useState<Channel>(preSelectedChannel ?? "whatsapp");
+  const [contactType, setContactType] = useState<ContactType>("supplier");
   const [rawText, setRawText] = useState("");
   const [senderHint, setSenderHint] = useState("");
   const [selectedShipment, setSelectedShipment] = useState<{ id: number; name: string } | null>(
@@ -74,14 +156,53 @@ export default function CapturePage() {
   const [isShareEntry, setIsShareEntry] = useState(false);
   const [showManualEdit, setShowManualEdit] = useState(false);
 
+  // Share preview state (from ingest-chat auto-trigger on share intent)
+  const [sharePreview, setSharePreview] = useState<IngestPreview | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  // Final capture result
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
+  // Shipment context at capture time (for deep-linking on success)
+  const [resultShipmentId, setResultShipmentId] = useState<number | null>(null);
+
   const CHANNELS = CHANNEL_CONFIGS.map((cfg) => ({
     ...cfg,
     label: cfg.staticLabel ?? (cfg.id === "email" ? t("capture.channelEmail") : t("capture.channelOther")),
   }));
 
   const { data: shipments } = useListShipments();
-  const { mutate: ingestChat, isPending } = useIngestChat();
+  const { mutate: ingestChat } = useIngestChat();
 
+  // ── Core capture function ────────────────────────────────────────────────────
+  const doCapture = useCallback(
+    async (text: string, ch: Channel, ct: ContactType, sender: string, shipmentId: number | null) => {
+      if (isCapturing) return;
+      setIsCapturing(true);
+      setResultShipmentId(shipmentId);
+      try {
+        const [token, deviceId] = await Promise.all([getToken(), computeDeviceId()]);
+        const result = await callCaptureApi({
+          senderRaw: sender.trim() || "manual-entry",
+          messageText: text,
+          channel: ch,
+          contactType: ct,
+          confidence: 0.5,
+          deviceId,
+          token,
+        });
+        if (result.resolvedContactType) setContactType(result.resolvedContactType);
+        setCaptureResult(result);
+      } catch {
+        alert(t("capture.submitFailed"));
+      } finally {
+        setIsCapturing(false);
+      }
+    },
+    [getToken, isCapturing, t],
+  );
+
+  // ── Share intent detection — runs once on mount ───────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const viaShare = params.get("via") === "share";
@@ -89,19 +210,44 @@ export default function CapturePage() {
     const sharedUrl = params.get("url") ?? "";
     const sharedTitle = params.get("title") ?? "";
 
-    if (viaShare || sharedText || sharedUrl || sharedTitle) {
-      const composed = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n").trim();
-      if (composed) setRawText(composed);
+    const hasShareSignal = viaShare || sharedText || sharedUrl || sharedTitle;
+    if (!hasShareSignal) return;
 
-      setIsShareEntry(true);
-      const detected = detectChannel(sharedText, sharedUrl, sharedTitle);
-      if (detected) {
-        setChannel(detected.channel);
-        setAutoDetectedLabel(detected.label);
-      } else if (sharedText || sharedUrl || sharedTitle || viaShare) {
-        setChannel("other");
-      }
-      window.history.replaceState({}, "", window.location.pathname);
+    const composed = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n").trim();
+    const detected = detectChannel(sharedText, sharedUrl, sharedTitle);
+    const detectedCh: Channel = detected?.channel ?? "other";
+
+    if (composed) setRawText(composed);
+    setIsShareEntry(true);
+    if (detected) {
+      setChannel(detected.channel);
+      setAutoDetectedLabel(detected.label);
+    } else if (hasShareSignal) {
+      setChannel("other");
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+
+    // Auto-trigger routing PREVIEW (ingest-chat, no DB write) so the user can
+    // see the AI-matched shipment and confidence before explicitly confirming.
+    if (composed.trim().length > 5) {
+      setIsPreviewLoading(true);
+      ingestChat(
+        { data: { rawText: composed, channel: detectedCh, senderHint: undefined } },
+        {
+          onSuccess: (result) => {
+            setSharePreview({
+              routingStatus: result.routingStatus,
+              shipmentId: result.shipmentId,
+              confidence: result.confidence,
+              sender: result.sender,
+            });
+            setIsPreviewLoading(false);
+          },
+          onError: () => {
+            setIsPreviewLoading(false);
+          },
+        },
+      );
     }
 
     if (viaShare) {
@@ -112,6 +258,7 @@ export default function CapturePage() {
         }
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -136,6 +283,10 @@ export default function CapturePage() {
     }
   }, [preSelectedId, preSelectedName]);
 
+  useEffect(() => {
+    if (preSelectedChannel) setChannel(preSelectedChannel);
+  }, [preSelectedChannel]);
+
   const filtered = (shipments ?? [])
     .filter((s) => s.status !== "completed")
     .filter((s) => {
@@ -149,7 +300,7 @@ export default function CapturePage() {
     })
     .slice(0, 20);
 
-  const canSubmit = (rawText.trim().length > 5 || attachedFile !== null) && !isPending;
+  const canSubmit = (rawText.trim().length > 5 || attachedFile !== null) && !isCapturing;
   const hasContent = rawText.length > 0 || attachedFile !== null;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -158,30 +309,19 @@ export default function CapturePage() {
     e.target.value = "";
   }
 
+  // Manual submit (no share preview step)
   function handleSubmit() {
     if (!canSubmit) return;
     const text = rawText.trim() || (attachedFile ? `[Attached: ${attachedFile.name}]` : "");
-    ingestChat(
-      { data: { rawText: text, channel, senderHint: senderHint.trim() || undefined } },
-      {
-        onSuccess: (result) => {
-          const payload = {
-            result, rawText: text, channel,
-            senderHint: senderHint.trim(),
-            preSelectedShipmentId: selectedShipment?.id ?? null,
-          };
-          try {
-            sessionStorage.setItem("ff_routing_payload", JSON.stringify(payload));
-          } catch {
-            try {
-              sessionStorage.setItem("ff_routing_payload", JSON.stringify({ ...payload, rawText: text.slice(0, 1000) }));
-            } catch { /* ignore */ }
-          }
-          navigate("/routing-result");
-        },
-        onError: () => { alert(t("capture.analysisFailed")); },
-      }
-    );
+    doCapture(text, channel, contactType, senderHint, selectedShipment?.id ?? null);
+  }
+
+  // Confirm after share preview — use AI-matched shipment if available
+  function handleConfirmCapture() {
+    const text = rawText.trim() || (attachedFile ? `[Attached: ${attachedFile.name}]` : "");
+    if (!text || text.length < 5) return;
+    const shipId = sharePreview?.shipmentId ?? selectedShipment?.id ?? null;
+    doCapture(text, channel, contactType, "share-entry", shipId);
   }
 
   function handleClear() {
@@ -189,13 +329,107 @@ export default function CapturePage() {
     setSenderHint("");
     setAttachedFile(null);
     setSelectedShipment(null);
+    setResultShipmentId(null);
     setAutoDetectedLabel(null);
     setIsShareEntry(false);
     setShowManualEdit(false);
+    setSharePreview(null);
+    setIsPreviewLoading(false);
+    setCaptureResult(null);
   }
 
   const activeCh = CHANNELS.find((c) => c.id === channel)!;
 
+  // ── Result screen ─────────────────────────────────────────────────────────────
+  if (captureResult) {
+    const isCaptured = captureResult.status === "captured";
+    const isDuplicate = captureResult.status === "duplicate";
+    const needsReview = isCaptured && captureResult.routingStatus === "needs_review";
+    const isRouted = isCaptured && captureResult.routingStatus === "routed";
+
+    const bannerColor = isRouted ? "#22c55e" : needsReview ? "#f59e0b" : "#3b82f6";
+    const BannerIcon = isRouted ? CheckCircle : needsReview ? AlertTriangle : Info;
+    const bannerTitle = isRouted
+      ? t("capture.resultCaptured")
+      : needsReview
+        ? t("capture.resultNeedsReview")
+        : t("capture.resultDuplicate");
+    const bannerDesc = isRouted
+      ? t("capture.resultCapturedDesc")
+      : needsReview
+        ? t("capture.resultNeedsReviewDesc")
+        : t("capture.resultDuplicateDesc");
+
+    // For captured+routed: deep-link to matched shipment if available
+    const handlePrimaryAction = () => {
+      if (isRouted && resultShipmentId) {
+        navigate(`/shipment/${resultShipmentId}`);
+      } else {
+        navigate("/home");
+      }
+    };
+    const primaryLabel =
+      isRouted && resultShipmentId ? t("capture.viewShipment") : t("capture.viewInbox");
+
+    return (
+      <AppShell>
+        <div className="status-bar-pad px-5 pb-5 flex items-center justify-between shrink-0 page-header-gradient">
+          <div className="flex items-center gap-3">
+            <img
+              src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+              alt="FlowForgeIQ"
+              style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+            />
+            <div>
+              <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
+              <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("capture.title")}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 scroll-area px-4 pt-8 pb-4 flex flex-col gap-5 items-center justify-center">
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: `${bannerColor}18`, border: `2px solid ${bannerColor}30` }}
+          >
+            <BannerIcon size={38} style={{ color: bannerColor }} />
+          </div>
+
+          <div className="text-center flex flex-col gap-1.5 max-w-[280px]">
+            <p className="text-lg font-bold text-foreground">{bannerTitle}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{bannerDesc}</p>
+          </div>
+
+          {!isDuplicate && (
+            <button
+              onClick={handlePrimaryAction}
+              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-[14px] font-semibold text-sm btn-press w-full max-w-[260px]"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+                boxShadow: "0 4px 14px hsl(var(--primary) / 0.35)",
+                color: "white",
+              }}
+            >
+              {primaryLabel}
+            </button>
+          )}
+
+          <button
+            onClick={handleClear}
+            className="px-6 py-3 rounded-[14px] font-medium text-sm btn-press"
+            style={{
+              backgroundColor: "hsl(var(--muted))",
+              color: "hsl(var(--muted-foreground))",
+            }}
+          >
+            {t("capture.captureAnother")}
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // ── Capture form ──────────────────────────────────────────────────────────────
   return (
     <AppShell>
       {/* Header */}
@@ -240,7 +474,9 @@ export default function CapturePage() {
             >
               <CheckCircle2 size={15} style={{ color: "hsl(var(--primary))", flexShrink: 0 }} />
               <p className="text-[13px] font-semibold" style={{ color: "hsl(var(--primary))" }}>
-                {t("capture.sharedReceived")}
+                {autoDetectedLabel
+                  ? t("capture.sharedReceivedFrom", { channel: autoDetectedLabel })
+                  : t("capture.sharedReceived")}
               </p>
               {autoDetectedLabel && (
                 <span
@@ -331,6 +567,78 @@ export default function CapturePage() {
             </p>
           </div>
         )}
+
+        {/* ── Share routing preview card ── */}
+        {isShareEntry && (isPreviewLoading || sharePreview) && (
+          <div
+            className="rounded-xl border overflow-hidden"
+            style={{ borderColor: "hsl(var(--border))" }}
+          >
+            {isPreviewLoading ? (
+              <div className="flex items-center gap-2.5 px-3.5 py-3" style={{ background: "hsl(var(--card))" }}>
+                <Loader2 size={15} className="animate-spin" style={{ color: "hsl(var(--primary))", flexShrink: 0 }} />
+                <p className="text-[12px] text-muted-foreground">{t("capture.analyzing")}</p>
+              </div>
+            ) : sharePreview ? (
+              <div style={{ background: "hsl(var(--card))" }}>
+                <div className="px-3.5 py-2.5 flex items-center gap-2.5" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                  {sharePreview.routingStatus === "routed" ? (
+                    <CheckCircle size={14} style={{ color: "#22c55e", flexShrink: 0 }} />
+                  ) : (
+                    <AlertTriangle size={14} style={{ color: "#f59e0b", flexShrink: 0 }} />
+                  )}
+                  <p className="text-[12px] font-semibold text-foreground flex-1">
+                    {sharePreview.routingStatus === "routed"
+                      ? t("routing.autoRouted")
+                      : t("routing.needsReview")}
+                  </p>
+                  <span
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                    style={{
+                      color: Math.round(sharePreview.confidence * 100) >= 65 ? "#22c55e" : "#f59e0b",
+                      backgroundColor: Math.round(sharePreview.confidence * 100) >= 65 ? "#22c55e18" : "#f59e0b18",
+                    }}
+                  >
+                    {Math.round(sharePreview.confidence * 100)}% conf.
+                  </span>
+                </div>
+                {sharePreview.shipmentId && (
+                  <div className="px-3.5 py-2 flex items-center gap-2">
+                    <Package size={13} style={{ color: "hsl(var(--primary))", flexShrink: 0 }} />
+                    <p className="text-[12px] text-foreground">
+                      {t("capture.hintToShipment")} #{sharePreview.shipmentId}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* Contact type radio */}
+        <div className="flex flex-col gap-2">
+          <p className="section-label">{t("capture.contactType")}</p>
+          <div className="flex gap-2">
+            {(["supplier", "buyer"] as ContactType[]).map((ct) => {
+              const active = contactType === ct;
+              const label = ct === "supplier" ? t("capture.contactTypeSupplier") : t("capture.contactTypeBuyer");
+              return (
+                <button
+                  key={ct}
+                  onClick={() => setContactType(ct)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm transition-all active:opacity-70"
+                  style={{
+                    border: `1.5px solid ${active ? "hsl(var(--primary))" : "hsl(var(--border))"}`,
+                    backgroundColor: active ? "hsl(var(--primary) / 0.1)" : "hsl(var(--card))",
+                    color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Channel selector */}
         <div className="flex flex-col gap-2">
@@ -548,9 +856,9 @@ export default function CapturePage() {
           )}
         </div>
 
-        {/* Submit */}
+        {/* Submit button — "Confirm & Capture" for share entry, "Capture Message" for manual */}
         <button
-          onClick={handleSubmit}
+          onClick={isShareEntry ? handleConfirmCapture : handleSubmit}
           disabled={!canSubmit}
           className="flex items-center justify-center gap-2.5 rounded-[16px] py-4 font-bold text-base btn-press"
           style={{
@@ -562,12 +870,12 @@ export default function CapturePage() {
             opacity: canSubmit ? 1 : 0.7,
           }}
         >
-          {isPending ? (
+          {isCapturing ? (
             <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
           ) : (
             <>
               <Zap size={18} fill={canSubmit ? "white" : "hsl(var(--muted-foreground))"} strokeWidth={0} />
-              {isPending ? t("capture.analyzing") : t("capture.analyzeAi")}
+              {isShareEntry ? t("capture.confirmCapture") : t("capture.submitCapture")}
             </>
           )}
         </button>

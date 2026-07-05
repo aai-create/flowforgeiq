@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useListShipments } from "@workspace/api-client-react";
 import type { Shipment } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
@@ -15,6 +15,7 @@ import {
   WifiOff,
   Share2,
   X,
+  MessageSquarePlus,
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { color: string; Icon: React.ComponentType<{ size?: number; color?: string }> }> = {
@@ -23,6 +24,15 @@ const STATUS_CONFIG: Record<string, { color: string; Icon: React.ComponentType<{
   delayed: { color: "#e63946", Icon: AlertCircle },
   completed: { color: "#8896a7", Icon: Archive },
 };
+
+type Channel = "whatsapp" | "wechat" | "imessage" | "sms";
+
+const SOURCE_CHANNELS: { id: Channel; label: string; color: string }[] = [
+  { id: "whatsapp", label: "WhatsApp", color: "#25D366" },
+  { id: "wechat", label: "WeChat", color: "#09B83E" },
+  { id: "imessage", label: "iMessage", color: "#007AFF" },
+  { id: "sms", label: "SMS", color: "#5856D6" },
+];
 
 function isStandaloneMode(): boolean {
   return (
@@ -180,7 +190,41 @@ export default function HomePage() {
   const { t } = useTranslation();
   const { data: shipments, isLoading, isRefetching, refetch, isError } = useListShipments();
 
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
+
   const active = (shipments ?? []).filter((s) => s.status !== "completed").slice(0, 30);
+
+  const handleFabPointerDown = useCallback(() => {
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setShowSourcePicker(true);
+    }, 500);
+  }, []);
+
+  const handleFabPointerUp = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (!longPressTriggered.current) {
+      navigate("/capture");
+    }
+  }, [navigate]);
+
+  const handleFabPointerCancel = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  function handleChannelSelect(ch: Channel) {
+    setShowSourcePicker(false);
+    navigate(`/capture?channel=${ch}`);
+  }
 
   return (
     <AppShell>
@@ -199,7 +243,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 pt-3.5 pb-2">
+      <div className="flex-1 scroll-area px-4 pt-3.5 pb-2 relative">
         {/* Loading */}
         {isLoading && !isRefetching && (
           <div className="flex flex-col items-center justify-center gap-3 py-24">
@@ -287,6 +331,85 @@ export default function HomePage() {
           </>
         )}
       </div>
+
+      {/* ── FAB ────────────────────────────────────────────────────────── */}
+      <button
+        aria-label={t("home.fabLabel")}
+        onPointerDown={handleFabPointerDown}
+        onPointerUp={handleFabPointerUp}
+        onPointerCancel={handleFabPointerCancel}
+        onPointerLeave={handleFabPointerCancel}
+        className="fixed bottom-20 right-4 w-14 h-14 rounded-full flex items-center justify-center btn-press select-none"
+        style={{
+          background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
+          boxShadow: "0 4px 20px hsl(var(--primary) / 0.45)",
+          zIndex: 40,
+          touchAction: "none",
+        }}
+      >
+        <MessageSquarePlus size={24} color="white" strokeWidth={2} />
+      </button>
+
+      {/* ── Source Picker Bottom Sheet ──────────────────────────────────── */}
+      {showSourcePicker && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            style={{ backdropFilter: "blur(2px)", backgroundColor: "rgba(0,0,0,0.35)" }}
+            onClick={() => setShowSourcePicker(false)}
+          />
+          {/* Sheet */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl pt-4 pb-8 px-4 flex flex-col gap-3"
+            style={{
+              backgroundColor: "hsl(var(--card))",
+              boxShadow: "0 -4px 32px rgba(0,0,0,0.18)",
+            }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center mb-1">
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "hsl(var(--border))" }} />
+            </div>
+
+            <p className="text-[13px] font-semibold text-foreground text-center mb-1">
+              {t("home.sourcePickerTitle")}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {SOURCE_CHANNELS.map(({ id, label, color }) => (
+                <button
+                  key={id}
+                  onClick={() => handleChannelSelect(id)}
+                  className="flex flex-col items-center gap-2.5 py-4 rounded-2xl active:opacity-70 btn-press"
+                  style={{
+                    backgroundColor: `${color}10`,
+                    border: `1.5px solid ${color}30`,
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: `${color}20` }}
+                  >
+                    <MessageSquarePlus size={20} style={{ color }} strokeWidth={2} />
+                  </div>
+                  <span className="text-[13px] font-semibold" style={{ color }}>
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowSourcePicker(false)}
+              className="mt-1 py-3 rounded-xl text-sm font-medium text-muted-foreground active:opacity-60"
+              style={{ backgroundColor: "hsl(var(--muted))" }}
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
+        </>
+      )}
     </AppShell>
   );
 }

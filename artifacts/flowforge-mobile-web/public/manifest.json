@@ -29,28 +29,13 @@
   ],
   "categories": ["business", "productivity"],
   "share_target": {
-    "action": "./capture",
+    "action": "/mobile/capture",
     "method": "POST",
-    "enctype": "multipart/form-data",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
       "title": "title",
       "text": "text",
-      "url": "url",
-      "files": [
-        {
-          "name": "file",
-          "accept": [
-            "image/*",
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "text/csv",
-            "text/plain"
-          ]
-        }
-      ]
+      "url": "url"
     }
   }
 }
