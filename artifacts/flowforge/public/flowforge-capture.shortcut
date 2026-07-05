@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>WFWorkflowClientVersion</key>
+  <string>2605.0.5.1</string>
+  <key>WFWorkflowMinimumClientVersion</key>
+  <integer>900</integer>
+  <key>WFWorkflowMinimumClientVersionString</key>
+  <string>900</string>
+  <key>WFWorkflowName</key>
+  <string>FlowForge</string>
+  <key>WFWorkflowHasShortcutInputVariables</key>
+  <false/>
+  <key>WFWorkflowTypes</key>
+  <array>
+    <string>ActionExtension</string>
+  </array>
+  <key>WFWorkflowOutputContentItemClasses</key>
+  <array/>
+  <key>WFWorkflowIcon</key>
+  <dict>
+    <key>WFWorkflowIconGlyphNumber</key>
+    <integer>59511</integer>
+    <key>WFWorkflowIconStartColor</key>
+    <integer>4287541248</integer>
+  </dict>
+
+  <!-- ─── Import questions: fill these in when adding the shortcut ─────────── -->
+  <key>WFWorkflowImportQuestions</key>
+  <array>
+    <!-- Question 0: API token (stored in action 0 text field) -->
+    <dict>
+      <key>ActionIndex</key>
+      <integer>0</integer>
+      <key>Category</key>
+      <string>Parameter</string>
+      <key>DefaultValue</key>
+      <string></string>
+      <key>ParameterKey</key>
+      <string>WFTextActionText</string>
+      <key>Text</key>
+      <string>Paste your FlowForge API Token (Settings → Chat Channels → Mobile Capture)</string>
+    </dict>
+    <!-- Question 1: channel (stored in action 2 text field) -->
+    <dict>
+      <key>ActionIndex</key>
+      <integer>2</integer>
+      <key>Category</key>
+      <string>Parameter</string>
+      <key>DefaultValue</key>
+      <string>whatsapp</string>
+      <key>ParameterKey</key>
+      <string>WFTextActionText</string>
+      <key>Text</key>
+      <string>Default channel (whatsapp / imessage / sms / wechat / other)</string>
+    </dict>
+  </array>
+
+  <key>WFWorkflowActions</key>
+  <array>
+
+    <!-- Action 0: Text — API Token (filled by import question 0) -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.gettext</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFInput</key>
+        <dict>
+          <key>Value</key>
+          <dict>
+            <key>attachmentsByRange</key>
+            <dict/>
+            <key>string</key>
+            <string></string>
+          </dict>
+          <key>WFSerializationType</key>
+          <string>WFTextTokenString</string>
+        </dict>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000001</string>
+      </dict>
+    </dict>
+
+    <!-- Action 1: Set variable "FFToken" -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.setvariable</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFVariableName</key>
+        <string>FFToken</string>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000002</string>
+      </dict>
+    </dict>
+
+    <!-- Action 2: Text — channel (filled by import question 1, default "whatsapp") -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.gettext</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFInput</key>
+        <dict>
+          <key>Value</key>
+          <dict>
+            <key>attachmentsByRange</key>
+            <dict/>
+            <key>string</key>
+            <string>whatsapp</string>
+          </dict>
+          <key>WFSerializationType</key>
+          <string>WFTextTokenString</string>
+        </dict>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000003</string>
+      </dict>
+    </dict>
+
+    <!-- Action 3: Set variable "Channel" -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.setvariable</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFVariableName</key>
+        <string>Channel</string>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000004</string>
+      </dict>
+    </dict>
+
+    <!-- Action 4: Get text from share sheet input (messageText) -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.gettext</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFInput</key>
+        <dict>
+          <key>Value</key>
+          <dict>
+            <key>attachmentsByRange</key>
+            <dict>
+              <key>{0, 1}</key>
+              <dict>
+                <key>Aggrandizements</key>
+                <array/>
+                <key>Type</key>
+                <string>Variable</string>
+                <key>VariableName</key>
+                <string>Provided Input</string>
+              </dict>
+            </dict>
+            <key>string</key>
+            <string>&#xFFFC;</string>
+          </dict>
+          <key>WFSerializationType</key>
+          <string>WFTextTokenString</string>
+        </dict>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000005</string>
+      </dict>
+    </dict>
+
+    <!-- Action 5: Set variable "MessageText" -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.setvariable</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFVariableName</key>
+        <string>MessageText</string>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000006</string>
+      </dict>
+    </dict>
+
+    <!-- Action 6: Ask for text — supplier / sender name -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.ask</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFAskActionPrompt</key>
+        <string>Supplier or sender name (as it appears in your Contacts)</string>
+        <key>WFInputType</key>
+        <string>Text</string>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000007</string>
+      </dict>
+    </dict>
+
+    <!-- Action 7: Set variable "SenderRaw" -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.setvariable</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFVariableName</key>
+        <string>SenderRaw</string>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000008</string>
+      </dict>
+    </dict>
+
+    <!-- Action 8: POST to /api/capture/mobile -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.downloadurl</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFURL</key>
+        <string>https://flowforgeiq.com/api/capture/mobile</string>
+        <key>WFHTTPMethod</key>
+        <string>POST</string>
+        <key>WFHTTPBodyType</key>
+        <string>JSON</string>
+        <key>WFJSONValues</key>
+        <dict>
+          <key>Value</key>
+          <dict>
+            <key>WFDictionaryFieldValueItems</key>
+            <array>
+              <!-- senderRaw -->
+              <dict>
+                <key>WFItemType</key>
+                <integer>0</integer>
+                <key>WFKey</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict/>
+                    <key>string</key>
+                    <string>senderRaw</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+                <key>WFValue</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict>
+                      <key>{0, 1}</key>
+                      <dict>
+                        <key>Aggrandizements</key>
+                        <array/>
+                        <key>Type</key>
+                        <string>Variable</string>
+                        <key>VariableName</key>
+                        <string>SenderRaw</string>
+                      </dict>
+                    </dict>
+                    <key>string</key>
+                    <string>&#xFFFC;</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+              </dict>
+              <!-- messageText -->
+              <dict>
+                <key>WFItemType</key>
+                <integer>0</integer>
+                <key>WFKey</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict/>
+                    <key>string</key>
+                    <string>messageText</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+                <key>WFValue</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict>
+                      <key>{0, 1}</key>
+                      <dict>
+                        <key>Aggrandizements</key>
+                        <array/>
+                        <key>Type</key>
+                        <string>Variable</string>
+                        <key>VariableName</key>
+                        <string>MessageText</string>
+                      </dict>
+                    </dict>
+                    <key>string</key>
+                    <string>&#xFFFC;</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+              </dict>
+              <!-- channel -->
+              <dict>
+                <key>WFItemType</key>
+                <integer>0</integer>
+                <key>WFKey</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict/>
+                    <key>string</key>
+                    <string>channel</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+                <key>WFValue</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict>
+                      <key>{0, 1}</key>
+                      <dict>
+                        <key>Aggrandizements</key>
+                        <array/>
+                        <key>Type</key>
+                        <string>Variable</string>
+                        <key>VariableName</key>
+                        <string>Channel</string>
+                      </dict>
+                    </dict>
+                    <key>string</key>
+                    <string>&#xFFFC;</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+              </dict>
+            </array>
+          </dict>
+          <key>WFSerializationType</key>
+          <string>WFDictionaryFieldValue</string>
+        </dict>
+        <key>WFHTTPHeaders</key>
+        <dict>
+          <key>Value</key>
+          <dict>
+            <key>WFDictionaryFieldValueItems</key>
+            <array>
+              <!-- Content-Type -->
+              <dict>
+                <key>WFItemType</key>
+                <integer>0</integer>
+                <key>WFKey</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict/>
+                    <key>string</key>
+                    <string>Content-Type</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+                <key>WFValue</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict/>
+                    <key>string</key>
+                    <string>application/json</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+              </dict>
+              <!-- Authorization: Bearer <token> -->
+              <dict>
+                <key>WFItemType</key>
+                <integer>0</integer>
+                <key>WFKey</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict/>
+                    <key>string</key>
+                    <string>Authorization</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+                <key>WFValue</key>
+                <dict>
+                  <key>Value</key>
+                  <dict>
+                    <key>attachmentsByRange</key>
+                    <dict>
+                      <key>{7, 1}</key>
+                      <dict>
+                        <key>Aggrandizements</key>
+                        <array/>
+                        <key>Type</key>
+                        <string>Variable</string>
+                        <key>VariableName</key>
+                        <string>FFToken</string>
+                      </dict>
+                    </dict>
+                    <key>string</key>
+                    <string>Bearer &#xFFFC;</string>
+                  </dict>
+                  <key>WFSerializationType</key>
+                  <string>WFTextTokenString</string>
+                </dict>
+              </dict>
+            </array>
+          </dict>
+          <key>WFSerializationType</key>
+          <string>WFDictionaryFieldValue</string>
+        </dict>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000009</string>
+      </dict>
+    </dict>
+
+    <!-- Action 9: Set variable "APIResponse" to hold the result -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.setvariable</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFVariableName</key>
+        <string>APIResponse</string>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000010</string>
+      </dict>
+    </dict>
+
+    <!-- Action 10: Get "status" key from the JSON response -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.getvalueforkey</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFDictionaryKey</key>
+        <string>status</string>
+        <key>WFInput</key>
+        <dict>
+          <key>Value</key>
+          <dict>
+            <key>attachmentsByRange</key>
+            <dict>
+              <key>{0, 1}</key>
+              <dict>
+                <key>Aggrandizements</key>
+                <array/>
+                <key>Type</key>
+                <string>Variable</string>
+                <key>VariableName</key>
+                <string>APIResponse</string>
+              </dict>
+            </dict>
+            <key>string</key>
+            <string>&#xFFFC;</string>
+          </dict>
+          <key>WFSerializationType</key>
+          <string>WFTextTokenString</string>
+        </dict>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000011</string>
+      </dict>
+    </dict>
+
+    <!-- Action 11: If status contains "capture" (covers "captured") → success branch -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.conditional</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFCondition</key>
+        <string>Contains</string>
+        <key>WFConditionalActionString</key>
+        <string>capture</string>
+        <key>GroupingIdentifier</key>
+        <string>FF000001-COND-COND-COND-000000000001</string>
+        <key>WFControlFlowMode</key>
+        <integer>0</integer>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000012</string>
+      </dict>
+    </dict>
+
+    <!-- Action 12: Show success notification (inside if-branch) -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.notification</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFNotificationActionTitle</key>
+        <string>Sent to FlowForge ✓</string>
+        <key>WFNotificationActionBody</key>
+        <string>Message forwarded to your inbox. Check FlowForge to review.</string>
+        <key>WFNotificationActionSound</key>
+        <true/>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000013</string>
+      </dict>
+    </dict>
+
+    <!-- Action 13: Else branch -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.conditional</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>GroupingIdentifier</key>
+        <string>FF000001-COND-COND-COND-000000000001</string>
+        <key>WFControlFlowMode</key>
+        <integer>1</integer>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000014</string>
+      </dict>
+    </dict>
+
+    <!-- Action 14: Show error/duplicate notification (inside else-branch) -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.notification</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFNotificationActionTitle</key>
+        <string>FlowForge — Check Required</string>
+        <key>WFNotificationActionBody</key>
+        <string>Message may already be in your inbox, or there was an error. Open FlowForge to check.</string>
+        <key>WFNotificationActionSound</key>
+        <false/>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000015</string>
+      </dict>
+    </dict>
+
+    <!-- Action 15: End if -->
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.conditional</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>GroupingIdentifier</key>
+        <string>FF000001-COND-COND-COND-000000000001</string>
+        <key>WFControlFlowMode</key>
+        <integer>2</integer>
+        <key>UUID</key>
+        <string>FF000001-0000-0000-0000-000000000016</string>
+      </dict>
+    </dict>
+
+  </array>
+</dict>
+</plist>

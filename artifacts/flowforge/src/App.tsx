@@ -22,6 +22,7 @@ import { useProvisionUser } from "@/lib/useCurrentUser";
 import { useUserPref } from "@/lib/useUserPref";
 import { AcceptInvite } from "@/pages/AcceptInvite";
 import { LandingPage } from "@/pages/Landing";
+import { ShortcutsGuide } from "@/pages/ShortcutsGuide";
 
 const queryClient = new QueryClient();
 
@@ -221,6 +222,7 @@ function Router() {
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/shortcuts" component={ShortcutsGuide} />
       <Route path="/accept-invite" component={AcceptInvite} />
       <Route component={NotFound} />
     </Switch>
