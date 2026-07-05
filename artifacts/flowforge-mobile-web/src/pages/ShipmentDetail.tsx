@@ -14,7 +14,7 @@ function fmtUsd(n: number | null | undefined) {
 
 const GRADIENT_HEADER = {
   background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-  boxShadow: "0 2px 16px hsl(var(--primary) / 0.3)",
+  boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
 };
 
 function SectionPanel({ title, children }: { title: string; children: React.ReactNode }) {
@@ -65,6 +65,11 @@ export default function ShipmentDetailPage() {
           <button onClick={() => navigate("/home")} className="active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
+          <img
+            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+            alt="FlowForgeIQ"
+            style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+          />
           <p className="text-white font-bold text-[17px]">{t("shipmentDetail.title")}</p>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -81,6 +86,11 @@ export default function ShipmentDetailPage() {
           <button onClick={() => navigate("/home")} className="active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
+          <img
+            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+            alt="FlowForgeIQ"
+            style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+          />
           <p className="text-white font-bold text-[17px]">{t("shipmentDetail.title")}</p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
@@ -117,6 +127,11 @@ export default function ShipmentDetailPage() {
         <button onClick={() => navigate("/home")} className="mt-0.5 active:opacity-60">
           <ArrowLeft size={20} color="white" />
         </button>
+        <img
+          src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
+          alt="FlowForgeIQ"
+          style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0, marginTop: 2 }}
+        />
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-[17px] leading-tight">PO {shipment.poNumber}</p>
           <p className="text-white/65 text-xs mt-0.5 truncate">{shipment.product}</p>
