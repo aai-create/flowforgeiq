@@ -13,11 +13,16 @@ import {
   ArrowRight,
   Zap,
   Download,
+  AlertCircle,
 } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const SHORTCUT_FILE_URL = `${basePath}/flowforge-capture.shortcut`;
+const SHORTCUT_FILE_URL = `${basePath}/api/shortcuts/capture.shortcut`;
 const SHORTCUT_ABSOLUTE_URL = `${window.location.origin}${SHORTCUT_FILE_URL}`;
+
+const isIOS =
+  /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const STEPS: {
   id: string;
@@ -47,12 +52,12 @@ const STEPS: {
     id: "install-shortcut",
     num: 2,
     title: "Download and add the Shortcut to your iPhone",
-    body: (
+    body: isIOS ? (
       <div className="space-y-3">
         <p className="text-[12px] text-[#5E687B] leading-relaxed">
-          Open this page on your iPhone and tap the button below. The{" "}
+          Tap the button below. The{" "}
           <strong className="text-[#212833]">FlowForge Capture</strong> shortcut
-          file downloads and Apple Shortcuts will prompt you to{" "}
+          downloads and Apple Shortcuts will prompt you to{" "}
           <strong className="text-[#212833]">Add Shortcut</strong>. Tap it.
         </p>
         <a
@@ -65,6 +70,17 @@ const STEPS: {
         <p className="text-[11px] text-[#9E9FAE]">
           Requires iOS 16 or later · Free · No account needed
         </p>
+      </div>
+    ) : (
+      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-lg px-3.5 py-3">
+        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-[12px] font-semibold text-amber-800">iPhone only</p>
+          <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
+            This file only works on iPhone. Scan the QR code below with your
+            iPhone camera to open the download directly on your device.
+          </p>
+        </div>
       </div>
     ),
   },
@@ -261,25 +277,41 @@ export function ShortcutsGuide() {
 
               {/* CTA at bottom of steps */}
               <div className="mt-2 p-4 bg-[#F7F9FA] rounded-xl border border-[#E5EAF0]">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#212833]">
-                      Ready to install?
-                    </p>
-                    <p className="text-[11px] text-[#9E9FAE] mt-0.5">
-                      Scan the QR code with your iPhone to download instantly.
-                    </p>
+                {isIOS ? (
+                  <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+                    <div>
+                      <p className="text-[12px] font-semibold text-[#212833]">
+                        Ready to install?
+                      </p>
+                      <p className="text-[11px] text-[#9E9FAE] mt-0.5">
+                        Tap the button or scan the QR code to download instantly.
+                      </p>
+                    </div>
+                    <a
+                      href={SHORTCUT_FILE_URL}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shrink-0 shadow-sm"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Get Shortcut
+                      <ArrowRight className="w-3 h-3" />
+                    </a>
                   </div>
-                  <a
-                    href={SHORTCUT_FILE_URL}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shrink-0 shadow-sm"
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    Get Shortcut
-                    <ArrowRight className="w-3 h-3" />
-                  </a>
-                </div>
-                <div className="mt-4 flex items-center gap-5">
+                ) : (
+                  <div className="flex items-start gap-2.5 mb-4">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[12px] font-semibold text-amber-800">
+                        iPhone required
+                      </p>
+                      <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
+                        The FlowForge Shortcut only works on iPhone. Scan the QR
+                        code below with your iPhone camera to open the download
+                        directly on your device.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-5">
                   <div className="p-2 bg-white rounded-xl border border-[#E5EAF0] shadow-sm shrink-0">
                     <QRCodeSVG
                       value={SHORTCUT_ABSOLUTE_URL}

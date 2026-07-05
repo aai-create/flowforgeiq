@@ -31,6 +31,20 @@ export default defineConfig(async ({ command }) => {
       react(),
       tailwindcss({ optimize: false }),
       runtimeErrorOverlay(),
+      {
+        name: "shortcut-download-header",
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url && /\.shortcut(\?|$)/.test(req.url)) {
+              res.setHeader(
+                "Content-Disposition",
+                'attachment; filename="FlowForge Capture.shortcut"',
+              );
+            }
+            next();
+          });
+        },
+      },
       ...(process.env.NODE_ENV !== "production" &&
       process.env.REPL_ID !== undefined
         ? [
