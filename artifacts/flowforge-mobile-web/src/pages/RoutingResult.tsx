@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCreateMessage, useListShipments } from "@workspace/api-client-react";
 import type { Shipment } from "@workspace/api-client-react";
-import { ArrowLeft, Check, CheckCircle, AlertCircle, HelpCircle, Package, Search, ChevronRight, Edit2, Zap } from "lucide-react";
+import { Check, CheckCircle, AlertCircle, HelpCircle, Package, Search, ChevronRight, Edit2, Zap } from "lucide-react";
+import { GradientHeader } from "@/components/GradientHeader";
 import { useTranslation } from "react-i18next";
 
 interface IngestResult {
@@ -26,10 +27,6 @@ interface RoutingPayload {
   preSelectedShipmentId?: number | null;
 }
 
-const GRADIENT_HEADER = {
-  background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-  boxShadow: "0 2px 16px hsl(var(--primary) / 0.3)",
-};
 
 const GRADIENT_BTN = {
   background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
@@ -256,20 +253,7 @@ export default function RoutingResultPage() {
   if (payloadError || (!payload && !result)) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
-          <button onClick={goBack} className="active:opacity-60"><ArrowLeft size={20} color="white" /></button>
-          <div className="flex items-center gap-3">
-            <img
-              src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-              alt="FlowForgeIQ"
-              style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-            />
-            <div>
-              <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-              <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("routing.title")}</p>
-            </div>
-          </div>
-        </div>
+        <GradientHeader back={goBack} logoSize={28} subtitle={t("routing.title")} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
           <p className="text-muted-foreground text-center">
             {payloadError ? t("routing.noResult") : t("common.loading")}
@@ -298,22 +282,7 @@ export default function RoutingResultPage() {
   return (
     <div className="flex flex-col h-full max-w-lg mx-auto overflow-hidden">
       {/* Header */}
-      <div className="status-bar-pad px-5 pb-5 flex items-start gap-3 shrink-0" style={GRADIENT_HEADER}>
-        <button onClick={goBack} className="mt-1 active:opacity-60"><ArrowLeft size={20} color="white" /></button>
-        <div className="flex items-center gap-3">
-          <img
-            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-            alt="FlowForgeIQ"
-            style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-          />
-          <div>
-            <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-            <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">
-              {headerSubtitle}
-            </p>
-          </div>
-        </div>
-      </div>
+      <GradientHeader back={goBack} logoSize={28} align="start" subtitle={headerSubtitle} />
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-3">
 

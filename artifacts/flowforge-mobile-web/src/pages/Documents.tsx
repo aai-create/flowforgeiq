@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useListDocuments } from "@workspace/api-client-react";
 import type { DocumentWithExtraction } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
+import { GradientHeader } from "@/components/GradientHeader";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Search, X, CheckCircle, Clock, AlertCircle, HelpCircle, FileText, Image, Grid, File, ChevronRight, WifiOff, Inbox } from "lucide-react";
@@ -132,19 +133,7 @@ export default function DocumentsPage() {
   return (
     <AppShell>
       {/* Header */}
-      <div
-        className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0 page-header-gradient"
-      >
-        <img
-          src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-          alt="FlowForgeIQ"
-          style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-        />
-        <div>
-          <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-          <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("documents.title")}</p>
-        </div>
-      </div>
+      <GradientHeader subtitle={t("documents.title")} />
 
       {/* Search + filter bar */}
       <div className="px-4 pt-3 pb-2 shrink-0 flex flex-col gap-2.5">

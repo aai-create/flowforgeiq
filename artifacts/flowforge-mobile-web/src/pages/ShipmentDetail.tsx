@@ -1,7 +1,8 @@
 import { useLocation, useParams } from "wouter";
 import { useListShipments, useListShipmentStageEvents, useListMessages } from "@workspace/api-client-react";
-import { ArrowLeft, Package, MessageSquare, Zap, User, TrendingUp } from "lucide-react";
+import { Package, MessageSquare, Zap, User, TrendingUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { GradientHeader } from "@/components/GradientHeader";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -12,10 +13,6 @@ function fmtUsd(n: number | null | undefined) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-const GRADIENT_HEADER = {
-  background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-  boxShadow: "0 2px 12px hsl(var(--primary) / 0.35)",
-};
 
 function SectionPanel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -61,17 +58,7 @@ export default function ShipmentDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
-          <button onClick={() => navigate("/home")} className="active:opacity-60">
-            <ArrowLeft size={20} color="white" />
-          </button>
-          <img
-            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-            alt="FlowForgeIQ"
-            style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-          />
-          <p className="text-white font-bold text-[17px]">{t("shipmentDetail.title")}</p>
-        </div>
+        <GradientHeader back={() => navigate("/home")} logoSize={26} title={t("shipmentDetail.title")} />
         <div className="flex-1 flex items-center justify-center">
           <div className="app-spinner" />
         </div>
@@ -82,17 +69,7 @@ export default function ShipmentDetailPage() {
   if (!shipment) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
-          <button onClick={() => navigate("/home")} className="active:opacity-60">
-            <ArrowLeft size={20} color="white" />
-          </button>
-          <img
-            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-            alt="FlowForgeIQ"
-            style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-          />
-          <p className="text-white font-bold text-[17px]">{t("shipmentDetail.title")}</p>
-        </div>
+        <GradientHeader back={() => navigate("/home")} logoSize={26} title={t("shipmentDetail.title")} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -123,30 +100,26 @@ export default function ShipmentDetailPage() {
   return (
     <div className="flex flex-col h-full max-w-lg mx-auto overflow-hidden">
       {/* Header */}
-      <div className="status-bar-pad px-5 pb-5 flex items-start gap-3 shrink-0" style={GRADIENT_HEADER}>
-        <button onClick={() => navigate("/home")} className="mt-0.5 active:opacity-60">
-          <ArrowLeft size={20} color="white" />
-        </button>
-        <img
-          src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-          alt="FlowForgeIQ"
-          style={{ width: 26, height: 26, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0, marginTop: 2 }}
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-[17px] leading-tight">PO {shipment.poNumber}</p>
-          <p className="text-white/65 text-xs mt-0.5 truncate">{shipment.product}</p>
-        </div>
-        <span
-          className="text-[11px] font-bold px-2.5 py-1 rounded-full mt-0.5 shrink-0"
-          style={{
-            color: cfg.color,
-            backgroundColor: `${cfg.color}22`,
-            border: `1px solid ${cfg.color}35`,
-          }}
-        >
-          {cfg.label}
-        </span>
-      </div>
+      <GradientHeader
+        back={() => navigate("/home")}
+        logoSize={26}
+        align="start"
+        title={`PO ${shipment.poNumber}`}
+        subtitle={shipment.product}
+        subtitleClassName="text-white/65 text-xs mt-0.5 truncate"
+        right={
+          <span
+            className="text-[11px] font-bold px-2.5 py-1 rounded-full mt-0.5 shrink-0"
+            style={{
+              color: cfg.color,
+              backgroundColor: `${cfg.color}22`,
+              border: `1px solid ${cfg.color}35`,
+            }}
+          >
+            {cfg.label}
+          </span>
+        }
+      />
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
 

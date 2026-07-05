@@ -3,6 +3,7 @@ import { useListShipments, useIngestChat } from "@workspace/api-client-react";
 import type { ChatIngestInputChannel } from "@workspace/api-client-react";
 import { useAuth } from "@clerk/react";
 import { AppShell } from "@/components/AppShell";
+import { GradientHeader } from "@/components/GradientHeader";
 import { useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import {
@@ -373,19 +374,7 @@ export default function CapturePage() {
 
     return (
       <AppShell>
-        <div className="status-bar-pad px-5 pb-5 flex items-center justify-between shrink-0 page-header-gradient">
-          <div className="flex items-center gap-3">
-            <img
-              src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-              alt="FlowForgeIQ"
-              style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-            />
-            <div>
-              <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-              <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("capture.title")}</p>
-            </div>
-          </div>
-        </div>
+        <GradientHeader subtitle={t("capture.title")} />
 
         <div className="flex-1 scroll-area px-4 pt-8 pb-4 flex flex-col gap-5 items-center justify-center">
           <div
@@ -433,28 +422,20 @@ export default function CapturePage() {
   return (
     <AppShell>
       {/* Header */}
-      <div className="status-bar-pad px-5 pb-5 flex items-center justify-between shrink-0 page-header-gradient">
-        <div className="flex items-center gap-3">
-          <img
-            src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-            alt="FlowForgeIQ"
-            style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-          />
-          <div>
-            <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-            <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("capture.title")}</p>
-          </div>
-        </div>
-        {hasContent && (
-          <button
-            onClick={handleClear}
-            className="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
-            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
-          >
-            <X size={16} color="white" strokeWidth={2.5} />
-          </button>
-        )}
-      </div>
+      <GradientHeader
+        subtitle={t("capture.title")}
+        right={
+          hasContent ? (
+            <button
+              onClick={handleClear}
+              className="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+              style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+            >
+              <X size={16} color="white" strokeWidth={2.5} />
+            </button>
+          ) : undefined
+        }
+      />
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
 

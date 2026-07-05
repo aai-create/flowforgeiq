@@ -1,5 +1,6 @@
 import { useUser, useClerk } from "@clerk/react";
 import { AppShell } from "@/components/AppShell";
+import { GradientHeader } from "@/components/GradientHeader";
 import { Globe, User, LogOut, Check, Shield, PlayCircle, Share2, Smartphone, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTour } from "@/hooks/useTour";
@@ -148,19 +149,7 @@ export default function SettingsPage() {
   return (
     <AppShell>
       {/* Header */}
-      <div
-        className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0 page-header-gradient"
-      >
-        <img
-          src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-          alt="FlowForgeIQ"
-          style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-        />
-        <div>
-          <p className="text-white font-bold text-[17px] tracking-tight leading-tight">FlowForgeIQ</p>
-          <p className="text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5">{t("settings.title")}</p>
-        </div>
-      </div>
+      <GradientHeader subtitle={t("settings.title")} />
 
       <div className="flex-1 scroll-area px-4 pt-4 pb-4 flex flex-col gap-4">
 
