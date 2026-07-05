@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 
-export async function renderShortcutsGuidePage(baseUrl: string): Promise<string> {
+export async function renderShortcutsGuidePage(baseUrl: string, isAuthenticated = false): Promise<string> {
   const webhookUrl = `${baseUrl}/api/capture/mobile`;
   const guideUrl = `${baseUrl}/shortcuts`;
 
@@ -147,6 +147,51 @@ export async function renderShortcutsGuidePage(baseUrl: string): Promise<string>
       border: none; border-top: 1px solid #E5EAF0;
       margin: 28px 0;
     }
+
+    /* ── Device token section ───────────────────────────────────── */
+    .token-box {
+      background: #F7F9FA; border: 1px solid #E5EAF0;
+      border-radius: 12px; padding: 14px 16px;
+      margin-bottom: 28px;
+    }
+    .token-box.token-authed { border-color: #D4B8FF; background: #FAF5FF; }
+    .token-label {
+      font-size: 10px; font-weight: 700; color: #9E9FAE;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
+    }
+    .token-authed .token-label { color: #7C3AED; }
+    .token-signin-prompt {
+      font-size: 13px; color: #5E687B; line-height: 1.5;
+    }
+    .token-signin-prompt a {
+      color: #9000FF; font-weight: 700; text-decoration: none;
+    }
+    .token-signin-prompt a:hover { text-decoration: underline; }
+    .token-generate-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .token-value {
+      flex: 1; font-family: "SF Mono", "Fira Mono", "Consolas", monospace;
+      font-size: 12px; font-weight: 600; color: #212833;
+      background: #fff; border: 1px solid #E5EAF0;
+      border-radius: 8px; padding: 8px 12px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      min-width: 0;
+      letter-spacing: .04em;
+    }
+    .token-value.masked { color: #9E9FAE; letter-spacing: .12em; }
+    .token-hint {
+      font-size: 11px; color: #9E9FAE; margin-top: 6px; line-height: 1.5;
+    }
+    .token-hint strong { color: #92680A; }
+    #token-feedback, #copy-token-feedback {
+      font-size: 11px; color: #16A34A; font-weight: 600;
+      opacity: 0; transition: opacity .3s;
+      margin-top: 6px; display: block;
+    }
+    #token-error {
+      font-size: 11px; color: #DC2626; font-weight: 600;
+      opacity: 0; transition: opacity .3s;
+      margin-top: 6px; display: block;
+    }
   </style>
 </head>
 <body>
@@ -196,6 +241,39 @@ export async function renderShortcutsGuidePage(baseUrl: string): Promise<string>
 
   <hr class="divider" />
 
+  <!-- Device token -->
+  ${isAuthenticated ? `
+  <div class="token-box token-authed">
+    <div class="token-label">Your Device Token</div>
+    <div class="token-generate-row">
+      <div class="token-value masked" id="tokenValue">••••••••••••••••••••••••••••••••</div>
+      <button class="btn btn-outline btn-copy" id="copyTokenBtn" onclick="copyToken()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+      <button class="btn btn-primary" id="generateTokenBtn" onclick="generateToken()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Generate token
+      </button>
+    </div>
+    <span id="copy-token-feedback">✓ Token copied!</span>
+    <span id="token-error"></span>
+    <div class="token-hint">Generates a new token tied to your account. <strong>Copy it now</strong> — it won't be shown again. Paste it into Step 3 below.</div>
+  </div>
+  ` : `
+  <div class="token-box">
+    <div class="token-label">Device Token</div>
+    <p class="token-signin-prompt">
+      <a href="/">Sign in to FlowForge</a> to generate and copy your device token directly from this page —
+      no need to navigate to Settings.
+    </p>
+  </div>
+  `}
+
   <!-- Step-by-step guide -->
   <ol class="steps">
     <li class="step">
@@ -228,7 +306,9 @@ export async function renderShortcutsGuidePage(baseUrl: string): Promise<string>
           Add two headers:
           <pre>Content-Type: application/json
 Authorization: Bearer &lt;your-device-token&gt;</pre>
-          Copy your device token from FlowForge → Settings → Chat Channels.
+          ${isAuthenticated
+            ? 'Generate and copy your device token using the box above, then paste it in place of <code>&lt;your-device-token&gt;</code>.'
+            : 'Copy your device token from FlowForge → Settings → Chat Channels, or <a href="/" style="color:#9000FF;font-weight:700;">sign in</a> above to generate one here.'}
         </div>
       </div>
     </li>
@@ -297,6 +377,52 @@ Authorization: Bearer &lt;your-device-token&gt;</pre>
   function showFeedback(el) {
     el.style.opacity = '1';
     setTimeout(function() { el.style.opacity = '0'; }, 2000);
+  }
+
+  var _generatedToken = null;
+
+  function generateToken() {
+    var btn = document.getElementById('generateTokenBtn');
+    var tokenEl = document.getElementById('tokenValue');
+    var copyBtn = document.getElementById('copyTokenBtn');
+    var errEl = document.getElementById('token-error');
+    if (!btn || !tokenEl) return;
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    errEl.style.opacity = '0';
+    fetch('/api/settings/device-tokens', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: 'iOS Shortcut' })
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      _generatedToken = data.token;
+      tokenEl.textContent = data.token;
+      tokenEl.classList.remove('masked');
+      if (copyBtn) copyBtn.style.display = 'inline-flex';
+      btn.style.display = 'none';
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Generate token';
+      errEl.textContent = 'Failed to generate token. Make sure you are signed in.';
+      errEl.style.opacity = '1';
+    });
+  }
+
+  function copyToken() {
+    if (!_generatedToken) return;
+    var feedback = document.getElementById('copy-token-feedback');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(_generatedToken).then(function() { showFeedback(feedback); }).catch(function() { fallbackCopy(_generatedToken, feedback); });
+    } else {
+      fallbackCopy(_generatedToken, feedback);
+    }
   }
 </script>
 </body>

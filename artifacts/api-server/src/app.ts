@@ -12,6 +12,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { renderShortcutsGuidePage } from "./routes/shortcuts-guide";
 import { resolveBaseUrl } from "./lib/resolveBaseUrl";
+import { getAuth } from "@clerk/express";
 
 const app: Express = express();
 
@@ -58,7 +59,14 @@ app.use(
 
 app.get("/shortcuts", async (req, res) => {
   const baseUrl = resolveBaseUrl(process.env) || `${req.protocol}://${req.hostname}`;
-  const html = await renderShortcutsGuidePage(baseUrl);
+  let isAuthenticated = false;
+  try {
+    const auth = getAuth(req);
+    isAuthenticated = !!auth?.userId;
+  } catch {
+    // treat as unauthenticated
+  }
+  const html = await renderShortcutsGuidePage(baseUrl, isAuthenticated);
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(html);
 });
