@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import {
@@ -16,6 +17,7 @@ import {
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SHORTCUT_FILE_URL = `${basePath}/flowforge-capture.shortcut`;
+const SHORTCUT_ABSOLUTE_URL = `${window.location.origin}${SHORTCUT_FILE_URL}`;
 
 const STEPS: {
   id: string;
@@ -258,23 +260,47 @@ export function ShortcutsGuide() {
               </div>
 
               {/* CTA at bottom of steps */}
-              <div className="mt-2 p-4 bg-[#F7F9FA] rounded-xl border border-[#E5EAF0] flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[12px] font-semibold text-[#212833]">
-                    Ready to install?
-                  </p>
-                  <p className="text-[11px] text-[#9E9FAE] mt-0.5">
-                    Open this page on your iPhone for the best experience.
-                  </p>
+              <div className="mt-2 p-4 bg-[#F7F9FA] rounded-xl border border-[#E5EAF0]">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#212833]">
+                      Ready to install?
+                    </p>
+                    <p className="text-[11px] text-[#9E9FAE] mt-0.5">
+                      Scan the QR code with your iPhone to download instantly.
+                    </p>
+                  </div>
+                  <a
+                    href={SHORTCUT_FILE_URL}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shrink-0 shadow-sm"
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    Get Shortcut
+                    <ArrowRight className="w-3 h-3" />
+                  </a>
                 </div>
-                <a
-                  href={SHORTCUT_FILE_URL}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shrink-0 shadow-sm"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  Get Shortcut
-                  <ArrowRight className="w-3 h-3" />
-                </a>
+                <div className="mt-4 flex items-center gap-5">
+                  <div className="p-2 bg-white rounded-xl border border-[#E5EAF0] shadow-sm shrink-0">
+                    <QRCodeSVG
+                      value={SHORTCUT_ABSOLUTE_URL}
+                      size={100}
+                      fgColor="#9000FF"
+                      bgColor="#ffffff"
+                      level="M"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#212833]">
+                      Scan with your iPhone camera
+                    </p>
+                    <p className="text-[11px] text-[#5E687B] mt-1 leading-relaxed">
+                      Point your iPhone camera at this code — it opens the
+                      Shortcut download directly in Safari so you can tap{" "}
+                      <strong className="text-[#212833]">Add Shortcut</strong>{" "}
+                      right away. No typing required.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
