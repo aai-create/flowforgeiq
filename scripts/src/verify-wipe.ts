@@ -41,6 +41,7 @@
 
 import { execSync } from "child_process";
 import pg from "pg";
+import { WIPE_TABLES, WIPE_PRESERVED_TABLES } from "@workspace/db/wipe-tables";
 
 const { Pool } = pg;
 
@@ -58,41 +59,6 @@ async function count(table: string): Promise<number> {
   const result = await pool.query<{ n: string }>(`SELECT COUNT(*) AS n FROM ${table}`);
   return parseInt(result.rows[0].n, 10);
 }
-
-// ── Table lists ──────────────────────────────────────────────────────────────
-
-const PRESERVED_TABLES = [
-  "organizations",
-  "stages",
-  "team_users",
-  "team_invitations",
-  "push_tokens",
-  "gmail_credentials",
-  "po_numbering_config",
-] as const;
-
-const WIPED_TABLES = [
-  "tasks",
-  "messages",
-  "factory_quotes",
-  "payments",
-  "deal_shipments",
-  "shipments",
-  "deal_adjustments",
-  "deals",
-  "suppliers",
-  "buyers",
-  "rfqs",
-  "rfq_quotes",
-  "copilot_proposals",
-  "autonomy_policies",
-  "shipment_predictions",
-  "stage_events",
-  "buyer_emails",
-  "extraction_corrections",
-  "extractions",
-  "documents",
-] as const;
 
 /**
  * Authenticated business endpoints to probe after the wipe.
@@ -163,14 +129,14 @@ async function main(): Promise<void> {
   const failures: Failure[] = [];
 
   // ── 0. Drift guard: every public table must be accounted for ───────────────
-  // If a developer adds a schema table but forgets to add it to WIPED_TABLES
-  // or PRESERVED_TABLES the wipe will silently leave rows behind.  Query
+  // If a developer adds a schema table but forgets to add it to WIPE_TABLES
+  // or WIPE_PRESERVED_TABLES the wipe will silently leave rows behind.  Query
   // information_schema first so we fail loudly before touching any data.
   console.log("\n━━━  Step 0: Check for unlisted tables  ━━━");
   {
     const known = new Set<string>([
-      ...(WIPED_TABLES as readonly string[]),
-      ...(PRESERVED_TABLES as readonly string[]),
+      ...(WIPE_TABLES as readonly string[]),
+      ...(WIPE_PRESERVED_TABLES as readonly string[]),
     ]);
     const res = await pool.query<{ table_name: string }>(
       `SELECT table_name
@@ -182,8 +148,8 @@ async function main(): Promise<void> {
     const unlisted = (res.rows as { table_name: string }[]).map((r) => r.table_name).filter((t) => !known.has(t));
     if (unlisted.length > 0) {
       const msg =
-        `Table(s) not listed in WIPED_TABLES or PRESERVED_TABLES: ${unlisted.join(", ")}. ` +
-        `Add each to the appropriate constant in verify-wipe.ts (and seed.ts) before running wipe.`;
+        `Table(s) not listed in WIPE_TABLES or WIPE_PRESERVED_TABLES: ${unlisted.join(", ")}. ` +
+        `Add each to the appropriate constant in lib/db/src/wipe-tables.ts before running wipe.`;
       failures.push({ check: "schema:unlisted-tables", reason: msg });
       console.error(`  ✗  ${msg}`);
     } else {
@@ -194,7 +160,7 @@ async function main(): Promise<void> {
   // ── 1. Snapshot pre-wipe counts ────────────────────────────────────────────
   console.log("\n━━━  Step 1: Snapshot pre-wipe row counts  ━━━");
   const preCounts: Record<string, number> = {};
-  for (const t of PRESERVED_TABLES) {
+  for (const t of WIPE_PRESERVED_TABLES) {
     try {
       preCounts[t] = await count(t);
       console.log(`  ${t}: ${preCounts[t]} row(s)`);
@@ -210,7 +176,7 @@ async function main(): Promise<void> {
 
   // ── 3. Assert preserved tables are unchanged ───────────────────────────────
   console.log("\n━━━  Step 3: Verify preserved tables  ━━━");
-  for (const t of PRESERVED_TABLES) {
+  for (const t of WIPE_PRESERVED_TABLES) {
     if (preCounts[t] === -1) {
       console.log(`  ⚠  Skipping ${t} (was not queryable before wipe)`);
       continue;
@@ -234,7 +200,7 @@ async function main(): Promise<void> {
 
   // ── 4. Assert business tables are empty ────────────────────────────────────
   console.log("\n━━━  Step 4: Verify wiped tables are empty  ━━━");
-  for (const t of WIPED_TABLES) {
+  for (const t of WIPE_TABLES) {
     try {
       const after = await count(t);
       if (after !== 0) {

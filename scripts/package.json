@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@types/pg": "^8.20.0",
+    "@workspace/db": "workspace:*",
     "pg": "^8.20.0"
   }
 }

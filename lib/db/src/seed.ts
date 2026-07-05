@@ -1,5 +1,6 @@
 import { db, pool } from "./index";
 import { sql } from "drizzle-orm";
+import { WIPE_TABLES, WIPE_PRESERVED_TABLES } from "./wipe-tables";
 import {
   organizationsTable,
   stagesTable,
@@ -95,30 +96,6 @@ async function main() {
   if (wipeOnly) {
     console.log("Wiping business data (preserving users, org, stages, and config)...");
 
-    // Tables truncated during a wipe.  When you add a new schema table, add it
-    // here (or to WIPE_PRESERVED_TABLES below) so the drift check below catches
-    // it before the wipe silently leaves stale rows behind.
-    const WIPE_TABLES = [
-      "tasks", "messages", "factory_quotes", "payments", "deal_shipments",
-      "shipments", "deal_adjustments", "deals", "suppliers", "buyers",
-      "rfqs", "rfq_quotes", "copilot_proposals", "autonomy_policies",
-      "shipment_predictions", "stage_events", "buyer_emails",
-      "extraction_corrections", "extractions", "documents",
-    ] as const;
-
-    // Tables intentionally left untouched by a wipe:
-    //   organizations     — single-row tenant record; recreating it would orphan Clerk memberships
-    //   stages            — lookup table seeded once; losing it breaks all shipment stage FKs
-    //   team_users        — Clerk identity ↔ org mapping; a wipe must not log out the team
-    //   team_invitations  — pending invites should survive a data reset
-    //   push_tokens       — device push subscriptions; not business data
-    //   gmail_credentials — OAuth tokens are hard to re-obtain; preserve across resets
-    //   po_numbering_config — org-wide counter; resetting it would reissue duplicate PO numbers
-    const WIPE_PRESERVED_TABLES = [
-      "organizations", "stages", "team_users", "team_invitations",
-      "push_tokens", "gmail_credentials", "po_numbering_config",
-    ] as const;
-
     // ── Drift guard: ensure every public table is accounted for ──────────────
     // If a developer adds a new schema table but forgets to list it above the
     // wipe will silently leave its rows behind.  We query information_schema
@@ -142,8 +119,8 @@ async function main() {
         `\nWipe aborted — the following table(s) are not listed in WIPE_TABLES or WIPE_PRESERVED_TABLES:\n` +
         unknown.map((t) => `  • ${t}`).join("\n") +
         `\n\nAdd each table to WIPE_TABLES (if it holds business data that should be cleared)\n` +
-        `or to WIPE_PRESERVED_TABLES (if it should survive a wipe) in lib/db/src/seed.ts.\n` +
-        `Also update WIPED_TABLES / PRESERVED_TABLES in scripts/src/verify-wipe.ts to match.`,
+        `or to WIPE_PRESERVED_TABLES (if it should survive a wipe) in lib/db/src/wipe-tables.ts.\n` +
+        `Both seed.ts and scripts/src/verify-wipe.ts import from that shared file automatically.`,
       );
       await pool.end();
       process.exit(1);
