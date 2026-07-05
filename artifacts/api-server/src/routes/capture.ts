@@ -7,6 +7,8 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
 
+const CAPTURE_DEDUP_WINDOW_MS = 5 * 60 * 1000;
+
 const MobileCapturePayload = z.object({
   senderRaw: z.string().min(1),
   messageText: z.string().min(1),
@@ -226,7 +228,7 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   const userId = req.userId!;
 
   // ─── Deduplication: same user + sender + first-60-char prefix within 5 min ──
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const fiveMinutesAgo = new Date(Date.now() - CAPTURE_DEDUP_WINDOW_MS);
   const textPrefix = input.messageText.slice(0, 60);
 
   const recentRows = await db
