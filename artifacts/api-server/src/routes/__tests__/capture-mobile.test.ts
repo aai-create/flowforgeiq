@@ -9,7 +9,7 @@
  *   - Assert that missing / invalid tokens produce 401 with human-readable messages.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import express, { type Request, type Response, type NextFunction } from "express";
 import request from "supertest";
 
@@ -326,5 +326,140 @@ describe("POST /capture/mobile — device token authentication", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
+  });
+});
+
+// ─── Dedup window boundary conditions ─────────────────────────────────────────
+//
+// CAPTURE_DEDUP_WINDOW_MS = 5 * 60 * 1000 (mirrored here; must stay in sync)
+//
+// Strategy:
+//   - Pin Date.now() via vi.useFakeTimers() so boundary timestamps are exact.
+//   - The DB is still fully mocked; what the dedup query "returns" is controlled
+//     by selectQueue (simulating rows inside vs. outside the window).
+//   - For the boundary timestamp tests we also spy on the mocked `gte` function
+//     to verify that the route computed the cutoff correctly before querying.
+
+describe("POST /capture/mobile — dedup window boundary conditions", () => {
+  const WINDOW_MS = 5 * 60 * 1000; // mirrors CAPTURE_DEDUP_WINDOW_MS in capture.ts
+  const PINNED_NOW = 1_750_000_000_000; // a fixed epoch ms; value is arbitrary
+
+  beforeEach(() => {
+    selectQueue = [];
+    mockInsertReturning.mockReset();
+    vi.useFakeTimers();
+    vi.setSystemTime(PINNED_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Helper: auth rows that every capture request needs before hitting dedup
+  function authQueue() {
+    return [[DEVICE_TOKEN_ROW], [TEAM_USER_ROW]];
+  }
+
+  // ── Case 1: clearly inside the window ────────────────────────────────────────
+
+  it("suppresses a duplicate sent well within the 5-minute window (status=duplicate, no DB insert)", async () => {
+    const dupeRow = { id: 55, snippet: VALID_PAYLOAD.messageText.slice(0, 60) };
+
+    selectQueue = [
+      ...authQueue(),
+      [dupeRow], // dedup query returns a matching row
+    ];
+
+    const app = await buildTestApp();
+    const res = await request(app)
+      .post("/capture/mobile")
+      .set("Authorization", "Bearer valid-device-token-for-alice")
+      .send(VALID_PAYLOAD);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("duplicate");
+    expect(res.body.messageId).toBe(55);
+
+    // Ensure no insert was attempted
+    expect(mockInsertReturning).not.toHaveBeenCalled();
+  });
+
+  // ── Case 2: at exactly the boundary ──────────────────────────────────────────
+  //
+  // The SQL predicate is `receivedAt >= fiveMinutesAgo`, so a message stamped at
+  // exactly (now - WINDOW_MS) is still within the window (≥, not >).
+
+  it("treats a message sent at exactly CAPTURE_DEDUP_WINDOW_MS ago as a duplicate and passes the exact boundary timestamp to gte", async () => {
+    // Simulate: the DB finds a row whose receivedAt == now - WINDOW_MS (boundary hit)
+    const dupeRow = { id: 66, snippet: VALID_PAYLOAD.messageText.slice(0, 60) };
+
+    selectQueue = [
+      ...authQueue(),
+      [dupeRow],
+    ];
+
+    // Get a handle on the mocked gte so we can inspect call args
+    const { gte: mockGte } = await import("drizzle-orm");
+    vi.mocked(mockGte).mockClear();
+
+    const app = await buildTestApp();
+    const res = await request(app)
+      .post("/capture/mobile")
+      .set("Authorization", "Bearer valid-device-token-for-alice")
+      .send(VALID_PAYLOAD);
+
+    // Route should treat it as a duplicate (DB returned a row)
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("duplicate");
+    expect(res.body.messageId).toBe(66);
+    expect(mockInsertReturning).not.toHaveBeenCalled();
+
+    // Verify the route computed the cutoff as exactly (now - WINDOW_MS)
+    const gteCall = vi.mocked(mockGte).mock.calls.find(
+      (c): c is [unknown, Date] => c[1] instanceof Date,
+    );
+    expect(gteCall).toBeDefined();
+    expect((gteCall![1] as Date).getTime()).toBe(PINNED_NOW - WINDOW_MS);
+  });
+
+  // ── Case 3: just outside the window ──────────────────────────────────────────
+  //
+  // A message whose receivedAt is (now - WINDOW_MS - 1ms) falls outside the `>=`
+  // predicate — the DB query returns no row and a fresh insert must happen.
+
+  it("treats a message sent at CAPTURE_DEDUP_WINDOW_MS + 1 ms ago as new and inserts a fresh row", async () => {
+    // Simulate: dedup query finds nothing (the old message is 1 ms past the window)
+    selectQueue = [
+      ...authQueue(),
+      [],  // dedup query → no rows in window
+      [],  // suppliers resolution
+      [],  // buyers resolution
+    ];
+    mockInsertReturning.mockResolvedValue([INSERTED_MESSAGE]);
+
+    // Get a handle on the mocked gte so we can inspect call args
+    const { gte: mockGte } = await import("drizzle-orm");
+    vi.mocked(mockGte).mockClear();
+
+    const app = await buildTestApp();
+    const res = await request(app)
+      .post("/capture/mobile")
+      .set("Authorization", "Bearer valid-device-token-for-alice")
+      .send(VALID_PAYLOAD);
+
+    // Route should proceed to insert
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("captured");
+    expect(res.body.messageId).toBe(INSERTED_MESSAGE.id);
+    expect(mockInsertReturning).toHaveBeenCalledOnce();
+
+    // Verify the cutoff timestamp is still exactly (now - WINDOW_MS) — confirming
+    // the constant hasn't drifted and the 1 ms difference is on the data side, not
+    // the predicate side.
+    const gteCall = vi.mocked(mockGte).mock.calls.find(
+      (c): c is [unknown, Date] => c[1] instanceof Date,
+    );
+    expect(gteCall).toBeDefined();
+    expect((gteCall![1] as Date).getTime()).toBe(PINNED_NOW - WINDOW_MS);
   });
 });
