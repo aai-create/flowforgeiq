@@ -1957,9 +1957,6 @@ export default function Home() {
   }, [apiTasks, shipments]);
 
   const [activeMessageId, setActiveMessageId] = useState<string>("");
-  useEffect(() => {
-    if (!activeMessageId && messages.length > 0) setActiveMessageId(messages[0].id);
-  }, [messages, activeMessageId]);
   // Restore inbox filter state from sessionStorage. We read the initial URL
   // params (before any URL-sync effects run) so genuine deep-links from Reports
   // or Risk Radar still take priority over persisted values.
@@ -1972,6 +1969,20 @@ export default function Home() {
     return sessionStorage.getItem("flowforge:selectedShipmentId");
   });
   const selectedShipmentPo = selectedShipmentId ? shipments.find(s => s.id === selectedShipmentId)?.po : undefined;
+  // Default-message effect: when messages first load, auto-open the first message.
+  // If a shipment deep-link was already set from the URL, prefer the first message
+  // for that shipment over the global messages[0], so Reports/Risk Radar navigation
+  // lands on the correct thread rather than an unrelated one.
+  useEffect(() => {
+    if (!activeMessageId && messages.length > 0) {
+      if (selectedShipmentId) {
+        const first = messages.find(m => m.shipmentId === selectedShipmentId);
+        setActiveMessageId(first ? first.id : "__cleared__");
+      } else {
+        setActiveMessageId(messages[0].id);
+      }
+    }
+  }, [messages, activeMessageId, selectedShipmentId]);
   const breadcrumbSegments = parseBreadcrumb(fromParam, selectedShipmentPo, selectedShipmentId);
   const [channelFilter, setChannelFilter] = useState<Channel|"all">(() => {
     const initParams = new URLSearchParams(initialSearchRef.current);
