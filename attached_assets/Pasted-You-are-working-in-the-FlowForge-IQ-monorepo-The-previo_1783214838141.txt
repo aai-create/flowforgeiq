@@ -1,0 +1,75 @@
+You are working in the FlowForge IQ monorepo. The previous step added:
+- POST /api/capture/mobile  (unified mobile ingest)
+- POST /api/settings/device-tokens  (create device token)
+- DELETE /api/settings/device-tokens/:id  (revoke)
+- device_tokens table in the DB
+
+The Settings page is at artifacts/flowforge/src/pages/Settings.tsx 
+and already has sections for: Team, Chat Channels (Postmark inbound address), 
+Gmail integration.
+
+## Task
+
+Add a new "Mobile Capture" section to the Settings page with two subsections:
+
+### Subsection A — iOS Shortcuts Setup
+
+Display this as a step-by-step onboarding card:
+
+Step 1: "Generate your personal device token"
+  - Show a [Generate Token] button
+  - On click: POST /api/settings/device-tokens with label "iOS Shortcut"
+  - Display the returned raw token ONCE (with copy button + warning: 
+    "Save this — it won't be shown again")
+  - After generation, show the token inline in a monospace code block
+
+Step 2: "Install the FlowForge Shortcut on your iPhone"
+  - Show a deep-link button: "Open Shortcut Installer →"
+  - The link format is:
+    shortcuts://import-shortcut?url=https://flowforgeiq.com/shortcuts/capture.shortcut
+    (This is a placeholder URL — note in a code comment that the actual 
+    .shortcut file will be hosted as a static asset once built in Phase 2)
+  - Below the button, show manual instructions as a collapsed <details> block:
+    "Can't tap the link? Follow these steps:" with numbered instructions for 
+    manually creating the Shortcut (copy the webhook URL and token)
+
+Step 3: "Configure which contacts to capture"
+  - Link to the Contacts section (anchor scroll)
+  - Text: "We'll only forward messages from contacts you tag as 
+    Supplier or Buyer in FlowForge"
+
+Step 4: Status indicator
+  - Poll GET /api/settings/device-tokens (add this read endpoint too)
+  - Show green "✅ Shortcut connected — last seen {relative time}" 
+    if last_used_at within 7 days
+  - Show yellow "⏳ Waiting for first capture..." if token exists but 
+    last_used_at is null
+  - Show red "❌ Not set up" if no token exists
+
+### Subsection B — Android PWA Web Share Target
+
+Display a simpler card:
+  - Heading: "Android — Share to FlowForge"
+  - Text: "On Android, install the FlowForge app to your home screen, 
+    then use the Share button in WhatsApp or Gmail to send messages 
+    directly to FlowForge."
+  - Show a [Install App] button that triggers the PWA beforeinstallprompt event
+    (use the existing PWA install prompt pattern if one exists in 
+    artifacts/flowforge-mobile-web; otherwise implement it fresh)
+  - Below: a "How it works" collapsed section with 3 steps
+
+### Subsection C — Active Device Tokens list
+
+Below both subsections, show a table of all device tokens:
+  Columns: Label | Created | Last Used | [Revoke]
+  Revoke calls DELETE /api/settings/device-tokens/:id with confirm dialog.
+
+### Styling
+
+Match existing Settings page card style exactly. Use the same 
+shadcn/ui components already in use (Card, Button, Badge, etc.).
+Do not introduce new UI dependencies.
+
+### After changes
+
+- Run: pnpm run typecheck — fix all errors

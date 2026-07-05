@@ -1,0 +1,85 @@
+You are working in the FlowForge IQ monorepo.
+
+## Context
+
+The Settings page now has an iOS Shortcuts onboarding flow that references:
+  https://flowforgeiq.com/shortcuts/capture.shortcut
+
+This shortcut needs to:
+1. Be triggered automatically when a message arrives from a tagged contact
+2. Send the message body + sender to POST /api/capture/mobile
+3. Use the user's personal device token (Bearer auth) stored inside the Shortcut
+
+## Task
+
+### Step 1: Create the Shortcut definition file
+
+Apple Shortcuts can be imported via a .shortcut file (a binary plist) 
+OR via a Shortcuts URL scheme with pre-filled parameters.
+
+Since we cannot generate a binary .shortcut in this codebase, instead:
+
+Create a static page at /shortcuts served by the API server:
+  GET /shortcuts  → returns an HTML page (no auth required) with:
+
+  a) A human-readable setup guide:
+     - Heading: "Set up FlowForge Capture on iPhone"
+     - Step 1: Copy your webhook URL (shown as a personalized URL if 
+       the user is authenticated, or a template if not):
+       https://[your-replit-domain]/api/capture/mobile
+     - Step 2: Copy your device token (link back to Settings → Mobile Capture)
+     - Step 3: Create the Shortcut manually — show a numbered visual guide 
+       with these exact Shortcut actions in order:
+
+       [1] Shortcut Input  (receives: Shortcut Input)
+       [2] Get variable   → Shortcut Input → Text
+       [3] URL            → https://[FLOWFORGE_URL]/api/capture/mobile
+       [4] Get Contents of URL
+             Method: POST
+             Headers: Authorization: Bearer [YOUR_DEVICE_TOKEN]
+                      Content-Type: application/json
+             Request Body: JSON
+               {
+                 "source_type": "imessage",
+                 "source_app": "com.apple.MobileSMS",
+                 "sender_raw": "[Shortcut Input - Sender Name]",
+                 "message_text": "[Shortcut Input - Message Body]",
+                 "captured_at": "[Current Date - ISO8601]",
+                 "device_id": "[Device Name - hashed]",
+                 "contact_type": "supplier",
+                 "confidence": 0.7
+               }
+       [5] If  (Contents of URL → status = "captured")
+             Show notification: "✅ Logged to FlowForge"
+           Otherwise
+             Show notification: "⚠️ Needs review in FlowForge"
+
+  b) A "Copy Webhook URL" button (copies to clipboard)
+  c) A "Open in Shortcuts" button that generates a shortcuts:// deep link 
+     pre-filled with the POST action and a placeholder token:
+     shortcuts://create-shortcut?... 
+     (best-effort — document the limitations clearly on the page)
+
+  d) A QR code (use qrcode npm package, render as SVG inline) encoding 
+     the webhook URL so the agent can scan it from their Mac to pre-fill 
+     the Shortcut on iPhone.
+
+### Step 2: Register the route
+
+In artifacts/api-server/src/routes/index.ts, register:
+  GET /shortcuts  → serve the HTML page (no requireAuth — page is public)
+  
+The HTML should be generated as a template literal in a new file:
+  artifacts/api-server/src/routes/shortcuts-guide.ts
+
+### Step 3: Update Settings page deep link
+
+In artifacts/flowforge/src/pages/Settings.tsx, the "Open Shortcut Installer" 
+button should now link to:
+  /shortcuts  (opens in new tab)
+
+### Step 4: Add qrcode dependency
+
+Run: pnpm --filter @workspace/api-server add qrcode
+Run: pnpm --filter @workspace/api-server add -D @types/qrcode
+Run: pnpm run typecheck — fix all errors

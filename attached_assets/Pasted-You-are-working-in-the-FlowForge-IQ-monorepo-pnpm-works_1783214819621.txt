@@ -1,0 +1,97 @@
+You are working in the FlowForge IQ monorepo (pnpm workspaces, Node 24, 
+TypeScript 5.9, Express 5, Drizzle ORM + PostgreSQL, Clerk auth, Zod v4).
+
+The existing stack already has:
+- POST /webhooks/email  (Postmark inbound, in artifacts/api-server/src/routes/webhooks.ts)
+- POST /messages/ingest-chat  (preview-only, no DB write)
+- POST /messages  (persists messages with routingStatus/rawChatText)
+- Supplier registry in lib/db/src/schema/
+- Buyer registry in lib/db/src/schema/
+- Clerk requireAuth middleware in artifacts/api-server/src/middlewares/requireAuth.ts
+
+## Task
+
+Add a new authenticated capture endpoint:
+  POST /api/capture/mobile
+
+This endpoint is the unified ingest point for all mobile OS-level notification 
+captures (Android NotificationListenerService and iOS Shortcuts webhook).
+
+### 1. Zod request schema (add to lib/api-spec/openapi.yaml AND validate in route)
+
+MobileCapturePayload:
+  source_type:    enum ["whatsapp", "wechat", "imessage", "sms", "email", "other"]
+  source_app:     string   // raw package name or app label, e.g. "com.whatsapp"
+  sender_raw:     string   // raw phone number or display name from notification
+  message_text:   string   // notification body text (may be truncated at ~100 chars)
+  captured_at:    string   // ISO 8601 timestamp from device
+  device_id:      string   // SHA-256 hashed device identifier (never raw IMEI)
+  contact_type:   enum ["supplier", "buyer", "unknown"]   // pre-classified on-device
+  confidence:     number   // 0.0–1.0, on-device classifier confidence
+  po_hint:        string?  // optional PO number detected on-device
+  agent_note:     string?  // optional free-text note added via widget/shortcut
+
+### 2. Deduplication logic
+
+Before inserting, check for an existing message in the last 5 minutes with:
+  - Same userId (from Clerk)
+  - Same sender_raw
+  - message_text substring match (first 60 chars)
+
+If a duplicate is found, return HTTP 200 with { status: "duplicate", messageId } 
+instead of inserting. Log the dedup hit at info level.
+
+### 3. Contact resolution
+
+After dedup check:
+1. Look up sender_raw in suppliers table (match on phone, alias, name ILIKE)
+2. Look up sender_raw in buyers table (same approach)
+3. If found, set resolved_contact_type and resolved_contact_id
+4. If contact_type from payload conflicts with resolved type, 
+   flag routing_status = "needs_review"
+5. If not found in either, routing_status = "needs_review"
+
+### 4. AI enrichment (async, non-blocking)
+
+After responding 201 to the client, fire-and-forget an async job that:
+1. Calls the existing AI routing logic (reuse the pattern from 
+   POST /messages/ingest-chat — the copilot route already has LLM integration)
+2. Extracts: intent (eta_update | order_inquiry | price_quote | delay_notice | 
+   complaint | confirmation | payment_request | other), 
+   extracted_date (if mentioned), extracted_amount (if mentioned),
+   shipment_id (if resolvable from context)
+3. Updates the message row with enrichment results
+4. If intent is high-confidence and shipment_id resolved, 
+   sets routing_status = "auto_routed" and links to shipment
+
+### 5. Response
+
+HTTP 201:
+{
+  status: "captured" | "needs_review" | "duplicate",
+  messageId: string,
+  routingStatus: string,
+  resolvedContactId: string | null,
+  resolvedContactType: "supplier" | "buyer" | null
+}
+
+### 6. Auth
+
+Gate with requireAuth. Extract userId from Clerk session.
+Also support a secondary auth mode: Bearer token via a per-user 
+"device token" (for iOS Shortcuts which cannot use Clerk session cookies).
+Add a device_tokens table:
+  id, user_id, token (SHA-256 hashed), label, created_at, last_used_at
+Expose POST /api/settings/device-tokens (create) and 
+DELETE /api/settings/device-tokens/:id (revoke) — requireAuth on both.
+The mobile capture endpoint accepts EITHER a valid Clerk session OR 
+a valid Bearer device token.
+
+### 7. After writing the route
+
+- Register it in artifacts/api-server/src/routes/index.ts
+- Add the OpenAPI spec entries to lib/api-spec/openapi.yaml
+- Run: pnpm --filter @workspace/api-spec run codegen
+- Run: pnpm --filter @workspace/db run generate
+- Run: pnpm --filter @workspace/db run migrate
+- Run: pnpm run typecheck — fix all errors before finishing

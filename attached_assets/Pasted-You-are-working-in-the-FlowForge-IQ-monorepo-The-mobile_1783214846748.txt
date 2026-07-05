@@ -1,0 +1,77 @@
+You are working in the FlowForge IQ monorepo.
+The mobile PWA lives at: artifacts/flowforge-mobile-web/
+It has screens: Home, Capture (chat paste + AI routing), Documents, 
+Shipment Detail, Settings. It uses Clerk auth, React, Tailwind, 
+and connects to the same Express API.
+
+The previous steps added POST /api/capture/mobile.
+
+## Task — Three changes to the mobile PWA:
+
+### Change 1: Register as Web Share Target (Android PWA)
+
+In artifacts/flowforge-mobile-web/public/manifest.json, add:
+
+"share_target": {
+  "action": "/mobile/capture",
+  "method": "POST",
+  "enctype": "application/x-www-form-urlencoded",
+  "params": {
+    "title": "title",
+    "text": "text",
+    "url": "url"
+  }
+}
+
+In the Capture screen route handler, detect incoming share target params:
+  - On mount, check URL search params for ?text= or ?url=
+  - If present, pre-fill the message input with the shared content
+  - Auto-trigger the AI routing preview (same flow as manual paste)
+  - Show a banner: "Message received from WhatsApp — review and confirm"
+
+### Change 2: Upgrade the Capture screen
+
+Current: paste-to-process modal for WhatsApp/WeChat/iMessage/SMS
+New additions:
+
+a) Contact type selector (required before submission):
+   - Radio group: Supplier | Buyer  (default: auto-detected, editable)
+   - Show resolved contact name if matched, or "Unknown — will need review"
+
+b) Source channel selector:
+   - Pills: WhatsApp | WeChat | iMessage | SMS | Email | Other
+   - Default: WhatsApp (most common)
+
+c) Submission now calls POST /api/capture/mobile instead of 
+   POST /messages/ingest-chat
+   - Payload maps: message_text from paste input, source_type from channel 
+     selector, contact_type from radio, sender_raw from optional name input,
+     captured_at = new Date().toISOString(), device_id = hashed fingerprint 
+     (use navigator.userAgent + screen dimensions, SHA-256 via WebCrypto),
+     confidence = 0.5 (manual entry default)
+
+d) Response handling:
+   - status "captured": show green success with shipment link if resolved
+   - status "needs_review": show yellow banner 
+     "Logged — needs review in inbox" with link to inbox
+   - status "duplicate": show info banner 
+     "This message was already captured"
+
+### Change 3: Quick-capture floating button
+
+On the Home screen (shipments list), add a floating action button (FAB) 
+in the bottom-right corner (above the bottom nav bar, z-index layered correctly):
+  - Icon: message-plus (lucide)
+  - Tap → navigates to /mobile/capture with focus on the paste input
+  - Long-press (500ms) → shows a quick-source picker bottom sheet:
+    [WhatsApp] [Email] [SMS] [WeChat]
+    Tapping a source pre-selects that channel and navigates to capture
+
+### Styling rules
+- Match existing mobile PWA design system (Tailwind, bottom nav pattern)
+- FAB: 56px circle, bg-primary, shadow-lg, fixed bottom-20 right-4
+- Bottom sheet: slide-up animation, rounded-t-2xl, backdrop blur
+- Do not break existing screens
+
+### After changes
+- Run: pnpm run typecheck — fix all errors
