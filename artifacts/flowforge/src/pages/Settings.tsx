@@ -873,6 +873,39 @@ function HelpOnboardingSection() {
   );
 }
 
+const TOKEN_SESSION_KEY = "flowforge:ios_token_draft";
+const TOKEN_TTL_MS = 5 * 60 * 1000;
+
+interface StoredTokenDraft {
+  token: string;
+  id: number;
+  label: string;
+  createdAt: string;
+  lastUsedAt?: string | null;
+  expiresAt: number;
+}
+
+function saveTokenToSession(t: CreateDeviceTokenResponse) {
+  const draft: StoredTokenDraft = { ...t, expiresAt: Date.now() + TOKEN_TTL_MS };
+  try { sessionStorage.setItem(TOKEN_SESSION_KEY, JSON.stringify(draft)); } catch { /* ignore */ }
+}
+
+function clearTokenFromSession() {
+  try { sessionStorage.removeItem(TOKEN_SESSION_KEY); } catch { /* ignore */ }
+}
+
+function loadTokenFromSession(): { token: CreateDeviceTokenResponse; secondsLeft: number } | null {
+  try {
+    const raw = sessionStorage.getItem(TOKEN_SESSION_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as StoredTokenDraft;
+    const secondsLeft = Math.floor((draft.expiresAt - Date.now()) / 1000);
+    if (secondsLeft <= 0) { sessionStorage.removeItem(TOKEN_SESSION_KEY); return null; }
+    const { expiresAt: _expiresAt, ...tokenResponse } = draft;
+    return { token: tokenResponse as CreateDeviceTokenResponse, secondsLeft };
+  } catch { return null; }
+}
+
 function MobileCaptureSection() {
   const queryClient = useQueryClient();
   const { data: tokens = [], refetch: refetchTokens } = useListDeviceTokens();
@@ -884,6 +917,26 @@ function MobileCaptureSection() {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<number | null>(null);
+  const [tokenCountdown, setTokenCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    const restored = loadTokenFromSession();
+    if (restored) {
+      setNewToken(restored.token);
+      setTokenCountdown(restored.secondsLeft);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (newToken === null) { setTokenCountdown(null); return; }
+    const tick = () => {
+      const restored = loadTokenFromSession();
+      if (!restored) { setNewToken(null); setTokenCountdown(null); return; }
+      setTokenCountdown(restored.secondsLeft);
+    };
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [newToken]);
 
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [androidInstalled, setAndroidInstalled] = useState(false);
@@ -909,12 +962,20 @@ function MobileCaptureSection() {
     try {
       const result = await createMutation.mutateAsync({ data: { label: "iOS Shortcut" } });
       setNewToken(result);
+      saveTokenToSession(result);
       void refetchTokens();
     } catch {
       setGenerateError("Failed to generate token. Please try again.");
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleDismissToken = () => {
+    clearTokenFromSession();
+    setNewToken(null);
+    setTokenCountdown(null);
+    setTokenCopied(false);
   };
 
   const copyToken = (value: string) => {
@@ -993,7 +1054,14 @@ function MobileCaptureSection() {
               <div className="ml-7 space-y-2">
                 <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-800 font-medium">Copy this token now — it will not be shown again.</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-amber-800 font-medium">Copy this token now — it will not be shown again.</p>
+                    {tokenCountdown !== null && (
+                      <p className="text-[10px] text-amber-700 mt-0.5">
+                        Visible for <span className="font-semibold tabular-nums">{Math.floor(tokenCountdown / 60)}:{String(tokenCountdown % 60).padStart(2, "0")}</span> more
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 font-mono text-[11px] text-[#212833] bg-[#F7F9FA] border border-[#E5EAF0] rounded-md px-2.5 py-2 break-all leading-relaxed">
@@ -1006,6 +1074,13 @@ function MobileCaptureSection() {
                     {tokenCopied ? <><Check className="w-3 h-3 text-emerald-500" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
                   </button>
                 </div>
+                <button
+                  onClick={handleDismissToken}
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
+                >
+                  <Check className="w-3 h-3" />
+                  Done — I copied it
+                </button>
               </div>
             ) : (
               <div className="ml-7">
