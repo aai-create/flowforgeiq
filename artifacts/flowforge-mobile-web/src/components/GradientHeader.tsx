@@ -17,11 +17,11 @@ export function GradientHeader({
   back,
   right,
   align = "center",
-  logoSize = 30,
+  logoSize = 28,
 }: GradientHeaderProps) {
   return (
     <div
-      className={`status-bar-pad px-5 pb-5 flex items-${align} gap-3 shrink-0 page-header-gradient`}
+      className={`status-bar-pad px-5 pb-3.5 flex items-${align} gap-3 shrink-0 page-header-gradient`}
     >
       {back && (
         <button

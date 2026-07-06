@@ -33,20 +33,11 @@ export function BottomNav() {
               className="flex-1 flex flex-col items-center pt-2.5 pb-2 gap-1 transition-opacity active:opacity-60"
               aria-current={active ? "page" : undefined}
             >
-              <div
-                style={{
-                  padding: "5px 14px",
-                  borderRadius: 999,
-                  background: active ? "hsl(var(--primary) / 0.12)" : "transparent",
-                  transition: "background 0.18s ease",
-                }}
-              >
-                <Icon
-                  size={20}
-                  strokeWidth={active ? 2.5 : 1.8}
-                  color={active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
-                />
-              </div>
+              <Icon
+                size={22}
+                strokeWidth={active ? 2.5 : 1.8}
+                color={active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+              />
               <span
                 className="text-[10px] font-semibold tracking-wide"
                 style={{

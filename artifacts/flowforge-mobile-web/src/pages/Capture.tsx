@@ -596,10 +596,10 @@ export default function CapturePage() {
           </div>
         )}
 
-        {/* Contact type radio */}
+        {/* Contact type — segmented control */}
         <div className="flex flex-col gap-2">
           <p className="section-label">{t("capture.contactType")}</p>
-          <div className="flex gap-2">
+          <div className="segmented-track">
             {(["supplier", "buyer"] as ContactType[]).map((ct) => {
               const active = contactType === ct;
               const label = ct === "supplier" ? t("capture.contactTypeSupplier") : t("capture.contactTypeBuyer");
@@ -607,11 +607,13 @@ export default function CapturePage() {
                 <button
                   key={ct}
                   onClick={() => setContactType(ct)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm transition-all active:opacity-70"
+                  className="flex-1 flex items-center justify-center py-2 text-sm font-semibold transition-all relative z-10"
                   style={{
-                    border: `1.5px solid ${active ? "hsl(var(--primary))" : "hsl(var(--border))"}`,
-                    backgroundColor: active ? "hsl(var(--primary) / 0.1)" : "hsl(var(--card))",
-                    color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                    borderRadius: 999,
+                    color: active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                    background: active ? "white" : "transparent",
+                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)" : "none",
+                    transition: "background 0.2s, box-shadow 0.2s, color 0.15s",
                   }}
                 >
                   {label}
@@ -631,15 +633,27 @@ export default function CapturePage() {
                 <button
                   key={id}
                   onClick={() => { setChannel(id); setAutoDetectedLabel(null); }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full shrink-0 transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full shrink-0 transition-all font-semibold"
                   style={{
                     border: `1.5px solid ${active ? color : "hsl(var(--border))"}`,
-                    backgroundColor: active ? `${color}18` : "hsl(var(--card))",
-                    color: active ? color : "hsl(var(--muted-foreground))",
-                    fontWeight: active ? 600 : 500,
+                    backgroundColor: active ? color : "hsl(var(--card))",
+                    color: active ? "white" : "hsl(var(--muted-foreground))",
                     fontSize: 13,
                   }}
                 >
+                  {/* Colored dot — only shown when inactive so the channel is still identifiable */}
+                  {!active && (
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        flexShrink: 0,
+                        display: "inline-block",
+                      }}
+                    />
+                  )}
                   {label}
                 </button>
               );
@@ -661,6 +675,7 @@ export default function CapturePage() {
                 onChange={(e) => setRawText(e.target.value)}
                 className="w-full bg-transparent text-sm text-foreground resize-none outline-none leading-relaxed min-h-[110px]"
                 placeholder={t("capture.textareaPlaceholder", { channel: activeCh.label })}
+                style={{ boxShadow: "inset 0 1px 3px rgba(0,0,0,0.05)" }}
               />
               {rawText.length > 0 && (
                 <p className="text-[11px] text-right mt-1 text-muted-foreground">

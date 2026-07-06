@@ -56,7 +56,7 @@ function getFileIcon(fileType: string) {
 
 const GRADIENT_HEADER = {
   background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(274 100% 43%) 100%)",
-  boxShadow: "0 2px 16px hsl(var(--primary) / 0.3)",
+  boxShadow: "0 2px 16px hsl(var(--primary) / 0.25)",
 };
 
 function SectionPanel({ title, children, badge }: { title: string; children: React.ReactNode; badge?: string }) {
@@ -248,7 +248,7 @@ export default function DocumentDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
+        <div className="status-bar-pad px-5 pb-3.5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
           <button onClick={() => navigate("/documents")} className="active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
@@ -264,7 +264,7 @@ export default function DocumentDetailPage() {
   if (isError || !doc) {
     return (
       <div className="flex flex-col h-full max-w-lg mx-auto">
-        <div className="status-bar-pad px-5 pb-5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
+        <div className="status-bar-pad px-5 pb-3.5 flex items-center gap-3 shrink-0" style={GRADIENT_HEADER}>
           <button onClick={() => navigate("/documents")} className="active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
@@ -319,7 +319,7 @@ export default function DocumentDetailPage() {
     <>
       <div className="flex flex-col h-full max-w-lg mx-auto overflow-hidden">
         {/* Header */}
-        <div className="status-bar-pad px-5 pb-5 flex items-start gap-3 shrink-0" style={GRADIENT_HEADER}>
+        <div className="status-bar-pad px-5 pb-3.5 flex items-start gap-3 shrink-0" style={GRADIENT_HEADER}>
           <button onClick={() => navigate("/documents")} className="mt-0.5 active:opacity-60">
             <ArrowLeft size={20} color="white" />
           </button>
