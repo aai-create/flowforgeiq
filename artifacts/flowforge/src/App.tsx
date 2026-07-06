@@ -23,6 +23,7 @@ import { useUserPref } from "@/lib/useUserPref";
 import { AcceptInvite } from "@/pages/AcceptInvite";
 import { LandingPage } from "@/pages/Landing";
 import { ShortcutsGuide } from "@/pages/ShortcutsGuide";
+import { ShortcutsRedirect } from "@/pages/ShortcutsRedirect";
 
 const queryClient = new QueryClient();
 
@@ -223,6 +224,7 @@ function Router() {
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
       <Route path="/shortcuts" component={ShortcutsGuide} />
+      <Route path="/shortcuts-redirect" component={ShortcutsRedirect} />
       <Route path="/accept-invite" component={AcceptInvite} />
       <Route component={NotFound} />
     </Switch>

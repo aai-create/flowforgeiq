@@ -20,6 +20,7 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SHORTCUT_FILE_URL = `${basePath}/api/shortcuts/capture.shortcut`;
 const SHORTCUT_ABSOLUTE_URL = `${window.location.origin}${SHORTCUT_FILE_URL}`;
 const OPEN_IN_SHORTCUTS_URL = `shortcuts://import-shortcut?url=${encodeURIComponent(SHORTCUT_ABSOLUTE_URL)}`;
+const SHORTCUTS_REDIRECT_URL = `${window.location.origin}${basePath}/shortcuts-redirect`;
 
 const isIOS =
   /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -331,7 +332,7 @@ export function ShortcutsGuide() {
                 <div className="flex items-center gap-5">
                   <div className="p-2 bg-white rounded-xl border border-[#E5EAF0] shadow-sm shrink-0">
                     <QRCodeSVG
-                      value={OPEN_IN_SHORTCUTS_URL}
+                      value={SHORTCUTS_REDIRECT_URL}
                       size={100}
                       fgColor="#9000FF"
                       bgColor="#ffffff"
@@ -340,13 +341,13 @@ export function ShortcutsGuide() {
                   </div>
                   <div>
                     <p className="text-[12px] font-semibold text-[#212833]">
-                      Scan with your iPhone camera
+                      Scan from any device
                     </p>
                     <p className="text-[11px] text-[#5E687B] mt-1 leading-relaxed">
-                      Point your iPhone camera at this code — it opens the
-                      Shortcuts app directly and prompts{" "}
-                      <strong className="text-[#212833]">Add Shortcut</strong>{" "}
-                      right away. Best scanned from an iPhone.
+                      iPhone camera opens the Shortcuts app directly. Android
+                      or Mac downloads the{" "}
+                      <code className="bg-[#F0F4F8] text-[#9000FF] px-1 py-0.5 rounded text-[10px]">.shortcut</code>{" "}
+                      file for sideloading.
                     </p>
                   </div>
                 </div>
