@@ -17,6 +17,7 @@ function formatRule(r: {
   shipmentId: number;
   poNumber: string | null;
   active: boolean;
+  deactivationReason?: string | null;
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +30,7 @@ function formatRule(r: {
     shipmentId: r.shipmentId,
     poNumber: r.poNumber ?? null,
     active: r.active,
+    deactivationReason: r.deactivationReason ?? null,
     createdBy: r.createdBy ?? null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
@@ -45,6 +47,7 @@ router.get("/settings/contact-rules", async (req, res) => {
       fromEmail: contactRoutingRulesTable.fromEmail,
       shipmentId: contactRoutingRulesTable.shipmentId,
       active: contactRoutingRulesTable.active,
+      deactivationReason: contactRoutingRulesTable.deactivationReason,
       createdBy: contactRoutingRulesTable.createdBy,
       createdAt: contactRoutingRulesTable.createdAt,
       updatedAt: contactRoutingRulesTable.updatedAt,
@@ -140,6 +143,7 @@ router.post("/settings/contact-rules", async (req, res) => {
     shipmentId: inserted!.shipmentId,
     poNumber: shipmentCheck.poNumber,
     active: inserted!.active,
+    deactivationReason: inserted!.deactivationReason ?? null,
     createdBy: inserted!.createdBy ?? null,
     createdAt: inserted!.createdAt,
     updatedAt: inserted!.updatedAt,
@@ -210,6 +214,7 @@ router.patch("/settings/contact-rules/:id", async (req, res) => {
     shipmentId: updated.shipmentId,
     poNumber: ship?.poNumber ?? null,
     active: updated.active,
+    deactivationReason: updated.deactivationReason ?? null,
     createdBy: updated.createdBy ?? null,
     createdAt: updated.createdAt,
     updatedAt: updated.updatedAt,

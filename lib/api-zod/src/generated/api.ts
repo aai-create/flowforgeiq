@@ -40,6 +40,7 @@ export const ListContactRulesResponseItem = zod.object({
   "shipmentId": zod.number(),
   "poNumber": zod.string().nullish(),
   "active": zod.boolean(),
+  "deactivationReason": zod.string().nullish().describe('Why the rule was auto-deactivated (e.g. \'shipment-closed\', \'org-mismatch\'); null when deactivated manually or rule is still active'),
   "createdBy": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -78,6 +79,7 @@ export const PatchContactRuleResponse = zod.object({
   "shipmentId": zod.number(),
   "poNumber": zod.string().nullish(),
   "active": zod.boolean(),
+  "deactivationReason": zod.string().nullish().describe('Why the rule was auto-deactivated (e.g. \'shipment-closed\', \'org-mismatch\'); null when deactivated manually or rule is still active'),
   "createdBy": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()

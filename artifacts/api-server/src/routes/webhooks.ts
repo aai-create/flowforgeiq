@@ -1057,12 +1057,12 @@ router.post("/webhooks/email", async (req, res) => {
         res.json({ accepted: true, documentIds: documentIds2 });
         return;
       } else {
-        // Rule's shipment no longer belongs to this org — deactivate it
+        // Rule's shipment no longer belongs to this org — deactivate it and record why
         await db
           .update(contactRoutingRulesTable)
-          .set({ active: false, updatedAt: new Date() })
+          .set({ active: false, deactivationReason: "org-mismatch", updatedAt: new Date() })
           .where(eq(contactRoutingRulesTable.id, activeRule.id));
-        req.log.warn({ ruleId: activeRule.id }, "email-webhook: contact rule shipment failed org check — deactivated");
+        req.log.warn({ ruleId: activeRule.id }, "email-webhook: contact rule shipment failed org check — deactivated (org-mismatch)");
       }
     }
   }

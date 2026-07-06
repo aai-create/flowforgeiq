@@ -1775,6 +1775,11 @@ function ContactRulesPanel({ shipments }: { shipments: UiShipment[] }) {
                     → <span className="font-semibold">{rule.poNumber ?? `Shipment #${rule.shipmentId}`}</span>
                     {ship && <span className="ml-1 text-[#9E9FAE]">· {ship.supplier}</span>}
                   </div>
+                  {!rule.active && rule.deactivationReason && (
+                    <div className="text-[10px] text-amber-600 mt-0.5 font-medium">
+                      Deactivated: {rule.deactivationReason === "shipment-closed" ? "shipment closed" : rule.deactivationReason === "org-mismatch" ? "org mismatch" : rule.deactivationReason}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${rule.active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-[#F0F4F8] text-[#9E9FAE] border-[#E5EAF0]"}`}>

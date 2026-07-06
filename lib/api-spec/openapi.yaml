@@ -3344,16 +3344,17 @@ components:
       type: object
       required: [id, channel, senderId, shipmentId, active, createdAt, updatedAt]
       properties:
-        id:         { type: integer }
-        channel:    { type: string, description: "Messaging channel — email, whatsapp, sms, wechat, imessage, or other" }
-        senderId:   { type: string, description: "Universal sender identifier: email address for email rules; phone number, display name, or handle for chat/SMS rules" }
-        fromEmail:  { type: ["string", "null"], description: "Populated for email rules only (equals senderId); null for chat/SMS rules" }
-        shipmentId: { type: integer }
-        poNumber:   { type: ["string", "null"] }
-        active:     { type: boolean }
-        createdBy:  { type: ["string", "null"] }
-        createdAt:  { type: string, format: date-time }
-        updatedAt:  { type: string, format: date-time }
+        id:                 { type: integer }
+        channel:            { type: string, description: "Messaging channel — email, whatsapp, sms, wechat, imessage, or other" }
+        senderId:           { type: string, description: "Universal sender identifier: email address for email rules; phone number, display name, or handle for chat/SMS rules" }
+        fromEmail:          { type: ["string", "null"], description: "Populated for email rules only (equals senderId); null for chat/SMS rules" }
+        shipmentId:         { type: integer }
+        poNumber:           { type: ["string", "null"] }
+        active:             { type: boolean }
+        deactivationReason: { type: ["string", "null"], description: "Why the rule was auto-deactivated (e.g. 'shipment-closed', 'org-mismatch'); null when deactivated manually or rule is still active" }
+        createdBy:          { type: ["string", "null"] }
+        createdAt:          { type: string, format: date-time }
+        updatedAt:          { type: string, format: date-time }
 
     CreateContactRuleBody:
       type: object

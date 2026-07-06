@@ -1,0 +1,1 @@
+ALTER TABLE "contact_routing_rules" ADD COLUMN "deactivation_reason" text;

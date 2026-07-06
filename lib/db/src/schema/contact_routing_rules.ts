@@ -17,6 +17,7 @@ export const contactRoutingRulesTable = pgTable("contact_routing_rules", {
   shipmentId: integer("shipment_id").notNull().references(() => shipmentsTable.id, { onDelete: "cascade" }),
   createdBy: text("created_by").references(() => teamUsersTable.clerkUserId, { onDelete: "set null" }),
   active: boolean("active").notNull().default(true),
+  deactivationReason: text("deactivation_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

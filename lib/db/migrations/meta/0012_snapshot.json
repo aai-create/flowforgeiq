@@ -1,6 +1,6 @@
 {
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "prevId": "c90d3e2b-eac6-48b0-b2a6-5d3b1f28059e",
+  "id": "b7e17b43-0f87-4200-b92c-c898ecbe42b0",
+  "prevId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3351,6 +3351,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "deactivation_reason": {
+          "name": "deactivation_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

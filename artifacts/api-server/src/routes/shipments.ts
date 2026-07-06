@@ -501,7 +501,7 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
     try {
       const deactivated = await db
         .update(contactRoutingRulesTable)
-        .set({ active: false, updatedAt: new Date() })
+        .set({ active: false, deactivationReason: "shipment-closed", updatedAt: new Date() })
         .where(
           and(
             eq(contactRoutingRulesTable.shipmentId, shipmentId),

@@ -21,6 +21,11 @@ export interface ContactRoutingRule {
   /** @nullable */
   poNumber?: string | null;
   active: boolean;
+  /**
+     * Why the rule was auto-deactivated (e.g. 'shipment-closed', 'org-mismatch'); null when deactivated manually or rule is still active
+     * @nullable
+     */
+  deactivationReason?: string | null;
   /** @nullable */
   createdBy?: string | null;
   createdAt: Date;
