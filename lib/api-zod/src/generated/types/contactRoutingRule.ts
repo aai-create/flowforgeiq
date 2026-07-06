@@ -8,7 +8,15 @@
 
 export interface ContactRoutingRule {
   id: number;
-  fromEmail: string;
+  /** Messaging channel — email, whatsapp, sms, wechat, imessage, or other */
+  channel: string;
+  /** Universal sender identifier: email address for email rules; phone number, display name, or handle for chat/SMS rules */
+  senderId: string;
+  /**
+     * Populated for email rules only (equals senderId); null for chat/SMS rules
+     * @nullable
+     */
+  fromEmail?: string | null;
   shipmentId: number;
   /** @nullable */
   poNumber?: string | null;

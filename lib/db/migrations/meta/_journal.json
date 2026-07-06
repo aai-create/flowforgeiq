@@ -71,6 +71,13 @@
       "when": 1783300545656,
       "tag": "0009_swift_ender_wiggin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783301260450,
+      "tag": "0010_fuzzy_nova",
+      "breakpoints": true
     }
   ]
 }

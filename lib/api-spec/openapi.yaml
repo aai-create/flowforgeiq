@@ -3154,10 +3154,12 @@ components:
 
     ContactRoutingRule:
       type: object
-      required: [id, fromEmail, shipmentId, active, createdAt, updatedAt]
+      required: [id, channel, senderId, shipmentId, active, createdAt, updatedAt]
       properties:
         id:         { type: integer }
-        fromEmail:  { type: string }
+        channel:    { type: string, description: "Messaging channel — email, whatsapp, sms, wechat, imessage, or other" }
+        senderId:   { type: string, description: "Universal sender identifier: email address for email rules; phone number, display name, or handle for chat/SMS rules" }
+        fromEmail:  { type: ["string", "null"], description: "Populated for email rules only (equals senderId); null for chat/SMS rules" }
         shipmentId: { type: integer }
         poNumber:   { type: ["string", "null"] }
         active:     { type: boolean }
@@ -3167,9 +3169,11 @@ components:
 
     CreateContactRuleBody:
       type: object
-      required: [fromEmail, shipmentId]
+      required: [senderId, shipmentId]
       properties:
-        fromEmail:  { type: string, format: email }
+        senderId:   { type: string, description: "Universal sender identifier — email address, phone number, display name, or handle" }
+        channel:    { type: string, enum: [email, whatsapp, sms, wechat, imessage, other], description: "Messaging channel; defaults to email when omitted" }
+        fromEmail:  { type: string, format: email, description: "Deprecated — use senderId instead; kept for backwards compatibility with email rules" }
         shipmentId: { type: integer }
 
     PatchContactRuleBody:

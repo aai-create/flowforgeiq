@@ -34,7 +34,9 @@ export const MobileCaptureResponse = zod.object({
  */
 export const ListContactRulesResponseItem = zod.object({
   "id": zod.number(),
-  "fromEmail": zod.string(),
+  "channel": zod.string().describe('Messaging channel — email, whatsapp, sms, wechat, imessage, or other'),
+  "senderId": zod.string().describe('Universal sender identifier: email address for email rules; phone number, display name, or handle for chat\/SMS rules'),
+  "fromEmail": zod.string().nullish().describe('Populated for email rules only (equals senderId); null for chat\/SMS rules'),
   "shipmentId": zod.number(),
   "poNumber": zod.string().nullish(),
   "active": zod.boolean(),
@@ -49,7 +51,9 @@ export const ListContactRulesResponse = zod.array(ListContactRulesResponseItem)
  * @summary Create or upsert a contact routing rule
  */
 export const CreateContactRuleBody = zod.object({
-  "fromEmail": zod.string().email(),
+  "senderId": zod.string().describe('Universal sender identifier — email address, phone number, display name, or handle'),
+  "channel": zod.enum(['email', 'whatsapp', 'sms', 'wechat', 'imessage', 'other']).optional().describe('Messaging channel; defaults to email when omitted'),
+  "fromEmail": zod.string().email().optional().describe('Deprecated — use senderId instead; kept for backwards compatibility with email rules'),
   "shipmentId": zod.number()
 })
 
@@ -68,7 +72,9 @@ export const PatchContactRuleBody = zod.object({
 
 export const PatchContactRuleResponse = zod.object({
   "id": zod.number(),
-  "fromEmail": zod.string(),
+  "channel": zod.string().describe('Messaging channel — email, whatsapp, sms, wechat, imessage, or other'),
+  "senderId": zod.string().describe('Universal sender identifier: email address for email rules; phone number, display name, or handle for chat\/SMS rules'),
+  "fromEmail": zod.string().nullish().describe('Populated for email rules only (equals senderId); null for chat\/SMS rules'),
   "shipmentId": zod.number(),
   "poNumber": zod.string().nullish(),
   "active": zod.boolean(),

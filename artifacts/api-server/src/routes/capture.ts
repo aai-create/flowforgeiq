@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, messagesTable, suppliersTable, buyersTable, shipmentsTable } from "@workspace/db";
+import { db, messagesTable, suppliersTable, buyersTable, shipmentsTable, contactRoutingRulesTable } from "@workspace/db";
 import { and, eq, gte, ilike, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireDeviceTokenAuth } from "../middlewares/requireDeviceTokenAuth";
@@ -110,6 +110,55 @@ async function resolveContact(senderRaw: string, orgId: number): Promise<Resolve
     routingStatus: "needs_review",
     supplierId: null,
   };
+}
+
+// ─── Contact routing rule lookup ──────────────────────────────────────────────
+
+type RuleMatch = {
+  shipmentId: number;
+  ruleId: number;
+} | null;
+
+async function lookupContactRoutingRule(
+  channel: string,
+  senderRaw: string,
+  orgId: number,
+): Promise<RuleMatch> {
+  const normalised = senderRaw.trim();
+  if (!normalised) return null;
+
+  const [rule] = await db
+    .select({ id: contactRoutingRulesTable.id, shipmentId: contactRoutingRulesTable.shipmentId })
+    .from(contactRoutingRulesTable)
+    .where(
+      and(
+        eq(contactRoutingRulesTable.orgId, orgId),
+        eq(contactRoutingRulesTable.channel, channel),
+        eq(contactRoutingRulesTable.senderId, normalised),
+        eq(contactRoutingRulesTable.active, true),
+      ),
+    )
+    .limit(1);
+
+  if (!rule) return null;
+
+  // Defence-in-depth: verify the shipment still belongs to this org
+  const [guardRow] = await db
+    .select({ id: shipmentsTable.id })
+    .from(shipmentsTable)
+    .where(and(eq(shipmentsTable.id, rule.shipmentId), eq(shipmentsTable.orgId, orgId)))
+    .limit(1);
+
+  if (!guardRow) {
+    // Shipment no longer in org — deactivate the rule
+    await db
+      .update(contactRoutingRulesTable)
+      .set({ active: false, updatedAt: new Date() })
+      .where(eq(contactRoutingRulesTable.id, rule.id));
+    return null;
+  }
+
+  return { shipmentId: rule.shipmentId, ruleId: rule.id };
 }
 
 // ─── Async AI enrichment ───────────────────────────────────────────────────────
@@ -258,12 +307,24 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
     return;
   }
 
+  // ─── Contact routing rule check (fires before contact resolution & AI) ───────
+  const ruleMatch = await lookupContactRoutingRule(input.channel, input.senderRaw, orgId);
+
   // ─── Contact resolution ───────────────────────────────────────────────────────
   const contact = await resolveContact(input.senderRaw, orgId);
 
   // ─── Insert message ───────────────────────────────────────────────────────────
   const receivedAt = input.capturedAt ? new Date(input.capturedAt) : new Date();
   const snippet = input.messageText.slice(0, 200);
+
+  // If a routing rule matched, route directly; otherwise fall back to contact resolution
+  const finalShipmentId = ruleMatch?.shipmentId ?? null;
+  const routingStatus = ruleMatch
+    ? "routed"
+    : contact.routingStatus === "needs_review"
+      ? "needs-review"
+      : "routed";
+  const matchMethod = ruleMatch ? "contact-rule" : null;
 
   let inserted: (typeof messagesTable.$inferSelect) | undefined;
   try {
@@ -280,7 +341,10 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
         aiTags: [],
         unread: true,
         isFlagged: false,
-        routingStatus: contact.routingStatus === "needs_review" ? "needs-review" : "routed",
+        shipmentId: finalShipmentId,
+        routingStatus,
+        routingConfidence: ruleMatch ? 1.0 : null,
+        matchMethod,
         supplierId: contact.supplierId,
         rawChatText: input.messageText,
         routedToClerkUserId: userId,
@@ -303,22 +367,31 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   }
 
   req.log.info(
-    { messageId: inserted.id, senderRaw: input.senderRaw, channel: input.channel, routingStatus: contact.routingStatus },
+    {
+      messageId: inserted.id,
+      senderRaw: input.senderRaw,
+      channel: input.channel,
+      routingStatus,
+      ruleMatched: ruleMatch != null,
+      shipmentId: finalShipmentId,
+    },
     "capture/mobile: inserted",
   );
 
-  // ─── Respond 201 then enrich async ────────────────────────────────────────────
+  // ─── Respond 201 then enrich async (skip if rule already resolved the shipment) ─
   res.status(201).json({
     status: "captured",
     messageId: inserted.id,
-    routingStatus: contact.routingStatus,
+    routingStatus: ruleMatch ? "routed" : contact.routingStatus,
     resolvedContactId: contact.resolvedContactId,
     resolvedContactType: contact.resolvedContactType,
   });
 
-  setImmediate(() => {
-    enrichMessageWithAI(inserted.id, orgId, input.senderRaw, input.messageText, contact.supplierId);
-  });
+  if (!ruleMatch) {
+    setImmediate(() => {
+      enrichMessageWithAI(inserted.id, orgId, input.senderRaw, input.messageText, contact.supplierId);
+    });
+  }
 });
 
 export default router;

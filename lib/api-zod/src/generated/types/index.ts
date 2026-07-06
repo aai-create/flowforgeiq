@@ -36,6 +36,7 @@ export * from './copilotProposalUpdateEditedPayload';
 export * from './copilotSummary';
 export * from './copilotTriggerResult';
 export * from './createContactRuleBody';
+export * from './createContactRuleBodyChannel';
 export * from './createDeviceTokenBody';
 export * from './createDeviceTokenResponse';
 export * from './dealAdjustment';

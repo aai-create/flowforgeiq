@@ -5,8 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateContactRuleBodyChannel } from './createContactRuleBodyChannel';
 
 export interface CreateContactRuleBody {
-  fromEmail: string;
+  /** Universal sender identifier — email address, phone number, display name, or handle */
+  senderId: string;
+  /** Messaging channel; defaults to email when omitted */
+  channel?: CreateContactRuleBodyChannel;
+  /** Deprecated — use senderId instead; kept for backwards compatibility with email rules */
+  fromEmail?: string;
   shipmentId: number;
 }

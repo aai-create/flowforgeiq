@@ -919,7 +919,7 @@ router.post("/webhooks/email", async (req, res) => {
   let aiGuess: { buyerName: string | null; shipmentId: number | null; confidence: number; reasoning: string } | null = null;
 
   // ── Contact routing rule check: fires before AI inference ─────────────────
-  // Check for an active rule keyed on the sender's raw email address.
+  // Check for an active rule keyed on channel="email" + the sender's raw email address.
   // If found, route directly — no AI call needed.
   const rawSenderForRule = (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail ?? "").toLowerCase();
   if (rawSenderForRule) {
@@ -932,7 +932,8 @@ router.post("/webhooks/email", async (req, res) => {
       .where(
         and(
           eq(contactRoutingRulesTable.orgId, scopedOrgId),
-          eq(contactRoutingRulesTable.fromEmail, rawSenderForRule),
+          eq(contactRoutingRulesTable.channel, "email"),
+          eq(contactRoutingRulesTable.senderId, rawSenderForRule),
           eq(contactRoutingRulesTable.active, true),
         ),
       )

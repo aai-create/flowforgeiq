@@ -1384,7 +1384,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
     );
   };
 
-  const doAssign = (msgId: number, shipmentId: number, buyerName: string, rawSenderEmail: string | null | undefined) => {
+  const doAssign = (msgId: number, shipmentId: number, buyerName: string, msg: ApiMessageFull) => {
     setAssigning(p => ({ ...p, [msgId]: true }));
     assignMutation.mutate(
       { id: msgId, data: { shipmentId, buyerName } },
@@ -1392,8 +1392,13 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
         onSuccess: () => {
           onAssigned(msgId);
           setAssigning(p => ({ ...p, [msgId]: false }));
-          if (createRuleToggle[msgId] && rawSenderEmail) {
-            createRuleMutation.mutate({ data: { fromEmail: rawSenderEmail.toLowerCase(), shipmentId } });
+          if (createRuleToggle[msgId]) {
+            // Use the raw email for email messages; use the sender name/number for chat/SMS
+            const senderId = msg.rawSenderEmail ?? msg.sender;
+            const channel = (msg.channel || "email") as "email" | "whatsapp" | "sms" | "wechat" | "imessage" | "other";
+            if (senderId) {
+              createRuleMutation.mutate({ data: { senderId, channel, shipmentId } });
+            }
           }
         },
         onError: () => setAssigning(p => ({ ...p, [msgId]: false })),
@@ -1417,9 +1422,9 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
         <AlertCircle size={13} className="text-amber-600 mt-0.5 shrink-0"/>
         <div>
           <p className="text-xs font-semibold text-amber-800">
-            {messages.length} email{messages.length !== 1 ? "s" : ""} couldn't be automatically routed
+            {messages.length} message{messages.length !== 1 ? "s" : ""} couldn't be automatically routed
           </p>
-          <p className="text-xs text-amber-700 mt-0.5">Assign each message to the correct shipment. Future emails from the same sender will be auto-routed.</p>
+          <p className="text-xs text-amber-700 mt-0.5">Assign each message to the correct shipment. Future messages from the same sender on the same channel will be auto-routed.</p>
         </div>
       </div>
       {messages.map(msg => {
@@ -1474,7 +1479,11 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
                   className="w-3.5 h-3.5 rounded accent-[#9000FF]"
                 />
                 <span className="text-[11px] text-[#5E687B]">
-                  Always route messages from <span className="font-semibold text-[#212833]">{msg.rawSenderEmail ?? msg.sender}</span> to this PO
+                  Always route{" "}
+                  {msg.channel !== "email" ? (
+                    <span className="font-semibold text-[#212833]">{msg.channel === "whatsapp" ? "WhatsApp" : msg.channel === "wechat" ? "WeChat" : msg.channel === "imessage" ? "iMessage" : msg.channel === "sms" ? "SMS" : msg.channel}</span>
+                  ) : null}
+                  {" "}messages from <span className="font-semibold text-[#212833]">{msg.rawSenderEmail ?? msg.sender}</span> to this PO
                 </span>
               </label>
             )}
@@ -1491,7 +1500,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
               </select>
               <button
                 disabled={!selectedShipId || assigning[msg.id]}
-                onClick={() => selectedShipId && doAssign(msg.id, selectedShipId, selectedShip?.customer ?? msg.sender, msg.rawSenderEmail)}
+                onClick={() => selectedShipId && doAssign(msg.id, selectedShipId, selectedShip?.customer ?? msg.sender, msg)}
                 className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
               >
                 {assigning[msg.id] ? "Saving…" : <><Check size={10}/>Assign</>}
@@ -1717,7 +1726,7 @@ function ContactRulesPanel({ shipments }: { shipments: UiShipment[] }) {
     <div className="border-t border-[#E5EAF0] pt-6 mt-2">
       <h2 className="text-sm font-bold text-[#212833] mb-1">Contact Routing Rules</h2>
       <p className={`${BODY_MUTED} mb-4`}>
-        Messages from known sender addresses are auto-routed to their linked PO — no AI needed.
+        Messages from known senders (email, WhatsApp, SMS, and other channels) are auto-routed to their linked PO — no AI needed.
         Rules are created when you assign a needs-review message with "Always route" checked.
         Rules deactivate automatically when a shipment reaches a delivered/closed stage.
       </p>
@@ -1732,7 +1741,18 @@ function ContactRulesPanel({ shipments }: { shipments: UiShipment[] }) {
             return (
               <div key={rule.id} className={`bg-white border rounded-xl px-3.5 py-3 flex items-center gap-3 shadow-sm ${rule.active ? "border-[#E5EAF0]" : "border-dashed border-[#D0D5DE] opacity-60"}`}>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-[#212833] truncate">{rule.fromEmail}</div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                      rule.channel === "whatsapp" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                      rule.channel === "sms" ? "bg-slate-50 text-slate-500 border border-slate-200" :
+                      rule.channel === "wechat" ? "bg-green-50 text-green-600 border border-green-100" :
+                      rule.channel === "imessage" ? "bg-blue-50 text-blue-500 border border-blue-100" :
+                      "bg-indigo-50 text-indigo-600 border border-indigo-100"
+                    }`}>
+                      {rule.channel === "whatsapp" ? "WhatsApp" : rule.channel === "wechat" ? "WeChat" : rule.channel === "imessage" ? "iMessage" : rule.channel === "sms" ? "SMS" : "Email"}
+                    </span>
+                    <div className="text-xs font-bold text-[#212833] truncate">{rule.senderId}</div>
+                  </div>
                   <div className="text-[11px] text-[#5E687B] mt-0.5">
                     → <span className="font-semibold">{rule.poNumber ?? `Shipment #${rule.shipmentId}`}</span>
                     {ship && <span className="ml-1 text-[#9E9FAE]">· {ship.supplier}</span>}

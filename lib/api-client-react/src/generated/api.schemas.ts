@@ -1470,7 +1470,15 @@ export interface CreateDeviceTokenResponse {
 
 export interface ContactRoutingRule {
   id: number;
-  fromEmail: string;
+  /** Messaging channel — email, whatsapp, sms, wechat, imessage, or other */
+  channel: string;
+  /** Universal sender identifier: email address for email rules; phone number, display name, or handle for chat/SMS rules */
+  senderId: string;
+  /**
+     * Populated for email rules only (equals senderId); null for chat/SMS rules
+     * @nullable
+     */
+  fromEmail?: string | null;
   shipmentId: number;
   /** @nullable */
   poNumber?: string | null;
@@ -1481,8 +1489,28 @@ export interface ContactRoutingRule {
   updatedAt: string;
 }
 
+/**
+ * Messaging channel; defaults to email when omitted
+ */
+export type CreateContactRuleBodyChannel = typeof CreateContactRuleBodyChannel[keyof typeof CreateContactRuleBodyChannel];
+
+
+export const CreateContactRuleBodyChannel = {
+  email: 'email',
+  whatsapp: 'whatsapp',
+  sms: 'sms',
+  wechat: 'wechat',
+  imessage: 'imessage',
+  other: 'other',
+} as const;
+
 export interface CreateContactRuleBody {
-  fromEmail: string;
+  /** Universal sender identifier — email address, phone number, display name, or handle */
+  senderId: string;
+  /** Messaging channel; defaults to email when omitted */
+  channel?: CreateContactRuleBodyChannel;
+  /** Deprecated — use senderId instead; kept for backwards compatibility with email rules */
+  fromEmail?: string;
   shipmentId: number;
 }
 

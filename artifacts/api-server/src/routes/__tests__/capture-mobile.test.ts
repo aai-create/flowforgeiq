@@ -61,6 +61,7 @@ vi.mock("@workspace/db", () => {
     suppliersTable: {},
     buyersTable: {},
     shipmentsTable: {},
+    contactRoutingRulesTable: {},
   };
 });
 
@@ -235,14 +236,16 @@ describe("POST /capture/mobile — device token authentication", () => {
 
   it("returns 201 with capture details when a valid device token is provided", async () => {
     // DB call sequence (select calls in order):
-    //  1. device_tokens lookup         → [DEVICE_TOKEN_ROW]
-    //  2. team_users membership check  → [TEAM_USER_ROW]
-    //  3. dedup check (messagesTable)  → [] (no duplicate)
-    //  4. suppliers contact resolution → []
-    //  5. buyers contact resolution    → []
+    //  1. device_tokens lookup              → [DEVICE_TOKEN_ROW]
+    //  2. team_users membership check       → [TEAM_USER_ROW]
+    //  3. dedup check (messagesTable)       → [] (no duplicate)
+    //  4. contact routing rule lookup       → [] (no rule)
+    //  5. suppliers contact resolution      → []
+    //  6. buyers contact resolution         → []
     selectQueue = [
       [DEVICE_TOKEN_ROW],
       [TEAM_USER_ROW],
+      [],
       [],
       [],
       [],
@@ -296,6 +299,7 @@ describe("POST /capture/mobile — device token authentication", () => {
       [DEVICE_TOKEN_ROW],
       [TEAM_USER_ROW],
       [differentRow], // dedup query returns a row, but its snippet doesn't match the prefix
+      [],             // contact routing rule lookup → no rule
       [],             // suppliers contact resolution
       [],             // buyers contact resolution
     ];
@@ -415,9 +419,8 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
     expect(mockInsertReturning).not.toHaveBeenCalled();
 
     // Verify the route computed the cutoff as exactly (now - WINDOW_MS)
-    const gteCall = vi.mocked(mockGte).mock.calls.find(
-      (c): c is [unknown, Date] => c[1] instanceof Date,
-    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gteCall = vi.mocked(mockGte).mock.calls.find((c: any) => c[1] instanceof Date);
     expect(gteCall).toBeDefined();
     expect((gteCall![1] as Date).getTime()).toBe(PINNED_NOW - WINDOW_MS);
   });
@@ -432,6 +435,7 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
     selectQueue = [
       ...authQueue(),
       [],  // dedup query → no rows in window
+      [],  // contact routing rule lookup → no rule
       [],  // suppliers resolution
       [],  // buyers resolution
     ];
@@ -456,9 +460,8 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
     // Verify the cutoff timestamp is still exactly (now - WINDOW_MS) — confirming
     // the constant hasn't drifted and the 1 ms difference is on the data side, not
     // the predicate side.
-    const gteCall = vi.mocked(mockGte).mock.calls.find(
-      (c): c is [unknown, Date] => c[1] instanceof Date,
-    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gteCall = vi.mocked(mockGte).mock.calls.find((c: any) => c[1] instanceof Date);
     expect(gteCall).toBeDefined();
     expect((gteCall![1] as Date).getTime()).toBe(PINNED_NOW - WINDOW_MS);
   });
