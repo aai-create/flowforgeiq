@@ -11,6 +11,7 @@ import {
   buyerEmailsTable,
   teamUsersTable,
   pushTokensTable,
+  contactRoutingRulesTable,
 } from "@workspace/db";
 import { sendExpoPushNotifications } from "../lib/pushNotifications";
 import { InboundEmailWebhookBody } from "@workspace/api-zod";
@@ -916,6 +917,154 @@ router.post("/webhooks/email", async (req, res) => {
   let finalConfidence = ctx.confidence;
   let finalMatchMethod = ctx.matchMethod;
   let aiGuess: { buyerName: string | null; shipmentId: number | null; confidence: number; reasoning: string } | null = null;
+
+  // ── Contact routing rule check: fires before AI inference ─────────────────
+  // Check for an active rule keyed on the sender's raw email address.
+  // If found, route directly — no AI call needed.
+  const rawSenderForRule = (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail ?? "").toLowerCase();
+  if (rawSenderForRule) {
+    const [activeRule] = await db
+      .select({
+        id: contactRoutingRulesTable.id,
+        shipmentId: contactRoutingRulesTable.shipmentId,
+      })
+      .from(contactRoutingRulesTable)
+      .where(
+        and(
+          eq(contactRoutingRulesTable.orgId, scopedOrgId),
+          eq(contactRoutingRulesTable.fromEmail, rawSenderForRule),
+          eq(contactRoutingRulesTable.active, true),
+        ),
+      )
+      .limit(1);
+
+    if (activeRule) {
+      // Validate the rule's shipmentId is still org-scoped (defence-in-depth)
+      const [guardRow] = await db
+        .select({ id: shipmentsTable.id })
+        .from(shipmentsTable)
+        .where(and(eq(shipmentsTable.id, activeRule.shipmentId), eq(shipmentsTable.orgId, scopedOrgId)))
+        .limit(1);
+
+      if (guardRow) {
+        req.log.info(
+          { ruleId: activeRule.id, shipmentId: activeRule.shipmentId, fromEmail: rawSenderForRule },
+          "email-webhook: contact routing rule matched — skipping AI inference",
+        );
+
+        finalShipmentId = activeRule.shipmentId;
+        finalConfidence = 1.0;
+        finalMatchMethod = "contact-rule" as MatchMethod;
+
+        // Build a label for the sender
+        const rawBody2 = TextBody ?? "";
+        const snippet2 = rawBody2.replace(/\s+/g, " ").trim().slice(0, 200);
+        const senderLabel2 =
+          ctx.matchedSupplierName ??
+          ctx.resolvedCustomerName ??
+          From ??
+          "Unknown Sender";
+
+        const [msg2] = await db
+          .insert(messagesTable)
+          .values({
+            shipmentId: finalShipmentId,
+            supplierId: ctx.supplierId,
+            sender: senderLabel2,
+            recipient: toAddress || null,
+            channel: "email",
+            subject: Subject ?? null,
+            direction: "inbound",
+            snippet: snippet2 || "(empty email)",
+            fullBody: rawBody2,
+            aiDraft: "",
+            aiAction: "",
+            aiTags: [],
+            unread: true,
+            isFlagged: false,
+            routingStatus: "routed",
+            routingConfidence: 1.0,
+            matchMethod: "contact-rule",
+            rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
+            aiRoutingGuess: null,
+            receivedAt: new Date(),
+            routedToClerkUserId: ctx.scopedClerkUserId,
+            orgId: scopedOrgId,
+          })
+          .returning();
+
+        setImmediate(async () => {
+          try {
+            const tokenRows = await db
+              .select({ expoPushToken: pushTokensTable.expoPushToken })
+              .from(pushTokensTable)
+              .where(eq(pushTokensTable.orgId, scopedOrgId));
+            const tokens = tokenRows.map((r) => r.expoPushToken);
+            if (tokens.length > 0) {
+              await sendExpoPushNotifications(
+                tokens,
+                `New email from ${senderLabel2}`,
+                (Subject ?? "No subject").slice(0, 60),
+                { type: "message", messageId: msg2.id, shipmentId: finalShipmentId ?? null },
+                req.log,
+              );
+            }
+          } catch { /* best-effort */ }
+        });
+
+        setImmediate(async () => {
+          try {
+            const shipmentForDraft = finalShipmentId
+              ? (await db.select({
+                  id: shipmentsTable.id, poNumber: shipmentsTable.poNumber, product: shipmentsTable.product,
+                  customerName: shipmentsTable.customerName, supplierId: shipmentsTable.supplierId,
+                  exFactoryDate: shipmentsTable.exFactoryDate, dueDate: shipmentsTable.dueDate,
+                }).from(shipmentsTable).where(eq(shipmentsTable.id, finalShipmentId!)))[0] ?? null
+              : null;
+            const rawBody3 = TextBody ?? "";
+            const [draft3, tags3] = await Promise.all([
+              draftReplyWithAI(rawBody3, Subject ?? "", shipmentForDraft ?? null),
+              buildAiTags(rawBody3, Subject ?? ""),
+            ]);
+            const patch3: Record<string, unknown> = { aiDraft: draft3 };
+            if (tags3.length) patch3.aiTags = tags3;
+            await db.update(messagesTable).set(patch3).where(eq(messagesTable.id, msg2.id));
+            if (finalShipmentId) {
+              await extractFieldsFromEmail(rawBody3, Subject ?? "", finalShipmentId, msg2.id, scopedOrgId);
+            }
+          } catch { /* best-effort */ }
+        });
+
+        const documentIds2: number[] = [];
+        if (Attachments && Attachments.length > 0) {
+          for (const attachment of Attachments) {
+            if (!attachment.Content) continue;
+            const docId = await ingestDocumentFromBase64({
+              fileName: attachment.Name ?? `attachment-${Date.now()}`,
+              mimeType: attachment.ContentType ?? "application/octet-stream",
+              base64Content: attachment.Content,
+              sourceChannel: "email",
+              supplierId: ctx.supplierId ?? null,
+              preMatchedShipmentId: finalShipmentId,
+              routingShipmentIds: finalShipmentId ? [finalShipmentId] : null,
+              orgId: scopedOrgId,
+            });
+            documentIds2.push(docId);
+          }
+        }
+
+        res.json({ accepted: true, documentIds: documentIds2 });
+        return;
+      } else {
+        // Rule's shipment no longer belongs to this org — deactivate it
+        await db
+          .update(contactRoutingRulesTable)
+          .set({ active: false, updatedAt: new Date() })
+          .where(eq(contactRoutingRulesTable.id, activeRule.id));
+        req.log.warn({ ruleId: activeRule.id }, "email-webhook: contact rule shipment failed org check — deactivated");
+      }
+    }
+  }
 
   // Track every shipment ID that was legitimately presented to the AI as a routing candidate.
   // This set is used as the final allowlist guard before any write is applied.

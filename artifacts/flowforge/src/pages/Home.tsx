@@ -44,9 +44,14 @@ import {
   usePatchShipmentDeal,
   useSaveExtractionCorrection,
   useGetExtractionCorrections,
+  useListContactRules,
+  useCreateContactRule,
+  usePatchContactRule,
+  useDeleteContactRule,
   type Message as ApiMessageFull,
   type ChatIngestResult,
   type ExtractionCorrection,
+  type ContactRoutingRule,
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import type { DocumentWithExtraction, ReconciliationFinding, SupplierSummary } from "@workspace/api-client-react";
@@ -1363,8 +1368,10 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
 }) {
   const assignMutation = useAssignMessage();
   const deleteMutation = useDeleteMessage();
+  const createRuleMutation = useCreateContactRule();
   const [assignments, setAssignments] = useState<Record<number, number>>({});
   const [assigning, setAssigning] = useState<Record<number, boolean>>({});
+  const [createRuleToggle, setCreateRuleToggle] = useState<Record<number, boolean>>({});
 
   const doDelete = (msg: ApiMessageFull) => {
     if (!window.confirm("Permanently delete this message? This cannot be undone.")) return;
@@ -1377,12 +1384,18 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
     );
   };
 
-  const doAssign = (msgId: number, shipmentId: number, buyerName: string) => {
+  const doAssign = (msgId: number, shipmentId: number, buyerName: string, rawSenderEmail: string | null | undefined) => {
     setAssigning(p => ({ ...p, [msgId]: true }));
     assignMutation.mutate(
       { id: msgId, data: { shipmentId, buyerName } },
       {
-        onSuccess: () => { onAssigned(msgId); setAssigning(p => ({ ...p, [msgId]: false })); },
+        onSuccess: () => {
+          onAssigned(msgId);
+          setAssigning(p => ({ ...p, [msgId]: false }));
+          if (createRuleToggle[msgId] && rawSenderEmail) {
+            createRuleMutation.mutate({ data: { fromEmail: rawSenderEmail.toLowerCase(), shipmentId } });
+          }
+        },
         onError: () => setAssigning(p => ({ ...p, [msgId]: false })),
       }
     );
@@ -1452,6 +1465,19 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
                 )}
               </div>
             )}
+            {selectedShipId && (
+              <label className="flex items-center gap-1.5 mb-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!createRuleToggle[msg.id]}
+                  onChange={e => setCreateRuleToggle(p => ({ ...p, [msg.id]: e.target.checked }))}
+                  className="w-3.5 h-3.5 rounded accent-[#9000FF]"
+                />
+                <span className="text-[11px] text-[#5E687B]">
+                  Always route messages from <span className="font-semibold text-[#212833]">{msg.rawSenderEmail ?? msg.sender}</span> to this PO
+                </span>
+              </label>
+            )}
             <div className="flex items-center gap-2">
               <select
                 value={selectedShipId ?? ""}
@@ -1465,7 +1491,7 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
               </select>
               <button
                 disabled={!selectedShipId || assigning[msg.id]}
-                onClick={() => selectedShipId && doAssign(msg.id, selectedShipId, selectedShip?.customer ?? msg.sender)}
+                onClick={() => selectedShipId && doAssign(msg.id, selectedShipId, selectedShip?.customer ?? msg.sender, msg.rawSenderEmail)}
                 className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#9000FF] text-white hover:bg-[#7A00D9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
               >
                 {assigning[msg.id] ? "Saving…" : <><Check size={10}/>Assign</>}
@@ -1660,6 +1686,82 @@ function GmailSettingsPanel({ status, onGmailStatusChange }: {
           <div className="text-amber-700">Or with your custom domain: <span className="font-mono font-bold">https://flowforgeiq.com/api/webhooks/email?token=…</span> — replace <span className="font-mono font-bold">[POSTMARK_WEBHOOK_TOKEN]</span> with your secret value.</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contact Routing Rules Panel (Settings)
+// ─────────────────────────────────────────────────────────────────────────────
+function ContactRulesPanel({ shipments }: { shipments: UiShipment[] }) {
+  const { data: rules, refetch } = useListContactRules();
+  const patchMutation = usePatchContactRule();
+  const deleteMutation = useDeleteContactRule();
+
+  const toggleActive = (id: number, currentActive: boolean) => {
+    patchMutation.mutate(
+      { id, data: { active: !currentActive } },
+      { onSuccess: () => { void refetch(); } },
+    );
+  };
+
+  const deleteRule = (id: number) => {
+    if (!window.confirm("Delete this routing rule?")) return;
+    deleteMutation.mutate(
+      { id },
+      { onSuccess: () => { void refetch(); } },
+    );
+  };
+
+  return (
+    <div className="border-t border-[#E5EAF0] pt-6 mt-2">
+      <h2 className="text-sm font-bold text-[#212833] mb-1">Contact Routing Rules</h2>
+      <p className={`${BODY_MUTED} mb-4`}>
+        Messages from known sender addresses are auto-routed to their linked PO — no AI needed.
+        Rules are created when you assign a needs-review message with "Always route" checked.
+        Rules deactivate automatically when a shipment reaches a delivered/closed stage.
+      </p>
+      {!rules || rules.length === 0 ? (
+        <div className="bg-[#FAFBFC] border border-[#E5EAF0] rounded-xl px-4 py-6 text-center">
+          <p className="text-xs text-[#9E9FAE]">No routing rules yet. Assign a needs-review message with "Always route" checked to create one.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rules.map(rule => {
+            const ship = shipments.find(s => s.shipmentId === rule.shipmentId);
+            return (
+              <div key={rule.id} className={`bg-white border rounded-xl px-3.5 py-3 flex items-center gap-3 shadow-sm ${rule.active ? "border-[#E5EAF0]" : "border-dashed border-[#D0D5DE] opacity-60"}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-[#212833] truncate">{rule.fromEmail}</div>
+                  <div className="text-[11px] text-[#5E687B] mt-0.5">
+                    → <span className="font-semibold">{rule.poNumber ?? `Shipment #${rule.shipmentId}`}</span>
+                    {ship && <span className="ml-1 text-[#9E9FAE]">· {ship.supplier}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${rule.active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-[#F0F4F8] text-[#9E9FAE] border-[#E5EAF0]"}`}>
+                    {rule.active ? "Active" : "Inactive"}
+                  </span>
+                  <button
+                    onClick={() => toggleActive(rule.id, rule.active)}
+                    title={rule.active ? "Deactivate rule" : "Reactivate rule"}
+                    className="text-[11px] px-2 py-1 rounded-md border border-[#E5EAF0] text-[#5E687B] hover:bg-[#F0F4F8] transition-colors"
+                  >
+                    {rule.active ? "Deactivate" : "Reactivate"}
+                  </button>
+                  <button
+                    onClick={() => deleteRule(rule.id)}
+                    title="Delete rule"
+                    className="p-1.5 rounded-lg border border-[#E5EAF0] text-[#9E9FAE] hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={11}/>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -3082,7 +3184,12 @@ export default function Home() {
                 <Settings size={13} className="text-[#5E687B]"/>
                 <span className="text-xs font-bold text-[#212833]">Settings</span>
               </div>
-              <GmailSettingsPanel status={gmailStatus} onGmailStatusChange={() => { void refetchGmailStatus(); }}/>
+              <div className="flex-1 overflow-y-auto">
+                <GmailSettingsPanel status={gmailStatus} onGmailStatusChange={() => { void refetchGmailStatus(); }}/>
+                <div className="px-6 pb-8 max-w-xl mx-auto w-full">
+                  <ContactRulesPanel shipments={shipments}/>
+                </div>
+              </div>
             </div>
           )}
           {/* ── INBOX ENTITY LISTS (suppliers / POs / channels) ── */}

@@ -30,6 +30,63 @@ export const MobileCaptureResponse = zod.object({
 
 
 /**
+ * @summary List contact routing rules for the org
+ */
+export const ListContactRulesResponseItem = zod.object({
+  "id": zod.number(),
+  "fromEmail": zod.string(),
+  "shipmentId": zod.number(),
+  "poNumber": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListContactRulesResponse = zod.array(ListContactRulesResponseItem)
+
+
+/**
+ * @summary Create or upsert a contact routing rule
+ */
+export const CreateContactRuleBody = zod.object({
+  "fromEmail": zod.string().email(),
+  "shipmentId": zod.number()
+})
+
+
+/**
+ * @summary Update a contact routing rule (toggle active, reassign shipment)
+ */
+export const PatchContactRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchContactRuleBody = zod.object({
+  "active": zod.boolean().optional(),
+  "shipmentId": zod.number().optional()
+})
+
+export const PatchContactRuleResponse = zod.object({
+  "id": zod.number(),
+  "fromEmail": zod.string(),
+  "shipmentId": zod.number(),
+  "poNumber": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a contact routing rule
+ */
+export const DeleteContactRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List device tokens for the authenticated user
  */
 export const ListDeviceTokensResponseItem = zod.object({

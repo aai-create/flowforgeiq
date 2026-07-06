@@ -29,11 +29,13 @@ import type {
   ChatIngestInput,
   ChatIngestResult,
   ConnectGmail200,
+  ContactRoutingRule,
   CopilotProposal,
   CopilotProposalInput,
   CopilotProposalUpdate,
   CopilotSummary,
   CopilotTriggerResult,
+  CreateContactRuleBody,
   CreateDeviceTokenBody,
   CreateDeviceTokenResponse,
   DealAdjustmentInput,
@@ -73,6 +75,7 @@ import type {
   MobileCaptureResponse,
   NextPoNumbers,
   OrgResponse,
+  PatchContactRuleBody,
   PatchShipmentDealBody,
   Payment,
   PaymentUpdate,
@@ -200,6 +203,296 @@ export const useMobileCapture = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMobileCaptureMutationOptions(options));
+    }
+
+export const getListContactRulesUrl = () => {
+
+
+
+
+  return `/api/settings/contact-rules`
+}
+
+/**
+ * @summary List contact routing rules for the org
+ */
+export const listContactRules = async ( options?: RequestInit): Promise<ContactRoutingRule[]> => {
+
+  return customFetch<ContactRoutingRule[]>(getListContactRulesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListContactRulesQueryKey = () => {
+    return [
+    `/api/settings/contact-rules`
+    ] as const;
+    }
+
+
+export const getListContactRulesQueryOptions = <TData = Awaited<ReturnType<typeof listContactRules>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContactRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListContactRulesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContactRules>>> = ({ signal }) => listContactRules({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listContactRules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListContactRulesQueryResult = NonNullable<Awaited<ReturnType<typeof listContactRules>>>
+export type ListContactRulesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List contact routing rules for the org
+ */
+
+export function useListContactRules<TData = Awaited<ReturnType<typeof listContactRules>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listContactRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListContactRulesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateContactRuleUrl = () => {
+
+
+
+
+  return `/api/settings/contact-rules`
+}
+
+/**
+ * @summary Create or upsert a contact routing rule
+ */
+export const createContactRule = async (createContactRuleBody: CreateContactRuleBody, options?: RequestInit): Promise<ContactRoutingRule> => {
+
+  return customFetch<ContactRoutingRule>(getCreateContactRuleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createContactRuleBody,)
+  }
+);}
+
+
+
+
+export const getCreateContactRuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContactRule>>, TError,{data: BodyType<CreateContactRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createContactRule>>, TError,{data: BodyType<CreateContactRuleBody>}, TContext> => {
+
+const mutationKey = ['createContactRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContactRule>>, {data: BodyType<CreateContactRuleBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createContactRule(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateContactRuleMutationResult = NonNullable<Awaited<ReturnType<typeof createContactRule>>>
+    export type CreateContactRuleMutationBody = BodyType<CreateContactRuleBody>
+    export type CreateContactRuleMutationError = ErrorType<void>
+
+    /**
+ * @summary Create or upsert a contact routing rule
+ */
+export const useCreateContactRule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContactRule>>, TError,{data: BodyType<CreateContactRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createContactRule>>,
+        TError,
+        {data: BodyType<CreateContactRuleBody>},
+        TContext
+      > => {
+      return useMutation(getCreateContactRuleMutationOptions(options));
+    }
+
+export const getPatchContactRuleUrl = (id: number,) => {
+
+
+
+
+  return `/api/settings/contact-rules/${id}`
+}
+
+/**
+ * @summary Update a contact routing rule (toggle active, reassign shipment)
+ */
+export const patchContactRule = async (id: number,
+    patchContactRuleBody: PatchContactRuleBody, options?: RequestInit): Promise<ContactRoutingRule> => {
+
+  return customFetch<ContactRoutingRule>(getPatchContactRuleUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchContactRuleBody,)
+  }
+);}
+
+
+
+
+export const getPatchContactRuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchContactRule>>, TError,{id: number;data: BodyType<PatchContactRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchContactRule>>, TError,{id: number;data: BodyType<PatchContactRuleBody>}, TContext> => {
+
+const mutationKey = ['patchContactRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchContactRule>>, {id: number;data: BodyType<PatchContactRuleBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchContactRule(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchContactRuleMutationResult = NonNullable<Awaited<ReturnType<typeof patchContactRule>>>
+    export type PatchContactRuleMutationBody = BodyType<PatchContactRuleBody>
+    export type PatchContactRuleMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a contact routing rule (toggle active, reassign shipment)
+ */
+export const usePatchContactRule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchContactRule>>, TError,{id: number;data: BodyType<PatchContactRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchContactRule>>,
+        TError,
+        {id: number;data: BodyType<PatchContactRuleBody>},
+        TContext
+      > => {
+      return useMutation(getPatchContactRuleMutationOptions(options));
+    }
+
+export const getDeleteContactRuleUrl = (id: number,) => {
+
+
+
+
+  return `/api/settings/contact-rules/${id}`
+}
+
+/**
+ * @summary Delete a contact routing rule
+ */
+export const deleteContactRule = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteContactRuleUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteContactRuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContactRule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteContactRule>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteContactRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContactRule>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteContactRule(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteContactRuleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContactRule>>>
+
+    export type DeleteContactRuleMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a contact routing rule
+ */
+export const useDeleteContactRule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContactRule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteContactRule>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteContactRuleMutationOptions(options));
     }
 
 export const getListDeviceTokensUrl = () => {

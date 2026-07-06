@@ -15,6 +15,7 @@ import {
   tasksTable,
   buyersTable,
   pushTokensTable,
+  contactRoutingRulesTable,
 } from "@workspace/db";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { sendExpoPushNotifications } from "../lib/pushNotifications";
@@ -491,6 +492,34 @@ router.post("/shipments/:id/stage-events", async (req, res) => {
       })
       .returning();
   });
+
+  // Deactivate contact routing rules for this shipment when it reaches a closed/delivered stage.
+  // Agents are prompted to reassign the rule if a new message arrives from that contact.
+  const closedStageKeywords = ["delivered", "closed", "complete", "completed", "done", "cancelled", "canceled"];
+  const toStageNorm = input.toStageId.toLowerCase();
+  if (closedStageKeywords.some(kw => toStageNorm.includes(kw))) {
+    try {
+      const deactivated = await db
+        .update(contactRoutingRulesTable)
+        .set({ active: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(contactRoutingRulesTable.shipmentId, shipmentId),
+            eq(contactRoutingRulesTable.orgId, orgId),
+            eq(contactRoutingRulesTable.active, true),
+          ),
+        )
+        .returning({ id: contactRoutingRulesTable.id });
+      if (deactivated.length > 0) {
+        req.log.info(
+          { shipmentId, toStageId: input.toStageId, ruleIds: deactivated.map(r => r.id) },
+          "stage-events: deactivated contact routing rules for closed shipment",
+        );
+      }
+    } catch (err) {
+      req.log.warn({ err }, "stage-events: failed to deactivate contact routing rules");
+    }
+  }
 
   setImmediate(async () => {
     try {

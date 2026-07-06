@@ -1468,6 +1468,29 @@ export interface CreateDeviceTokenResponse {
   token: string;
 }
 
+export interface ContactRoutingRule {
+  id: number;
+  fromEmail: string;
+  shipmentId: number;
+  /** @nullable */
+  poNumber?: string | null;
+  active: boolean;
+  /** @nullable */
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateContactRuleBody {
+  fromEmail: string;
+  shipmentId: number;
+}
+
+export interface PatchContactRuleBody {
+  active?: boolean;
+  shipmentId?: number;
+}
+
 export type CreateDeviceTokenBody = {
   /** @maxLength 80 */
   label?: string;

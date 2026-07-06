@@ -20,6 +20,7 @@ import focusRouter from "./focus";
 import pushTokensRouter from "./push-tokens";
 import captureRouter from "./capture";
 import shortcutsRouter from "./shortcuts";
+import contactRulesRouter from "./contact-rules";
 
 const router: IRouter = Router();
 
@@ -50,6 +51,7 @@ protectedRouter.use(settingsRouter);
 protectedRouter.use(integrationsRouter);
 protectedRouter.use(rfqsRouter);
 protectedRouter.use(pushTokensRouter);
+protectedRouter.use(contactRulesRouter);
 
 router.use(protectedRouter);
 
