@@ -331,7 +331,7 @@ export function ShortcutsGuide() {
                 <div className="flex items-center gap-5">
                   <div className="p-2 bg-white rounded-xl border border-[#E5EAF0] shadow-sm shrink-0">
                     <QRCodeSVG
-                      value={SHORTCUT_ABSOLUTE_URL}
+                      value={OPEN_IN_SHORTCUTS_URL}
                       size={100}
                       fgColor="#9000FF"
                       bgColor="#ffffff"
@@ -344,9 +344,9 @@ export function ShortcutsGuide() {
                     </p>
                     <p className="text-[11px] text-[#5E687B] mt-1 leading-relaxed">
                       Point your iPhone camera at this code — it opens the
-                      Shortcut download directly in Safari so you can tap{" "}
+                      Shortcuts app directly and prompts{" "}
                       <strong className="text-[#212833]">Add Shortcut</strong>{" "}
-                      right away. No typing required.
+                      right away. Best scanned from an iPhone.
                     </p>
                   </div>
                 </div>
