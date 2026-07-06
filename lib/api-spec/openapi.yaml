@@ -1544,6 +1544,39 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ChatIngestResult" }
 
+  /settings/copilot:
+    get:
+      operationId: getCopilotSettings
+      tags: [settings]
+      summary: Get copilot threshold settings for the org
+      responses:
+        "200":
+          description: Copilot settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotSettingsConfig" }
+        "401":
+          description: Unauthorized
+    patch:
+      operationId: updateCopilotSettings
+      tags: [settings]
+      summary: Update copilot threshold settings (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CopilotSettingsUpdate" }
+      responses:
+        "200":
+          description: Updated copilot settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CopilotSettingsConfig" }
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin required
+
   /settings/po-numbering:
     get:
       operationId: getPoNumberingConfig
@@ -2894,6 +2927,9 @@ components:
         userEditedContent:   { type: ["string", "null"], description: "Extracted edited draftBody text saved when user approves an edit" }
         editDistance:        { type: ["number", "null"], description: "Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten" }
         auditTrail:          { type: array, items: { type: object, additionalProperties: true } }
+        sparseThreadWarning: { type: ["boolean", "null"], description: "True when the thread has fewer messages than usual for the current stage duration — possible capture gap" }
+        sparseMessageCount:  { type: ["integer", "null"], description: "Number of messages linked to this shipment at proposal time" }
+        sparseDaysInStage:   { type: ["integer", "null"], description: "Days the shipment has been in its current stage at proposal time" }
         createdAt:           { type: string, format: date-time }
         updatedAt:           { type: string, format: date-time }
 
@@ -2996,6 +3032,19 @@ components:
         supplierName: { type: string }
         actionType:   { type: string }
         policy:       { type: string }
+
+    CopilotSettingsConfig:
+      type: object
+      required: [sparseThreadMinMessages, sparseThreadMinDays]
+      properties:
+        sparseThreadMinMessages: { type: integer, description: "Minimum message count below which a thread is considered sparse (default 5)" }
+        sparseThreadMinDays:     { type: integer, description: "Minimum days in current stage before the sparse check applies (default 14)" }
+
+    CopilotSettingsUpdate:
+      type: object
+      properties:
+        sparseThreadMinMessages: { type: integer }
+        sparseThreadMinDays:     { type: integer }
 
     InboundEmailAttachment:
       type: object

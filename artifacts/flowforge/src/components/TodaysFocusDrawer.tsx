@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Zap, X, Check, Sparkles, ArrowRight, Loader2, ChevronRight, AlertCircle, Clock, User } from "lucide-react";
+import { Zap, X, Check, Sparkles, ArrowRight, Loader2, ChevronRight, AlertCircle, Clock, User, TriangleAlert } from "lucide-react";
 import { useListFocusItems, useUpdateFocusItem } from "@workspace/api-client-react";
 import type { FocusItem, AiSuggestion } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
@@ -51,13 +51,15 @@ export function AIDrawer({ open, onClose, initialTab = "focus" }: AIDrawerProps)
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   // Ask AI tab state
-  const { contextHint, suggestions: copilotSuggestions, inputRef, history, addToHistory } = useCopilot();
+  const { contextHint, suggestions: copilotSuggestions, inputRef, history, addToHistory, focusedShipmentId } = useCopilot();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
   const [pendingMessage, setPendingMessage] = useState("");
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [sparseMeta, setSparseMeta] = useState<{ sparseThreadWarning: boolean; sparseMessageCount: number; sparseDaysInStage: number } | null>(null);
+  const [sparseDismissed, setSparseDismissed] = useState(false);
   const draftRef = useRef("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const askInputRef = useRef<HTMLInputElement>(null);
@@ -127,10 +129,17 @@ export function AIDrawer({ open, onClose, initialTab = "focus" }: AIDrawerProps)
           message: text,
           contextHint: contextHint !== "Ask FlowForgeIQ anything" ? contextHint : undefined,
           history: conversationHistory,
+          ...(focusedShipmentId != null ? { shipmentId: focusedShipmentId } : {}),
         }),
       });
       if (!res.ok) throw new Error("Request failed");
-      const d = (await res.json()) as { reply: string };
+      const d = (await res.json()) as { reply: string; sparseThreadWarning?: boolean; sparseMessageCount?: number; sparseDaysInStage?: number };
+      if (d.sparseThreadWarning) {
+        setSparseMeta({ sparseThreadWarning: d.sparseThreadWarning, sparseMessageCount: d.sparseMessageCount ?? 0, sparseDaysInStage: d.sparseDaysInStage ?? 0 });
+        setSparseDismissed(false);
+      } else {
+        setSparseMeta(null);
+      }
       setConversationHistory(prev => [
         ...prev,
         { role: "user", content: text },
@@ -403,6 +412,23 @@ export function AIDrawer({ open, onClose, initialTab = "focus" }: AIDrawerProps)
                     <p className="text-xs text-[#212833] leading-relaxed max-w-[90%]">{turn.content}</p>
                   </div>
                 )
+              )}
+
+              {/* Sparse thread warning — shown below last AI reply */}
+              {sparseMeta?.sparseThreadWarning && !sparseDismissed && conversationHistory.length > 0 && !loading && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                  <TriangleAlert size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                  <p className="flex-1 text-[11px] text-amber-800 leading-snug">
+                    This thread has{" "}
+                    <span className="font-semibold">{sparseMeta.sparseMessageCount} message{sparseMeta.sparseMessageCount !== 1 ? "s" : ""}</span>
+                    {" "}for a shipment{" "}
+                    <span className="font-semibold">{sparseMeta.sparseDaysInStage} days</span>
+                    {" "}into this stage — some context may be missing.
+                  </p>
+                  <button onClick={() => setSparseDismissed(true)} className="shrink-0 text-amber-400 hover:text-amber-600 transition-colors">
+                    <X size={11} />
+                  </button>
+                </div>
               )}
 
               {pendingMessage && (

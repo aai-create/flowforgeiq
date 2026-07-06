@@ -1,6 +1,6 @@
 {
-  "id": "b7e17b43-0f87-4200-b92c-c898ecbe42b0",
-  "prevId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "id": "17af34cc-4ef9-4db5-88ec-e644289a5868",
+  "prevId": "b7e17b43-0f87-4200-b92c-c898ecbe42b0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1930,6 +1930,24 @@
           "notNull": true,
           "default": "'[]'::jsonb"
         },
+        "sparse_thread_warning": {
+          "name": "sparse_thread_warning",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sparse_message_count": {
+          "name": "sparse_message_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sparse_days_in_stage": {
+          "name": "sparse_days_in_stage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "org_id": {
           "name": "org_id",
           "type": "integer",
@@ -3629,6 +3647,83 @@
             "id"
           ],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.copilot_settings": {
+      "name": "copilot_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sparse_thread_min_messages": {
+          "name": "sparse_thread_min_messages",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "sparse_thread_min_days": {
+          "name": "sparse_thread_min_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 14
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "copilot_settings_org_id_idx": {
+          "name": "copilot_settings_org_id_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "copilot_settings_org_id_organizations_id_fk": {
+          "name": "copilot_settings_org_id_organizations_id_fk",
+          "tableFrom": "copilot_settings",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

@@ -1,5 +1,6 @@
 import { db, shipmentsTable, messagesTable, paymentsTable, copilotProposalsTable, autonomyPoliciesTable, suppliersTable } from "@workspace/db";
 import { desc, eq, inArray, isNotNull, and } from "drizzle-orm";
+import { computeThreadDensity } from "./thread-density";
 
 export type ProposalCandidate = {
   shipmentId: number;
@@ -353,6 +354,24 @@ export async function runTriggerEngine(orgId: number): Promise<{
     };
   }
 
+  // Fetch all messages for density computation
+  const allMessages = await db
+    .select()
+    .from(messagesTable)
+    .where(eq(messagesTable.orgId, orgId));
+
+  // Pre-compute thread density per shipment (for all unique shipmentIds in toInsert)
+  const uniqueShipmentIds = [...new Set(toInsert.map(c => c.shipmentId))];
+  const densityMap = new Map<number, { sparse: boolean; messageCount: number; daysInStage: number }>();
+  for (const shipId of uniqueShipmentIds) {
+    const shipment = allShipments.find(s => s.id === shipId);
+    const msgs = allMessages.filter(m => m.shipmentId === shipId);
+    if (shipment) {
+      const density = await computeThreadDensity(shipId, shipment.currentStageId, msgs.length, orgId);
+      densityMap.set(shipId, density);
+    }
+  }
+
   const created: (typeof copilotProposalsTable.$inferSelect)[] = [];
   let autoExecuted = 0;
 
@@ -370,6 +389,8 @@ export async function runTriggerEngine(orgId: number): Promise<{
       note: `Policy: ${policy}. Confidence: ${candidate.confidence}`,
     };
 
+    const density = densityMap.get(candidate.shipmentId);
+
     const [inserted] = await db
       .insert(copilotProposalsTable)
       .values({
@@ -382,6 +403,9 @@ export async function runTriggerEngine(orgId: number): Promise<{
         confidence: candidate.confidence,
         status,
         auditTrail: [auditEntry],
+        sparseThreadWarning: density?.sparse ?? null,
+        sparseMessageCount: density?.messageCount ?? null,
+        sparseDaysInStage: density?.daysInStage ?? null,
         orgId,
       })
       .returning();

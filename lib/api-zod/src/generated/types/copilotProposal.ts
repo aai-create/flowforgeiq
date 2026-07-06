@@ -35,6 +35,21 @@ export interface CopilotProposal {
      */
   editDistance?: number | null;
   auditTrail?: CopilotProposalAuditTrailItem[];
+  /**
+     * True when the thread has fewer messages than usual for the current stage duration — possible capture gap
+     * @nullable
+     */
+  sparseThreadWarning?: boolean | null;
+  /**
+     * Number of messages linked to this shipment at proposal time
+     * @nullable
+     */
+  sparseMessageCount?: number | null;
+  /**
+     * Days the shipment has been in its current stage at proposal time
+     * @nullable
+     */
+  sparseDaysInStage?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizationsTable } from "./organizations";
@@ -18,6 +18,9 @@ export const copilotProposalsTable = pgTable("copilot_proposals", {
   userEditedContent: text("user_edited_content"), // extracted edited draftBody text for learning
   editDistance: real("edit_distance"), // normalized 0–1; 0 = identical to AI draft, 1 = completely rewritten
   auditTrail: jsonb("audit_trail").notNull().default([]), // array of { at, actor, action, note }
+  sparseThreadWarning: boolean("sparse_thread_warning"),
+  sparseMessageCount: integer("sparse_message_count"),
+  sparseDaysInStage: integer("sparse_days_in_stage"),
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

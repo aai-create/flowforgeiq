@@ -9,6 +9,7 @@ import {
   ListCopilotProposalsQueryParams,
 } from "@workspace/api-zod";
 import { runTriggerEngine } from "../lib/copilot-trigger";
+import { computeThreadDensity } from "../lib/thread-density";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { z } from "zod";
 
@@ -77,6 +78,25 @@ router.get("/copilot/proposals", async (req, res) => {
 router.post("/copilot/proposals", async (req, res) => {
   const orgId = await resolveOrgId(req);
   const input = CreateCopilotProposalBody.parse(req.body);
+
+  // Fetch the shipment to get currentStageId for thread-density computation
+  const [shipment] = await db
+    .select({ currentStageId: shipmentsTable.currentStageId })
+    .from(shipmentsTable)
+    .where(and(eq(shipmentsTable.id, input.shipmentId), eq(shipmentsTable.orgId, orgId)))
+    .limit(1);
+
+  const msgCount = shipment
+    ? (await db
+        .select()
+        .from(messagesTable)
+        .where(and(eq(messagesTable.shipmentId, input.shipmentId), eq(messagesTable.orgId, orgId)))).length
+    : 0;
+
+  const density = shipment
+    ? await computeThreadDensity(input.shipmentId, shipment.currentStageId, msgCount, orgId)
+    : null;
+
   const [inserted] = await db
     .insert(copilotProposalsTable)
     .values({
@@ -90,6 +110,13 @@ router.post("/copilot/proposals", async (req, res) => {
       status: "pending",
       auditTrail: [{ at: new Date().toISOString(), actor: "user", action: "created" }],
       orgId,
+      ...(density
+        ? {
+            sparseThreadWarning: density.sparse,
+            sparseMessageCount: density.messageCount,
+            sparseDaysInStage: density.daysInStage,
+          }
+        : {}),
     })
     .returning();
   res.status(201).json(inserted);
@@ -321,6 +348,7 @@ router.put("/copilot/policies", requireAdmin, async (req, res) => {
 const CopilotChatBody = z.object({
   message: z.string().min(1).max(2000),
   contextHint: z.string().max(500).optional(),
+  shipmentId: z.number().int().positive().optional(),
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional(),
 });
 
@@ -356,13 +384,13 @@ router.post("/copilot/chat", async (req, res) => {
     .from(paymentsTable)
     .where(and(eq(paymentsTable.orgId, orgId), eq(paymentsTable.paid, false)));
 
-  const TODAY = "2026-05-18";
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const shipmentContext = shipments.map(s => {
     const msgs = recentMessages.filter(m => m.shipmentId === s.id);
     const pmts = payments.filter(p => p.shipmentId === s.id);
     const stage = s.currentStageId.replace(/_/g, " ");
-    const overduePayments = pmts.filter(p => new Date(p.dueDate) < new Date(TODAY));
+    const overduePayments = pmts.filter(p => new Date(p.dueDate) < new Date(todayStr));
     return [
       `• ${s.poNumber} (${s.product}) — supplier: ${s.supplierName ?? "unknown"}, status: ${s.status}, stage: ${stage}, ex-factory: ${s.exFactoryDate}`,
       overduePayments.length > 0
@@ -378,7 +406,7 @@ router.post("/copilot/chat", async (req, res) => {
     ? `\nCURRENT PAGE CONTEXT: ${input.contextHint}\n`
     : "";
 
-  const systemPrompt = `You are FlowForge Copilot, an AI assistant for a supply-chain buyer managing international purchase orders. Today is ${TODAY}.
+  const systemPrompt = `You are FlowForge Copilot, an AI assistant for a supply-chain buyer managing international purchase orders. Today is ${todayStr}.
 ${contextSection}
 ACTIVE SHIPMENTS:
 ${shipmentContext || "No active shipments."}
@@ -393,7 +421,7 @@ Your role:
 
 If asked to draft a reply, write a clear, professional message the buyer can send directly.`;
 
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+  const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
     { role: "system", content: systemPrompt },
     ...(input.history ?? []),
     { role: "user", content: input.message },
@@ -401,12 +429,38 @@ If asked to draft a reply, write a clear, professional message the buyer can sen
 
   const completion = await openai.chat.completions.create({
     model: "gpt-5-mini",
-    messages,
+    messages: chatMessages,
   });
 
   const content = completion.choices[0]?.message?.content;
   const reply = (content && content.trim()) ? content.trim() : "I couldn't generate a response. Please try again.";
-  res.json({ reply });
+
+  // If the caller scoped the chat to a specific shipment, compute sparse-thread density
+  // so the client can show the amber callout alongside the AI draft.
+  // NOTE: count ALL shipment messages directly — not the limited recentMessages buffer.
+  let sparseMeta: { sparseThreadWarning: boolean; sparseMessageCount: number; sparseDaysInStage: number } | null = null;
+  if (input.shipmentId) {
+    const focusedShipment = shipments.find(s => s.id === input.shipmentId);
+    if (focusedShipment) {
+      const allShipmentMessages = await db
+        .select({ id: messagesTable.id })
+        .from(messagesTable)
+        .where(and(eq(messagesTable.shipmentId, focusedShipment.id), eq(messagesTable.orgId, orgId)));
+      const density = await computeThreadDensity(
+        focusedShipment.id,
+        focusedShipment.currentStageId,
+        allShipmentMessages.length,
+        orgId,
+      );
+      sparseMeta = {
+        sparseThreadWarning: density.sparse,
+        sparseMessageCount: density.messageCount,
+        sparseDaysInStage: density.daysInStage,
+      };
+    }
+  }
+
+  res.json({ reply, ...(sparseMeta ?? {}) });
 });
 
 export default router;

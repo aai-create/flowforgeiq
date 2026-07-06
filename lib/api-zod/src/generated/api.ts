@@ -1925,6 +1925,9 @@ export const ListCopilotProposalsResponseItem = zod.object({
   "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
   "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -1967,6 +1970,9 @@ export const UpdateCopilotProposalResponse = zod.object({
   "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
   "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -1994,6 +2000,9 @@ export const TriggerCopilotResponse = zod.object({
   "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
   "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })).optional()
@@ -2022,6 +2031,9 @@ export const GetCopilotSummaryResponse = zod.object({
   "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
   "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
   "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })).optional(),
@@ -2203,6 +2215,29 @@ export const IngestChatResponse = zod.object({
   "aiDraft": zod.string(),
   "aiAction": zod.string(),
   "aiTags": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Get copilot threshold settings for the org
+ */
+export const GetCopilotSettingsResponse = zod.object({
+  "sparseThreadMinMessages": zod.number().describe('Minimum message count below which a thread is considered sparse (default 5)'),
+  "sparseThreadMinDays": zod.number().describe('Minimum days in current stage before the sparse check applies (default 14)')
+})
+
+
+/**
+ * @summary Update copilot threshold settings (admin only)
+ */
+export const UpdateCopilotSettingsBody = zod.object({
+  "sparseThreadMinMessages": zod.number().optional(),
+  "sparseThreadMinDays": zod.number().optional()
+})
+
+export const UpdateCopilotSettingsResponse = zod.object({
+  "sparseThreadMinMessages": zod.number().describe('Minimum message count below which a thread is considered sparse (default 5)'),
+  "sparseThreadMinDays": zod.number().describe('Minimum days in current stage before the sparse check applies (default 14)')
 })
 
 

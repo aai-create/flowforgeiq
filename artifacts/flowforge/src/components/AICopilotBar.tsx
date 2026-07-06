@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, X, AlertCircle, Clock, User } from "lucide-react";
+import { Sparkles, X, AlertCircle, Clock, User, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCopilot } from "@/lib/CopilotContext";
 
@@ -19,11 +19,14 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
     copilotLoading, setCopilotLoading,
     copilotError, setCopilotError,
     clearConversation,
+    focusedShipmentId,
   } = useCopilot();
 
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [sparseMeta, setSparseMeta] = useState<{ sparseThreadWarning: boolean; sparseMessageCount: number; sparseDaysInStage: number } | null>(null);
+  const [sparseDismissed, setSparseDismissed] = useState(false);
   const draftRef = useRef("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -70,10 +73,17 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
           message: text,
           contextHint: contextHint !== "Ask FlowForgeIQ anything" ? contextHint : undefined,
           history: conversationHistory,
+          ...(focusedShipmentId != null ? { shipmentId: focusedShipmentId } : {}),
         }),
       });
       if (!res.ok) throw new Error("Request failed");
-      const data = (await res.json()) as { reply: string };
+      const data = (await res.json()) as { reply: string; sparseThreadWarning?: boolean; sparseMessageCount?: number; sparseDaysInStage?: number };
+      if (data.sparseThreadWarning) {
+        setSparseMeta({ sparseThreadWarning: data.sparseThreadWarning, sparseMessageCount: data.sparseMessageCount ?? 0, sparseDaysInStage: data.sparseDaysInStage ?? 0 });
+        setSparseDismissed(false);
+      } else {
+        setSparseMeta(null);
+      }
       setConversationHistory(prev => [
         ...prev,
         { role: "user", content: text },
@@ -268,6 +278,23 @@ export function AICopilotBar({ className, leftNode, alwaysOpen = false }: AICopi
                       </p>
                     </div>
                   )
+                )}
+
+                {/* Sparse thread warning — shown below last AI reply */}
+                {sparseMeta?.sparseThreadWarning && !sparseDismissed && conversationHistory.length > 0 && !copilotLoading && (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                    <TriangleAlert size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                    <p className="flex-1 text-[11px] text-amber-800 leading-snug">
+                      This thread has{" "}
+                      <span className="font-semibold">{sparseMeta.sparseMessageCount} message{sparseMeta.sparseMessageCount !== 1 ? "s" : ""}</span>
+                      {" "}for a shipment{" "}
+                      <span className="font-semibold">{sparseMeta.sparseDaysInStage} days</span>
+                      {" "}into this stage — some context may be missing.
+                    </p>
+                    <button onClick={() => setSparseDismissed(true)} className="shrink-0 text-amber-400 hover:text-amber-600 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </div>
                 )}
 
                 {pendingMessage && (

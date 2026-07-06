@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
-import { db, poNumberingConfigTable, teamUsersTable, messagesTable, deviceTokensTable } from "@workspace/db";
+import { db, poNumberingConfigTable, teamUsersTable, messagesTable, deviceTokensTable, copilotSettingsTable } from "@workspace/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
 import { randomBytes, createHash } from "crypto";
 import { resolveOrgId, requireAuth, requireAdmin } from "../middlewares/requireAuth";
+import { getCopilotThresholds } from "../lib/thread-density";
 
 const router: IRouter = Router();
 
@@ -301,6 +302,46 @@ router.delete("/settings/device-tokens/:id", requireAuth, async (req, res) => {
 
   req.log.info({ tokenId: id }, "settings/device-tokens: revoked");
   res.status(204).end();
+});
+
+// ─── Copilot settings ─────────────────────────────────────────────────────────
+
+router.get("/settings/copilot", requireAuth, async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const thresholds = await getCopilotThresholds(orgId);
+  res.json(thresholds);
+});
+
+const CopilotSettingsUpdateBody = z.object({
+  sparseThreadMinMessages: z.number().int().min(1).max(100).optional(),
+  sparseThreadMinDays: z.number().int().min(1).max(365).optional(),
+});
+
+router.patch("/settings/copilot", requireAdmin, async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const body = CopilotSettingsUpdateBody.parse(req.body);
+
+  const [existing] = await db
+    .select()
+    .from(copilotSettingsTable)
+    .where(eq(copilotSettingsTable.orgId, orgId))
+    .limit(1);
+
+  if (existing) {
+    const patch: Partial<typeof copilotSettingsTable.$inferInsert> = {};
+    if (body.sparseThreadMinMessages !== undefined) patch.sparseThreadMinMessages = body.sparseThreadMinMessages;
+    if (body.sparseThreadMinDays !== undefined) patch.sparseThreadMinDays = body.sparseThreadMinDays;
+    await db.update(copilotSettingsTable).set(patch).where(eq(copilotSettingsTable.id, existing.id));
+  } else {
+    await db.insert(copilotSettingsTable).values({
+      orgId,
+      sparseThreadMinMessages: body.sparseThreadMinMessages ?? 5,
+      sparseThreadMinDays: body.sparseThreadMinDays ?? 14,
+    });
+  }
+
+  const thresholds = await getCopilotThresholds(orgId);
+  res.json(thresholds);
 });
 
 export { buildPoNumber, getConfig };

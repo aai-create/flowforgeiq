@@ -25,6 +25,8 @@ interface CopilotContextValue {
   copilotError: string;
   setCopilotError: (v: string) => void;
   clearConversation: () => void;
+  focusedShipmentId: number | null;
+  setFocusedShipmentId: (id: number | null) => void;
 }
 
 const CopilotContext = createContext<CopilotContextValue>({
@@ -48,6 +50,8 @@ const CopilotContext = createContext<CopilotContextValue>({
   copilotError: "",
   setCopilotError: () => {},
   clearConversation: () => {},
+  focusedShipmentId: null,
+  setFocusedShipmentId: () => {},
 });
 
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
@@ -56,6 +60,7 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [focusedShipmentId, setFocusedShipmentId] = useState<number | null>(null);
 
   const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
   const [showResult, setShowResult] = useState(false);
@@ -118,6 +123,7 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
       copilotLoading, setCopilotLoading,
       copilotError, setCopilotError,
       clearConversation,
+      focusedShipmentId, setFocusedShipmentId,
     }}>
       {children}
     </CopilotContext.Provider>

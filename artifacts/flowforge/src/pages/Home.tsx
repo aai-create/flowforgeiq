@@ -9,7 +9,7 @@ import { FilterDropdown, type FilterOption } from "@/components/FilterDropdown";
 import { PixelShip } from "@/components/PixelShip";
 import { AIDrawer, AISparklesButton } from "@/components/TodaysFocusDrawer";
 import { useListFocusItems } from "@workspace/api-client-react";
-import { useCopilotHint } from "@/lib/CopilotContext";
+import { useCopilotHint, useCopilot } from "@/lib/CopilotContext";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSearch, useLocation } from "wouter";
 import {
@@ -2059,6 +2059,7 @@ export default function Home() {
     "Any overdue payments on this PO?",
     "Summarize this shipment's current status",
   ]);
+  const { setFocusedShipmentId } = useCopilot();
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const authReady = isLoaded && !!isSignedIn;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2393,6 +2394,13 @@ export default function Home() {
       sessionStorage.removeItem("flowforge:selectedShipmentId");
     }
   }, [selectedShipmentId]);
+
+  // Sync the focused shipment's numeric ID to CopilotContext so the AI drawer
+  // can compute sparse-thread density for that shipment when drafting replies.
+  useEffect(() => {
+    const numericId = selectedShipmentId ? Number(selectedShipmentId.replace(/^s/, "")) : null;
+    setFocusedShipmentId(numericId && !Number.isNaN(numericId) ? numericId : null);
+  }, [selectedShipmentId, setFocusedShipmentId]);
 
   useEffect(() => {
     if (channelFilter !== "all") {

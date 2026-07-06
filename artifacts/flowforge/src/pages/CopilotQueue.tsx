@@ -19,6 +19,7 @@ import {
   AlertCircle, Zap, MessageCircle, Mail, DollarSign, FileText,
   ArrowUpRight, Settings, ChevronDown, ChevronRight, X, RotateCcw,
   BrainCircuit, Shield, Bot, Play, Eye, ThumbsUp, TrendingUp, TrendingDown, BarChart2,
+  TriangleAlert,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -308,6 +309,7 @@ function ProposalCard({
   onEdit: (p: CopilotProposal) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const payload = getPayload(proposal);
   const poLabel = shipmentMap.get(proposal.shipmentId) ?? `Shipment #${proposal.shipmentId}`;
   const isPending = proposal.status === "pending" || proposal.status === "edited";
@@ -386,6 +388,29 @@ function ProposalCard({
       {/* Expanded body */}
       {expanded && (
         <div className="px-4 pb-3 space-y-3 border-t border-[#E5EAF0] pt-3">
+          {/* Sparse thread warning */}
+          {proposal.sparseThreadWarning && !dismissed && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+              <TriangleAlert size={13} className="text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  This thread has{" "}
+                  <span className="font-semibold">{proposal.sparseMessageCount ?? 0} message{proposal.sparseMessageCount !== 1 ? "s" : ""}</span>
+                  {" "}for a shipment{" "}
+                  <span className="font-semibold">{proposal.sparseDaysInStage ?? 0} days</span>
+                  {" "}into {proposal.payload && typeof proposal.payload === "object" && "currentStage" in proposal.payload ? String((proposal.payload as Record<string, unknown>).currentStage).replace(/_/g, " ") : "this stage"} — some context may be missing.
+                </p>
+              </div>
+              <button
+                onClick={() => setDismissed(true)}
+                className="shrink-0 text-amber-400 hover:text-amber-600 transition-colors"
+                title="Dismiss"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          )}
+
           {/* Draft preview */}
           {draftBody && (
             <div>

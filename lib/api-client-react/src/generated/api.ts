@@ -34,6 +34,8 @@ import type {
   CopilotProposal,
   CopilotProposalInput,
   CopilotProposalUpdate,
+  CopilotSettingsConfig,
+  CopilotSettingsUpdate,
   CopilotSummary,
   CopilotTriggerResult,
   CreateContactRuleBody,
@@ -6176,6 +6178,154 @@ export const useIngestChat = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getIngestChatMutationOptions(options));
+    }
+
+export const getGetCopilotSettingsUrl = () => {
+
+
+
+
+  return `/api/settings/copilot`
+}
+
+/**
+ * @summary Get copilot threshold settings for the org
+ */
+export const getCopilotSettings = async ( options?: RequestInit): Promise<CopilotSettingsConfig> => {
+
+  return customFetch<CopilotSettingsConfig>(getGetCopilotSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCopilotSettingsQueryKey = () => {
+    return [
+    `/api/settings/copilot`
+    ] as const;
+    }
+
+
+export const getGetCopilotSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getCopilotSettings>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCopilotSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCopilotSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCopilotSettings>>> = ({ signal }) => getCopilotSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCopilotSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCopilotSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getCopilotSettings>>>
+export type GetCopilotSettingsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get copilot threshold settings for the org
+ */
+
+export function useGetCopilotSettings<TData = Awaited<ReturnType<typeof getCopilotSettings>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCopilotSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCopilotSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCopilotSettingsUrl = () => {
+
+
+
+
+  return `/api/settings/copilot`
+}
+
+/**
+ * @summary Update copilot threshold settings (admin only)
+ */
+export const updateCopilotSettings = async (copilotSettingsUpdate: CopilotSettingsUpdate, options?: RequestInit): Promise<CopilotSettingsConfig> => {
+
+  return customFetch<CopilotSettingsConfig>(getUpdateCopilotSettingsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      copilotSettingsUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateCopilotSettingsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCopilotSettings>>, TError,{data: BodyType<CopilotSettingsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCopilotSettings>>, TError,{data: BodyType<CopilotSettingsUpdate>}, TContext> => {
+
+const mutationKey = ['updateCopilotSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCopilotSettings>>, {data: BodyType<CopilotSettingsUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCopilotSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCopilotSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateCopilotSettings>>>
+    export type UpdateCopilotSettingsMutationBody = BodyType<CopilotSettingsUpdate>
+    export type UpdateCopilotSettingsMutationError = ErrorType<void>
+
+    /**
+ * @summary Update copilot threshold settings (admin only)
+ */
+export const useUpdateCopilotSettings = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCopilotSettings>>, TError,{data: BodyType<CopilotSettingsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCopilotSettings>>,
+        TError,
+        {data: BodyType<CopilotSettingsUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCopilotSettingsMutationOptions(options));
     }
 
 export const getGetPoNumberingConfigUrl = () => {

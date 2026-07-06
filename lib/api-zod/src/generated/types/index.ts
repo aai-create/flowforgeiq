@@ -34,6 +34,8 @@ export * from './copilotProposalInputPayload';
 export * from './copilotProposalPayload';
 export * from './copilotProposalUpdate';
 export * from './copilotProposalUpdateEditedPayload';
+export * from './copilotSettingsConfig';
+export * from './copilotSettingsUpdate';
 export * from './copilotSummary';
 export * from './copilotTriggerResult';
 export * from './createContactRuleBody';

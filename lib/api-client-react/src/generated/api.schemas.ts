@@ -1071,6 +1071,21 @@ export interface CopilotProposal {
      */
   editDistance?: number | null;
   auditTrail?: CopilotProposalAuditTrailItem[];
+  /**
+     * True when the thread has fewer messages than usual for the current stage duration — possible capture gap
+     * @nullable
+     */
+  sparseThreadWarning?: boolean | null;
+  /**
+     * Number of messages linked to this shipment at proposal time
+     * @nullable
+     */
+  sparseMessageCount?: number | null;
+  /**
+     * Days the shipment has been in its current stage at proposal time
+     * @nullable
+     */
+  sparseDaysInStage?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1154,6 +1169,18 @@ export interface AutonomyPolicyInput {
   supplierName?: string;
   actionType?: string;
   policy: string;
+}
+
+export interface CopilotSettingsConfig {
+  /** Minimum message count below which a thread is considered sparse (default 5) */
+  sparseThreadMinMessages: number;
+  /** Minimum days in current stage before the sparse check applies (default 14) */
+  sparseThreadMinDays: number;
+}
+
+export interface CopilotSettingsUpdate {
+  sparseThreadMinMessages?: number;
+  sparseThreadMinDays?: number;
 }
 
 export interface InboundEmailAttachment {

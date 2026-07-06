@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle } from "lucide-react";
 import { useTour } from "@/hooks/useTour";
-import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey } from "@workspace/api-client-react";
+import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings } from "@workspace/api-client-react";
 import type { Stage, CreateDeviceTokenResponse } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
@@ -55,6 +55,88 @@ function BeeperSection() {
         </div>
       )}
     </div>
+  );
+}
+
+function CopilotSettingsSection() {
+  const { data, isLoading } = useGetCopilotSettings();
+  const updateMutation = useUpdateCopilotSettings();
+  const [minMessages, setMinMessages] = useState<number>(5);
+  const [minDays, setMinDays] = useState<number>(14);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setMinMessages(data.sparseThreadMinMessages);
+      setMinDays(data.sparseThreadMinDays);
+    }
+  }, [data]);
+
+  const handleSave = async () => {
+    try {
+      await updateMutation.mutateAsync({
+        data: { sparseThreadMinMessages: minMessages, sparseThreadMinDays: minDays },
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {}
+  };
+
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-1">
+        <Zap className="w-3.5 h-3.5 text-[#9000FF]" />
+        <h2 className="text-sm font-bold text-[#212833]">Copilot</h2>
+      </div>
+      <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
+        Configure when the copilot flags a shipment thread as sparse. The warning appears inline on proposals when a thread has fewer messages than expected for the time spent in the current stage.
+      </p>
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-[#9E9FAE]">
+          <RefreshCw className="w-3 h-3 animate-spin" /> Loading…
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                Sparse threshold — messages
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={minMessages}
+                onChange={e => setMinMessages(Number(e.target.value))}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"
+              />
+              <p className="text-[10px] text-[#9E9FAE] mt-1">Flag threads with fewer than this many messages.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5E687B] mb-1">
+                Sparse threshold — days in stage
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={minDays}
+                onChange={e => setMinDays(Number(e.target.value))}
+                className="w-full border border-[#E5EAF0] rounded-md px-3 py-2 text-sm text-[#212833] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"
+              />
+              <p className="text-[10px] text-[#9E9FAE] mt-1">Only flag if shipment has been in this stage for more than this many days.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => void handleSave()}
+            disabled={updateMutation.isPending}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#9000FF] text-white rounded-md text-xs font-bold hover:bg-[#7A00D9] disabled:opacity-50 transition-colors"
+          >
+            {saved ? <><Check className="w-3 h-3" />Saved</> : updateMutation.isPending ? "Saving…" : <><Save className="w-3 h-3" />Save</>}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1473,6 +1555,7 @@ export function Settings() {
               <DefaultLandingPageSection />
               <MobileAppSection />
               <HelpOnboardingSection />
+              <CopilotSettingsSection />
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.general.poNumbering")}</h2>
                 <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">{t("settings.general.poNumberingDesc")}</p>
