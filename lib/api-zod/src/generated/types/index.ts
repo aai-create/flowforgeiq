@@ -85,6 +85,7 @@ export * from './message';
 export * from './messageAiRoutingGuess';
 export * from './messageAssignInput';
 export * from './messageDirection';
+export * from './messageInactiveContactRule';
 export * from './messageInput';
 export * from './messageInputDirection';
 export * from './messageInputRoutingStatus';

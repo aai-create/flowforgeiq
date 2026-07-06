@@ -2378,6 +2378,13 @@ components:
             delayDays:     { type: ["integer", "null"] }
             newStatus:     { type: ["string", "null"] }
             confidence:    { type: number }
+        inactiveContactRule:
+          type: ["object", "null"]
+          description: "Deactivated routing rule for this sender — their previous shipment closed"
+          properties:
+            fromEmail:     { type: string, description: "The sender email address that had the rule" }
+            oldPoNumber:   { type: string, description: "PO number of the shipment that closed and deactivated the rule" }
+            oldShipmentId: { type: integer, description: "DB id of the shipment that closed" }
     MessageInput:
       type: object
       required: [sender, channel, snippet, fullBody]

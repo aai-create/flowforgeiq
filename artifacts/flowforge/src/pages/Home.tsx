@@ -1373,6 +1373,14 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
   const [assigning, setAssigning] = useState<Record<number, boolean>>({});
   const [createRuleToggle, setCreateRuleToggle] = useState<Record<number, boolean>>({});
 
+  useEffect(() => {
+    const preChecked: Record<number, boolean> = {};
+    messages.forEach(m => { if (m.inactiveContactRule) preChecked[m.id] = true; });
+    if (Object.keys(preChecked).length > 0) {
+      setCreateRuleToggle(prev => ({ ...preChecked, ...prev }));
+    }
+  }, [messages]);
+
   const doDelete = (msg: ApiMessageFull) => {
     if (!window.confirm("Permanently delete this message? This cannot be undone.")) return;
     onDeleted(msg.id);
@@ -1461,6 +1469,16 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
             <div className="text-xs text-[#5E687B] bg-[#FAFBFC] rounded-lg p-2 mb-2.5 line-clamp-2 leading-relaxed border border-[#E5EAF0]">
               {msg.snippet}
             </div>
+            {msg.inactiveContactRule && (
+              <div className="flex items-start gap-2 mb-2.5 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2">
+                <AlertCircle size={12} className="text-orange-500 mt-0.5 shrink-0"/>
+                <p className="text-[11px] text-orange-800 leading-relaxed">
+                  You had a rule routing <span className="font-semibold">{msg.inactiveContactRule.fromEmail}</span> to{" "}
+                  <span className="font-semibold">{msg.inactiveContactRule.oldPoNumber}</span> — it was deactivated when that shipment closed.
+                  Assign to a new PO to create a replacement rule.
+                </p>
+              </div>
+            )}
             {guessShip && (
               <div className="flex items-center gap-1.5 mb-2.5 text-[11px] text-[#5E687B] bg-[#9000FF]/4 rounded-md px-2 py-1.5 border border-[#9000FF]/15">
                 <Sparkles size={9} className="text-[#9000FF] shrink-0"/>

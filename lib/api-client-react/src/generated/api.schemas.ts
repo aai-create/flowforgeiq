@@ -535,6 +535,19 @@ export type MessagePendingExtractionFields = {
   confidence?: number;
 } | null;
 
+/**
+ * Deactivated routing rule for this sender — their previous shipment closed
+ * @nullable
+ */
+export type MessageInactiveContactRule = {
+  /** The sender email address that had the rule */
+  fromEmail?: string;
+  /** PO number of the shipment that closed and deactivated the rule */
+  oldPoNumber?: string;
+  /** DB id of the shipment that closed */
+  oldShipmentId?: number;
+} | null;
+
 export interface Message {
   id: number;
   /**
@@ -607,6 +620,11 @@ export interface Message {
      * @nullable
      */
   pendingExtractionFields?: MessagePendingExtractionFields;
+  /**
+     * Deactivated routing rule for this sender — their previous shipment closed
+     * @nullable
+     */
+  inactiveContactRule?: MessageInactiveContactRule;
 }
 
 export type MessageInputDirection = typeof MessageInputDirection[keyof typeof MessageInputDirection];

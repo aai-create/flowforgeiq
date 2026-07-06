@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable, pushTokensTable } from "@workspace/db";
-import { and, desc, eq } from "drizzle-orm";
+import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable, pushTokensTable, contactRoutingRulesTable } from "@workspace/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
 import { sendExpoPushNotifications } from "../lib/pushNotifications";
 import {
@@ -30,16 +30,45 @@ router.get("/messages", async (req, res) => {
 
 router.get("/messages/needs-review", async (req, res) => {
   const orgId = await resolveOrgId(req);
+
   const rows = await db
     .select({
       message: messagesTable,
       routedToUserName: teamUsersTable.name,
+      inactiveRuleFromEmail: contactRoutingRulesTable.fromEmail,
+      inactiveRuleShipmentId: contactRoutingRulesTable.shipmentId,
+      inactiveRulePoNumber: shipmentsTable.poNumber,
     })
     .from(messagesTable)
     .leftJoin(teamUsersTable, eq(messagesTable.routedToClerkUserId, teamUsersTable.clerkUserId))
+    .leftJoin(
+      contactRoutingRulesTable,
+      and(
+        eq(contactRoutingRulesTable.orgId, orgId),
+        eq(contactRoutingRulesTable.active, false),
+        sql`lower(${messagesTable.rawSenderEmail}) = lower(${contactRoutingRulesTable.fromEmail})`,
+      ),
+    )
+    .leftJoin(shipmentsTable, eq(contactRoutingRulesTable.shipmentId, shipmentsTable.id))
     .where(and(eq(messagesTable.routingStatus, "needs-review"), eq(messagesTable.orgId, orgId)))
     .orderBy(desc(messagesTable.receivedAt));
-  res.json(rows.map(r => ListMessagesResponseItem.parse({ ...r.message, routedToUserName: r.routedToUserName ?? null })));
+
+  res.json(
+    rows.map(r =>
+      ListMessagesResponseItem.parse({
+        ...r.message,
+        routedToUserName: r.routedToUserName ?? null,
+        inactiveContactRule:
+          r.inactiveRuleFromEmail != null && r.inactiveRulePoNumber != null
+            ? {
+                fromEmail: r.inactiveRuleFromEmail,
+                oldPoNumber: r.inactiveRulePoNumber,
+                oldShipmentId: r.inactiveRuleShipmentId,
+              }
+            : null,
+      }),
+    ),
+  );
 });
 
 router.post("/messages", async (req, res) => {

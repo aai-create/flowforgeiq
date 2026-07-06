@@ -1090,7 +1090,12 @@ export const ListMessagesResponseItem = zod.object({
   "delayDays": zod.number().nullish(),
   "newStatus": zod.string().nullish(),
   "confidence": zod.number().optional()
-}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
 })
 export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
 
@@ -1159,7 +1164,12 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
   "delayDays": zod.number().nullish(),
   "newStatus": zod.string().nullish(),
   "confidence": zod.number().optional()
-}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
 })
 export const ListNeedsReviewMessagesResponse = zod.array(ListNeedsReviewMessagesResponseItem)
 
@@ -1220,7 +1230,12 @@ export const UpdateMessageResponse = zod.object({
   "delayDays": zod.number().nullish(),
   "newStatus": zod.string().nullish(),
   "confidence": zod.number().optional()
-}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
 })
 
 
@@ -1274,7 +1289,12 @@ export const AssignMessageResponse = zod.object({
   "delayDays": zod.number().nullish(),
   "newStatus": zod.string().nullish(),
   "confidence": zod.number().optional()
-}).nullish().describe('Low-confidence field extractions awaiting human confirmation')
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
 })
 
 

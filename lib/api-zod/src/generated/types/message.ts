@@ -7,6 +7,7 @@
  */
 import type { MessageAiRoutingGuess } from './messageAiRoutingGuess';
 import type { MessageDirection } from './messageDirection';
+import type { MessageInactiveContactRule } from './messageInactiveContactRule';
 import type { MessagePendingExtractionFields } from './messagePendingExtractionFields';
 import type { MessageRoutingStatus } from './messageRoutingStatus';
 
@@ -82,4 +83,9 @@ export interface Message {
      * @nullable
      */
   pendingExtractionFields?: MessagePendingExtractionFields;
+  /**
+     * Deactivated routing rule for this sender — their previous shipment closed
+     * @nullable
+     */
+  inactiveContactRule?: MessageInactiveContactRule;
 }
