@@ -19,6 +19,7 @@ import {
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SHORTCUT_FILE_URL = `${basePath}/api/shortcuts/capture.shortcut`;
 const SHORTCUT_ABSOLUTE_URL = `${window.location.origin}${SHORTCUT_FILE_URL}`;
+const OPEN_IN_SHORTCUTS_URL = `shortcuts://import-shortcut?url=${encodeURIComponent(SHORTCUT_ABSOLUTE_URL)}`;
 
 const isIOS =
   /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -51,24 +52,31 @@ const STEPS: {
   {
     id: "install-shortcut",
     num: 2,
-    title: "Download and add the Shortcut to your iPhone",
+    title: "Add the Shortcut to your iPhone in one tap",
     body: isIOS ? (
       <div className="space-y-3">
         <p className="text-[12px] text-[#5E687B] leading-relaxed">
-          Tap the button below. The{" "}
-          <strong className="text-[#212833]">FlowForge Capture</strong> shortcut
-          downloads and Apple Shortcuts will prompt you to{" "}
-          <strong className="text-[#212833]">Add Shortcut</strong>. Tap it.
+          Tap the button below — iOS will open the{" "}
+          <strong className="text-[#212833]">Shortcuts app</strong> directly
+          with the FlowForge Capture shortcut pre-loaded. Tap{" "}
+          <strong className="text-[#212833]">Add Shortcut</strong> to finish.
         </p>
         <a
-          href={SHORTCUT_FILE_URL}
+          href={OPEN_IN_SHORTCUTS_URL}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shadow-sm"
         >
-          <Download className="w-4 h-4" />
-          Download FlowForge Shortcut
+          <Zap className="w-4 h-4" />
+          Open in Shortcuts
         </a>
         <p className="text-[11px] text-[#9E9FAE]">
           Requires iOS 16 or later · Free · No account needed
+        </p>
+        <p className="text-[11px] text-[#9E9FAE]">
+          Button not working?{" "}
+          <a href={SHORTCUT_FILE_URL} className="text-[#9000FF] hover:underline font-medium">
+            Download the file directly
+          </a>{" "}
+          instead.
         </p>
       </div>
     ) : (
@@ -284,17 +292,26 @@ export function ShortcutsGuide() {
                         Ready to install?
                       </p>
                       <p className="text-[11px] text-[#9E9FAE] mt-0.5">
-                        Tap the button or scan the QR code to download instantly.
+                        Tap to open Shortcuts and add it in one step.
                       </p>
                     </div>
-                    <a
-                      href={SHORTCUT_FILE_URL}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shrink-0 shadow-sm"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      Get Shortcut
-                      <ArrowRight className="w-3 h-3" />
-                    </a>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <a
+                        href={OPEN_IN_SHORTCUTS_URL}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shadow-sm"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Open in Shortcuts
+                        <ArrowRight className="w-3 h-3" />
+                      </a>
+                      <a
+                        href={SHORTCUT_FILE_URL}
+                        className="text-[10px] text-[#9E9FAE] hover:text-[#9000FF] transition-colors"
+                      >
+                        <Download className="w-3 h-3 inline mr-0.5" />
+                        Download file instead
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-start gap-2.5 mb-4">
