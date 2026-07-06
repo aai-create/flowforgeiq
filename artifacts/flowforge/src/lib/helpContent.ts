@@ -181,6 +181,38 @@ export const HELP_SECTIONS: HelpSection[] = [
     keywords: ["team", "invite", "colleague", "admin", "member", "access", "clerk", "sign in", "login"],
   },
   {
+    id: "sample-requests",
+    title: "Sample Requests (Pre-Production)",
+    summary:
+      "Before committing to a full PO, request physical samples from one or more factories. FlowForgeIQ tracks each sample through five milestones — from request to approval — and converts the winner directly to a shipment.",
+    steps: [
+      { text: 'Open RFQs from the left sidebar and click the "Samples" tab. Then click "+ New Sample Request".' },
+      { text: "Select the supplier, enter a product name and quantity, and optionally add notes (e.g. colourway, size spec, packaging requirements)." },
+      { text: 'Click "Create". The sample request is created at the Sample Requested milestone.' },
+      { text: 'When the factory ships the sample, click "Advance" to move it to Sample Shipped. Add a tracking code and carrier name so you can monitor the delivery.' },
+      { text: 'Once the sample arrives, advance to Sample Received. Review quality and advance again to Approved or Rejected.' },
+      { text: 'On an Approved request, click "Convert to PO". FlowForgeIQ creates a new shipment pre-filled with the supplier and product details, placed at the Spec Sheet stage.' },
+      { text: "Rejected sample requests are archived. All sample history is preserved for reference and compliance." },
+    ],
+    screenshot: "sample-requests.png",
+    keywords: ["sample", "pre-production", "prototype", "factory sample", "approve", "reject", "convert po", "milestone", "tracking"],
+  },
+  {
+    id: "manage-buyers",
+    title: "Managing Buyers",
+    summary:
+      "The Buyers page is your client directory. Every buyer you've created — whether via a PO, RFQ, or directly — appears here with their contact details and order history.",
+    steps: [
+      { text: 'Open Suppliers from the left sidebar, then click the "Buyers" tab. All buyers are listed with their name and email.' },
+      { text: "Click any buyer row to open the detail panel. Contact fields are editable inline — click to edit, click away to save." },
+      { text: 'To add a buyer directly, click "+ New Buyer" and enter their name and email address.' },
+      { text: "Buyers are also created automatically whenever you type a new name in the Buyer field when creating a PO — no need to pre-add them here." },
+      { text: "The buyer's unit price on a shipment feeds the spread calculation. Keep buyer details accurate for correct margin reporting across the Finance and Reports pages." },
+    ],
+    screenshot: "manage-buyers.png",
+    keywords: ["buyer", "client", "brand", "buyer price", "directory", "contact", "margin", "spread"],
+  },
+  {
     id: "intermediary-financing",
     title: "Intermediary Advance Financing",
     summary:

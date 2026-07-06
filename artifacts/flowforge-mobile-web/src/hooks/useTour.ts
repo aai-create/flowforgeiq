@@ -69,7 +69,17 @@ export function useTour() {
         },
       },
       {
-        element: "#bottom-nav-docs",
+        element: "#bottom-nav-samples",
+        popover: {
+          title: "🧪 Samples",
+          description:
+            "Track pre-production samples from request to approval. Once a sample is approved, convert it to a full PO with one tap — supplier and product details carry over automatically.",
+          side: "top",
+          align: "center",
+        },
+      },
+      {
+        element: "#bottom-nav-documents",
         popover: {
           title: "📄 Documents",
           description:

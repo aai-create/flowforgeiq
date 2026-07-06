@@ -9,7 +9,7 @@ import {
   Search, ChevronRight, X, ArrowRight,
   MessageCircle, ClipboardList, Inbox, Wand2, CheckCircle2,
   FileQuestion, Package, BarChart3, FilePlus, TrendingUp,
-  ShieldAlert, AlertTriangle, BellRing, DollarSign, Users,
+  ShieldAlert, AlertTriangle, BellRing, DollarSign, Users, Truck,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -84,6 +84,19 @@ const DIAGRAM_LANES = [
     ],
   },
   {
+    label: "PRE-PRODUCTION",
+    sublabel: "samples & buyer mgmt",
+    accent: "#E11D48",
+    bg: "#FFF1F2",
+    nodes: [
+      { icon: Package, text: "Create sample\nrequest" },
+      { icon: Truck, text: "Factory ships\nsample" },
+      { icon: Inbox, text: "Sample\nreceived" },
+      { icon: CheckCircle2, text: "Approve\nor reject" },
+      { icon: FilePlus, text: "Convert to\nfull PO" },
+    ],
+  },
+  {
     label: "TEAM",
     sublabel: "access & attribution",
     accent: "#7C3AED",
@@ -102,6 +115,7 @@ const LEGEND = [
   { color: "#9000FF", label: "Inbox", desc: "unified message hub" },
   { color: "#059669", label: "Chat Ingest", desc: "WhatsApp · WeChat · iMessage" },
   { color: "#0EA5E9", label: "RFQs", desc: "quote & PO management" },
+  { color: "#E11D48", label: "Samples", desc: "pre-production & buyer mgmt" },
   { color: "#D97706", label: "Risk Radar", desc: "delay & exposure monitoring" },
   { color: "#7C3AED", label: "Team Access", desc: "multi-user via Clerk" },
 ];

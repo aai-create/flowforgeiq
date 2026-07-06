@@ -81,9 +81,19 @@ export function useTour() {
       {
         element: "#nav-rfqs",
         popover: {
-          title: "📋 RFQs",
+          title: "📋 RFQs & Samples",
           description:
-            "Request quotes from multiple factories, compare landed costs and spread against your target, then convert the winner directly into a PO.",
+            "Request quotes from multiple factories, compare landed costs and spread against your target, then convert the winner directly into a PO. The Samples tab lets you track physical pre-production samples through approval before committing to a full order.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#nav-suppliers",
+        popover: {
+          title: "🏭 Suppliers & Buyers",
+          description:
+            "Your factory directory lives here. The Buyers tab alongside it gives you a client directory — both are editable inline and feed spread and margin calculations across the app.",
           side: "right",
           align: "start",
         },
