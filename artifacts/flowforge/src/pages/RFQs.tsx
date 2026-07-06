@@ -25,8 +25,9 @@ import { useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   Plus, FileText, CheckCircle2, AlertCircle,
   X, Trash2, Edit2, Check, TrendingDown, TrendingUp, Minus,
-  Download, ArrowRight, RefreshCw, Info, Mail, ChevronsUpDown,
+  Download, ArrowRight, RefreshCw, Info, Mail, ChevronsUpDown, Package,
 } from "lucide-react";
+import { SamplesTab } from "./SamplesTab";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -230,6 +231,7 @@ export function RFQs() {
     "Which RFQs are awaiting quotes?",
     "Compare factory quotes for open RFQs",
   ]);
+  const [activeTab, setActiveTab] = useState<"rfqs" | "samples">("rfqs");
   const queryClient = useQueryClient();
   const rfqsQueryKey = getListRfqsQueryKey();
   const shipmentsQueryKey = getListShipmentsQueryKey();
@@ -547,7 +549,29 @@ export function RFQs() {
 
       <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
         <GlobalHeader breadcrumb="RFQs" />
+
+        {/* Tab bar */}
+        <div className="h-9 bg-white border-b border-[#E5EAF0] flex items-center px-5 gap-1 shrink-0">
+          <button
+            onClick={() => setActiveTab("rfqs")}
+            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "rfqs" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
+          >
+            <FileText className="w-3.5 h-3.5" /> RFQs
+          </button>
+          <button
+            onClick={() => setActiveTab("samples")}
+            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "samples" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
+          >
+            <Package className="w-3.5 h-3.5" /> Samples
+          </button>
+        </div>
+
         <div className="flex-1 flex overflow-hidden">
+
+        {activeTab === "samples" ? (
+          <SamplesTab />
+        ) : (
+        <>
         <NavSidebar showBrand={false} counts={{ myOrders: null }}>
           <div className="px-3 py-2 border-t border-[#E5EAF0]">
             <div className="mb-1.5 px-2 flex items-center justify-between">
@@ -860,6 +884,9 @@ export function RFQs() {
             </div>
           )}
         </div>
+
+        </>
+        )}
 
         </div>
       </div>

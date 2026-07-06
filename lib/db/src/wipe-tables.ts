@@ -16,6 +16,7 @@ export const WIPE_TABLES = [
   "rfqs", "rfq_quotes", "copilot_proposals", "autonomy_policies",
   "shipment_predictions", "stage_events", "buyer_emails",
   "extraction_corrections", "extractions", "documents",
+  "sample_requests",
 ] as const;
 
 /**

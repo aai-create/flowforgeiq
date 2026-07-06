@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Home, Zap, FileText, Settings } from "lucide-react";
+import { Home, Zap, Package, FileText, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export function BottomNav() {
@@ -9,6 +9,7 @@ export function BottomNav() {
   const TABS = [
     { href: "/home", icon: Home, label: t("nav.home") },
     { href: "/capture", icon: Zap, label: t("nav.capture") },
+    { href: "/samples", icon: Package, label: "Samples" },
     { href: "/documents", icon: FileText, label: t("nav.docs") },
     { href: "/settings", icon: Settings, label: t("nav.settings") },
   ];

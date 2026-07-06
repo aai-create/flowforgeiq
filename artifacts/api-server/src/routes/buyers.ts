@@ -1,12 +1,31 @@
 import { Router, type IRouter } from "express";
 import { db, buyersTable, shipmentsTable } from "@workspace/db";
 import { and, asc, eq } from "drizzle-orm";
-import { ListBuyersResponseItem, UpdateBuyerBody } from "@workspace/api-zod";
+import { ListBuyersResponseItem, UpdateBuyerBody, CreateBuyerBody } from "@workspace/api-zod";
 import { resolveOrgId } from "../middlewares/requireAuth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const router: IRouter = Router();
+
+router.post("/buyers", async (req, res) => {
+  const parsed = CreateBuyerBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return;
+  }
+  const input = parsed.data;
+  if (input.email != null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+    res.status(400).json({ error: "email must be a valid email address" });
+    return;
+  }
+  if (input.email != null) {
+    input.email = input.email.toLowerCase().trim();
+  }
+  const orgId = await resolveOrgId(req);
+  const [row] = await db.insert(buyersTable).values({ ...input, orgId }).returning();
+  res.status(201).json(ListBuyersResponseItem.parse(row));
+});
 
 router.get("/buyers", async (req, res) => {
   const orgId = await resolveOrgId(req);

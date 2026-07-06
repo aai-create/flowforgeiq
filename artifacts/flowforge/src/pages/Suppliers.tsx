@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
+import { BuyersTab } from "./BuyersTab";
 import {
   useListSuppliers,
   useListShipments,
@@ -479,6 +480,7 @@ export function Suppliers() {
     if (suppliersData) setSuppliers(suppliersData);
   }, [suppliersData]);
 
+  const [activeTab, setActiveTab] = useState<"suppliers" | "buyers">("suppliers");
   const [search, setSearch] = useState("");
   const [sortCol, setSortCol] = useState<"name" | "country" | "active" | "onTime">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -548,6 +550,25 @@ export function Suppliers() {
 
         <div className="flex-1 flex flex-col overflow-hidden">
 
+        {/* Tab bar */}
+        <div className="h-9 bg-white border-b border-[#E5EAF0] flex items-center px-5 gap-1 shrink-0">
+          <button
+            onClick={() => setActiveTab("suppliers")}
+            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "suppliers" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
+          >
+            <Building2 className="w-3.5 h-3.5" /> {t("suppliers.title")}
+          </button>
+          <button
+            onClick={() => setActiveTab("buyers")}
+            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "buyers" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
+          >
+            <User className="w-3.5 h-3.5" /> Buyers
+          </button>
+        </div>
+
+        {activeTab === "buyers" ? (
+          <BuyersTab />
+        ) : (
         <div className="flex-1 flex overflow-hidden">
 
         {/* MAIN CONTENT */}
@@ -715,6 +736,7 @@ export function Suppliers() {
           </div>
         </div>
         </div>
+        )}
         </div>
 
       <NewSupplierDialog

@@ -199,6 +199,15 @@ export const ListBuyersResponseItem = zod.object({
 export const ListBuyersResponse = zod.array(ListBuyersResponseItem)
 
 
+export const CreateBuyerBody = zod.object({
+  "name": zod.string(),
+  "contactName": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "region": zod.string().optional()
+})
+
+
 /**
  * @summary Update buyer contact fields
  */
@@ -221,6 +230,119 @@ export const UpdateBuyerResponse = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "region": zod.string().nullish()
+})
+
+
+export const ListSampleRequestsQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().optional().describe('When true, include rejected sample requests. Defaults to false.')
+})
+
+export const ListSampleRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "orgId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "product": zod.string(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListSampleRequestsResponse = zod.array(ListSampleRequestsResponseItem)
+
+
+export const CreateSampleRequestBody = zod.object({
+  "supplierId": zod.number().optional(),
+  "buyerId": zod.number().optional(),
+  "product": zod.string(),
+  "quantity": zod.number().optional(),
+  "notes": zod.string().optional(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']).optional(),
+  "trackingCode": zod.string().optional(),
+  "carrierName": zod.string().optional()
+})
+
+
+export const GetSampleRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSampleRequestResponse = zod.object({
+  "id": zod.number(),
+  "orgId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "product": zod.string(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const UpdateSampleRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSampleRequestBody = zod.object({
+  "supplierId": zod.number().nullish(),
+  "buyerId": zod.number().nullish(),
+  "product": zod.string().optional(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']).optional(),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish()
+})
+
+export const UpdateSampleRequestResponse = zod.object({
+  "id": zod.number(),
+  "orgId": zod.number(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "product": zod.string(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Convert an approved sample request to a shipment PO
+ */
+export const ConvertSampleRequestToPoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ConvertSampleRequestToPoBody = zod.object({
+  "poNumber": zod.string(),
+  "supplierId": zod.number(),
+  "buyerId": zod.number().nullish(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string(),
+  "via": zod.string().optional(),
+  "depositPct": zod.number().optional().describe('Deposit percentage (default 30)'),
+  "notes": zod.string().optional()
 })
 
 

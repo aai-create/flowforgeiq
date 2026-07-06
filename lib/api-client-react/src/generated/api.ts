@@ -24,6 +24,7 @@ import type {
   AcceptInviteBody,
   AutonomyPolicy,
   AutonomyPolicyInput,
+  BuyerCreate,
   BuyerSummary,
   BuyerUpdate,
   ChatIngestInput,
@@ -66,6 +67,7 @@ import type {
   ListCopilotProposalsParams,
   ListDocumentsParams,
   ListMessagesParams,
+  ListSampleRequestsParams,
   ListShipmentsParams,
   Message,
   MessageAssignInput,
@@ -95,6 +97,10 @@ import type {
   RfqUpdate,
   RfqWithQuotes,
   RiskRadarResponse,
+  SampleRequest,
+  SampleRequestConvertInput,
+  SampleRequestCreate,
+  SampleRequestUpdate,
   SendReplyInput,
   SendRfqEmailBody,
   SendRfqEmailResponse,
@@ -1210,6 +1216,71 @@ export function useListBuyers<TData = Awaited<ReturnType<typeof listBuyers>>, TE
 
 
 
+export const getCreateBuyerUrl = () => {
+
+
+
+
+  return `/api/buyers`
+}
+
+export const createBuyer = async (buyerCreate: BuyerCreate, options?: RequestInit): Promise<BuyerSummary> => {
+
+  return customFetch<BuyerSummary>(getCreateBuyerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      buyerCreate,)
+  }
+);}
+
+
+
+
+export const getCreateBuyerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuyer>>, TError,{data: BodyType<BuyerCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBuyer>>, TError,{data: BodyType<BuyerCreate>}, TContext> => {
+
+const mutationKey = ['createBuyer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBuyer>>, {data: BodyType<BuyerCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBuyer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBuyerMutationResult = NonNullable<Awaited<ReturnType<typeof createBuyer>>>
+    export type CreateBuyerMutationBody = BodyType<BuyerCreate>
+    export type CreateBuyerMutationError = ErrorType<unknown>
+
+    export const useCreateBuyer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuyer>>, TError,{data: BodyType<BuyerCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBuyer>>,
+        TError,
+        {data: BodyType<BuyerCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateBuyerMutationOptions(options));
+    }
+
 export const getUpdateBuyerUrl = (id: number,) => {
 
 
@@ -1280,6 +1351,358 @@ export const useUpdateBuyer = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateBuyerMutationOptions(options));
+    }
+
+export const getListSampleRequestsUrl = (params?: ListSampleRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/sample-requests?${stringifiedParams}` : `/api/sample-requests`
+}
+
+export const listSampleRequests = async (params?: ListSampleRequestsParams, options?: RequestInit): Promise<SampleRequest[]> => {
+
+  return customFetch<SampleRequest[]>(getListSampleRequestsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSampleRequestsQueryKey = (params?: ListSampleRequestsParams,) => {
+    return [
+    `/api/sample-requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSampleRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listSampleRequests>>, TError = ErrorType<unknown>>(params?: ListSampleRequestsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSampleRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSampleRequestsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSampleRequests>>> = ({ signal }) => listSampleRequests(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSampleRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSampleRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listSampleRequests>>>
+export type ListSampleRequestsQueryError = ErrorType<unknown>
+
+
+
+export function useListSampleRequests<TData = Awaited<ReturnType<typeof listSampleRequests>>, TError = ErrorType<unknown>>(
+ params?: ListSampleRequestsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSampleRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSampleRequestsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSampleRequestUrl = () => {
+
+
+
+
+  return `/api/sample-requests`
+}
+
+export const createSampleRequest = async (sampleRequestCreate: SampleRequestCreate, options?: RequestInit): Promise<SampleRequest> => {
+
+  return customFetch<SampleRequest>(getCreateSampleRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sampleRequestCreate,)
+  }
+);}
+
+
+
+
+export const getCreateSampleRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSampleRequest>>, TError,{data: BodyType<SampleRequestCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSampleRequest>>, TError,{data: BodyType<SampleRequestCreate>}, TContext> => {
+
+const mutationKey = ['createSampleRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSampleRequest>>, {data: BodyType<SampleRequestCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSampleRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSampleRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createSampleRequest>>>
+    export type CreateSampleRequestMutationBody = BodyType<SampleRequestCreate>
+    export type CreateSampleRequestMutationError = ErrorType<unknown>
+
+    export const useCreateSampleRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSampleRequest>>, TError,{data: BodyType<SampleRequestCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSampleRequest>>,
+        TError,
+        {data: BodyType<SampleRequestCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateSampleRequestMutationOptions(options));
+    }
+
+export const getGetSampleRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/sample-requests/${id}`
+}
+
+export const getSampleRequest = async (id: number, options?: RequestInit): Promise<SampleRequest> => {
+
+  return customFetch<SampleRequest>(getGetSampleRequestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSampleRequestQueryKey = (id: number,) => {
+    return [
+    `/api/sample-requests/${id}`
+    ] as const;
+    }
+
+
+export const getGetSampleRequestQueryOptions = <TData = Awaited<ReturnType<typeof getSampleRequest>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSampleRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSampleRequestQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSampleRequest>>> = ({ signal }) => getSampleRequest(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSampleRequest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSampleRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getSampleRequest>>>
+export type GetSampleRequestQueryError = ErrorType<void>
+
+
+
+export function useGetSampleRequest<TData = Awaited<ReturnType<typeof getSampleRequest>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSampleRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSampleRequestQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateSampleRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/sample-requests/${id}`
+}
+
+export const updateSampleRequest = async (id: number,
+    sampleRequestUpdate: SampleRequestUpdate, options?: RequestInit): Promise<SampleRequest> => {
+
+  return customFetch<SampleRequest>(getUpdateSampleRequestUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sampleRequestUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateSampleRequestMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSampleRequest>>, TError,{id: number;data: BodyType<SampleRequestUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSampleRequest>>, TError,{id: number;data: BodyType<SampleRequestUpdate>}, TContext> => {
+
+const mutationKey = ['updateSampleRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSampleRequest>>, {id: number;data: BodyType<SampleRequestUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSampleRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSampleRequestMutationResult = NonNullable<Awaited<ReturnType<typeof updateSampleRequest>>>
+    export type UpdateSampleRequestMutationBody = BodyType<SampleRequestUpdate>
+    export type UpdateSampleRequestMutationError = ErrorType<void>
+
+    export const useUpdateSampleRequest = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSampleRequest>>, TError,{id: number;data: BodyType<SampleRequestUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSampleRequest>>,
+        TError,
+        {id: number;data: BodyType<SampleRequestUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSampleRequestMutationOptions(options));
+    }
+
+export const getConvertSampleRequestToPoUrl = (id: number,) => {
+
+
+
+
+  return `/api/sample-requests/${id}/convert`
+}
+
+/**
+ * @summary Convert an approved sample request to a shipment PO
+ */
+export const convertSampleRequestToPo = async (id: number,
+    sampleRequestConvertInput: SampleRequestConvertInput, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getConvertSampleRequestToPoUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sampleRequestConvertInput,)
+  }
+);}
+
+
+
+
+export const getConvertSampleRequestToPoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof convertSampleRequestToPo>>, TError,{id: number;data: BodyType<SampleRequestConvertInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof convertSampleRequestToPo>>, TError,{id: number;data: BodyType<SampleRequestConvertInput>}, TContext> => {
+
+const mutationKey = ['convertSampleRequestToPo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof convertSampleRequestToPo>>, {id: number;data: BodyType<SampleRequestConvertInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  convertSampleRequestToPo(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConvertSampleRequestToPoMutationResult = NonNullable<Awaited<ReturnType<typeof convertSampleRequestToPo>>>
+    export type ConvertSampleRequestToPoMutationBody = BodyType<SampleRequestConvertInput>
+    export type ConvertSampleRequestToPoMutationError = ErrorType<void>
+
+    /**
+ * @summary Convert an approved sample request to a shipment PO
+ */
+export const useConvertSampleRequestToPo = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof convertSampleRequestToPo>>, TError,{id: number;data: BodyType<SampleRequestConvertInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof convertSampleRequestToPo>>,
+        TError,
+        {id: number;data: BodyType<SampleRequestConvertInput>},
+        TContext
+      > => {
+      return useMutation(getConvertSampleRequestToPoMutationOptions(options));
     }
 
 export const getListSuppliersUrl = () => {

@@ -27,6 +27,7 @@ tags:
   - name: integrations
   - name: team
   - name: capture
+  - name: sample-requests
 paths:
   /capture/mobile:
     post:
@@ -297,6 +298,20 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/BuyerSummary" }
+    post:
+      operationId: createBuyer
+      tags: [buyers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BuyerCreate" }
+      responses:
+        "201":
+          description: Created buyer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BuyerSummary" }
 
   /buyers/{id}:
     patch:
@@ -321,6 +336,103 @@ paths:
               schema: { $ref: "#/components/schemas/BuyerSummary" }
         "404":
           description: Buyer not found
+
+  /sample-requests:
+    get:
+      operationId: listSampleRequests
+      tags: [sample-requests]
+      parameters:
+        - in: query
+          name: includeArchived
+          schema: { type: boolean }
+          description: "When true, include rejected sample requests. Defaults to false."
+      responses:
+        "200":
+          description: Sample requests list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SampleRequest" }
+    post:
+      operationId: createSampleRequest
+      tags: [sample-requests]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SampleRequestCreate" }
+      responses:
+        "201":
+          description: Created sample request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SampleRequest" }
+
+  /sample-requests/{id}:
+    get:
+      operationId: getSampleRequest
+      tags: [sample-requests]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Sample request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SampleRequest" }
+        "404":
+          description: Not found
+    patch:
+      operationId: updateSampleRequest
+      tags: [sample-requests]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SampleRequestUpdate" }
+      responses:
+        "200":
+          description: Updated sample request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SampleRequest" }
+        "404":
+          description: Not found
+
+  /sample-requests/{id}/convert:
+    post:
+      operationId: convertSampleRequestToPo
+      tags: [sample-requests]
+      summary: Convert an approved sample request to a shipment PO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SampleRequestConvertInput" }
+      responses:
+        "201":
+          description: Created shipment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shipment" }
+        "400":
+          description: Validation error
+        "404":
+          description: Sample request not found
 
   /suppliers:
     get:
@@ -1974,6 +2086,16 @@ components:
         phone:       { type: string, nullable: true }
         region:      { type: string, nullable: true }
 
+    BuyerCreate:
+      type: object
+      required: [name]
+      properties:
+        name:        { type: string }
+        contactName: { type: string }
+        email:       { type: string }
+        phone:       { type: string }
+        region:      { type: string }
+
     BuyerUpdate:
       type: object
       properties:
@@ -1982,6 +2104,65 @@ components:
         email:       { type: string, nullable: true }
         phone:       { type: string, nullable: true }
         region:      { type: string, nullable: true }
+
+    SampleRequest:
+      type: object
+      required: [id, orgId, product, milestone, createdAt, updatedAt]
+      properties:
+        id:                   { type: integer }
+        orgId:                { type: integer }
+        supplierId:           { type: ["integer", "null"] }
+        supplierName:         { type: ["string", "null"] }
+        buyerId:              { type: ["integer", "null"] }
+        buyerName:            { type: ["string", "null"] }
+        product:              { type: string }
+        quantity:             { type: ["integer", "null"] }
+        notes:                { type: ["string", "null"] }
+        milestone:            { type: string, enum: [sample_requested, sample_shipped, sample_received, approved, rejected] }
+        trackingCode:         { type: ["string", "null"] }
+        carrierName:          { type: ["string", "null"] }
+        convertedShipmentId:  { type: ["integer", "null"] }
+        createdAt:            { type: string, format: date-time }
+        updatedAt:            { type: string, format: date-time }
+
+    SampleRequestCreate:
+      type: object
+      required: [product]
+      properties:
+        supplierId:  { type: integer }
+        buyerId:     { type: integer }
+        product:     { type: string }
+        quantity:    { type: integer }
+        notes:       { type: string }
+        milestone:   { type: string, enum: [sample_requested, sample_shipped, sample_received, approved, rejected] }
+        trackingCode: { type: string }
+        carrierName: { type: string }
+
+    SampleRequestUpdate:
+      type: object
+      properties:
+        supplierId:   { type: ["integer", "null"] }
+        buyerId:      { type: ["integer", "null"] }
+        product:      { type: string }
+        quantity:     { type: ["integer", "null"] }
+        notes:        { type: ["string", "null"] }
+        milestone:    { type: string, enum: [sample_requested, sample_shipped, sample_received, approved, rejected] }
+        trackingCode: { type: ["string", "null"] }
+        carrierName:  { type: ["string", "null"] }
+
+    SampleRequestConvertInput:
+      type: object
+      required: [poNumber, supplierId, dueDate, exFactoryDate, destination]
+      properties:
+        poNumber:      { type: string }
+        supplierId:    { type: integer }
+        buyerId:       { type: ["integer", "null"] }
+        dueDate:       { type: string, format: date-time }
+        exFactoryDate: { type: string, format: date-time }
+        destination:   { type: string }
+        via:           { type: string }
+        depositPct:    { type: integer, description: "Deposit percentage (default 30)" }
+        notes:         { type: string }
 
     SupplierSummary:
       type: object

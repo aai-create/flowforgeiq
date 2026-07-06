@@ -15,6 +15,7 @@ import webhooksRouter from "./webhooks";
 import settingsRouter from "./settings";
 import integrationsRouter from "./integrations";
 import rfqsRouter from "./rfqs";
+import sampleRequestsRouter from "./sample-requests";
 import teamRouter from "./team";
 import focusRouter from "./focus";
 import pushTokensRouter from "./push-tokens";
@@ -50,6 +51,7 @@ protectedRouter.use(focusRouter);
 protectedRouter.use(settingsRouter);
 protectedRouter.use(integrationsRouter);
 protectedRouter.use(rfqsRouter);
+protectedRouter.use(sampleRequestsRouter);
 protectedRouter.use(pushTokensRouter);
 protectedRouter.use(contactRulesRouter);
 

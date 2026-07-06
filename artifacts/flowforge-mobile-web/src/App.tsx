@@ -20,6 +20,8 @@ import DocumentDetailPage from "@/pages/DocumentDetail";
 import ShipmentDetailPage from "@/pages/ShipmentDetail";
 import SettingsPage from "@/pages/Settings";
 import RoutingResultPage from "@/pages/RoutingResult";
+import SamplesPage from "@/pages/Samples";
+import SampleDetailPage from "@/pages/SampleDetail";
 import { IOSInstallPrompt } from "@/components/IOSInstallPrompt";
 import { AndroidInstallPrompt } from "@/components/AndroidInstallPrompt";
 
@@ -139,6 +141,8 @@ function Router() {
       <Route path="/documents" component={() => <ProtectedRoute component={DocumentsPage} />} />
       <Route path="/documents/:id" component={() => <ProtectedRoute component={DocumentDetailPage} />} />
       <Route path="/shipment/:id" component={() => <ProtectedRoute component={ShipmentDetailPage} />} />
+      <Route path="/samples" component={() => <ProtectedRoute component={SamplesPage} />} />
+      <Route path="/samples/:id" component={() => <ProtectedRoute component={SampleDetailPage} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
       <Route path="/routing-result" component={() => <ProtectedRoute component={RoutingResultPage} />} />
       <Route path="/sign-in/*?" component={SignInPage} />

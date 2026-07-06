@@ -99,12 +99,122 @@ export interface BuyerSummary {
   region?: string | null;
 }
 
+export interface BuyerCreate {
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  region?: string;
+}
+
 export interface BuyerUpdate {
   name?: string;
   contactName?: string | null;
   email?: string | null;
   phone?: string | null;
   region?: string | null;
+}
+
+export type SampleRequestMilestone = typeof SampleRequestMilestone[keyof typeof SampleRequestMilestone];
+
+
+export const SampleRequestMilestone = {
+  sample_requested: 'sample_requested',
+  sample_shipped: 'sample_shipped',
+  sample_received: 'sample_received',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface SampleRequest {
+  id: number;
+  orgId: number;
+  /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  supplierName?: string | null;
+  /** @nullable */
+  buyerId?: number | null;
+  /** @nullable */
+  buyerName?: string | null;
+  product: string;
+  /** @nullable */
+  quantity?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  milestone: SampleRequestMilestone;
+  /** @nullable */
+  trackingCode?: string | null;
+  /** @nullable */
+  carrierName?: string | null;
+  /** @nullable */
+  convertedShipmentId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SampleRequestCreateMilestone = typeof SampleRequestCreateMilestone[keyof typeof SampleRequestCreateMilestone];
+
+
+export const SampleRequestCreateMilestone = {
+  sample_requested: 'sample_requested',
+  sample_shipped: 'sample_shipped',
+  sample_received: 'sample_received',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface SampleRequestCreate {
+  supplierId?: number;
+  buyerId?: number;
+  product: string;
+  quantity?: number;
+  notes?: string;
+  milestone?: SampleRequestCreateMilestone;
+  trackingCode?: string;
+  carrierName?: string;
+}
+
+export type SampleRequestUpdateMilestone = typeof SampleRequestUpdateMilestone[keyof typeof SampleRequestUpdateMilestone];
+
+
+export const SampleRequestUpdateMilestone = {
+  sample_requested: 'sample_requested',
+  sample_shipped: 'sample_shipped',
+  sample_received: 'sample_received',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface SampleRequestUpdate {
+  /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  buyerId?: number | null;
+  product?: string;
+  /** @nullable */
+  quantity?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  milestone?: SampleRequestUpdateMilestone;
+  /** @nullable */
+  trackingCode?: string | null;
+  /** @nullable */
+  carrierName?: string | null;
+}
+
+export interface SampleRequestConvertInput {
+  poNumber: string;
+  supplierId: number;
+  /** @nullable */
+  buyerId?: number | null;
+  dueDate: string;
+  exFactoryDate: string;
+  destination: string;
+  via?: string;
+  /** Deposit percentage (default 30) */
+  depositPct?: number;
+  notes?: string;
 }
 
 export interface SupplierSummary {
@@ -1540,6 +1650,13 @@ export interface PatchContactRuleBody {
 export type CreateDeviceTokenBody = {
   /** @maxLength 80 */
   label?: string;
+};
+
+export type ListSampleRequestsParams = {
+/**
+ * When true, include rejected sample requests. Defaults to false.
+ */
+includeArchived?: boolean;
 };
 
 export type ListShipmentsParams = {

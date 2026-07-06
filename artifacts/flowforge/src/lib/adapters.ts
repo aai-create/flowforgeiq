@@ -107,6 +107,36 @@ export interface UiTask {
 
 export interface UiStage { id: string; label: string; }
 
+export type SampleMilestone = "sample_requested" | "sample_shipped" | "sample_received" | "approved" | "rejected";
+
+export interface UiBuyer {
+  id: string;
+  buyerId: number;
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  region: string | null;
+}
+
+export interface UiSampleRequest {
+  id: string;
+  sampleId: number;
+  supplierId: number | null;
+  supplierName: string | null;
+  buyerId: number | null;
+  buyerName: string | null;
+  product: string;
+  quantity: number | null;
+  notes: string | null;
+  milestone: SampleMilestone;
+  trackingCode: string | null;
+  carrierName: string | null;
+  convertedShipmentId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Spread badge color: target-driven when a target spread % is set, else 25/10 fallback.
 export function spreadBadgeClass(pct: number, target: number | null | undefined): string {
   if (target !== null && target !== undefined) {
