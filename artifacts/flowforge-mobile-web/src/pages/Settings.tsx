@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/react";
 import { AppShell } from "@/components/AppShell";
 import { GradientHeader } from "@/components/GradientHeader";
-import { Globe, User, LogOut, Check, Shield, PlayCircle, Share2, Smartphone, CheckCircle2, Key, Copy, AlertTriangle, RefreshCw, ExternalLink, Trash2 } from "lucide-react";
+import { Globe, User, LogOut, Check, Shield, PlayCircle, Share2, Smartphone, CheckCircle2, Key, Copy, AlertTriangle, RefreshCw, ExternalLink, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTour } from "@/hooks/useTour";
 import { useTranslation, Trans } from "react-i18next";
@@ -79,6 +79,86 @@ function loadTokenFromSession(): { token: CreateDeviceTokenResponse; secondsLeft
   } catch { return null; }
 }
 
+function ShortcutStep({ number, children }: { number: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-white mt-0.5"
+        style={{ background: "hsl(274 100% 43%)" }}
+      >
+        {number}
+      </div>
+      <div className="flex-1 text-xs text-foreground leading-snug">{children}</div>
+    </div>
+  );
+}
+
+function ShortcutSetupGuide({
+  isIOS,
+  shortcutInstallerUrl,
+  hasToken,
+}: {
+  isIOS: boolean;
+  shortcutInstallerUrl: string;
+  hasToken: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs font-semibold text-foreground">Here's how to get started</p>
+      <div className="flex flex-col gap-3">
+        <ShortcutStep number={1}>
+          {hasToken ? (
+            <>
+              <span className="font-semibold">Your token is ready.</span> Make sure you've copied it — you'll paste it in Step 3.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">Generate your token</span> using the button above, then copy it somewhere handy — you'll need it in Step 3.
+            </>
+          )}
+        </ShortcutStep>
+
+        <ShortcutStep number={2}>
+          <span className="font-semibold">Install the Shortcut</span> on your iPhone.
+          {isIOS ? (
+            <div className="mt-2">
+              <a
+                href={shortcutInstallerUrl}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all active:opacity-75"
+                style={{
+                  border: "1.5px solid hsl(274 100% 43% / 0.35)",
+                  backgroundColor: "hsl(274 100% 43% / 0.08)",
+                  color: "hsl(274 100% 43%)",
+                  textDecoration: "none",
+                }}
+              >
+                <ExternalLink size={12} />
+                <span className="text-xs font-semibold">Open in Shortcuts</span>
+              </a>
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              This step requires an iPhone — open this page on your iOS device to install.
+            </p>
+          )}
+        </ShortcutStep>
+
+        <ShortcutStep number={3}>
+          <span className="font-semibold">Paste your token when prompted</span>, then pick your default channel (WhatsApp, iMessage, etc.). The Shortcut saves both for future forwards.
+        </ShortcutStep>
+
+        <ShortcutStep number={4}>
+          <span className="font-semibold">Allow Contacts access</span> when iOS asks — this lets FlowForge match senders to your suppliers automatically.
+        </ShortcutStep>
+
+        <ShortcutStep number={5}>
+          <span className="font-semibold">Test it!</span> Open a conversation in iMessage or WhatsApp, tap the Share button, and run the FlowForge Shortcut. Done — check your inbox! 🎉
+        </ShortcutStep>
+      </div>
+    </div>
+  );
+}
+
 function IOSShortcutsSection() {
   const queryClient = useQueryClient();
   const { data: tokens = [], refetch: refetchTokens } = useListDeviceTokens();
@@ -92,6 +172,7 @@ function IOSShortcutsSection() {
   const [revoking, setRevoking] = useState<number | null>(null);
   const [tokenCountdown, setTokenCountdown] = useState<number | null>(null);
   const [tokenLabel, setTokenLabel] = useState("iOS Shortcut");
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     const restored = loadTokenFromSession();
@@ -111,6 +192,10 @@ function IOSShortcutsSection() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [newToken]);
+
+  useEffect(() => {
+    setGuideOpen(tokens.length === 0);
+  }, [tokens.length]);
 
   const statusBadge = (() => {
     if (tokens.length === 0) return { active: false, label: "No token" };
@@ -373,36 +458,46 @@ function IOSShortcutsSection() {
         </div>
       )}
 
-      {/* Setup guide link */}
+      {/* Inline setup guide */}
       <div
-        className="flex flex-col gap-2 pt-1"
+        className="flex flex-col gap-0 pt-1"
         style={{ borderTop: "1px solid hsl(var(--border))" }}
       >
-        {isIOS ? (
-          <a
-            href={shortcutInstallerUrl}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl transition-all active:opacity-75 btn-press"
+        {tokens.length > 0 ? (
+          <button
+            onClick={() => setGuideOpen((v) => !v)}
+            className="flex items-center justify-between w-full py-2.5 transition-all active:opacity-75"
+          >
+            <span className="text-xs font-semibold" style={{ color: "hsl(274 100% 43%)" }}>
+              How to set up the Shortcut
+            </span>
+            {guideOpen
+              ? <ChevronUp size={14} color="hsl(274 100% 43%)" />
+              : <ChevronDown size={14} color="hsl(274 100% 43%)" />}
+          </button>
+        ) : (
+          <div className="pt-2.5">
+            <p className="text-xs font-semibold mb-3" style={{ color: "hsl(274 100% 43%)" }}>
+              You're almost set up!
+            </p>
+          </div>
+        )}
+
+        {guideOpen && (
+          <div
+            className="rounded-xl p-3"
             style={{
-              border: "1.5px solid hsl(274 100% 43% / 0.35)",
-              backgroundColor: "hsl(274 100% 43% / 0.06)",
-              color: "hsl(274 100% 43%)",
-              textDecoration: "none",
+              backgroundColor: "hsl(274 100% 43% / 0.04)",
+              border: "1px solid hsl(274 100% 43% / 0.18)",
             }}
           >
-            <ExternalLink size={14} />
-            <span className="text-sm font-semibold">Install Shortcut</span>
-          </a>
-        ) : null}
-        <a
-          href="/shortcuts"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs font-medium transition-all active:opacity-75 self-start"
-          style={{ color: "hsl(var(--muted-foreground))", textDecoration: "none" }}
-        >
-          <ExternalLink size={12} />
-          View setup guide →
-        </a>
+            <ShortcutSetupGuide
+              isIOS={isIOS}
+              shortcutInstallerUrl={shortcutInstallerUrl}
+              hasToken={tokens.length > 0 || newToken !== null}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
