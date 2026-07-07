@@ -7,21 +7,10 @@ function getShortcutFileUrl() {
   return `${window.location.origin}${SHORTCUT_FILE_PATH}`;
 }
 
-function isIOS() {
-  return (
-    /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
 
 export function ShortcutsRedirect() {
   useEffect(() => {
-    const fileUrl = getShortcutFileUrl();
-    if (isIOS()) {
-      window.location.href = `shortcuts://import-shortcut?url=${encodeURIComponent(fileUrl)}`;
-    } else {
-      window.location.href = fileUrl;
-    }
+    window.location.href = getShortcutFileUrl();
   }, []);
 
   return (

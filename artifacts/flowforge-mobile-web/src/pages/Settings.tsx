@@ -180,9 +180,7 @@ function IOSShortcutsSection() {
 
   const isIOS = isIOSDevice();
 
-  const shortcutInstallerUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(
-    `${window.location.origin}/api/shortcuts/capture.shortcut`
-  )}`;
+  const shortcutInstallerUrl = `${window.location.origin}/api/shortcuts/capture.shortcut`;
 
   return (
     <div
@@ -392,7 +390,7 @@ function IOSShortcutsSection() {
             }}
           >
             <ExternalLink size={14} />
-            <span className="text-sm font-semibold">Open Shortcut Installer</span>
+            <span className="text-sm font-semibold">Install Shortcut</span>
           </a>
         ) : null}
         <a

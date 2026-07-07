@@ -11,15 +11,12 @@ import {
   MessageCircle,
   Key,
   ArrowRight,
-  Zap,
   Download,
   AlertCircle,
 } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SHORTCUT_FILE_URL = `${basePath}/api/shortcuts/capture.shortcut`;
-const SHORTCUT_ABSOLUTE_URL = `${window.location.origin}${SHORTCUT_FILE_URL}`;
-const OPEN_IN_SHORTCUTS_URL = `shortcuts://import-shortcut?url=${encodeURIComponent(SHORTCUT_ABSOLUTE_URL)}`;
 const SHORTCUTS_REDIRECT_URL = `${window.location.origin}${basePath}/shortcuts-redirect`;
 
 const isIOS =
@@ -57,27 +54,21 @@ const STEPS: {
     body: isIOS ? (
       <div className="space-y-3">
         <p className="text-[12px] text-[#5E687B] leading-relaxed">
-          Tap the button below — iOS will open the{" "}
-          <strong className="text-[#212833]">Shortcuts app</strong> directly
-          with the FlowForge Capture shortcut pre-loaded. Tap{" "}
-          <strong className="text-[#212833]">Add Shortcut</strong> to finish.
+          Tap the button below to download the shortcut — iOS will automatically
+          open the <strong className="text-[#212833]">Add Shortcut</strong>{" "}
+          prompt. Tap <strong className="text-[#212833]">Add Shortcut</strong>{" "}
+          to finish.
         </p>
         <a
-          href={OPEN_IN_SHORTCUTS_URL}
+          href={SHORTCUT_FILE_URL}
+          download
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shadow-sm"
         >
-          <Zap className="w-4 h-4" />
-          Open in Shortcuts
+          <Download className="w-4 h-4" />
+          Install Shortcut
         </a>
         <p className="text-[11px] text-[#9E9FAE]">
           Requires iOS 16 or later · Free · No account needed
-        </p>
-        <p className="text-[11px] text-[#9E9FAE]">
-          Button not working?{" "}
-          <a href={SHORTCUT_FILE_URL} className="text-[#9000FF] hover:underline font-medium">
-            Download the file directly
-          </a>{" "}
-          instead.
         </p>
       </div>
     ) : (
@@ -293,24 +284,18 @@ export function ShortcutsGuide() {
                         Ready to install?
                       </p>
                       <p className="text-[11px] text-[#9E9FAE] mt-0.5">
-                        Tap to open Shortcuts and add it in one step.
+                        Tap to download — iOS opens the Add Shortcut prompt automatically.
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <a
-                        href={OPEN_IN_SHORTCUTS_URL}
+                        href={SHORTCUT_FILE_URL}
+                        download
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-lg transition-colors shadow-sm"
                       >
-                        <Zap className="w-3.5 h-3.5" />
-                        Open in Shortcuts
+                        <Download className="w-3.5 h-3.5" />
+                        Install Shortcut
                         <ArrowRight className="w-3 h-3" />
-                      </a>
-                      <a
-                        href={SHORTCUT_FILE_URL}
-                        className="text-[10px] text-[#9E9FAE] hover:text-[#9000FF] transition-colors"
-                      >
-                        <Download className="w-3 h-3 inline mr-0.5" />
-                        Download file instead
                       </a>
                     </div>
                   </div>
