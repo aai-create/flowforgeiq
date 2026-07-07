@@ -304,8 +304,36 @@ export function Atelier() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("new") === "1") {
+      const rfqQuoteId = params.get("rfqQuoteId");
+      if (rfqQuoteId) {
+        try {
+          const raw = sessionStorage.getItem("rfq_po_prefill");
+          if (raw) {
+            const prefill = JSON.parse(raw) as {
+              rfqQuoteId: number;
+              supplierId: string;
+              supplierName: string;
+              product: string;
+              quantity: string;
+              unitCostUsd: string;
+            };
+            if (String(prefill.rfqQuoteId) === rfqQuoteId) {
+              setNewPOForm(f => ({
+                ...f,
+                product: prefill.product ?? "",
+                quantity: prefill.quantity ?? "",
+                unitCostUsd: prefill.unitCostUsd ?? "",
+                supplierId: prefill.supplierId ?? "",
+              }));
+              if (prefill.supplierName) setSupplierQuery(prefill.supplierName);
+              sessionStorage.removeItem("rfq_po_prefill");
+            }
+          }
+        } catch {}
+      }
       setShowNewPO(true);
       params.delete("new");
+      params.delete("rfqQuoteId");
       const newSearch = params.toString();
       window.history.replaceState(null, "", newSearch ? `?${newSearch}` : window.location.pathname);
     }

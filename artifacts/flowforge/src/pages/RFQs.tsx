@@ -432,6 +432,23 @@ export function RFQs() {
     }
   };
 
+  const handleUseThisQuote = (q: RfqQuote, rfq: RfqWithQuotes) => {
+    const supplierName = q.supplierId
+      ? (suppliers.find(s => s.id === q.supplierId)?.name ?? q.factoryName)
+      : q.factoryName;
+    try {
+      sessionStorage.setItem("rfq_po_prefill", JSON.stringify({
+        rfqQuoteId: q.id,
+        supplierId: q.supplierId ? String(q.supplierId) : "",
+        supplierName,
+        product: rfq.product,
+        quantity: String(rfq.quantity),
+        unitCostUsd: String(q.unitPriceUsd),
+      }));
+    } catch {}
+    navigate(`/orders?new=1&rfqQuoteId=${q.id}`);
+  };
+
   const openConvert = (quoteId: number) => {
     setConvertForm({ acceptedQuoteId: quoteId, poNumber: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", depositPct: "30" });
     setConvertError(null);
@@ -823,7 +840,7 @@ export function RFQs() {
                                     <td className="px-4 py-3">
                                       <div className="flex items-center gap-1 justify-end">
                                         {selectedRfq.status === "open" && q.status !== "accepted" && (
-                                          <button onClick={() => openConvert(q.id)}
+                                          <button onClick={() => handleUseThisQuote(q, selectedRfq)}
                                             className="px-2 py-1 text-[10px] font-bold bg-[#9000FF] text-white rounded hover:bg-[#7200CC] whitespace-nowrap transition-colors">
                                             {t("rfqs.useThisQuote")}
                                           </button>
