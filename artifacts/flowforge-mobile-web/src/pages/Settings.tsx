@@ -13,7 +13,23 @@ import {
   useDeleteDeviceToken,
   getListDeviceTokensQueryKey,
 } from "@workspace/api-client-react";
-import type { CreateDeviceTokenResponse } from "@workspace/api-client-react";
+import type { CreateDeviceTokenResponse, DeviceToken as DeviceTokenType } from "@workspace/api-client-react";
+
+function formatLastUsed(lastUsedAt: string | null | undefined): { label: string; color: string } {
+  if (!lastUsedAt) {
+    return { label: "Never used", color: "#d97706" };
+  }
+  const used = new Date(lastUsedAt);
+  const now = new Date();
+  const diffMs = now.getTime() - used.getTime();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  if (diffMs < oneDayMs) {
+    const timeStr = used.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return { label: `Today at ${timeStr}`, color: "#059669" };
+  }
+  const dateStr = used.toLocaleDateString([], { month: "short", day: "numeric" });
+  return { label: dateStr, color: "hsl(var(--muted-foreground))" };
+}
 
 const LANGUAGES = [
   { code: "en", label: "English", sub: "English" },
@@ -311,7 +327,9 @@ function IOSShortcutsSection() {
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold text-foreground">Active tokens</p>
           <div className="flex flex-col gap-2">
-            {tokens.map((token: { id: number; label?: string | null; createdAt?: string | null }) => (
+            {tokens.map((token: DeviceTokenType) => {
+              const lastUsed = formatLastUsed(token.lastUsedAt);
+              return (
               <div
                 key={token.id}
                 className="flex items-center justify-between px-3 py-2.5 rounded-xl"
@@ -324,11 +342,16 @@ function IOSShortcutsSection() {
                   <p className="text-xs font-semibold text-foreground truncate">
                     {token.label ?? "iOS Shortcut"}
                   </p>
-                  {token.createdAt && (
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Created {new Date(token.createdAt).toLocaleDateString()}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {token.createdAt && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Created {new Date(token.createdAt).toLocaleDateString()}
+                      </p>
+                    )}
+                    <span className="text-[11px] font-medium" style={{ color: lastUsed.color }}>
+                      · Last used: {lastUsed.label}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => void handleRevoke(token.id)}
@@ -346,7 +369,8 @@ function IOSShortcutsSection() {
                   </span>
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
