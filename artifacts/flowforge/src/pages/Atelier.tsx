@@ -296,6 +296,17 @@ export function Atelier() {
   };
 
   const [showNewPO, setShowNewPO] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      setShowNewPO(true);
+      params.delete("new");
+      const newSearch = params.toString();
+      window.history.replaceState(null, "", newSearch ? `?${newSearch}` : window.location.pathname);
+    }
+  }, []);
+
   const [editingShipmentId, setEditingShipmentId] = useState<number | null>(null);
   const [buyerPoMode, setBuyerPoMode] = useState<"auto" | "provided">("auto");
   const { data: poConfig } = useGetPoNumberingConfig();

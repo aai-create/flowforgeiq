@@ -3304,20 +3304,25 @@ export default function Home() {
                 <p className="text-[15px] font-semibold text-[#212833]">No shipments yet</p>
                 <p className="mt-1 text-[13px] text-[#5E687B] max-w-xs">Import a purchase order or create one to get started, or visit another section of the app.</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-2 w-full max-w-xs">
                 <a
-                  href="/orders"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  href="/orders?new=1"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
                   style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
                 >
-                  Go to Orders
+                  <Plus size={15}/>Create shipment
                 </a>
-                <a
-                  href="/rfqs"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#5E687B] border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors"
+                <button
+                  onClick={() => setShowPasteChat(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[#5E687B] border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors"
                 >
-                  Go to RFQs
-                </a>
+                  Quick import from chat
+                </button>
+                <div className="flex items-center gap-3 pt-1">
+                  <a href="/orders" className="text-xs text-[#9E9FAE] hover:text-[#5E687B] transition-colors">Go to Orders</a>
+                  <span className="text-[#E5EAF0]">·</span>
+                  <a href="/rfqs" className="text-xs text-[#9E9FAE] hover:text-[#5E687B] transition-colors">Go to RFQs</a>
+                </div>
               </div>
             </div>
           )}
