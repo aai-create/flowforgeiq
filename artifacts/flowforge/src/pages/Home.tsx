@@ -2810,7 +2810,7 @@ export default function Home() {
   const dupCookieHint = [stagesErrObj, shipmentsErrObj, messagesErrObj, tasksErrObj].some(
     (e) => e instanceof ApiError && e.status === 401 && e.headers.get("X-Auth-Hint") === "duplicate-clerk-cookies",
   );
-  if (isLoading || isError || shipments.length === 0) {
+  if (isLoading || isError) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#FAFBFC] text-[#5E687B]" style={{ fontFamily: "Inter, sans-serif" }}>
         {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
@@ -2867,9 +2867,7 @@ export default function Home() {
             </>
             )
           ) : (
-            <p className="text-sm font-medium" style={{color:"#7C3AED"}}>
-              {isLoading ? "Loading FlowForgeIQ…" : "No shipments yet. Seed the database with `pnpm --filter @workspace/db run seed`."}
-            </p>
+            <p className="text-sm font-medium" style={{color:"#7C3AED"}}>Loading FlowForgeIQ…</p>
           )}
         </div>
       </div>
@@ -3296,8 +3294,36 @@ export default function Home() {
             />
           )}
 
+          {/* ── INBOX EMPTY STATE ── */}
+          {activeView==="inbox"&&leftPanelMode==="all"&&shipments.length===0&&(
+            <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md shrink-0" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
+                <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-[#212833]">No shipments yet</p>
+                <p className="mt-1 text-[13px] text-[#5E687B] max-w-xs">Import a purchase order or create one to get started, or visit another section of the app.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/orders"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
+                >
+                  Go to Orders
+                </a>
+                <a
+                  href="/rfqs"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#5E687B] border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors"
+                >
+                  Go to RFQs
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* ── INBOX VIEW: thread list + detail ── */}
-          {activeView==="inbox"&&leftPanelMode==="all"&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
+          {activeView==="inbox"&&leftPanelMode==="all"&&shipments.length>0&&<ResizablePanelGroup direction="horizontal" autoSaveId="inbox-v2-panels" className="flex-1 overflow-hidden">
 
             {/* Col A — Thread list */}
             <ResizablePanel defaultSize={38} minSize={22} className="bg-white flex flex-col min-w-0">
