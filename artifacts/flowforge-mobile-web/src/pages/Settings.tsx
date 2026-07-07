@@ -75,6 +75,7 @@ function IOSShortcutsSection() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<number | null>(null);
   const [tokenCountdown, setTokenCountdown] = useState<number | null>(null);
+  const [tokenLabel, setTokenLabel] = useState("iOS Shortcut");
 
   useEffect(() => {
     const restored = loadTokenFromSession();
@@ -104,7 +105,7 @@ function IOSShortcutsSection() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const result = await createMutation.mutateAsync({ data: { label: "iOS Shortcut" } });
+      const result = await createMutation.mutateAsync({ data: { label: tokenLabel.trim() || "iOS Shortcut" } });
       setNewToken(result);
       saveTokenToSession(result);
       void refetchTokens();
@@ -263,6 +264,28 @@ function IOSShortcutsSection() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="token-label-input"
+                className="text-[11px] font-medium text-muted-foreground"
+              >
+                Device label
+              </label>
+              <input
+                id="token-label-input"
+                type="text"
+                value={tokenLabel}
+                onChange={(e) => setTokenLabel(e.target.value)}
+                maxLength={60}
+                placeholder="iOS Shortcut"
+                className="w-full text-xs px-3 py-2 rounded-xl outline-none"
+                style={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1.5px solid hsl(var(--border))",
+                  color: "hsl(var(--foreground))",
+                }}
+              />
+            </div>
             {generateError && (
               <p className="text-xs" style={{ color: "hsl(var(--destructive))" }}>{generateError}</p>
             )}
