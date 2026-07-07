@@ -10,6 +10,7 @@
   },
   "scripts": {
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "check-migrations": "bash ./check-migrations.sh",
     "migrate": "tsx ./src/migrate.ts",
     "stamp": "tsx ./src/stamp.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
