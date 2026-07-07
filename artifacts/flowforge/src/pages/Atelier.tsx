@@ -31,6 +31,8 @@ import { ShipmentDrawer, type MarkPaidForm } from "@/components/ShipmentDrawer";
 import { useTranslation } from "react-i18next";
 import { getDisplayLocale, fmtCountry } from "@/lib/locale";
 import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED } from "@/lib/typography";
+import { useUserPref } from "@/lib/useUserPref";
+import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 
 type ShipmentStatus = "on-track" | "at-risk" | "delayed";
 
@@ -296,6 +298,8 @@ export function Atelier() {
   };
 
   const [showNewPO, setShowNewPO] = useState(false);
+  const [checklistDismissed, setChecklistDismissed] = useUserPref<"no" | "yes">("onboarding-checklist-dismissed", "no");
+  const [showOnboardingChecklist, setShowOnboardingChecklist] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -486,6 +490,7 @@ export function Atelier() {
     setNewPOError(null);
     setPoNumberError(null);
     setMilestonesError(null);
+    const isFirstShipment = shipments.filter(s => s.archivedAt == null).length === 0;
     const resolvedSupplierId = newPOForm.supplierId;
 
     if (!newPOForm.buyerPoNumber.trim()) {
@@ -540,6 +545,10 @@ export function Atelier() {
       }
 
       resetNewPO();
+
+      if (isFirstShipment && checklistDismissed !== "yes") {
+        setShowOnboardingChecklist(true);
+      }
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 409) {
@@ -731,6 +740,15 @@ export function Atelier() {
               </button>
             </div>
           </div>
+
+          {showOnboardingChecklist && checklistDismissed !== "yes" && (
+            <GettingStartedChecklist
+              onDismiss={() => {
+                setShowOnboardingChecklist(false);
+                setChecklistDismissed("yes");
+              }}
+            />
+          )}
 
           <ScrollArea className="flex-1">
             <div className="p-5 space-y-4">
