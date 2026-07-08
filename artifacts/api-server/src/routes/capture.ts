@@ -265,10 +265,32 @@ Reply with JSON only (no markdown):
 // ─── POST /capture/mobile ──────────────────────────────────────────────────────
 
 router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
+  // Normalise incoming body before validation:
+  // - channel: trim whitespace + lowercase so "WhatsApp " → "whatsapp"
+  // - messageText: if iOS passes an object/array, coerce to string
+  const raw = req.body as Record<string, unknown>;
+  const normalised = {
+    ...raw,
+    channel: typeof raw.channel === "string" ? raw.channel.trim().toLowerCase() : raw.channel,
+    messageText:
+      typeof raw.messageText === "string"
+        ? raw.messageText
+        : raw.messageText != null
+          ? String(raw.messageText)
+          : raw.messageText,
+    senderRaw:
+      typeof raw.senderRaw === "string"
+        ? raw.senderRaw
+        : raw.senderRaw != null
+          ? String(raw.senderRaw)
+          : raw.senderRaw,
+  };
+
   let input: MobileCapturePayload;
   try {
-    input = MobileCapturePayload.parse(req.body);
+    input = MobileCapturePayload.parse(normalised);
   } catch (err) {
+    req.log.warn({ body: raw, err: String(err) }, "capture/mobile: invalid payload");
     res.status(400).json({ error: "Invalid payload", details: String(err) });
     return;
   }
