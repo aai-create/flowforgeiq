@@ -330,10 +330,20 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   }
 
   // ─── Contact routing rule check (fires before contact resolution & AI) ───────
-  const ruleMatch = await lookupContactRoutingRule(input.channel, input.senderRaw, orgId);
+  let ruleMatch: RuleMatch = null;
+  try {
+    ruleMatch = await lookupContactRoutingRule(input.channel, input.senderRaw, orgId);
+  } catch (err) {
+    req.log.warn({ err }, "capture/mobile: contact routing rule lookup failed, continuing without rule match");
+  }
 
   // ─── Contact resolution ───────────────────────────────────────────────────────
-  const contact = await resolveContact(input.senderRaw, orgId);
+  let contact: ResolvedContact = { resolvedContactType: null, resolvedContactId: null, routingStatus: "needs_review", supplierId: null };
+  try {
+    contact = await resolveContact(input.senderRaw, orgId);
+  } catch (err) {
+    req.log.warn({ err }, "capture/mobile: contact resolution failed, defaulting to needs_review");
+  }
 
   // ─── Insert message ───────────────────────────────────────────────────────────
   const receivedAt = input.capturedAt ? new Date(input.capturedAt) : new Date();
