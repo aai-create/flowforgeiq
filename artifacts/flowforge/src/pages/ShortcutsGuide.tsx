@@ -73,9 +73,10 @@ const STEPS: {
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
           <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-[11px] text-amber-800 leading-relaxed">
-            <strong>Seeing "Shortcut Cannot Be Opened"?</strong> Go to{" "}
-            <strong>iPhone Settings → Shortcuts</strong> and turn on{" "}
-            <strong>Allow Untrusted Shortcuts</strong>, then tap Install Shortcut again.
+            <strong>Seeing "Shortcut Cannot Be Opened"?</strong> iOS 17+ only
+            accepts shortcuts hosted on iCloud. Contact your FlowForge admin to
+            set the <code className="bg-amber-100 px-0.5 rounded text-[10px]">ICLOUD_SHORTCUT_URL</code> environment
+            variable — once set, this button will work without any workaround.
           </p>
         </div>
       </div>

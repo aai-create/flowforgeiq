@@ -241,9 +241,8 @@ export async function renderShortcutsGuidePage(baseUrl: string, isAuthenticated 
     The five-step manual guide below is only needed if the one-tap button does not work on your device.
   </div>
   <div class="open-note" style="margin-top:8px;background:#FFF7ED;border-color:#FED7AA;color:#92400E;">
-    <strong>Seeing "Shortcut Cannot Be Opened"?</strong> Go to
-    <strong>iPhone Settings → Shortcuts</strong> and turn on
-    <strong>Allow Untrusted Shortcuts</strong>, then tap the button above again.
+    <strong>Seeing "Shortcut Cannot Be Opened"?</strong> iOS 17+ only accepts shortcuts hosted on iCloud.
+    Ask your FlowForge admin to set the <code style="background:#FEEBC8;padding:1px 4px;border-radius:3px;font-size:10px;">ICLOUD_SHORTCUT_URL</code> environment variable to fix this.
   </div>
 
   <hr class="divider" />

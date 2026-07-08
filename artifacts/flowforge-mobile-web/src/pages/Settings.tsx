@@ -138,7 +138,7 @@ function ShortcutSetupGuide({
               <div className="flex items-start gap-1.5 rounded-lg px-2.5 py-2" style={{ backgroundColor: "hsl(38 100% 97%)", border: "1px solid hsl(38 80% 85%)" }}>
                 <span className="text-amber-500 text-[11px] shrink-0 mt-px">⚠</span>
                 <p className="text-[11px] leading-snug" style={{ color: "hsl(32 70% 35%)" }}>
-                  <span className="font-semibold">Seeing "Shortcut Cannot Be Opened"?</span> Go to <span className="font-semibold">iPhone Settings → Shortcuts</span> and turn on <span className="font-semibold">Allow Untrusted Shortcuts</span>, then tap Install again.
+                  <span className="font-semibold">Seeing "Shortcut Cannot Be Opened"?</span> iOS 17+ only accepts shortcuts hosted on iCloud. Ask your FlowForge admin to configure the iCloud shortcut link to fix this.
                 </p>
               </div>
             </div>
