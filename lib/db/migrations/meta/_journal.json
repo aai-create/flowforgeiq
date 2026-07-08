@@ -106,6 +106,13 @@
       "when": 1783427260813,
       "tag": "0014_add_device_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1783516800000,
+      "tag": "0015_repair_contact_routing_rules",
+      "breakpoints": true
     }
   ]
 }

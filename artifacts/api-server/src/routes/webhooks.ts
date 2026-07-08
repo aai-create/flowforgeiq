@@ -232,7 +232,7 @@ Reply with JSON only (no markdown):
       model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
-      max_tokens: 200,
+      max_completion_tokens: 200,
     });
 
     const raw = resp.choices[0]?.message?.content?.trim() ?? "";
@@ -286,7 +286,7 @@ Write only the reply body — no greeting line needed, just the content. Keep it
       model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
-      max_tokens: 300,
+      max_completion_tokens: 300,
     });
     return resp.choices[0]?.message?.content?.trim() ?? "";
   } catch {
@@ -324,7 +324,7 @@ Extract these fields if clearly mentioned (leave null otherwise):
       model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
-      max_tokens: 200,
+      max_completion_tokens: 200,
     });
 
     const raw = resp.choices[0]?.message?.content?.trim() ?? "";

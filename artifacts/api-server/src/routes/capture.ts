@@ -214,7 +214,7 @@ Reply with JSON only (no markdown):
       model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
-      max_tokens: 300,
+      max_completion_tokens: 300,
     });
 
     const raw = resp.choices[0]?.message?.content?.trim() ?? "";
