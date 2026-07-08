@@ -240,8 +240,17 @@ function buildCaptureShortcut(webhookUrl: string): object {
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 router.get("/shortcuts/capture.shortcut", (_req, res) => {
-  // Derive the base URL from the request so the webhook URL is always correct
-  // for the current deployment (dev vs. production).
+  // iOS 16+ blocks unsigned .shortcut files from arbitrary HTTPS servers.
+  // When ICLOUD_SHORTCUT_URL is set (a published iCloud shortcut link), redirect
+  // there instead — iOS trusts iCloud-hosted shortcuts unconditionally.
+  const icloudUrl = process.env.ICLOUD_SHORTCUT_URL;
+  if (icloudUrl) {
+    res.redirect(302, icloudUrl);
+    return;
+  }
+
+  // Fallback: serve the binary directly. Works when the user has enabled
+  // "Allow Untrusted Shortcuts" in iOS Settings → Shortcuts.
   const proto =
     (_req.headers["x-forwarded-proto"] as string | undefined) ?? _req.protocol;
   const host =

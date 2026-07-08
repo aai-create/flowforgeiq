@@ -70,6 +70,14 @@ const STEPS: {
         <p className="text-[11px] text-[#9E9FAE]">
           Requires iOS 16 or later · Free · No account needed
         </p>
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+          <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            <strong>Seeing "Shortcut Cannot Be Opened"?</strong> Go to{" "}
+            <strong>iPhone Settings → Shortcuts</strong> and turn on{" "}
+            <strong>Allow Untrusted Shortcuts</strong>, then tap Install Shortcut again.
+          </p>
+        </div>
       </div>
     ) : (
       <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-lg px-3.5 py-3">

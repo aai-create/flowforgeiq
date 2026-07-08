@@ -240,6 +240,11 @@ export async function renderShortcutsGuidePage(baseUrl: string, isAuthenticated 
     tap <strong>Add Shortcut</strong>. The webhook URL is already pre-filled.
     The five-step manual guide below is only needed if the one-tap button does not work on your device.
   </div>
+  <div class="open-note" style="margin-top:8px;background:#FFF7ED;border-color:#FED7AA;color:#92400E;">
+    <strong>Seeing "Shortcut Cannot Be Opened"?</strong> Go to
+    <strong>iPhone Settings → Shortcuts</strong> and turn on
+    <strong>Allow Untrusted Shortcuts</strong>, then tap the button above again.
+  </div>
 
   <hr class="divider" />
 

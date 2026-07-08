@@ -121,7 +121,7 @@ function ShortcutSetupGuide({
         <ShortcutStep number={2}>
           <span className="font-semibold">Install the Shortcut</span> on your iPhone.
           {isIOS ? (
-            <div className="mt-2">
+            <div className="mt-2 flex flex-col gap-2">
               <a
                 href={shortcutInstallerUrl}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all active:opacity-75"
@@ -133,8 +133,14 @@ function ShortcutSetupGuide({
                 }}
               >
                 <ExternalLink size={12} />
-                <span className="text-xs font-semibold">Open in Shortcuts</span>
+                <span className="text-xs font-semibold">Install Shortcut</span>
               </a>
+              <div className="flex items-start gap-1.5 rounded-lg px-2.5 py-2" style={{ backgroundColor: "hsl(38 100% 97%)", border: "1px solid hsl(38 80% 85%)" }}>
+                <span className="text-amber-500 text-[11px] shrink-0 mt-px">⚠</span>
+                <p className="text-[11px] leading-snug" style={{ color: "hsl(32 70% 35%)" }}>
+                  <span className="font-semibold">Seeing "Shortcut Cannot Be Opened"?</span> Go to <span className="font-semibold">iPhone Settings → Shortcuts</span> and turn on <span className="font-semibold">Allow Untrusted Shortcuts</span>, then tap Install again.
+                </p>
+              </div>
             </div>
           ) : (
             <p className="text-[11px] text-muted-foreground mt-1">

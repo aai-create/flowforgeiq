@@ -22,6 +22,7 @@ Supply-chain communication hub: unified inbox for buyer↔supplier conversations
 - Required secret: `POSTMARK_SERVER_TOKEN` — used by `POST /api/team/invite` to send transactional invite emails; if unset the invite is still created and `inviteUrl` is returned but no email is sent (warning logged)
 - Optional env: `POSTMARK_FROM_EMAIL` — outbound sender address for transactional emails (e.g. `noreply@flowforgeiq.com`); must match a verified Postmark sender signature; defaults to `noreply@flowforgeiq.com`; do **not** use the inbound address here
 - Optional env: `APP_URL` — canonical base URL used when constructing invite links in emails (e.g. `https://flowforgeiq.com`); takes priority over `REPLIT_DOMAINS` and `REPLIT_DEV_DOMAIN`; set this in production so invite emails link to the deployed domain instead of the Replit dev URL; trailing slash is stripped automatically
+- Optional env: `ICLOUD_SHORTCUT_URL` — iCloud-hosted shortcut URL (e.g. `https://www.icloud.com/shortcuts/XXXX`); when set, `GET /api/shortcuts/capture.shortcut` redirects there instead of serving the binary; iOS trusts iCloud-hosted shortcuts unconditionally, fixing the "Shortcut Cannot Be Opened" error on iOS 16+; to obtain the URL: create the shortcut on an iPhone, open the Shortcuts app → tap the shortcut → Share → Copy iCloud Link
 
 ## Stack
 
