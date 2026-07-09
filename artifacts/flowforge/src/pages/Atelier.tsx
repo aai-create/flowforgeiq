@@ -1987,7 +1987,7 @@ export function Atelier() {
                 const amountStr = qty != null && cost != null ? `$${Math.round(pct / 100 * qty * cost).toLocaleString()}` : "—";
                 return (
                   <div key={i} className="space-y-1">
-                    <div className="grid grid-cols-[1fr_52px_24px] gap-1.5 items-center">
+                    <div className="grid grid-cols-[1fr_72px_24px] gap-1.5 items-center">
                       <input value={m.label} onChange={e => setMilestones(prev => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
                         placeholder="Label"
                         className="border border-[#E5EAF0] rounded-md px-2 py-1.5 text-xs text-[#212833] placeholder:text-[#C0C8D4] outline-none focus:border-[#9000FF] focus:ring-1 focus:ring-[#9000FF]/20 transition-colors"/>
