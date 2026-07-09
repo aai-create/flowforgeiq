@@ -352,6 +352,7 @@ const zhTW = {
     paymentMilestones: "付款里程碑",
     addRow: "新增行",
     percentagesSumWarning: "百分比合計為{{total}}% — 必須等於100%才能儲存。",
+    percentagesSumExceed: "合計為{{total}}% — 不能超過100%。",
     percentagesSumOk: "✓ 百分比合計100%",
     notesLabel: "備註",
     optionalSuffix: "（可選）",

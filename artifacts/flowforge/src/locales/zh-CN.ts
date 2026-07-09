@@ -352,6 +352,7 @@ const zhCN = {
     paymentMilestones: "付款里程碑",
     addRow: "添加行",
     percentagesSumWarning: "百分比合计为{{total}}% — 必须等于100%才能保存。",
+    percentagesSumExceed: "合计为{{total}}% — 不能超过100%。",
     percentagesSumOk: "✓ 百分比合计100%",
     notesLabel: "备注",
     optionalSuffix: "（可选）",

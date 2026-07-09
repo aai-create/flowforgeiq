@@ -390,6 +390,7 @@ const en = {
     paymentMilestones: "Payment Milestones",
     addRow: "Add row",
     percentagesSumWarning: "Percentages sum to {{total}}% — must equal 100% to save.",
+    percentagesSumExceed: "Total is {{total}}% — cannot exceed 100%.",
     percentagesSumOk: "✓ Percentages sum to 100%",
     notesLabel: "Notes",
     optionalSuffix: "(optional)",
