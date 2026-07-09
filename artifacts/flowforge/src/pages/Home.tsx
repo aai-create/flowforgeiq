@@ -48,12 +48,15 @@ import {
   useCreateContactRule,
   usePatchContactRule,
   useDeleteContactRule,
+  getListSuppliersQueryKey,
+  getListShipmentsQueryKey,
   type Message as ApiMessageFull,
   type ChatIngestResult,
   type ExtractionCorrection,
   type ContactRoutingRule,
 } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
+import { AddSupplierModal } from "@/components/AddSupplierModal";
 import type { DocumentWithExtraction, ReconciliationFinding, SupplierSummary } from "@workspace/api-client-react";
 import { SECTION_LABEL, SECTION_LABEL_MUTED, PAGE_TITLE, SECTION_HEADING, BODY_MUTED, BODY_SM_MUTED } from "@/lib/typography";
 import { useUserPref } from "@/lib/useUserPref";
@@ -1369,9 +1372,11 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
   const assignMutation = useAssignMessage();
   const deleteMutation = useDeleteMessage();
   const createRuleMutation = useCreateContactRule();
+  const queryClient = useQueryClient();
   const [assignments, setAssignments] = useState<Record<number, number>>({});
   const [assigning, setAssigning] = useState<Record<number, boolean>>({});
   const [createRuleToggle, setCreateRuleToggle] = useState<Record<number, boolean>>({});
+  const [addingSupplierForMsgId, setAddingSupplierForMsgId] = useState<number | null>(null);
 
   useEffect(() => {
     const preChecked: Record<number, boolean> = {};
@@ -1507,14 +1512,25 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
             )}
             <div className="flex items-center gap-2">
               <select
-                value={selectedShipId ?? ""}
-                onChange={e => { const v = Number(e.target.value); if (v > 0) setAssignments(p => ({ ...p, [msg.id]: v })); else setAssignments(p => { const next = { ...p }; delete next[msg.id]; return next; }); }}
+                value={addingSupplierForMsgId === msg.id ? "" : (selectedShipId ?? "")}
+                onChange={e => {
+                  const v = e.target.value;
+                  if (v === "__add_supplier__") {
+                    setAddingSupplierForMsgId(msg.id);
+                    setAssignments(p => { const next = { ...p }; delete next[msg.id]; return next; });
+                  } else {
+                    const n = Number(v);
+                    if (n > 0) setAssignments(p => ({ ...p, [msg.id]: n }));
+                    else setAssignments(p => { const next = { ...p }; delete next[msg.id]; return next; });
+                  }
+                }}
                 className="flex-1 text-xs border border-[#E5EAF0] rounded-lg px-2 py-1.5 bg-white text-[#212833] outline-none focus:border-[#9000FF]/40 focus:ring-1 focus:ring-[#9000FF]/15"
               >
                 <option value="">— Assign to shipment —</option>
                 {shipments.map(s => (
                   <option key={s.shipmentId} value={s.shipmentId}>{s.po} · {s.supplier}</option>
                 ))}
+                <option value="__add_supplier__">＋ Add new supplier</option>
               </select>
               <button
                 disabled={!selectedShipId || assigning[msg.id]}
@@ -1534,6 +1550,15 @@ function NeedsReviewPanel({ messages, shipments, onAssigned, onDeleted, onDelete
           </div>
         );
       })}
+      <AddSupplierModal
+        open={addingSupplierForMsgId !== null}
+        onClose={() => setAddingSupplierForMsgId(null)}
+        onCreated={() => {
+          setAddingSupplierForMsgId(null);
+          void queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey() });
+          void queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+        }}
+      />
     </div>
   );
 }
