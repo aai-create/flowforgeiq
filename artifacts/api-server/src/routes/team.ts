@@ -41,7 +41,7 @@ const router: IRouter = Router();
 
 router.get("/org", requireAuth, async (req, res) => {
   const [org] = await db
-    .select({ id: organizationsTable.id, name: organizationsTable.name, slug: organizationsTable.slug })
+    .select({ id: organizationsTable.id, name: organizationsTable.name, slug: organizationsTable.slug, visibilityMode: organizationsTable.visibilityMode })
     .from(organizationsTable)
     .where(eq(organizationsTable.id, req.orgId));
   if (!org) {
@@ -74,7 +74,7 @@ router.post("/team/invite", requireAdmin, async (req, res) => {
     res.status(400).json({ error: "Valid email required" });
     return;
   }
-  const validRole = role === "admin" ? "admin" : "member";
+  const validRole = role === "admin" ? "admin" : role === "manager" ? "manager" : "member";
   const token = crypto.randomBytes(24).toString("hex");
   const [inv] = await db
     .insert(teamInvitationsTable)

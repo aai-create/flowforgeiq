@@ -17,8 +17,9 @@ import {
   pushTokensTable,
   contactRoutingRulesTable,
 } from "@workspace/db";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, type SQL } from "drizzle-orm";
 import { sendExpoPushNotifications } from "../lib/pushNotifications";
+import { resolveVisibilityMode, visibilityCondition } from "../lib/visibilityFilter";
 import {
   ListShipmentsResponseItem,
   CreateShipmentBody,
@@ -52,9 +53,10 @@ function computeAdjustmentsUsd(
   );
 }
 
-async function loadShipment(id: number, orgId?: number) {
-  const conditions = [eq(shipmentsTable.id, id)];
+async function loadShipment(id: number, orgId?: number, extraCond?: SQL) {
+  const conditions: SQL[] = [eq(shipmentsTable.id, id)];
   if (orgId !== undefined) conditions.push(eq(shipmentsTable.orgId, orgId));
+  if (extraCond) conditions.push(extraCond);
   const [row] = await db
     .select({
       shipment: shipmentsTable,
@@ -119,9 +121,12 @@ async function loadShipment(id: number, orgId?: number) {
 router.get("/shipments", async (req, res) => {
   const orgId = await resolveOrgId(req);
   const includeArchived = req.query["includeArchived"] === "true";
-  const whereConditions = includeArchived
+  const visibilityMode = await resolveVisibilityMode(orgId);
+  const visCond = visibilityCondition(shipmentsTable.assigneeId, req.userId, req.role, visibilityMode);
+  const whereConditions: SQL[] = includeArchived
     ? [eq(shipmentsTable.orgId, orgId)]
     : [eq(shipmentsTable.orgId, orgId), isNull(shipmentsTable.archivedAt)];
+  if (visCond) whereConditions.push(visCond);
   const shipments = await db
     .select({
       shipment: shipmentsTable,

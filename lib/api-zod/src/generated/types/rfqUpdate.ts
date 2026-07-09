@@ -17,4 +17,9 @@ export interface RfqUpdate {
   /** @nullable */
   notes?: string | null;
   status?: RfqUpdateStatus;
+  /**
+     * Clerk user ID of the team member to assign; null to unassign
+     * @nullable
+     */
+  assigneeId?: string | null;
 }

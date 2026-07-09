@@ -20,6 +20,16 @@ export interface RfqWithQuotes {
   /** @nullable */
   notes?: string | null;
   /**
+     * Clerk user ID of the assigned team member; null if unassigned
+     * @nullable
+     */
+  assigneeId?: string | null;
+  /**
+     * Display name of the assigned team member; null if unassigned
+     * @nullable
+     */
+  assigneeName?: string | null;
+  /**
      * Shipment ID created when this RFQ was converted to a PO
      * @nullable
      */

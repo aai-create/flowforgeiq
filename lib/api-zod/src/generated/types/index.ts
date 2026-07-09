@@ -102,6 +102,7 @@ export * from './mobileCaptureResponse';
 export * from './mobileCaptureResponseStatus';
 export * from './nextPoNumbers';
 export * from './orgResponse';
+export * from './orgResponseVisibilityMode';
 export * from './patchContactRuleBody';
 export * from './patchShipmentDealBody';
 export * from './payment';

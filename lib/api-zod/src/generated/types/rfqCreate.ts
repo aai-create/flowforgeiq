@@ -14,4 +14,9 @@ export interface RfqCreate {
   quantity: number;
   deadline: Date;
   notes?: string;
+  /**
+     * Clerk user ID of the team member to assign; null to leave unassigned
+     * @nullable
+     */
+  assigneeId?: string | null;
 }

@@ -9,6 +9,7 @@ declare global {
       userId?: string;
       actorName?: string;
       orgId: number;
+      role?: string;
       isProvisioned?: boolean;
     }
   }
@@ -54,12 +55,14 @@ export const orgContextMiddleware = async (
         .select({
           orgId: teamUsersTable.orgId,
           name: teamUsersTable.name,
+          role: teamUsersTable.role,
         })
         .from(teamUsersTable)
         .where(eq(teamUsersTable.clerkUserId, userId));
       if (user) {
         req.actorName = user.name;
         req.orgId = user.orgId;
+        req.role = user.role;
         req.isProvisioned = true;
       }
       // unprovisioned: req.orgId stays 1, req.isProvisioned stays false
@@ -111,6 +114,39 @@ export const requireAuth = (
     res.status(403).json({ error: "Forbidden: account not provisioned — call POST /team/provision-self first" });
     return;
   }
+  next();
+};
+
+// ─── requireManager ───────────────────────────────────────────────────────────
+// Requires a valid Clerk JWT AND manager or admin role in team_users.
+export const requireManager = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (!req.isProvisioned) {
+    res.status(403).json({ error: "Forbidden: account not provisioned" });
+    return;
+  }
+  const [user] = await db
+    .select()
+    .from(teamUsersTable)
+    .where(eq(teamUsersTable.clerkUserId, req.userId));
+  if (!user) {
+    res.status(403).json({ error: "Forbidden: not a team member" });
+    return;
+  }
+  if (user.role !== "manager" && user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden: manager or admin required" });
+    return;
+  }
+  req.actorName = user.name;
+  req.orgId = user.orgId;
+  req.role = user.role;
   next();
 };
 

@@ -5,10 +5,19 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type OrgResponseVisibilityMode = typeof OrgResponseVisibilityMode[keyof typeof OrgResponseVisibilityMode];
+
+
+export const OrgResponseVisibilityMode = {
+  shared: 'shared',
+  private: 'private',
+} as const;
+
 export interface OrgResponse {
   id: number;
   name: string;
   slug: string;
+  visibilityMode: OrgResponseVisibilityMode;
 }
 
 export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
@@ -16,6 +25,7 @@ export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
 
 export const TeamMemberRole = {
   admin: 'admin',
+  manager: 'manager',
   member: 'member',
 } as const;
 
@@ -1472,6 +1482,16 @@ export interface RfqWithQuotes {
   /** @nullable */
   notes?: string | null;
   /**
+     * Clerk user ID of the assigned team member; null if unassigned
+     * @nullable
+     */
+  assigneeId?: string | null;
+  /**
+     * Display name of the assigned team member; null if unassigned
+     * @nullable
+     */
+  assigneeName?: string | null;
+  /**
      * Shipment ID created when this RFQ was converted to a PO
      * @nullable
      */
@@ -1488,6 +1508,11 @@ export interface RfqCreate {
   quantity: number;
   deadline: string;
   notes?: string;
+  /**
+     * Clerk user ID of the team member to assign; null to leave unassigned
+     * @nullable
+     */
+  assigneeId?: string | null;
 }
 
 export type RfqUpdateStatus = typeof RfqUpdateStatus[keyof typeof RfqUpdateStatus];
@@ -1509,6 +1534,11 @@ export interface RfqUpdate {
   /** @nullable */
   notes?: string | null;
   status?: RfqUpdateStatus;
+  /**
+     * Clerk user ID of the team member to assign; null to unassign
+     * @nullable
+     */
+  assigneeId?: string | null;
 }
 
 export interface RfqConvertInput {

@@ -5,9 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { OrgResponseVisibilityMode } from './orgResponseVisibilityMode';
 
 export interface OrgResponse {
   id: number;
   name: string;
   slug: string;
+  visibilityMode: OrgResponseVisibilityMode;
 }

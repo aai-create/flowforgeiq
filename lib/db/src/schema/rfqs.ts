@@ -14,6 +14,7 @@ export const rfqsTable = pgTable("rfqs", {
   status: text("status").notNull().default("open"),
   notes: text("notes"),
   convertedShipmentId: integer("converted_shipment_id"),
+  assigneeId: text("assignee_id"),
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

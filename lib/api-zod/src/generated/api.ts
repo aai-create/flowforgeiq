@@ -2313,6 +2313,8 @@ export const ListRfqsResponseItem = zod.object({
   "deadline": zod.coerce.date(),
   "status": zod.enum(['open', 'accepted', 'cancelled']),
   "notes": zod.string().nullish(),
+  "assigneeId": zod.string().nullish().describe('Clerk user ID of the assigned team member; null if unassigned'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member; null if unassigned'),
   "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
   "createdAt": zod.coerce.date(),
   "quotes": zod.array(zod.object({
@@ -2342,7 +2344,8 @@ export const CreateRfqBody = zod.object({
   "targetPriceUsd": zod.number(),
   "quantity": zod.number(),
   "deadline": zod.coerce.date(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "assigneeId": zod.string().nullish().describe('Clerk user ID of the team member to assign; null to leave unassigned')
 })
 
 
@@ -2360,6 +2363,8 @@ export const GetRfqResponse = zod.object({
   "deadline": zod.coerce.date(),
   "status": zod.enum(['open', 'accepted', 'cancelled']),
   "notes": zod.string().nullish(),
+  "assigneeId": zod.string().nullish().describe('Clerk user ID of the assigned team member; null if unassigned'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member; null if unassigned'),
   "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
   "createdAt": zod.coerce.date(),
   "quotes": zod.array(zod.object({
@@ -2390,7 +2395,8 @@ export const UpdateRfqBody = zod.object({
   "quantity": zod.number().optional(),
   "deadline": zod.coerce.date().optional(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['open', 'accepted', 'cancelled']).optional()
+  "status": zod.enum(['open', 'accepted', 'cancelled']).optional(),
+  "assigneeId": zod.string().nullish().describe('Clerk user ID of the team member to assign; null to unassign')
 })
 
 export const UpdateRfqResponse = zod.object({
@@ -2403,6 +2409,8 @@ export const UpdateRfqResponse = zod.object({
   "deadline": zod.coerce.date(),
   "status": zod.enum(['open', 'accepted', 'cancelled']),
   "notes": zod.string().nullish(),
+  "assigneeId": zod.string().nullish().describe('Clerk user ID of the assigned team member; null if unassigned'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member; null if unassigned'),
   "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
   "createdAt": zod.coerce.date(),
   "quotes": zod.array(zod.object({
@@ -2551,7 +2559,8 @@ export const SendRfqEmailResponse = zod.object({
 export const GetOrgResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "slug": zod.string()
+  "slug": zod.string(),
+  "visibilityMode": zod.enum(['shared', 'private'])
 })
 
 
@@ -2563,7 +2572,7 @@ export const GetTeamResponse = zod.object({
   "clerkUserId": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "role": zod.enum(['admin', 'member']),
+  "role": zod.enum(['admin', 'manager', 'member']),
   "createdAt": zod.coerce.date()
 })),
   "pendingInvitations": zod.array(zod.object({
@@ -2587,7 +2596,7 @@ export const GetMyProfileResponse = zod.object({
   "clerkUserId": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "role": zod.enum(['admin', 'member']),
+  "role": zod.enum(['admin', 'manager', 'member']),
   "createdAt": zod.coerce.date()
 })
 })
@@ -2606,7 +2615,7 @@ export const ProvisionSelfResponse = zod.object({
   "clerkUserId": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "role": zod.enum(['admin', 'member']),
+  "role": zod.enum(['admin', 'manager', 'member']),
   "createdAt": zod.coerce.date()
 })
 })
@@ -2649,7 +2658,7 @@ export const AcceptInviteResponse = zod.object({
   "clerkUserId": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "role": zod.enum(['admin', 'member']),
+  "role": zod.enum(['admin', 'manager', 'member']),
   "createdAt": zod.coerce.date()
 })
 })

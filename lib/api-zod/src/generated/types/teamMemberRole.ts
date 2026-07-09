@@ -11,5 +11,6 @@ export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
 
 export const TeamMemberRole = {
   admin: 'admin',
+  manager: 'manager',
   member: 'member',
 } as const;

@@ -2022,11 +2022,12 @@ components:
   schemas:
     OrgResponse:
       type: object
-      required: [id, name, slug]
+      required: [id, name, slug, visibilityMode]
       properties:
-        id:   { type: integer }
-        name: { type: string }
-        slug: { type: string }
+        id:             { type: integer }
+        name:           { type: string }
+        slug:           { type: string }
+        visibilityMode: { type: string, enum: [shared, private] }
 
     TeamMember:
       type: object
@@ -2035,7 +2036,7 @@ components:
         clerkUserId: { type: string }
         email:       { type: string }
         name:        { type: string }
-        role:        { type: string, enum: [admin, member] }
+        role:        { type: string, enum: [admin, manager, member] }
         createdAt:   { type: string, format: date-time }
 
     TeamInvitation:
@@ -3265,6 +3266,8 @@ components:
         deadline:       { type: string, format: date-time }
         status:         { type: string, enum: [open, accepted, cancelled] }
         notes:          { type: ["string", "null"] }
+        assigneeId:     { type: ["string", "null"], description: "Clerk user ID of the assigned team member; null if unassigned" }
+        assigneeName:   { type: ["string", "null"], description: "Display name of the assigned team member; null if unassigned" }
         convertedShipmentId: { type: ["integer", "null"], description: "Shipment ID created when this RFQ was converted to a PO" }
         createdAt:      { type: string, format: date-time }
         quotes:
@@ -3282,6 +3285,7 @@ components:
         quantity:       { type: integer }
         deadline:       { type: string, format: date-time }
         notes:          { type: string }
+        assigneeId:     { type: ["string", "null"], description: "Clerk user ID of the team member to assign; null to leave unassigned" }
 
     RfqUpdate:
       type: object
@@ -3294,6 +3298,7 @@ components:
         deadline:       { type: string, format: date-time }
         notes:          { type: ["string", "null"] }
         status:         { type: string, enum: [open, accepted, cancelled] }
+        assigneeId:     { type: ["string", "null"], description: "Clerk user ID of the team member to assign; null to unassign" }
 
     RfqConvertInput:
       type: object

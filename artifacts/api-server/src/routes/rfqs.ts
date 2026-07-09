@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db, rfqsTable, rfqQuotesTable, shipmentsTable, suppliersTable, paymentsTable, stagesTable } from "@workspace/db";
-import { and, eq, asc, isNotNull } from "drizzle-orm";
+import { db, rfqsTable, rfqQuotesTable, shipmentsTable, suppliersTable, paymentsTable, stagesTable, teamUsersTable } from "@workspace/db";
+import { and, eq, asc, isNotNull, type SQL } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
+import { resolveVisibilityMode, visibilityCondition } from "../lib/visibilityFilter";
 import { z } from "zod/v4";
 import {
   CreateRfqBody,
@@ -47,12 +48,18 @@ async function sendViaPostmark(opts: {
   }
 }
 
-async function loadRfq(id: number, orgId?: number) {
-  const cond = orgId !== undefined
-    ? and(eq(rfqsTable.id, id), eq(rfqsTable.orgId, orgId))
-    : eq(rfqsTable.id, id);
-  const [rfq] = await db.select().from(rfqsTable).where(cond);
-  if (!rfq) return null;
+async function loadRfq(id: number, orgId?: number, extraCond?: SQL) {
+  const conditions: SQL[] = [eq(rfqsTable.id, id)];
+  if (orgId !== undefined) conditions.push(eq(rfqsTable.orgId, orgId));
+  if (extraCond) conditions.push(extraCond);
+  const cond = and(...conditions);
+  const [row] = await db
+    .select({ rfq: rfqsTable, assigneeName: teamUsersTable.name })
+    .from(rfqsTable)
+    .leftJoin(teamUsersTable, eq(rfqsTable.assigneeId, teamUsersTable.clerkUserId))
+    .where(cond);
+  if (!row) return null;
+  const { rfq } = row;
   const quoteCond = orgId !== undefined
     ? and(eq(rfqQuotesTable.rfqId, id), eq(rfqQuotesTable.orgId, orgId))
     : eq(rfqQuotesTable.rfqId, id);
@@ -63,6 +70,8 @@ async function loadRfq(id: number, orgId?: number) {
     .orderBy(asc(rfqQuotesTable.sortOrder));
   return {
     ...rfq,
+    assigneeId: rfq.assigneeId ?? null,
+    assigneeName: row.assigneeName ?? null,
     convertedShipmentId: rfq.convertedShipmentId ?? null,
     notes: rfq.notes ?? null,
     deadline: rfq.deadline.toISOString(),
@@ -111,17 +120,30 @@ router.post("/rfqs/:id/send-email", async (req, res) => {
 
 router.get("/rfqs", async (req, res) => {
   const orgId = await resolveOrgId(req);
-  const rfqs = await db.select().from(rfqsTable).where(eq(rfqsTable.orgId, orgId)).orderBy(asc(rfqsTable.id));
-  const allQuotes = await db.select().from(rfqQuotesTable).where(eq(rfqQuotesTable.orgId, orgId)).orderBy(asc(rfqQuotesTable.sortOrder));
+  const visibilityMode = await resolveVisibilityMode(orgId);
+  const visCond = visibilityCondition(rfqsTable.assigneeId, req.userId, req.role, visibilityMode);
+  const rfqWhere = visCond ? and(eq(rfqsTable.orgId, orgId), visCond) : eq(rfqsTable.orgId, orgId);
+  const rows = await db
+    .select({ rfq: rfqsTable, assigneeName: teamUsersTable.name })
+    .from(rfqsTable)
+    .leftJoin(teamUsersTable, eq(rfqsTable.assigneeId, teamUsersTable.clerkUserId))
+    .where(rfqWhere)
+    .orderBy(asc(rfqsTable.id));
+  const rfqIds = rows.map(r => r.rfq.id);
+  const allQuotes = rfqIds.length
+    ? await db.select().from(rfqQuotesTable).where(eq(rfqQuotesTable.orgId, orgId)).orderBy(asc(rfqQuotesTable.sortOrder))
+    : [];
   const quotesByRfq = new Map<number, typeof allQuotes>();
   for (const q of allQuotes) {
     const arr = quotesByRfq.get(q.rfqId) ?? [];
     arr.push(q);
     quotesByRfq.set(q.rfqId, arr);
   }
-  const out = rfqs.map(rfq =>
+  const out = rows.map(({ rfq, assigneeName }) =>
     ListRfqsResponseItem.parse({
       ...rfq,
+      assigneeId: rfq.assigneeId ?? null,
+      assigneeName: assigneeName ?? null,
       convertedShipmentId: rfq.convertedShipmentId ?? null,
       notes: rfq.notes ?? null,
       deadline: rfq.deadline.toISOString(),
@@ -140,7 +162,9 @@ router.get("/rfqs/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const orgId = await resolveOrgId(req);
-  const result = await loadRfq(id, orgId);
+  const visibilityMode = await resolveVisibilityMode(orgId);
+  const visCond = visibilityCondition(rfqsTable.assigneeId, req.userId, req.role, visibilityMode);
+  const result = await loadRfq(id, orgId, visCond);
   if (!result) { res.status(404).json({ error: "Not found" }); return; }
   res.json(UpdateRfqResponse.parse(result));
 });
@@ -156,6 +180,7 @@ router.post("/rfqs", async (req, res) => {
     quantity: body.quantity,
     deadline: new Date(body.deadline),
     notes: body.notes ?? null,
+    assigneeId: (body as { assigneeId?: string | null }).assigneeId ?? null,
     status: "open",
     orgId,
   }).returning();
@@ -177,6 +202,7 @@ router.patch("/rfqs/:id", async (req, res) => {
   if (body.deadline       !== undefined) update.deadline       = new Date(body.deadline);
   if (body.notes          !== undefined) update.notes          = body.notes;
   if (body.status         !== undefined) update.status         = body.status;
+  if ("assigneeId" in body)             update.assigneeId     = (body as { assigneeId?: string | null }).assigneeId ?? null;
   if (Object.keys(update).length) {
     await db.update(rfqsTable).set(update).where(and(eq(rfqsTable.id, id), eq(rfqsTable.orgId, orgId)));
   }
