@@ -1,9 +1,10 @@
 import React from "react";
 import { useLocation, Link } from "wouter";
-import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users, Globe } from "lucide-react";
+import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users, Globe, GitBranch } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
+import { useMyRole } from "@/lib/useCurrentUser";
 
 interface NavSidebarProps {
   showBrand?: boolean;
@@ -30,6 +31,7 @@ export function NavSidebar({
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { t, i18n: i18nHook } = useTranslation();
+  const { isManager } = useMyRole();
 
   const navItems = [
     { id: "inbox",     icon: Inbox,        to: "/inbox",       count: counts.inbox     ?? null },
@@ -38,6 +40,7 @@ export function NavSidebar({
     { id: "rfqs",      icon: FileQuestion, to: "/rfqs",        count: null              },
     { id: "riskRadar", icon: ShieldAlert,  to: "/risk-radar",  count: counts.riskRadar ?? null },
     { id: "reports",   icon: BarChart3,    to: "/reports",     count: null              },
+    ...(isManager ? [{ id: "pipeline", icon: GitBranch, to: "/pipeline", count: null }] : []),
     { id: "suppliers", icon: Building2,    to: "/suppliers",   count: null              },
     { id: "buyers",    icon: Users,        to: "/buyers",      count: null              },
     { id: "help",      icon: BookOpen,     to: "/help",        count: null              },

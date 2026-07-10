@@ -1888,6 +1888,96 @@ export const GetRiskRadarResponse = zod.object({
 })
 
 
+/**
+ * @summary Per-agent pipeline aggregates across the org (manager/admin only). When assignedUserId is provided, returns the full shipment list for that agent instead.
+ */
+export const GetPipelineReportQueryParams = zod.object({
+  "assignedUserId": zod.coerce.string().optional().describe('When provided, return the full shipment list for this agent (clerkUserId) instead of the per-agent summary.')
+})
+
+export const GetPipelineReportResponse = zod.object({
+  "agents": zod.array(zod.object({
+  "assigneeId": zod.string().nullable(),
+  "assigneeName": zod.string(),
+  "shipmentCount": zod.number(),
+  "totalValueUsd": zod.number(),
+  "avgSpreadPct": zod.number().nullable(),
+  "stageBreakdown": zod.record(zod.string(), zod.number()).describe('Map of stageId -> count of active shipments at that stage for this agent')
+})).nullable().describe('Per-agent aggregates; present when assignedUserId is not given'),
+  "shipments": zod.array(zod.object({
+  "id": zod.number(),
+  "poNumber": zod.string().describe('Supplier-facing PO number (trader→supplier)'),
+  "buyerPoNumber": zod.string().nullish().describe('Primary buyer-facing PO number (buyer→trader). Null if no deal is linked.'),
+  "buyerPoNumbers": zod.array(zod.string()).optional().describe('All buyer-facing PO numbers linked to this shipment via the deal_shipments join table.'),
+  "product": zod.string(),
+  "category": zod.string(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string(),
+  "customerName": zod.string(),
+  "buyerId": zod.number().nullish().describe('FK to the buyers table. Null if no buyer record is linked.'),
+  "dealId": zod.number().nullish(),
+  "status": zod.string(),
+  "currentStageId": zod.string(),
+  "dueDate": zod.coerce.date(),
+  "exFactoryDate": zod.coerce.date(),
+  "destination": zod.string(),
+  "via": zod.string(),
+  "notes": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "unitCostUsd": zod.number().nullish(),
+  "buyerUnitPrice": zod.number().nullish().describe('Buyer-facing unit price from the linked deal. Null if no deal is linked.'),
+  "buyerQuantity": zod.number().nullish().describe('Buyer quantity from the linked deal. Null if no deal is linked.'),
+  "spreadUsd": zod.number().nullish().describe('Net spread in USD (buyer total − supplier cost − deal adjustments). Null if no deal is linked.'),
+  "spreadPct": zod.number().nullish().describe('Net margin % (spreadUsd \/ buyerTotalUsd × 100). Null if no deal is linked or buyer total is zero.'),
+  "targetSpreadPct": zod.number().nullish().describe('Target spread % from the linked deal. Null if no deal is linked or no target set.'),
+  "adjustmentsUsd": zod.number().nullish().describe('Total hidden-cost adjustments (USD) from the linked deal subtracted from the spread. Null if no deal is linked.'),
+  "adjustments": zod.array(zod.object({
+  "id": zod.number(),
+  "dealId": zod.number(),
+  "label": zod.string(),
+  "type": zod.enum(['flat', 'percent']).describe('flat = USD amount; percent = percent of buyer total'),
+  "value": zod.number().describe('Dollar amount when type=flat; percent (e.g. 4 for 4%) when type=percent'),
+  "sortOrder": zod.number().optional()
+})).optional().describe('Hidden-cost adjustment lines from the linked deal. Empty if none or no deal linked.'),
+  "assigneeId": zod.string().nullish().describe('Clerk userId of the assigned team member'),
+  "assigneeName": zod.string().nullish().describe('Display name of the assigned team member'),
+  "archivedAt": zod.coerce.date().nullish().describe('ISO timestamp when this shipment was archived. Null means active.'),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "label": zod.string(),
+  "percent": zod.number(),
+  "amountUsd": zod.number(),
+  "paid": zod.boolean(),
+  "dueDate": zod.coerce.date(),
+  "sortOrder": zod.number(),
+  "paidAt": zod.coerce.date().nullish(),
+  "referenceNumber": zod.string().nullish(),
+  "method": zod.string().nullish(),
+  "buyerSharePct": zod.number().nullish().describe('Percentage of amountUsd the Buyer committed upfront (e.g. 40). Null means no intermediary financing on this payment.'),
+  "intermediaryAdvanceUsd": zod.number().nullish().describe('USD amount the Intermediary has fronted to the Supplier on behalf of the Buyer.'),
+  "intermediaryRecoveredUsd": zod.number().nullish().describe('USD amount the Intermediary has already recovered from the Buyer.'),
+  "invoiceNumber": zod.string().nullish().describe('Supplier invoice number for this payment.'),
+  "intermediarySupplierPaidUsd": zod.number().nullish().describe('USD amount the Intermediary has actually wired to the Supplier.'),
+  "intermediarySupplierPaidAt": zod.coerce.date().nullish().describe('Date the Intermediary wired funds to the Supplier.')
+})),
+  "quotes": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number(),
+  "factory": zod.string(),
+  "country": zod.string(),
+  "unitPrice": zod.number(),
+  "leadDays": zod.number(),
+  "moq": zod.number(),
+  "selected": zod.boolean(),
+  "sortOrder": zod.number(),
+  "validityDate": zod.string().nullish(),
+  "notes": zod.string().nullish()
+}))
+})).nullable().describe('Full shipment list for a single agent; present when assignedUserId is given')
+})
+
+
 export const GetPredictionAccuracyResponse = zod.object({
   "totalPredictions": zod.number(),
   "resolvedPredictions": zod.number(),

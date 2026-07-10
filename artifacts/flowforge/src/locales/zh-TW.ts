@@ -6,6 +6,7 @@ const zhTW = {
     rfqs: "詢價單",
     riskRadar: "風險雷達",
     reports: "報告",
+    pipeline: "業績看板",
     suppliers: "供應商",
     buyers: "買家",
     help: "說明",

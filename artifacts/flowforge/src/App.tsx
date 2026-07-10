@@ -14,6 +14,7 @@ import { Atelier } from "@/pages/Atelier";
 import { RFQs } from "@/pages/RFQs";
 import { RiskRadar } from "@/pages/RiskRadar";
 import { Reports } from "@/pages/Reports";
+import { Pipeline } from "@/pages/Pipeline";
 import { Suppliers } from "@/pages/Suppliers";
 import { Buyers } from "@/pages/Buyers";
 import { Help } from "@/pages/Help";
@@ -217,6 +218,7 @@ function Router() {
       <Route path="/rfqs" component={() => <ProtectedRoute component={RFQs} />} />
       <Route path="/risk-radar" component={() => <ProtectedRoute component={RiskRadarPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
+      <Route path="/pipeline" component={() => <ProtectedRoute component={Pipeline} />} />
       <Route path="/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
       <Route path="/buyers" component={() => <ProtectedRoute component={Buyers} />} />
       <Route path="/help" component={() => <ProtectedRoute component={Help} />} />

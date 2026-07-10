@@ -6,6 +6,7 @@ const en = {
     rfqs: "RFQs",
     riskRadar: "Risk Radar",
     reports: "Reports",
+    pipeline: "Pipeline",
     suppliers: "Suppliers",
     buyers: "Buyers",
     help: "Help",

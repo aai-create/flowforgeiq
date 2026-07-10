@@ -1027,6 +1027,36 @@ export interface RiskRadarResponse {
   generatedAt: string;
 }
 
+/**
+ * Map of stageId -> count of active shipments at that stage for this agent
+ */
+export type PipelineAgentSummaryStageBreakdown = {[key: string]: number};
+
+export interface PipelineAgentSummary {
+  /** @nullable */
+  assigneeId: string | null;
+  assigneeName: string;
+  shipmentCount: number;
+  totalValueUsd: number;
+  /** @nullable */
+  avgSpreadPct: number | null;
+  /** Map of stageId -> count of active shipments at that stage for this agent */
+  stageBreakdown: PipelineAgentSummaryStageBreakdown;
+}
+
+export interface PipelineReportResponse {
+  /**
+     * Per-agent aggregates; present when assignedUserId is not given
+     * @nullable
+     */
+  agents: PipelineAgentSummary[] | null;
+  /**
+     * Full shipment list for a single agent; present when assignedUserId is given
+     * @nullable
+     */
+  shipments: Shipment[] | null;
+}
+
 export interface AccuracyBucket {
   leadTimeDays: string;
   totalPredictions: number;
@@ -1781,6 +1811,13 @@ export type UploadDocumentBody = {
   file: Blob;
   shipmentId?: number;
   sourceChannel?: string;
+};
+
+export type GetPipelineReportParams = {
+/**
+ * When provided, return the full shipment list for this agent (clerkUserId) instead of the per-agent summary.
+ */
+assignedUserId?: string;
 };
 
 export type ListCopilotProposalsParams = {

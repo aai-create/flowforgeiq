@@ -6,6 +6,7 @@ const zhCN = {
     rfqs: "询价单",
     riskRadar: "风险雷达",
     reports: "报告",
+    pipeline: "业绩看板",
     suppliers: "供应商",
     buyers: "买家",
     help: "帮助",

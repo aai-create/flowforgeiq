@@ -58,6 +58,7 @@ import type {
   FocusListResponse,
   FocusSuggestionsResponse,
   GetMyProfile200,
+  GetPipelineReportParams,
   GmailOAuthCallbackParams,
   GmailStatus,
   HealthStatus,
@@ -83,6 +84,7 @@ import type {
   PatchShipmentDealBody,
   Payment,
   PaymentUpdate,
+  PipelineReportResponse,
   PoNumberingConfig,
   PoNumberingConfigUpdate,
   PredictionAccuracyReport,
@@ -5108,6 +5110,90 @@ export function useGetRiskRadar<TData = Awaited<ReturnType<typeof getRiskRadar>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetRiskRadarQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPipelineReportUrl = (params?: GetPipelineReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/pipeline?${stringifiedParams}` : `/api/reports/pipeline`
+}
+
+/**
+ * @summary Per-agent pipeline aggregates across the org (manager/admin only). When assignedUserId is provided, returns the full shipment list for that agent instead.
+ */
+export const getPipelineReport = async (params?: GetPipelineReportParams, options?: RequestInit): Promise<PipelineReportResponse> => {
+
+  return customFetch<PipelineReportResponse>(getGetPipelineReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPipelineReportQueryKey = (params?: GetPipelineReportParams,) => {
+    return [
+    `/api/reports/pipeline`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPipelineReportQueryOptions = <TData = Awaited<ReturnType<typeof getPipelineReport>>, TError = ErrorType<void>>(params?: GetPipelineReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPipelineReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPipelineReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPipelineReport>>> = ({ signal }) => getPipelineReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPipelineReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPipelineReportQueryResult = NonNullable<Awaited<ReturnType<typeof getPipelineReport>>>
+export type GetPipelineReportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Per-agent pipeline aggregates across the org (manager/admin only). When assignedUserId is provided, returns the full shipment list for that agent instead.
+ */
+
+export function useGetPipelineReport<TData = Awaited<ReturnType<typeof getPipelineReport>>, TError = ErrorType<void>>(
+ params?: GetPipelineReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPipelineReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPipelineReportQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

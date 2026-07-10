@@ -28,6 +28,7 @@ tags:
   - name: team
   - name: capture
   - name: sample-requests
+  - name: reports
 paths:
   /capture/mobile:
     post:
@@ -1311,6 +1312,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/RiskRadarResponse" }
+
+  /reports/pipeline:
+    get:
+      operationId: getPipelineReport
+      tags: [reports]
+      summary: Per-agent pipeline aggregates across the org (manager/admin only). When assignedUserId is provided, returns the full shipment list for that agent instead.
+      parameters:
+        - in: query
+          name: assignedUserId
+          schema: { type: string }
+          description: "When provided, return the full shipment list for this agent (clerkUserId) instead of the per-agent summary."
+      responses:
+        "200":
+          description: Pipeline report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PipelineReportResponse" }
+        "401":
+          description: Unauthorized
+        "403":
+          description: Manager or admin required
 
   /predictions/accuracy:
     get:
@@ -2903,6 +2925,33 @@ components:
         totalExposureUsd:  { type: number }
         highRiskCount:     { type: integer }
         generatedAt:       { type: string, format: date-time }
+
+    PipelineAgentSummary:
+      type: object
+      required: [assigneeId, assigneeName, shipmentCount, totalValueUsd, avgSpreadPct, stageBreakdown]
+      properties:
+        assigneeId:      { type: ["string", "null"] }
+        assigneeName:    { type: string }
+        shipmentCount:   { type: integer }
+        totalValueUsd:   { type: number }
+        avgSpreadPct:    { type: ["number", "null"] }
+        stageBreakdown:
+          type: object
+          additionalProperties: { type: integer }
+          description: "Map of stageId -> count of active shipments at that stage for this agent"
+
+    PipelineReportResponse:
+      type: object
+      required: [agents, shipments]
+      properties:
+        agents:
+          type: ["array", "null"]
+          items: { $ref: "#/components/schemas/PipelineAgentSummary" }
+          description: "Per-agent aggregates; present when assignedUserId is not given"
+        shipments:
+          type: ["array", "null"]
+          items: { $ref: "#/components/schemas/Shipment" }
+          description: "Full shipment list for a single agent; present when assignedUserId is given"
 
     AccuracyBucket:
       type: object

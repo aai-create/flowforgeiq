@@ -22,6 +22,7 @@ import pushTokensRouter from "./push-tokens";
 import captureRouter from "./capture";
 import shortcutsRouter from "./shortcuts";
 import contactRulesRouter from "./contact-rules";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -54,6 +55,7 @@ protectedRouter.use(rfqsRouter);
 protectedRouter.use(sampleRequestsRouter);
 protectedRouter.use(pushTokensRouter);
 protectedRouter.use(contactRulesRouter);
+protectedRouter.use(reportsRouter);
 
 router.use(protectedRouter);
 
