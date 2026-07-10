@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, poNumberingConfigTable, teamUsersTable, messagesTable, deviceTokensTable, copilotSettingsTable } from "@workspace/db";
+import { db, poNumberingConfigTable, teamUsersTable, messagesTable, deviceTokensTable, copilotSettingsTable, organizationsTable } from "@workspace/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { getAuth } from "@clerk/express";
@@ -168,6 +168,25 @@ router.put("/settings/inbound-email", requireAuth, async (req, res) => {
   const [localPart, domain] = base.split("@") as [string, string];
   const inboundEmailAddress = buildAddress(localPart, domain, normalized, null);
   res.json({ inboundEmailAddress });
+});
+
+const UpdateOrgBody = z.object({
+  visibilityMode: z.enum(["shared", "private"]),
+});
+
+router.patch("/settings/org", requireAdmin, async (req, res) => {
+  const orgId = await resolveOrgId(req);
+  const body = UpdateOrgBody.parse(req.body);
+  const [updated] = await db
+    .update(organizationsTable)
+    .set({ visibilityMode: body.visibilityMode })
+    .where(eq(organizationsTable.id, orgId))
+    .returning({ id: organizationsTable.id, name: organizationsTable.name, slug: organizationsTable.slug, visibilityMode: organizationsTable.visibilityMode });
+  if (!updated) {
+    res.status(404).json({ error: "Organization not found" });
+    return;
+  }
+  res.json(updated);
 });
 
 router.get("/settings/po-numbering", async (req, res) => {

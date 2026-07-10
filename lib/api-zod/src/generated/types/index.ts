@@ -168,4 +168,6 @@ export * from './teamResponse';
 export * from './testGmailSend200';
 export * from './testGmailSendBody';
 export * from './updateInboundHandleBody';
+export * from './updateOrgBody';
+export * from './updateOrgBodyVisibilityMode';
 export * from './uploadDocumentBody';

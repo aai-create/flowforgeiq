@@ -127,6 +127,7 @@ import type {
   TestGmailSend200,
   TestGmailSendBody,
   UpdateInboundHandleBody,
+  UpdateOrgBody,
   UploadDocumentBody
 } from './api.schemas';
 
@@ -7482,6 +7483,77 @@ export function useGetOrg<TData = Awaited<ReturnType<typeof getOrg>>, TError = E
 
 
 
+
+export const getUpdateOrgUrl = () => {
+
+
+
+
+  return `/api/settings/org`
+}
+
+/**
+ * @summary Update org-level settings (admin only)
+ */
+export const updateOrg = async (updateOrgBody: UpdateOrgBody, options?: RequestInit): Promise<OrgResponse> => {
+
+  return customFetch<OrgResponse>(getUpdateOrgUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateOrgBody,)
+  }
+);}
+
+
+
+
+export const getUpdateOrgMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrg>>, TError,{data: BodyType<UpdateOrgBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrg>>, TError,{data: BodyType<UpdateOrgBody>}, TContext> => {
+
+const mutationKey = ['updateOrg'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrg>>, {data: BodyType<UpdateOrgBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateOrg(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrg>>>
+    export type UpdateOrgMutationBody = BodyType<UpdateOrgBody>
+    export type UpdateOrgMutationError = ErrorType<void>
+
+    /**
+ * @summary Update org-level settings (admin only)
+ */
+export const useUpdateOrg = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrg>>, TError,{data: BodyType<UpdateOrgBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrg>>,
+        TError,
+        {data: BodyType<UpdateOrgBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrgMutationOptions(options));
+    }
 
 export const getGetTeamUrl = () => {
 

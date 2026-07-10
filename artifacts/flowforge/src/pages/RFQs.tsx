@@ -20,6 +20,7 @@ import {
   getListShipmentsQueryKey,
   getListRfqsQueryKey,
 } from "@workspace/api-client-react";
+import { AssigneePicker, AssigneeBadge } from "@/components/AssigneePicker";
 import type { RfqWithQuotes, RfqQuote } from "@workspace/api-client-react";
 import { useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
@@ -498,6 +499,16 @@ export function RFQs() {
     });
   };
 
+  const handleRfqAssigneeChange = (id: number, assigneeId: string | null) => {
+    updateRfqMutation.mutate({ id, data: { assigneeId } }, {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: rfqsQueryKey }); },
+      onError: () => {
+        queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
+        showToast("Failed to update assignee — please try again");
+      },
+    });
+  };
+
   const cancelRfq = async (id: number) => {
     await updateRfqMutation.mutateAsync({ id, data: { status: "cancelled" } });
     queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
@@ -617,8 +628,9 @@ export function RFQs() {
                         {getStatusLabel(t)[rfq.status] ?? rfq.status}
                       </span>
                     </div>
-                    <div className="text-[#5E687B] text-[10px]">
-                      {rfq.buyerName} · {rfq.quantity.toLocaleString()} units · {rfq.quotes.length} quote{rfq.quotes.length !== 1 ? "s" : ""}
+                    <div className="text-[#5E687B] text-[10px] flex items-center gap-1.5 flex-wrap">
+                      <span>{rfq.buyerName} · {rfq.quantity.toLocaleString()} units · {rfq.quotes.length} quote{rfq.quotes.length !== 1 ? "s" : ""}</span>
+                      <AssigneeBadge assigneeName={rfq.assigneeName} />
                     </div>
                   </button>
                 ))}
@@ -668,9 +680,16 @@ export function RFQs() {
                           {getStatusLabel(t)[selectedRfq.status]}
                         </span>
                       </div>
-                      {selectedRfq.category && (
-                        <span className="text-xs text-[#5E687B] bg-[#F0F2F5] px-2 py-0.5 rounded-full">{selectedRfq.category}</span>
-                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedRfq.category && (
+                          <span className="text-xs text-[#5E687B] bg-[#F0F2F5] px-2 py-0.5 rounded-full">{selectedRfq.category}</span>
+                        )}
+                        <AssigneePicker
+                          assigneeId={selectedRfq.assigneeId ?? null}
+                          assigneeName={selectedRfq.assigneeName ?? null}
+                          onChange={(assigneeId) => handleRfqAssigneeChange(selectedRfq.id, assigneeId)}
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {selectedRfq.status === "accepted" && (

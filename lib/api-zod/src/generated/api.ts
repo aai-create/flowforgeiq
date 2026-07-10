@@ -2565,6 +2565,21 @@ export const GetOrgResponse = zod.object({
 
 
 /**
+ * @summary Update org-level settings (admin only)
+ */
+export const UpdateOrgBody = zod.object({
+  "visibilityMode": zod.enum(['shared', 'private'])
+})
+
+export const UpdateOrgResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "visibilityMode": zod.enum(['shared', 'private'])
+})
+
+
+/**
  * @summary List team members and pending invitations
  */
 export const GetTeamResponse = zod.object({

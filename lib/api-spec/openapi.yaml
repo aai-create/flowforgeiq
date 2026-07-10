@@ -1862,6 +1862,31 @@ paths:
         "404":
           description: Organization not found
 
+  /settings/org:
+    patch:
+      operationId: updateOrg
+      tags: [team]
+      summary: Update org-level settings (admin only)
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateOrgBody" }
+      responses:
+        "200":
+          description: Updated organization
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrgResponse" }
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden — admin only
+        "404":
+          description: Organization not found
+
   /team:
     get:
       operationId: getTeam
@@ -2027,6 +2052,12 @@ components:
         id:             { type: integer }
         name:           { type: string }
         slug:           { type: string }
+        visibilityMode: { type: string, enum: [shared, private] }
+
+    UpdateOrgBody:
+      type: object
+      required: [visibilityMode]
+      properties:
         visibilityMode: { type: string, enum: [shared, private] }
 
     TeamMember:

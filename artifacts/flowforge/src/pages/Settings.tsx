@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle } from "lucide-react";
 import { useTour } from "@/hooks/useTour";
-import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings } from "@workspace/api-client-react";
+import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings, useGetOrg, useUpdateOrg, getGetOrgQueryKey } from "@workspace/api-client-react";
 import type { Stage, CreateDeviceTokenResponse } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
@@ -162,6 +162,81 @@ interface TeamInvitation {
   createdAt: string;
   acceptedAt: string | null;
   inviteUrl: string;
+}
+
+function VisibilitySection({ isAdmin }: { isAdmin: boolean }) {
+  const { data: org, isLoading } = useGetOrg();
+  const updateOrgMutation = useUpdateOrg();
+  const queryClient = useQueryClient();
+  const [saved, setSaved] = useState(false);
+
+  const handleSetMode = async (mode: "shared" | "private") => {
+    if (!isAdmin || org?.visibilityMode === mode) return;
+    try {
+      await updateOrgMutation.mutateAsync({ data: { visibilityMode: mode } });
+      queryClient.invalidateQueries({ queryKey: getGetOrgQueryKey() });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {}
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-[#9E9FAE] py-4">
+        <RefreshCw className="w-3 h-3 animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  const mode = org?.visibilityMode ?? "shared";
+
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <Globe className="w-3.5 h-3.5 text-[#9000FF]" />
+        <h2 className="text-sm font-bold text-[#212833]">Deal Visibility</h2>
+        {saved && <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5"><Check className="w-3 h-3" />Saved</span>}
+      </div>
+      <p className="text-xs text-[#5E687B] mb-4 leading-relaxed">
+        Controls who can see shipments and RFQs that are assigned to a specific team member.
+        {!isAdmin && " Only admins can change this setting."}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          disabled={!isAdmin || updateOrgMutation.isPending}
+          onClick={() => void handleSetMode("shared")}
+          className={`text-left border rounded-lg p-3.5 transition-colors ${
+            mode === "shared" ? "border-[#9000FF] bg-[#9000FF]/5" : "border-[#E5EAF0] hover:bg-[#F7F9FA]"
+          } ${!isAdmin ? "opacity-70 cursor-default" : "cursor-pointer"}`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs font-bold text-[#212833]">Shared</span>
+            {mode === "shared" && <Check className="w-3.5 h-3.5 text-[#9000FF]" />}
+          </div>
+          <p className="text-[11px] text-[#5E687B] leading-relaxed">
+            Everyone on the team can see all shipments and RFQs, regardless of assignee.
+          </p>
+        </button>
+        <button
+          type="button"
+          disabled={!isAdmin || updateOrgMutation.isPending}
+          onClick={() => void handleSetMode("private")}
+          className={`text-left border rounded-lg p-3.5 transition-colors ${
+            mode === "private" ? "border-[#9000FF] bg-[#9000FF]/5" : "border-[#E5EAF0] hover:bg-[#F7F9FA]"
+          } ${!isAdmin ? "opacity-70 cursor-default" : "cursor-pointer"}`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs font-bold text-[#212833]">Private</span>
+            {mode === "private" && <Check className="w-3.5 h-3.5 text-[#9000FF]" />}
+          </div>
+          <p className="text-[11px] text-[#5E687B] leading-relaxed">
+            Members only see shipments and RFQs assigned to them or unassigned. Admins can see everything.
+          </p>
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function TeamSection() {
@@ -1804,6 +1879,7 @@ export function Settings() {
                   <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.team.title")}</h2>
                   <p className="text-xs text-[#5E687B] leading-relaxed">{t("settings.team.desc")}</p>
                 </div>
+                <VisibilitySection isAdmin={myRole === "admin"} />
                 <TeamSection />
               </div>
             )}

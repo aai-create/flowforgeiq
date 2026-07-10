@@ -20,6 +20,18 @@ export interface OrgResponse {
   visibilityMode: OrgResponseVisibilityMode;
 }
 
+export type UpdateOrgBodyVisibilityMode = typeof UpdateOrgBodyVisibilityMode[keyof typeof UpdateOrgBodyVisibilityMode];
+
+
+export const UpdateOrgBodyVisibilityMode = {
+  shared: 'shared',
+  private: 'private',
+} as const;
+
+export interface UpdateOrgBody {
+  visibilityMode: UpdateOrgBodyVisibilityMode;
+}
+
 export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
 
 

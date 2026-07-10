@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StageHistory } from "@/components/StageHistory";
 import { QuotesTab } from "@/components/QuotesTab";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { AssigneePicker } from "@/components/AssigneePicker";
 import type { Message, DocumentWithExtraction, FactoryQuote, SupplierSummary, DealWithSpread } from "@workspace/api-client-react";
 import type { UiShipment, UiStage } from "@/lib/adapters";
 import { shortDate, spreadBadgeClass } from "@/lib/adapters";
@@ -68,6 +69,7 @@ interface ShipmentDrawerProps {
   openEditPO: (shipment: UiShipment) => void;
   setShipments: React.Dispatch<React.SetStateAction<UiShipment[]>>;
   setShipmentQuotesMap: React.Dispatch<React.SetStateAction<Map<number, FactoryQuote[]>>>;
+  onAssigneeChange: (id: number, assigneeId: string | null) => void;
 
   onClose: () => void;
 }
@@ -118,6 +120,7 @@ export function ShipmentDrawer({
   openEditPO,
   setShipments,
   setShipmentQuotesMap,
+  onAssigneeChange,
   onClose,
 }: ShipmentDrawerProps) {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -339,6 +342,11 @@ export function ShipmentDrawer({
                       {riskScore}
                     </span>
                   )}
+                  <AssigneePicker
+                    assigneeId={shipment.assigneeId}
+                    assigneeName={shipment.assigneeName}
+                    onChange={(assigneeId) => onAssigneeChange(shipment.shipmentId, assigneeId)}
+                  />
                 </div>
               </div>
 

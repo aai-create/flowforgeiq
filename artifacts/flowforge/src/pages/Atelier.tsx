@@ -4,11 +4,12 @@ import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { useCopilotHint } from "@/lib/CopilotContext";
-import { useListShipments, useListStages, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment, useCreateDealAdjustment, useUpdateDealAdjustment, useDeleteDealAdjustment } from "@workspace/api-client-react";
+import { useListShipments, useListStages, updateShipment, updatePayment, useGetRiskRadar, useListSuppliers, useCreateShipment, useCreateSupplier, useCreateShipmentStageEvent, useGetPoNumberingConfig, useListDeals, useLinkDealToShipment, useUnlinkDealFromShipment, getListShipmentsQueryKey, useListMessages, useListDocuments, useUpdateShipment, usePatchShipmentDeal, useDeleteShipment, useCreateDealAdjustment, useUpdateDealAdjustment, useDeleteDealAdjustment, useGetTeam } from "@workspace/api-client-react";
 import type { FactoryQuote, Message, DocumentWithExtraction } from "@workspace/api-client-react";
 import { StageHistory } from "@/components/StageHistory";
 import { adaptShipments, adaptStages, shortDate, spreadBadgeClass, type UiShipment, type UiStage } from "@/lib/adapters";
 import { QuotesTab } from "@/components/QuotesTab";
+import { AssigneeBadge } from "@/components/AssigneePicker";
 import {
   Search, Plus,
   MessageCircle, Mail, FileText, CheckCircle2, AlertCircle,
@@ -346,6 +347,8 @@ export function Atelier() {
   const queryClient = useQueryClient();
   const shipmentsQueryKey = getListShipmentsQueryKey();
   const updateShipmentMutation = useUpdateShipment();
+  const { data: teamData } = useGetTeam();
+  const teamMembers = teamData?.members ?? [];
   const { mutate: linkDeal } = useLinkDealToShipment({
     mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: shipmentsQueryKey }); } },
   });
@@ -384,6 +387,20 @@ export function Atelier() {
       onError: () => {
         queryClient.invalidateQueries({ queryKey: shipmentsQueryKey });
         setToast(archive ? "Failed to archive PO — please try again" : "Failed to unarchive PO — please try again");
+        setTimeout(() => setToast(null), 3000);
+      },
+    });
+  };
+
+  const handleAssigneeChange = (shipmentId: number, assigneeId: string | null) => {
+    const member = teamMembers.find(m => m.clerkUserId === assigneeId);
+    setShipments(prev => prev.map(s => s.shipmentId === shipmentId
+      ? { ...s, assigneeId, assigneeName: member?.name ?? null }
+      : s));
+    updateShipmentMutation.mutate({ id: shipmentId, data: { assigneeId } }, {
+      onError: () => {
+        queryClient.invalidateQueries({ queryKey: shipmentsQueryKey });
+        setToast("Failed to update assignee — please try again");
         setTimeout(() => setToast(null), 3000);
       },
     });
@@ -915,6 +932,7 @@ export function Atelier() {
                             </span>
                           );
                         })()}
+                        <AssigneeBadge assigneeName={shipment.assigneeName} />
                       </div>
                     </div>
 
@@ -1498,6 +1516,7 @@ export function Atelier() {
       openEditPO={openEditPO}
       setShipments={setShipments}
       setShipmentQuotesMap={setShipmentQuotesMap}
+      onAssigneeChange={handleAssigneeChange}
       onClose={() => setActiveShipmentId(null)}
     />
 
