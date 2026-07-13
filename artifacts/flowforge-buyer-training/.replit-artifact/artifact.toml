@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/training/"
+title = "FlowForge Buyer Training"
+version = "1.0.0"
+id = "artifacts/flowforge-buyer-training"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/training/" ]
+localPort = 18178
+
+[services.development]
+run = "pnpm --filter @workspace/flowforge-buyer-training run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/flowforge-buyer-training", "run", "build" ]
+publicDir = "artifacts/flowforge-buyer-training/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18178"
+BASE_PATH = "/training/"
