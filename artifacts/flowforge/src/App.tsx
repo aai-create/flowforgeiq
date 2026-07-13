@@ -185,27 +185,43 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   );
 }
 
+function RootPage() {
+  return (
+    <>
+      <Show when="signed-in"><DefaultLandingRedirect /></Show>
+      <Show when="signed-out"><LandingPage /></Show>
+    </>
+  );
+}
+
+const InboxPage = () => <ProtectedRoute component={Home} />;
+const CalendarRoutePage = () => <ProtectedRoute component={CalendarPage} />;
+const OrdersPage = () => <ProtectedRoute component={Atelier} />;
+const RFQsPage = () => <ProtectedRoute component={RFQs} />;
+const RiskRadarRoutePage = () => <ProtectedRoute component={RiskRadarPage} />;
+const ReportsPage = () => <ProtectedRoute component={Reports} />;
+const PipelinePage = () => <ProtectedRoute component={Pipeline} />;
+const SuppliersPage = () => <ProtectedRoute component={Suppliers} />;
+const BuyersPage = () => <ProtectedRoute component={Buyers} />;
+const HelpPage = () => <ProtectedRoute component={Help} />;
+const SettingsPage = () => <ProtectedRoute component={Settings} />;
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => (
-        <>
-          <Show when="signed-in"><DefaultLandingRedirect /></Show>
-          <Show when="signed-out"><LandingPage /></Show>
-        </>
-      )} />
-      <Route path="/inbox" component={() => <ProtectedRoute component={Home} />} />
-      <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
-      <Route path="/orders" component={() => <ProtectedRoute component={Atelier} />} />
-      <Route path="/command" component={() => <ProtectedRoute component={Atelier} />} />
-      <Route path="/rfqs" component={() => <ProtectedRoute component={RFQs} />} />
-      <Route path="/risk-radar" component={() => <ProtectedRoute component={RiskRadarPage} />} />
-      <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
-      <Route path="/pipeline" component={() => <ProtectedRoute component={Pipeline} />} />
-      <Route path="/suppliers" component={() => <ProtectedRoute component={Suppliers} />} />
-      <Route path="/buyers" component={() => <ProtectedRoute component={Buyers} />} />
-      <Route path="/help" component={() => <ProtectedRoute component={Help} />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/" component={RootPage} />
+      <Route path="/inbox" component={InboxPage} />
+      <Route path="/calendar" component={CalendarRoutePage} />
+      <Route path="/orders" component={OrdersPage} />
+      <Route path="/command" component={OrdersPage} />
+      <Route path="/rfqs" component={RFQsPage} />
+      <Route path="/risk-radar" component={RiskRadarRoutePage} />
+      <Route path="/reports" component={ReportsPage} />
+      <Route path="/pipeline" component={PipelinePage} />
+      <Route path="/suppliers" component={SuppliersPage} />
+      <Route path="/buyers" component={BuyersPage} />
+      <Route path="/help" component={HelpPage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
       <Route path="/shortcuts" component={ShortcutsGuide} />
