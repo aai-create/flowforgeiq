@@ -73,4 +73,30 @@ app.get("/shortcuts", async (req, res) => {
 
 app.use("/api", router);
 
+app.use(
+  (
+    err: unknown,
+    req: express.Request,
+    res: express.Response,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    next: express.NextFunction,
+  ) => {
+    req.log?.error({ err }, "Unhandled error");
+    if (res.headersSent) return;
+    const status =
+      typeof (err as { status?: unknown })?.status === "number"
+        ? (err as { status: number }).status
+        : typeof (err as { statusCode?: unknown })?.statusCode === "number"
+          ? (err as { statusCode: number }).statusCode
+          : (err as { name?: string })?.name === "ZodError"
+            ? 400
+            : 500;
+    const message =
+      (err as { name?: string })?.name === "ZodError"
+        ? "Invalid request data"
+        : (err as { message?: string })?.message || "Internal server error";
+    res.status(status).json({ error: message });
+  },
+);
+
 export default app;

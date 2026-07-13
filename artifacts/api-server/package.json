@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "fuser -k ${PORT}/tcp 2>/dev/null || true && export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "kill -9 $(lsof -ti tcp:${PORT}) 2>/dev/null; fuser -k ${PORT}/tcp 2>/dev/null; sleep 0.5; export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
