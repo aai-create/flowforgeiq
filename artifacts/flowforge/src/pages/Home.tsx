@@ -25,6 +25,10 @@ import {
   Factory, Tag, Smartphone,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
+import { InboxEmptyState } from "@/components/InboxEmptyState";
+import { NextActionNudge } from "@/components/NextActionNudge";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { useOnboardingState } from "@/hooks/useOnboardingState";
 import { Atelier } from "./Atelier";
 import { DocumentIntake } from "./DocumentIntake";
 import { ShipmentRiskDetail } from "./ShipmentRiskDetail";
@@ -2085,6 +2089,13 @@ export default function Home() {
     "Summarize this shipment's current status",
   ]);
   const { setFocusedShipmentId } = useCopilot();
+  const { state: onboardingState, markComplete: markOnboardingComplete, clearForceShow } = useOnboardingState();
+  const [showWizard, setShowWizard] = useState(false);
+  useEffect(() => {
+    if (onboardingState.forceShow && !onboardingState.isComplete) {
+      setShowWizard(true);
+    }
+  }, [onboardingState.forceShow, onboardingState.isComplete]);
   const [activeView, setActiveView]       = useState<ActiveView>("inbox");
   const authReady = isLoaded && !!isSignedIn;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2903,6 +2914,12 @@ export default function Home() {
     <div className="flex flex-col h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
       {toast&&<Toast message={toast} onDone={()=>setToast(null)}/>}
       {showStageConfig&&<StageConfigModal stages={stages} onSave={saveStages} onClose={()=>setShowStageConfig(false)}/>}
+      {showWizard&&(
+        <OnboardingWizard
+          onClose={() => { setShowWizard(false); clearForceShow(); }}
+          onComplete={() => { markOnboardingComplete(); refetchShipments(); refetchMessages(); setShowWizard(false); }}
+        />
+      )}
 
       <GlobalHeader
           breadcrumb={
@@ -3321,35 +3338,40 @@ export default function Home() {
 
           {/* ── INBOX EMPTY STATE ── */}
           {activeView==="inbox"&&leftPanelMode==="all"&&shipments.length===0&&(
-            <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md shrink-0" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
-                <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
-              </div>
-              <div>
-                <p className="text-[15px] font-semibold text-[#212833]">No shipments yet</p>
-                <p className="mt-1 text-[13px] text-[#5E687B] max-w-xs">Import a purchase order or create one to get started, or visit another section of the app.</p>
-              </div>
-              <div className="flex flex-col items-center gap-2 w-full max-w-xs">
-                <a
-                  href="/orders?new=1"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
-                  style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
-                >
-                  <Plus size={15}/>Create shipment
-                </a>
-                <button
-                  onClick={() => setShowPasteChat(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[#5E687B] border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors"
-                >
-                  Quick import from chat
-                </button>
-                <div className="flex items-center gap-3 pt-1">
-                  <a href="/orders" className="text-xs text-[#9E9FAE] hover:text-[#5E687B] transition-colors">Go to Orders</a>
-                  <span className="text-[#E5EAF0]">·</span>
-                  <a href="/rfqs" className="text-xs text-[#9E9FAE] hover:text-[#5E687B] transition-colors">Go to RFQs</a>
+            /* Show onboarding card only for true first-time users: no shipments, no messages,
+               and no suppliers. forceShow=true means explicit restart — wizard opens via the
+               top-level modal regardless of existing data. */
+            (!onboardingState.isComplete && !onboardingState.forceShow && messages.length===0 && apiSuppliers.length===0) ? (
+              <InboxEmptyState
+                onGetStarted={() => setShowWizard(true)}
+                onOpenPasteChat={() => setShowPasteChat(true)}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md shrink-0" style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}>
+                  <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain p-1.5" />
+                </div>
+                <div>
+                  <p className="text-[15px] font-semibold text-[#212833]">No shipments yet</p>
+                  <p className="mt-1 text-[13px] text-[#5E687B] max-w-xs">Import a purchase order or create one to get started.</p>
+                </div>
+                <div className="flex flex-col items-center gap-2 w-full max-w-xs">
+                  <a
+                    href="/orders?new=1"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+                    style={{background:"linear-gradient(135deg,#7C3AED,#5B21B6)"}}
+                  >
+                    <Plus size={15}/>Create shipment
+                  </a>
+                  <button
+                    onClick={() => setShowPasteChat(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[#5E687B] border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors"
+                  >
+                    Quick import from chat
+                  </button>
                 </div>
               </div>
-            </div>
+            )
           )}
 
           {/* ── INBOX VIEW: thread list + detail ── */}
@@ -3374,6 +3396,14 @@ export default function Home() {
                 </div>
               </div>
               <GetTheAppBanner />
+              {/* Show nudge when onboarding complete OR when user already has data (existing accounts) */}
+              {(onboardingState.isComplete || shipments.length > 0 || messages.length > 0 || apiSuppliers.length > 0) && (
+                <NextActionNudge
+                  messages={messages}
+                  shipments={shipments}
+                  onReplyToMessage={(id) => openMessage(id)}
+                />
+              )}
               <div className="flex-1 overflow-y-auto">
                 {visibleMessages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full py-12 px-6 text-center select-none">

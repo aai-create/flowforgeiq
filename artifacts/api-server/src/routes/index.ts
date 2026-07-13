@@ -23,6 +23,7 @@ import captureRouter from "./capture";
 import shortcutsRouter from "./shortcuts";
 import contactRulesRouter from "./contact-rules";
 import reportsRouter from "./reports";
+import onboardingRouter from "./onboarding";
 
 const router: IRouter = Router();
 
@@ -56,6 +57,7 @@ protectedRouter.use(sampleRequestsRouter);
 protectedRouter.use(pushTokensRouter);
 protectedRouter.use(contactRulesRouter);
 protectedRouter.use(reportsRouter);
+protectedRouter.use(onboardingRouter);
 
 router.use(protectedRouter);
 

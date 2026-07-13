@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle } from "lucide-react";
-import { useTour } from "@/hooks/useTour";
+import { useOnboardingState } from "@/hooks/useOnboardingState";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings, useGetOrg, useUpdateOrg, getGetOrgQueryKey } from "@workspace/api-client-react";
 import type { Stage, CreateDeviceTokenResponse } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
@@ -1009,7 +1009,14 @@ function MobileAppSection() {
 }
 
 function HelpOnboardingSection() {
-  const { replayTour } = useTour();
+  const { reset: resetOnboarding } = useOnboardingState();
+  const [, navigate] = useLocation();
+
+  const handleRestartTutorial = () => {
+    resetOnboarding();
+    navigate("/inbox");
+  };
+
   return (
     <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
       <div className="flex items-start gap-3 mb-4">
@@ -1019,16 +1026,16 @@ function HelpOnboardingSection() {
         <div>
           <h2 className="text-sm font-bold text-[#212833] mb-0.5">Help &amp; Onboarding</h2>
           <p className="text-xs text-[#5E687B] leading-relaxed">
-            New to FlowForge? The product tour walks you through every key feature in under 2 minutes.
+            Walk through the setup wizard to create a supplier, buyer, and see your inbox with demo messages.
           </p>
         </div>
       </div>
       <button
-        onClick={replayTour}
+        onClick={handleRestartTutorial}
         className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
       >
         <PlayCircle className="w-3.5 h-3.5" />
-        Take the tour again
+        Restart tutorial
       </button>
     </section>
   );
