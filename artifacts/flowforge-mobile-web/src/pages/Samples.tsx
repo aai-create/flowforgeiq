@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useListSampleRequests, useListBuyers, useListSuppliers } from "@workspace/api-client-react";
+import {
+  useListSampleRequests,
+  useListBuyers,
+  useListSuppliers,
+  useCreateSampleRequest,
+} from "@workspace/api-client-react";
 import type { SampleRequest } from "@workspace/api-client-react";
 import { AppShell } from "@/components/AppShell";
 import { GradientHeader } from "@/components/GradientHeader";
 import { useTranslation } from "react-i18next";
 import {
-  Package, Plus, Clock, Truck, CheckCircle2, XCircle, Loader2,
+  Package, Plus, Clock, Truck, CheckCircle2, XCircle, Loader2, X, ChevronDown,
 } from "lucide-react";
 
 type SampleMilestone = "sample_requested" | "sample_shipped" | "sample_received" | "approved" | "rejected";
@@ -66,12 +71,189 @@ function SampleCard({ sample, onPress, supplierName, buyerName }: {
 
 const MILESTONE_ORDER: SampleMilestone[] = ["sample_requested", "sample_shipped", "sample_received", "approved", "rejected"];
 
+function NewSampleSheet({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const { data: suppliers = [] } = useListSuppliers();
+  const createMutation = useCreateSampleRequest();
+
+  const [product, setProduct] = useState("");
+  const [supplierId, setSupplierId] = useState<number | "">("");
+  const [quantity, setQuantity] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function reset() {
+    setProduct("");
+    setSupplierId("");
+    setQuantity("");
+    setNotes("");
+    setError(null);
+  }
+
+  function handleClose() {
+    reset();
+    onClose();
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product.trim()) {
+      setError("Product name is required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await createMutation.mutateAsync({
+        data: {
+          product: product.trim(),
+          supplierId: supplierId !== "" ? supplierId : undefined,
+          quantity: quantity ? Number(quantity) : undefined,
+          notes: notes.trim() || undefined,
+        },
+      });
+      reset();
+      onCreated();
+      onClose();
+    } catch {
+      setError("Failed to create sample request. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40"
+        onClick={handleClose}
+      />
+      {/* Sheet */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl shadow-xl"
+        style={{ maxHeight: "85dvh" }}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h2 className="text-[16px] font-bold text-foreground">New Sample Request</h2>
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full active:bg-muted transition-colors"
+          >
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto px-4 py-4 space-y-4" style={{ maxHeight: "calc(85dvh - 100px)" }}>
+          {/* Product */}
+          <div>
+            <label className="block text-[12px] font-semibold text-muted-foreground mb-1">
+              Product <span style={{ color: "hsl(var(--primary))" }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={product}
+              onChange={e => setProduct(e.target.value)}
+              placeholder="e.g. Cotton Crew-Neck Tee"
+              className="w-full h-11 px-3 rounded-xl border border-border bg-card text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2"
+              style={{ focusRingColor: "hsl(var(--primary))" } as React.CSSProperties}
+              autoFocus
+            />
+          </div>
+
+          {/* Supplier */}
+          <div>
+            <label className="block text-[12px] font-semibold text-muted-foreground mb-1">
+              Supplier
+            </label>
+            <div className="relative">
+              <select
+                value={supplierId}
+                onChange={e => setSupplierId(e.target.value ? Number(e.target.value) : "")}
+                className="w-full h-11 pl-3 pr-8 rounded-xl border border-border bg-card text-[14px] text-foreground appearance-none focus:outline-none focus:ring-2"
+              >
+                <option value="">No supplier selected</option>
+                {suppliers.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <label className="block text-[12px] font-semibold text-muted-foreground mb-1">
+              Quantity (units)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={e => setQuantity(e.target.value)}
+              placeholder="e.g. 500"
+              className="w-full h-11 px-3 rounded-xl border border-border bg-card text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-[12px] font-semibold text-muted-foreground mb-1">
+              Notes
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Colorways, size range, special requirements…"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 resize-none"
+            />
+          </div>
+
+          {error && (
+            <p className="text-[13px] font-semibold" style={{ color: "#dc2626" }}>{error}</p>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={saving || !product.trim()}
+            className="w-full h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
+            style={{ background: "hsl(var(--primary))", color: "white" }}
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {saving ? "Creating…" : "Create Sample Request"}
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
+
 export default function SamplesPage() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [filter, setFilter] = useState<SampleMilestone | "all">("all");
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const { data: rawSamples = [], isLoading } = useListSampleRequests({ includeArchived: true });
+  const { data: rawSamples = [], isLoading, refetch } = useListSampleRequests({ includeArchived: true });
   const { data: suppliers = [] } = useListSuppliers();
   const { data: buyers = [] } = useListBuyers();
 
@@ -79,7 +261,6 @@ export default function SamplesPage() {
   const buyerMap = new Map(buyers.map(b => [b.id, b.name]));
 
   const samples = filter === "all" ? rawSamples : rawSamples.filter(s => s.milestone === filter);
-
   const activeSamples = rawSamples.filter(s => s.milestone !== "rejected" && s.milestone !== "approved");
 
   return (
@@ -89,6 +270,7 @@ export default function SamplesPage() {
         subtitle={`${activeSamples.length} active`}
         align="start"
       />
+
       {/* Filter chips */}
       <div className="flex gap-2 overflow-x-auto px-4 py-3 shrink-0 no-scrollbar">
         {(["all", ...MILESTONE_ORDER] as const).map(m => {
@@ -137,16 +319,22 @@ export default function SamplesPage() {
         )}
       </div>
 
-      {/* FAB placeholder */}
+      {/* New Sample Request button */}
       <div className="shrink-0 px-4 pb-4">
         <button
-          onClick={() => navigate("/capture")}
+          onClick={() => setSheetOpen(true)}
           className="w-full h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:opacity-75 transition-opacity"
           style={{ background: "hsl(var(--primary))", color: "white" }}
         >
           <Plus size={16} /> New Sample Request
         </button>
       </div>
+
+      <NewSampleSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onCreated={() => void refetch()}
+      />
     </AppShell>
   );
 
