@@ -164,6 +164,7 @@ export function GlobalHeader({
             <img src="/flowforge-logo.png" alt="FlowForgeIQ" className="w-full h-full object-contain" />
           </div>
           <span className="text-[#9000FF] tracking-tight">FlowForgeIQ</span>
+          <span className="text-xs font-medium bg-purple-100 text-purple-600 rounded px-1.5 py-0.5 leading-none">Beta</span>
           <span className="text-[#E5EAF0]">/</span>
           <span className="text-[#5E687B] font-medium text-xs">{breadcrumb}</span>
           {breadcrumbSegments.length > 0 && (

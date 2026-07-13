@@ -79,6 +79,7 @@ export function NavSidebar({
             />
           </div>
           <span className="font-bold text-sm tracking-tight text-[#9000FF]">FlowForgeIQ</span>
+          <span className="text-xs font-medium bg-purple-100 text-purple-600 rounded px-1.5 py-0.5 leading-none">Beta</span>
         </div>
       )}
       <div className={`p-2 flex flex-col gap-0.5 shrink-0 ${!showBrand ? "mt-1" : ""}`}>
