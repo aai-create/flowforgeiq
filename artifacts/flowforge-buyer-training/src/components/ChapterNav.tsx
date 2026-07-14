@@ -2,11 +2,11 @@ import { useLocation } from "wouter";
 
 const chapters = [
   { label: "Welcome", slide: 1 },
-  { label: "Inbox", slide: 5 },
-  { label: "Orders", slide: 9 },
-  { label: "Quotes", slide: 13 },
-  { label: "Mobile", slide: 17 },
-  { label: "AI", slide: 21 },
+  { label: "Inbox", slide: 6 },
+  { label: "Orders", slide: 10 },
+  { label: "Quotes", slide: 14 },
+  { label: "Mobile", slide: 18 },
+  { label: "AI", slide: 22 },
 ];
 
 const isAllSlides =
