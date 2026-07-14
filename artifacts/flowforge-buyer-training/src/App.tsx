@@ -12,7 +12,7 @@
  * check" if this file has been hand-edited and needs repair.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 
 import { slides } from "@/slideLoader";
@@ -160,52 +160,100 @@ function AllSlides() {
   );
 }
 
-// This component is used for the deployed view at `/`
+// This component is used for the deployed view at `/`.
+// Renders slides directly (no inner iframe) so interactive elements like
+// hotspot buttons receive mouse events correctly.
 function SlideViewer() {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [dims, setDims] = useState(() => ({
-    width: Math.min(window.innerWidth, window.innerHeight * (16 / 9)),
-    height: Math.min(window.innerHeight, window.innerWidth * (9 / 16)),
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [winSize, setWinSize] = useState(() => ({
+    w: window.innerWidth,
+    h: window.innerHeight,
   }));
 
   useEffect(() => {
-    const update = () => {
-      setDims({
-        width: Math.min(window.innerWidth, window.innerHeight * (16 / 9)),
-        height: Math.min(window.innerHeight, window.innerWidth * (9 / 16)),
-      });
-    };
+    const update = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  const dims = {
+    width: Math.min(winSize.w, winSize.h * (16 / 9)),
+    height: Math.min(winSize.h, winSize.w * (9 / 16)),
+  };
+  const scale = dims.width / winSize.w;
+
+  const advance = useCallback(
+    () => setCurrentIndex((i) => Math.min(i + 1, slides.length - 1)),
+    [],
+  );
+  const retreat = useCallback(
+    () => setCurrentIndex((i) => Math.max(i - 1, 0)),
+    [],
+  );
+
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== " ") return;
       if (event.key === " ") event.preventDefault();
-      iframeRef.current?.contentWindow?.dispatchEvent(
-        new KeyboardEvent("keydown", { key: event.key, code: event.code, bubbles: true }),
-      );
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") retreat();
+      if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === " ") advance();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [advance, retreat]);
 
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const firstPosition = slides.length > 0 ? slides[0].position : 1;
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "navigateToSlide" && typeof event.data.position === "number") {
+        const idx = slides.findIndex((s) => s.position === event.data.position);
+        if (idx >= 0) setCurrentIndex(idx);
+      }
+      if (event.data?.type === "advanceSlide") advance();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [advance]);
+
+  const INTERACTIVE =
+    "a,button,video,audio,input,select,textarea,details,summary,iframe,svg,canvas," +
+    '[role="button"],[contenteditable="true"]';
+
+  const handleClick = (event: React.MouseEvent) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey) return;
+    if ((event.target as HTMLElement | null)?.closest?.(INTERACTIVE)) return;
+    advance();
+  };
+
+  const CurrentSlide = slides[currentIndex]?.Component;
 
   return (
     <div
-      className="slide-viewer h-screen w-screen overflow-hidden bg-black flex items-center justify-center"
-      onClick={() => iframeRef.current?.focus()}
+      className="slide-viewer h-screen w-screen overflow-hidden bg-black flex items-center justify-center select-none"
+      onClick={handleClick}
     >
-      <iframe
-        ref={iframeRef}
-        src={`${base}/slide${firstPosition}`}
-        style={{ width: dims.width, height: dims.height, border: "none" }}
-        onLoad={() => iframeRef.current?.focus()}
-        title="Slide viewer"
-      />
+      <div
+        style={{
+          width: dims.width,
+          height: dims.height,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {CurrentSlide && (
+          <div
+            style={{
+              width: winSize.w,
+              height: winSize.h,
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              position: "absolute",
+              top: 0,
+              left: 0,
+            }}
+          >
+            <CurrentSlide />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -230,12 +278,15 @@ export default function App() {
   // DO NOT edit this useEffect - allows the parent frame to navigate
   // between slides via postMessage so it can avoid changing the iframe
   // src (which causes a white flash).
+  // Note: when at "/" the SlideViewer handles navigateToSlide internally;
+  // this handler only routes when already on a /slideN path.
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (
         event.data?.type === "navigateToSlide" &&
         typeof event.data.position === "number" &&
-        slides.some((s) => s.position === event.data.position)
+        slides.some((s) => s.position === event.data.position) &&
+        location !== "/"
       ) {
         navigate(`/slide${event.data.position}`);
       }
@@ -243,7 +294,7 @@ export default function App() {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [navigate]);
+  }, [navigate, location]);
 
   if (location === "/") return <SlideViewer />;
   if (location === "/allslides") return <AllSlides />;
