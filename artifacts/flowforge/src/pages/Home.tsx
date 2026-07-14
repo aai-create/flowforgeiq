@@ -2900,6 +2900,12 @@ export default function Home() {
               >
                 Retry
               </button>
+              <button
+                onClick={() => void signOut({ redirectUrl: `${window.location.origin}${import.meta.env.BASE_URL}sign-in` })}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#5E687B] border border-[#E5EAF0] hover:bg-[#F0F4F8] transition-colors"
+              >
+                Sign out instead
+              </button>
             </>
             )
           ) : (
