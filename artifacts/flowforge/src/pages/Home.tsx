@@ -2100,10 +2100,10 @@ export default function Home() {
   const authReady = isLoaded && !!isSignedIn;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const authQuery = { query: { enabled: authReady } as any };
-  const { data: apiStages,    isError: stagesError,    error: stagesErrObj,    refetch: refetchStages }    = useListStages(authQuery);
-  const { data: apiShipments, isError: shipmentsError, error: shipmentsErrObj, refetch: refetchShipments } = useListShipments(undefined, authQuery);
-  const { data: apiMessages,  isError: messagesError,  error: messagesErrObj,  refetch: refetchMessages }  = useListMessages( undefined, authQuery);
-  const { data: apiTasks,     isError: tasksError,     error: tasksErrObj,     refetch: refetchTasks }     = useListTasks(authQuery);
+  const { data: apiStages,    isError: stagesError,    isFetching: stagesFetching,    error: stagesErrObj,    refetch: refetchStages }    = useListStages(authQuery);
+  const { data: apiShipments, isError: shipmentsError, isFetching: shipmentsFetching, error: shipmentsErrObj, refetch: refetchShipments } = useListShipments(undefined, authQuery);
+  const { data: apiMessages,  isError: messagesError,  isFetching: messagesFetching,  error: messagesErrObj,  refetch: refetchMessages }  = useListMessages( undefined, authQuery);
+  const { data: apiTasks,     isError: tasksError,     isFetching: tasksFetching,     error: tasksErrObj,     refetch: refetchTasks }     = useListTasks(authQuery);
   const { data: apiProposals } = useListCopilotProposals({});
   const { data: apiNeedsReview, refetch: refetchNeedsReview } = useListNeedsReviewMessages();
   const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
@@ -2839,7 +2839,8 @@ export default function Home() {
 
 
   const isLoading = !isLoaded || !isSignedIn || !apiStages || !apiShipments || !apiMessages || !apiTasks;
-  const isError = stagesError || shipmentsError || messagesError || tasksError;
+  const isFetching = stagesFetching || shipmentsFetching || messagesFetching || tasksFetching;
+  const isError = (stagesError || shipmentsError || messagesError || tasksError) && !isFetching;
   const authError = [stagesErrObj, shipmentsErrObj, messagesErrObj, tasksErrObj].some(
     (e) => e instanceof ApiError && e.status === 401,
   );
