@@ -67,6 +67,7 @@ export default function Hotspot({ top, left, label, description }: HotspotProps)
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={(e) => e.stopPropagation()}
     >
       <div style={{ position: "relative", width: "2.2vw", height: "2.2vw" }}>
         <div
