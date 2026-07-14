@@ -76,6 +76,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - "Today" is hardcoded as 2026-05-18 in both `scripts/src/build-seed-data.ts` and `artifacts/flowforge/src/lib/adapters.ts` (`relativeAge`). Update both if shifting.
 - `aiRoutingGuess.buyerName` and `aiRoutingGuess.shipmentId` are nullable — the OpenAPI spec and Zod schema must declare them `["type", "null"]` or the `GET /messages/needs-review` endpoint returns 500.
 - Inbox is now the default route (`/`); Orders/Atelier is at `/orders` (also aliased `/command`). Do not restore the old `/` → Atelier routing.
+- **Error screen sign-out**: The "Could not reach the server" error screen in `Home.tsx` must always include a "Sign out instead" button (calls `signOut` with redirect to `/sign-in`). Do not remove it — users can get stuck with no escape if it's missing.
 - Clerk requires `VITE_CLERK_PUBLISHABLE_KEY` (frontend) and the AI Integrations proxy for backend JWT verification. Check the clerk-auth skill before modifying auth flows.
 - **Branded inbound email domain**: production inbound addresses use `inbound.flowforgeiq.com` (e.g. `iq+{token}@inbound.flowforgeiq.com`). Before emails arrive, an operator must: (1) add DNS MX record — `inbound.flowforgeiq.com MX 10 inbound.postmarkapp.com` — in the DNS provider (Cloudflare, Route 53, etc.); (2) configure the Postmark inbound server to `inbound.flowforgeiq.com` in the Postmark dashboard. No code change is needed — only `INBOUND_EMAIL_BASE=iq@inbound.flowforgeiq.com` (already set).
 
