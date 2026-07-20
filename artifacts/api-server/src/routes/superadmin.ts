@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, teamUsersTable, teamInvitationsTable, organizationsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, isNull, and } from "drizzle-orm";
 import { requireSuperAdmin } from "../middlewares/requireAuth";
 import crypto from "node:crypto";
 import * as postmark from "postmark";
@@ -136,6 +136,112 @@ router.post("/superadmin/orgs/:id/invite-admin", requireSuperAdmin, async (req, 
   }
 
   res.status(201).json({ invitation: inv, inviteUrl, emailSent });
+});
+
+router.get("/superadmin/orgs/:id/members", requireSuperAdmin, async (req, res) => {
+  const orgId = Number(req.params.id);
+  if (!orgId || isNaN(orgId)) {
+    res.status(400).json({ error: "Invalid org id" });
+    return;
+  }
+
+  const [org] = await db
+    .select({ id: organizationsTable.id })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.id, orgId));
+
+  if (!org) {
+    res.status(404).json({ error: "Organization not found" });
+    return;
+  }
+
+  const members = await db
+    .select({
+      clerkUserId: teamUsersTable.clerkUserId,
+      email: teamUsersTable.email,
+      name: teamUsersTable.name,
+      role: teamUsersTable.role,
+      createdAt: teamUsersTable.createdAt,
+    })
+    .from(teamUsersTable)
+    .where(eq(teamUsersTable.orgId, orgId))
+    .orderBy(teamUsersTable.createdAt);
+
+  res.json({ members });
+});
+
+router.delete("/superadmin/orgs/:id/members/:clerkUserId", requireSuperAdmin, async (req, res) => {
+  const orgId = Number(req.params.id);
+  const clerkUserId = String(req.params.clerkUserId ?? "");
+  if (!orgId || isNaN(orgId) || !clerkUserId) {
+    res.status(400).json({ error: "Invalid parameters" });
+    return;
+  }
+
+  const deleted = await db
+    .delete(teamUsersTable)
+    .where(and(eq(teamUsersTable.orgId, orgId), eq(teamUsersTable.clerkUserId, clerkUserId)))
+    .returning();
+
+  if (deleted.length === 0) {
+    res.status(404).json({ error: "Member not found" });
+    return;
+  }
+
+  res.json({ ok: true });
+});
+
+router.get("/superadmin/orgs/:id/invitations", requireSuperAdmin, async (req, res) => {
+  const orgId = Number(req.params.id);
+  if (!orgId || isNaN(orgId)) {
+    res.status(400).json({ error: "Invalid org id" });
+    return;
+  }
+
+  const [org] = await db
+    .select({ id: organizationsTable.id })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.id, orgId));
+
+  if (!org) {
+    res.status(404).json({ error: "Organization not found" });
+    return;
+  }
+
+  const invitations = await db
+    .select({
+      id: teamInvitationsTable.id,
+      email: teamInvitationsTable.email,
+      role: teamInvitationsTable.role,
+      invitedBy: teamInvitationsTable.invitedBy,
+      createdAt: teamInvitationsTable.createdAt,
+    })
+    .from(teamInvitationsTable)
+    .where(and(eq(teamInvitationsTable.orgId, orgId), isNull(teamInvitationsTable.acceptedAt)))
+    .orderBy(teamInvitationsTable.createdAt);
+
+  res.json({ invitations });
+});
+
+router.delete("/superadmin/orgs/:id/invitations/:invId", requireSuperAdmin, async (req, res) => {
+  const orgId = Number(req.params.id);
+  const invId = Number(req.params.invId);
+  if (!orgId || isNaN(orgId) || !invId || isNaN(invId)) {
+    res.status(400).json({ error: "Invalid parameters" });
+    return;
+  }
+
+  const deleted = await db
+    .delete(teamInvitationsTable)
+    .where(and(eq(teamInvitationsTable.orgId, orgId), eq(teamInvitationsTable.id, invId)))
+    .returning();
+
+  if (deleted.length === 0) {
+    res.status(404).json({ error: "Invitation not found" });
+    return;
+  }
+
+  res.json({ ok: true });
 });
 
 export default router;

@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/react";
-import { Redirect, useLocation } from "wouter";
-import { Building2, Plus, UserPlus, RefreshCw, Check, Copy, X, ChevronRight } from "lucide-react";
+import { Redirect } from "wouter";
+import {
+  Building2, Plus, UserPlus, RefreshCw, Check, Copy, X,
+  ChevronRight, Users, Mail, Shield, Clock, Trash2, MailX,
+  ArrowLeft,
+} from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
 
@@ -13,6 +17,22 @@ interface Org {
   memberCount: number;
 }
 
+interface Member {
+  clerkUserId: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+}
+
+interface Invitation {
+  id: number;
+  email: string;
+  role: string;
+  invitedBy: string;
+  createdAt: string;
+}
+
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SUPER_ADMIN_EMAIL = import.meta.env.VITE_SUPER_ADMIN_EMAIL as string | undefined;
 
@@ -22,6 +42,20 @@ function slugifyOrgName(name: string): string {
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "")
     .slice(0, 50) || "org";
+}
+
+function RoleBadge({ role }: { role: string }) {
+  const isAdmin = role === "admin";
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+      isAdmin
+        ? "bg-[#9000FF]/10 text-[#9000FF]"
+        : "bg-[#E5EAF0] text-[#5E687B]"
+    }`}>
+      {isAdmin && <Shield className="w-2.5 h-2.5" />}
+      {role}
+    </span>
+  );
 }
 
 function NewOrgModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
@@ -250,14 +284,308 @@ function InviteAdminModal({ org, onClose, onInvited }: { org: Org; onClose: () =
   );
 }
 
+function OrgDetailModal({
+  org,
+  onClose,
+  onInviteAdmin,
+}: {
+  org: Org;
+  onClose: () => void;
+  onInviteAdmin: () => void;
+}) {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<Invitation | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDetail = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [membRes, invRes] = await Promise.all([
+        fetch(`${basePath}/api/superadmin/orgs/${org.id}/members`),
+        fetch(`${basePath}/api/superadmin/orgs/${org.id}/invitations`),
+      ]);
+      if (!membRes.ok || !invRes.ok) throw new Error("Failed to load org details");
+      const [membData, invData] = await Promise.all([
+        membRes.json() as Promise<{ members: Member[] }>,
+        invRes.json() as Promise<{ invitations: Invitation[] }>,
+      ]);
+      setMembers(membData.members);
+      setInvitations(invData.invitations);
+    } catch {
+      setError("Could not load organization details");
+    } finally {
+      setLoading(false);
+    }
+  }, [org.id]);
+
+  useEffect(() => {
+    void loadDetail();
+  }, [loadDetail]);
+
+  const removeMember = async (member: Member) => {
+    setRemovingId(member.clerkUserId);
+    setConfirmRemove(null);
+    try {
+      const res = await fetch(
+        `${basePath}/api/superadmin/orgs/${org.id}/members/${encodeURIComponent(member.clerkUserId)}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        setError(d.error ?? "Failed to remove member");
+        return;
+      }
+      setMembers(prev => prev.filter(m => m.clerkUserId !== member.clerkUserId));
+    } catch {
+      setError("Failed to remove member");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const cancelInvitation = async (inv: Invitation) => {
+    setCancelingId(inv.id);
+    setConfirmCancel(null);
+    try {
+      const res = await fetch(
+        `${basePath}/api/superadmin/orgs/${org.id}/invitations/${inv.id}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        setError(d.error ?? "Failed to cancel invitation");
+        return;
+      }
+      setInvitations(prev => prev.filter(i => i.id !== inv.id));
+    } catch {
+      setError("Failed to cancel invitation");
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 p-0 sm:p-4">
+      <div className="bg-white w-full sm:rounded-xl border border-[#E5EAF0] shadow-xl sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden sm:mx-4">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E5EAF0] shrink-0">
+          <button
+            onClick={onClose}
+            className="p-1 -ml-1 text-[#9E9FAE] hover:text-[#212833] rounded transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="w-8 h-8 rounded-lg bg-[#9000FF]/10 flex items-center justify-center shrink-0">
+            <span className="text-[12px] font-bold text-[#9000FF]">{org.name.charAt(0).toUpperCase()}</span>
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-[#212833] truncate">{org.name}</h2>
+            <p className="text-[10px] text-[#9E9FAE] font-mono">{org.slug}</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <button
+              onClick={onInviteAdmin}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold border border-[#9000FF]/30 text-[#9000FF] rounded-lg hover:bg-[#9000FF]/5 transition-colors"
+            >
+              <UserPlus className="w-3 h-3" />
+              Invite Admin
+            </button>
+            <button onClick={onClose} className="p-1 text-[#9E9FAE] hover:text-[#212833] rounded transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {error && (
+            <div className="mx-5 mt-4 bg-red-50 border border-red-100 text-red-700 text-xs px-3 py-2.5 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center gap-2 px-5 py-10 text-xs text-[#9E9FAE]">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading…
+            </div>
+          ) : (
+            <div className="p-5 space-y-6">
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-3.5 h-3.5 text-[#9000FF]" />
+                  <h3 className="text-xs font-bold text-[#212833]">Members</h3>
+                  <span className="text-[10px] font-bold bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full">{members.length}</span>
+                </div>
+
+                {members.length === 0 ? (
+                  <p className="text-xs text-[#9E9FAE] py-3 px-1">No members yet.</p>
+                ) : (
+                  <div className="border border-[#E5EAF0] rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#E5EAF0] bg-[#FAFBFC]">
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5">Name</th>
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5 hidden sm:table-cell">Email</th>
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5">Role</th>
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5 hidden sm:table-cell">Joined</th>
+                          <th className="px-4 py-2.5" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E5EAF0]">
+                        {members.map(member => (
+                          <tr key={member.clerkUserId} className="hover:bg-[#FAFBFC] transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-[#E5EAF0] flex items-center justify-center shrink-0">
+                                  <span className="text-[10px] font-bold text-[#5E687B]">
+                                    {member.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-[#212833]">{member.name}</p>
+                                  <p className="text-[10px] text-[#9E9FAE] sm:hidden">{member.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              <span className="text-xs text-[#5E687B]">{member.email}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <RoleBadge role={member.role} />
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              <span className="text-xs text-[#9E9FAE]">{new Date(member.createdAt).toLocaleDateString()}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {confirmRemove?.clerkUserId === member.clerkUserId ? (
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <span className="text-[10px] text-[#5E687B]">Remove?</span>
+                                  <button
+                                    onClick={() => { void removeMember(member); }}
+                                    disabled={removingId === member.clerkUserId}
+                                    className="px-2 py-1 bg-red-500 text-white text-[10px] font-bold rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                                  >
+                                    {removingId === member.clerkUserId ? <RefreshCw className="w-2.5 h-2.5 animate-spin" /> : "Yes"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmRemove(null)}
+                                    className="px-2 py-1 border border-[#E5EAF0] text-[#5E687B] text-[10px] font-bold rounded hover:bg-[#F7F9FA] transition-colors"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmRemove(member)}
+                                  disabled={removingId === member.clerkUserId}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-[10px] font-semibold text-red-500 border border-red-200 rounded-md hover:bg-red-50 transition-colors ml-auto disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Remove
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <Mail className="w-3.5 h-3.5 text-[#9E9FAE]" />
+                  <h3 className="text-xs font-bold text-[#212833]">Pending Invitations</h3>
+                  <span className="text-[10px] font-bold bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full">{invitations.length}</span>
+                </div>
+
+                {invitations.length === 0 ? (
+                  <p className="text-xs text-[#9E9FAE] py-3 px-1">No pending invitations.</p>
+                ) : (
+                  <div className="border border-[#E5EAF0] rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#E5EAF0] bg-[#FAFBFC]">
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5">Email</th>
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5">Role</th>
+                          <th className="text-left text-[10px] font-bold text-[#9E9FAE] uppercase tracking-wider px-4 py-2.5 hidden sm:table-cell">
+                            <div className="flex items-center gap-1"><Clock className="w-3 h-3" />Sent</div>
+                          </th>
+                          <th className="px-4 py-2.5" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E5EAF0]">
+                        {invitations.map(inv => (
+                          <tr key={inv.id} className="hover:bg-[#FAFBFC] transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <MailX className="w-3.5 h-3.5 text-[#9E9FAE] shrink-0" />
+                                <span className="text-xs text-[#212833]">{inv.email}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <RoleBadge role={inv.role} />
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              <span className="text-xs text-[#9E9FAE]">{new Date(inv.createdAt).toLocaleDateString()}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {confirmCancel?.id === inv.id ? (
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <span className="text-[10px] text-[#5E687B]">Cancel?</span>
+                                  <button
+                                    onClick={() => { void cancelInvitation(inv); }}
+                                    disabled={cancelingId === inv.id}
+                                    className="px-2 py-1 bg-red-500 text-white text-[10px] font-bold rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                                  >
+                                    {cancelingId === inv.id ? <RefreshCw className="w-2.5 h-2.5 animate-spin" /> : "Yes"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmCancel(null)}
+                                    className="px-2 py-1 border border-[#E5EAF0] text-[#5E687B] text-[10px] font-bold rounded hover:bg-[#F7F9FA] transition-colors"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmCancel(inv)}
+                                  disabled={cancelingId === inv.id}
+                                  className="flex items-center gap-1 px-2 py-1.5 text-[10px] font-semibold text-[#5E687B] border border-[#E5EAF0] rounded-md hover:bg-[#F7F9FA] transition-colors ml-auto disabled:opacity-50"
+                                >
+                                  <X className="w-3 h-3" />
+                                  Cancel
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SuperAdmin() {
   const { user, isLoaded } = useUser();
-  const [, navigate] = useLocation();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewOrg, setShowNewOrg] = useState(false);
   const [inviteOrg, setInviteOrg] = useState<Org | null>(null);
+  const [detailOrg, setDetailOrg] = useState<Org | null>(null);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress;
   const isSuperAdmin = SUPER_ADMIN_EMAIL && userEmail?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
@@ -348,7 +676,11 @@ export function SuperAdmin() {
                   </thead>
                   <tbody className="divide-y divide-[#E5EAF0]">
                     {orgs.map(org => (
-                      <tr key={org.id} className="hover:bg-[#FAFBFC] transition-colors">
+                      <tr
+                        key={org.id}
+                        onClick={() => setDetailOrg(org)}
+                        className="hover:bg-[#FAFBFC] transition-colors cursor-pointer"
+                      >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-md bg-[#9000FF]/10 flex items-center justify-center shrink-0">
@@ -361,19 +693,31 @@ export function SuperAdmin() {
                           <span className="text-xs font-mono text-[#5E687B] bg-[#F0F4F8] px-1.5 py-0.5 rounded">{org.slug}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs font-semibold text-[#212833]">{org.memberCount}</span>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-3 h-3 text-[#9E9FAE]" />
+                            <span className="text-xs font-semibold text-[#212833]">{org.memberCount}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-xs text-[#9E9FAE]">{new Date(org.createdAt).toLocaleDateString()}</span>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => setInviteOrg(org)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-[#9000FF]/30 text-[#9000FF] rounded-md hover:bg-[#9000FF]/5 transition-colors ml-auto"
-                          >
-                            <UserPlus className="w-3 h-3" />
-                            Invite Admin
-                          </button>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 justify-end" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => setInviteOrg(org)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-[#9000FF]/30 text-[#9000FF] rounded-md hover:bg-[#9000FF]/5 transition-colors"
+                            >
+                              <UserPlus className="w-3 h-3" />
+                              Invite Admin
+                            </button>
+                            <button
+                              onClick={() => setDetailOrg(org)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-[#E5EAF0] text-[#5E687B] rounded-md hover:bg-[#F7F9FA] transition-colors"
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                              Manage
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -397,6 +741,17 @@ export function SuperAdmin() {
           org={inviteOrg}
           onClose={() => setInviteOrg(null)}
           onInvited={() => void loadOrgs()}
+        />
+      )}
+
+      {detailOrg && (
+        <OrgDetailModal
+          org={detailOrg}
+          onClose={() => setDetailOrg(null)}
+          onInviteAdmin={() => {
+            setInviteOrg(detailOrg);
+            setDetailOrg(null);
+          }}
         />
       )}
     </div>
