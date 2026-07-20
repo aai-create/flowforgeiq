@@ -1,0 +1,48 @@
+Here is the Markdown formatted version of the description. You can copy the text inside the block below and paste it into any text editor (like Notepad, TextEdit, or VS Code), then save it with a `.md` extension (for example, `workbook_structure.md`).
+
+``` markdown
+# Workbook Structure by Tracing Formula Logic Across Sheets
+
+## Assumptions Made
+* **Formula Evaluation:** Because the data is presented as values, it is assumed that standard spreadsheet formulas (such as `=SUM()`, product price multiplications, and cross-reference links) are driving the totals, grand totals, and commission rows.
+* **Template Standardization:** The identical row indexes and labels across multiple sheets indicate a strict master template architecture used to maintain consistency across different supply categories.
+
+---
+
+## Key Takeaways of the Workbook Structure
+
+### 1. Standardized Matrix-Based Architecture
+All sheets in the workbook utilize a highly structured, column-oriented matrix design where columns represent individual **Purchase Orders (POs) or Shipping Batches**, and rows represent **Product Items and Metadata**.
+
+* **Metadata Header Block (Rows 0–8):** Every sheet dedicates the first 9 rows to column-wise shipment metadata. This tracks critical logistical variables including the unique `PO#`, timeline dates (`Exfactory`, `ETD`, `PO Date`, or `Required ETA`), shipping mode (`VIA` e.g., Ocean, Air, LCL), and the `Destination` port or warehouse.
+* **Top-Positioned Dashboard Summary (Row 9):** A merged `GRAND TOTAL` row is strategically placed directly beneath the headers. In a live sheet, this row acts as a dashboard link that references the financial totals calculated at the very bottom of each column, allowing users to see shipment values instantly without scrolling down hundreds of rows.
+* **Granular Product Rows (Rows 20+):** Specific product variants are listed row-by-row (e.g., bag sizes, hanger styles, or light box dimensions) with their respective units of measure in Column 1, serving as the raw quantity inputs for cost formulas.
+
+### 2. Two-Dimensional Formula Flow (Vertical & Horizontal Aggregations)
+The formula logic in this workbook flows in two directions to provide both per-shipment and per-item visibility.
+
+* **Horizontal Item Totals:** Trailing columns on the far right of the product rows utilize horizontal `=SUM()` formulas to aggregate the total volume shipped for each individual item across all historical POs.
+* **Vertical Shipment Costs:** Columns calculate individual shipment values vertically. Shipped quantities are multiplied by their respective item unit prices in the `TOTAL USD AMOUNT` rows. These itemized costs are then summed into a `GRAND TOTAL USD AMOUNT` at the base of each column.
+* **Secondary Financial Metrics:** Packaging sheets (such as *F21 Shopping Bags* and *Schwarz Shopping Bags*) extend this vertical logic to calculate logistics-specific metrics like `Total boxes order` and a `COMMISION TOTAL (3%)` derived directly from the column's grand total.
+
+### 3. Chronological Continuity and Template Replication
+The sheets are organized by product category and time period, establishing clear relationships between tabs.
+
+* **Chronological Tab Splitting:** The *Hangers* and *Shopping Bags* categories demonstrate a parent-child relationship where data is split across tabs by year (e.g., `2009–2018` and `2019–2020`). Because they maintain identical row labels and structures, they are designed to support multi-tab consolidation or 3D formulas (e.g., `=SUM('Hangers:Hangers_2018-2021'!Column_Total)`).
+* **Template Twins:** Tabs like *Ecommerce* and *Track_light_LED* share identical row structures and dimensions, confirming that a master template is cloned when tracking new supply categories to ensure workbook integrity.
+
+---
+
+## Workbook Summary Table
+
+| Category | Sheet Name | Primary Unit | Structural Purpose / Logic |
+| :--- | :--- | :--- | :--- |
+| **Flooring** | *Flooring* (Active Sheet) | SQ/FT | Tracks quartz tiles, crystallized glass, and bases; calculates total square footage and order values. |
+| **Packaging** | *F21_Shopping_bags_2009-2018* <br> *F21_Shopping_bags_2019-2020* | Weight (g) / Boxes | Chronological tracking of plastic shopping bags; includes box count formulas and a 3% commission logic. |
+| **Packaging** | *Schwarz_Shopping_bags* | Die-cut / Soft loop | Separate logistics tracking for Schwarz-branded red and yellow HDPE bags. |
+| **Hangers** | *Hangers* (2010-2015) <br> *Hangers_2015-2018* <br> *Hangers_2018-2021* | Style# | Multi-tab chronological tracking for top, bottom, wood, rubber, and specialty hangers. |
+| **Fixtures** | *LED_Light_box* | Single / Double | Tracks fabric light boxes, totem directories, and exterior light boxes by dimension. |
+| **Logistics** | *Ecommerce* | Style# | Tracks e-commerce shipping envelopes (Yellow 2.5mil envelopes). |
+| **Electronics** | *Track_light_LED* | Style# | Tracks specific LED track light head models (25W24 / 25W38). |
+
+```
