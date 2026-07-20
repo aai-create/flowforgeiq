@@ -550,24 +550,8 @@ export function Suppliers() {
 
         <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Tab bar */}
-        <div className="h-9 bg-white border-b border-[#E5EAF0] flex items-center px-5 gap-1 shrink-0">
-          <button
-            onClick={() => setActiveTab("suppliers")}
-            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "suppliers" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
-          >
-            <Building2 className="w-3.5 h-3.5" /> {t("suppliers.title")}
-          </button>
-          <button
-            onClick={() => setActiveTab("buyers")}
-            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "buyers" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
-          >
-            <User className="w-3.5 h-3.5" /> Buyers
-          </button>
-        </div>
-
         {activeTab === "buyers" ? (
-          <BuyersTab />
+          <BuyersTab onSwitchTab={setActiveTab} />
         ) : (
         <div className="flex-1 flex overflow-hidden">
 
@@ -576,11 +560,21 @@ export function Suppliers() {
 
           {/* Toolbar */}
           <div className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
-            <div className="flex items-center gap-3">
-              <h1 className="text-sm font-bold text-[#212833]">{t("suppliers.title")}</h1>
-              <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
-                {sorted.length} of {suppliers.length}
-              </span>
+            <div className="flex items-center h-full gap-1">
+              <button
+                className="flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 border-[#9000FF] text-[#9000FF] transition-colors"
+              >
+                <Building2 className="w-3.5 h-3.5" /> {t("suppliers.title")}
+                <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full ml-1">
+                  {sorted.length} of {suppliers.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab("buyers")}
+                className="flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 border-transparent text-[#5E687B] hover:text-[#212833] transition-colors"
+              >
+                <User className="w-3.5 h-3.5" /> Buyers
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">

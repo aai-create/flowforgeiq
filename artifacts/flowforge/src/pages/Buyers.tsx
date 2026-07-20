@@ -12,16 +12,20 @@ import {
   useGetRiskRadar,
   useListBuyers,
   useUpdateBuyer,
+  useCreateBuyer,
   getListBuyersQueryKey,
 } from "@workspace/api-client-react";
 import type { Shipment, Stage, BuyerSummary } from "@workspace/api-client-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Search, Package, X, ArrowRight, Users,
   ChevronRight, AlertTriangle, MessageCircle,
   Mail, MessageSquare, User, Phone, Globe,
   Check, Pencil, DollarSign, ArrowUpDown, ArrowUp, ArrowDown,
+  Plus, Building2,
 } from "lucide-react";
 import { shortDate } from "@/lib/adapters";
 
@@ -433,6 +437,7 @@ function BuyerDetailPanel({ buyer, stages, onClose, onFieldSave }: DetailPanelPr
 // ---------------------------------------------------------------------------
 export function Buyers() {
   const { t } = useTranslation();
+  const [, navigate] = useLocation();
   useCopilotHint("Browse buyers and their active orders", [
     "Which buyer has the most at-risk orders?",
     "Show me all active POs for Marlowe & Sons",
@@ -458,10 +463,21 @@ export function Buyers() {
 
   const buyers = useMemo(() => buildBuyerStats(rawBuyers, shipments), [rawBuyers, shipments]);
 
+  const createBuyer = useCreateBuyer({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListBuyersQueryKey() });
+      },
+    },
+  });
+
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [showNew, setShowNew] = useState(false);
+  const [newForm, setNewForm] = useState({ name: "", contactName: "", email: "", phone: "", region: "" });
+  const [newError, setNewError] = useState<string | null>(null);
 
   function handleSort(col: SortCol) {
     if (sortCol === col) {
@@ -490,6 +506,27 @@ export function Buyers() {
 
   function handleFieldSave(buyerId: number, field: "contactName" | "email" | "phone" | "region", value: string) {
     updateBuyer.mutate({ id: buyerId, data: { [field]: value || null } });
+  }
+
+  async function submitNew() {
+    setNewError(null);
+    if (!newForm.name.trim()) { setNewError("Buyer name is required."); return; }
+    try {
+      const created = await createBuyer.mutateAsync({
+        data: {
+          name: newForm.name.trim(),
+          contactName: newForm.contactName.trim() || undefined,
+          email: newForm.email.trim() || undefined,
+          phone: newForm.phone.trim() || undefined,
+          region: newForm.region.trim() || undefined,
+        },
+      });
+      setShowNew(false);
+      setNewForm({ name: "", contactName: "", email: "", phone: "", region: "" });
+      setSelectedId(created.id);
+    } catch {
+      setNewError("Failed to create buyer. Name may already exist.");
+    }
   }
 
   function SortableHeader({ label, col }: { label: string; col: SortCol }) {
@@ -524,26 +561,41 @@ export function Buyers() {
 
               {/* Toolbar */}
               <div className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-sm font-bold text-[#212833]">{t("buyers.title")}</h1>
-                  <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full">
-                    {filtered.length} of {buyers.length}
-                  </span>
+                <div className="flex items-center h-full gap-1">
+                  <button
+                    onClick={() => navigate("/suppliers")}
+                    className="flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 border-transparent text-[#5E687B] hover:text-[#212833] transition-colors"
+                  >
+                    <Building2 className="w-3.5 h-3.5" /> {t("suppliers.title")}
+                  </button>
+                  <button
+                    className="flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 border-[#9000FF] text-[#9000FF] transition-colors"
+                  >
+                    <User className="w-3.5 h-3.5" /> {t("buyers.title")}
+                    <span className="text-[10px] text-[#5E687B] bg-[#F0F4F8] border border-[#E5EAF0] px-2 py-0.5 rounded-full ml-1">
+                      {filtered.length} of {buyers.length}
+                    </span>
+                  </button>
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9E9FAE]" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder={t("buyers.searchPlaceholder")}
-                    className="h-8 pl-8 pr-3 text-[12px] bg-[#F0F4F8] border border-transparent focus:border-[#9000FF]/30 focus:bg-white rounded-md outline-none w-52 transition-all placeholder:text-[#9E9FAE]"
-                  />
-                  {search && (
-                    <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE] hover:text-[#5E687B]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9E9FAE]" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder={t("buyers.searchPlaceholder")}
+                      className="h-8 pl-8 pr-3 text-[12px] bg-[#F0F4F8] border border-transparent focus:border-[#9000FF]/30 focus:bg-white rounded-md outline-none w-52 transition-all placeholder:text-[#9E9FAE]"
+                    />
+                    {search && (
+                      <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE] hover:text-[#5E687B]">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <Button size="sm" onClick={() => setShowNew(true)} className="h-8 px-3 bg-[#9000FF] hover:bg-[#7200CC] text-white text-xs font-semibold">
+                    <Plus className="w-3 h-3 mr-1" /> Add Buyer
+                  </Button>
                 </div>
               </div>
 
@@ -666,6 +718,72 @@ export function Buyers() {
           </div>
         </div>
       </div>
+
+      {/* Add Buyer dialog */}
+      <Dialog open={showNew} onOpenChange={open => { setShowNew(open); setNewError(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Buyer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <label className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wide">Name *</label>
+              <input
+                className="mt-1 w-full h-8 text-[12px] px-3 border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40"
+                placeholder="Buyer company name"
+                value={newForm.name}
+                onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
+                onKeyDown={e => e.key === "Enter" && submitNew()}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wide">Contact Name</label>
+              <input
+                className="mt-1 w-full h-8 text-[12px] px-3 border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40"
+                placeholder="Primary contact"
+                value={newForm.contactName}
+                onChange={e => setNewForm(f => ({ ...f, contactName: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wide">Email</label>
+              <input
+                type="email"
+                className="mt-1 w-full h-8 text-[12px] px-3 border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40"
+                placeholder="contact@company.com"
+                value={newForm.email}
+                onChange={e => setNewForm(f => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wide">Phone</label>
+              <input
+                type="tel"
+                className="mt-1 w-full h-8 text-[12px] px-3 border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40"
+                placeholder="+1 555 000 0000"
+                value={newForm.phone}
+                onChange={e => setNewForm(f => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#5E687B] uppercase tracking-wide">Region</label>
+              <input
+                className="mt-1 w-full h-8 text-[12px] px-3 border border-[#E5EAF0] rounded-md outline-none focus:border-[#9000FF]/40"
+                placeholder="e.g. North America"
+                value={newForm.region}
+                onChange={e => setNewForm(f => ({ ...f, region: e.target.value }))}
+              />
+            </div>
+            {newError && <p className="text-xs text-red-600">{newError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setShowNew(false); setNewError(null); }}>Cancel</Button>
+            <Button size="sm" onClick={submitNew} disabled={createBuyer.isPending} className="bg-[#9000FF] hover:bg-[#7200CC] text-white">
+              {createBuyer.isPending ? "Saving…" : "Add Buyer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

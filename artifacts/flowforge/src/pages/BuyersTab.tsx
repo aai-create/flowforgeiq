@@ -124,7 +124,11 @@ interface NewBuyerForm {
   region: string;
 }
 
-export function BuyersTab() {
+interface BuyersTabProps {
+  onSwitchTab?: (tab: "suppliers" | "buyers") => void;
+}
+
+export function BuyersTab({ onSwitchTab }: BuyersTabProps = {}) {
   const { data: rawBuyers = [], isLoading } = useListBuyers();
   const createMutation = useCreateBuyer();
   const [buyers, setBuyers] = useState<BuyerSummary[]>([]);
@@ -164,11 +168,20 @@ export function BuyersTab() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="h-11 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-[#9000FF]" />
-          <span className="font-bold text-sm text-[#212833]">Buyers</span>
-          <span className="text-[10px] bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full font-bold">{buyers.length}</span>
+      <div className="h-12 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
+        <div className="flex items-center h-full gap-1">
+          <button
+            onClick={() => onSwitchTab?.("suppliers")}
+            className="flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 border-transparent text-[#5E687B] hover:text-[#212833] transition-colors"
+          >
+            <Building2 className="w-3.5 h-3.5" /> Suppliers
+          </button>
+          <button
+            className="flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 border-[#9000FF] text-[#9000FF] transition-colors"
+          >
+            <User className="w-3.5 h-3.5" /> Buyers
+            <span className="text-[10px] bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full font-bold ml-1">{buyers.length}</span>
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <input
