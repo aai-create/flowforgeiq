@@ -1,10 +1,12 @@
 import React from "react";
 import { useLocation, Link } from "wouter";
-import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users, Globe, GitBranch } from "lucide-react";
+import { Inbox, LayoutGrid, Calendar, ShieldAlert, BarChart3, Building2, BookOpen, Settings2, LogOut, FileQuestion, Users, Globe, GitBranch, ShieldCheck } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { useMyRole } from "@/lib/useCurrentUser";
+
+const SUPER_ADMIN_EMAIL = import.meta.env.VITE_SUPER_ADMIN_EMAIL as string | undefined;
 
 interface NavSidebarProps {
   showBrand?: boolean;
@@ -144,6 +146,15 @@ export function NavSidebar({
       {/* User profile footer */}
       {isLoaded && user && (
         <div className="border-t border-[#E5EAF0] p-2 shrink-0">
+          {SUPER_ADMIN_EMAIL && user.primaryEmailAddress?.emailAddress?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && (
+            <Link
+              href="/superadmin"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[#9000FF] hover:bg-[#9000FF]/5 transition-colors mb-0.5"
+            >
+              <ShieldCheck className="w-3 h-3 shrink-0" />
+              <span className="text-[11px] font-semibold">Platform Admin</span>
+            </Link>
+          )}
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
             <div className="w-6 h-6 rounded-full bg-[#9000FF]/10 flex items-center justify-center shrink-0">
               <span className="text-[10px] font-bold text-[#9000FF]">{initials}</span>

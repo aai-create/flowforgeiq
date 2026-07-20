@@ -24,6 +24,7 @@ import { AcceptInvite } from "@/pages/AcceptInvite";
 import { LandingPage } from "@/pages/Landing";
 import { ShortcutsGuide } from "@/pages/ShortcutsGuide";
 import { ShortcutsRedirect } from "@/pages/ShortcutsRedirect";
+import { SuperAdmin } from "@/pages/SuperAdmin";
 
 const queryClient = new QueryClient();
 
@@ -227,6 +228,7 @@ function Router() {
       <Route path="/shortcuts" component={ShortcutsGuide} />
       <Route path="/shortcuts-redirect" component={ShortcutsRedirect} />
       <Route path="/accept-invite" component={AcceptInvite} />
+      <Route path="/superadmin" component={SuperAdmin} />
       <Route component={NotFound} />
     </Switch>
   );

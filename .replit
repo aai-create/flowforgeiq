@@ -106,6 +106,8 @@ channel = "stable-25_05"
 
 [userenv.shared]
 INBOUND_EMAIL_BASE = "iq@inbound.flowforgeiq.com"
+VITE_SUPER_ADMIN_EMAIL = "abid.a.imam@gmail.com"
+SUPER_ADMIN_EMAIL = "abid.a.imam@gmail.com"
 
 [userenv.production]
 APP_URL = "https://flowforgeiq.com"

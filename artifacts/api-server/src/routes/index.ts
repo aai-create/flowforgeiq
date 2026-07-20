@@ -17,6 +17,7 @@ import integrationsRouter from "./integrations";
 import rfqsRouter from "./rfqs";
 import sampleRequestsRouter from "./sample-requests";
 import teamRouter from "./team";
+import superadminRouter from "./superadmin";
 import focusRouter from "./focus";
 import pushTokensRouter from "./push-tokens";
 import captureRouter from "./capture";
@@ -33,6 +34,7 @@ router.use(orgContextMiddleware);
 router.use(healthRouter);
 router.use(webhooksRouter);
 router.use(teamRouter); // handles its own auth (requireClerkAuth for provision-self, requireAuth for the rest)
+router.use(superadminRouter); // handles its own auth via requireSuperAdmin
 router.use(captureRouter); // handles its own auth (Clerk session OR Bearer device token)
 router.use(shortcutsRouter); // serves the pre-built .shortcut binary; no auth needed
 

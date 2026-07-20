@@ -3,7 +3,6 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizationsTable } from "./organizations";
 import { shipmentsTable } from "./shipments";
-import { teamUsersTable } from "./team_users";
 
 export const contactRoutingRulesTable = pgTable("contact_routing_rules", {
   id: serial("id").primaryKey(),
@@ -15,7 +14,7 @@ export const contactRoutingRulesTable = pgTable("contact_routing_rules", {
   /** Kept for backwards compatibility — populated for email rules only; null for chat/SMS rules. */
   fromEmail: text("from_email"),
   shipmentId: integer("shipment_id").notNull().references(() => shipmentsTable.id, { onDelete: "cascade" }),
-  createdBy: text("created_by").references(() => teamUsersTable.clerkUserId, { onDelete: "set null" }),
+  createdBy: text("created_by"),
   active: boolean("active").notNull().default(true),
   deactivationReason: text("deactivation_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

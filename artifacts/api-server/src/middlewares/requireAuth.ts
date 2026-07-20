@@ -1,4 +1,5 @@
 import { getAuth } from "@clerk/express";
+import { clerkClient } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 import { db, teamUsersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -11,6 +12,7 @@ declare global {
       orgId: number;
       role?: string;
       isProvisioned?: boolean;
+      superAdminEmail?: string;
     }
   }
 }
@@ -179,6 +181,38 @@ export const requireAdmin = async (
   }
   req.actorName = user.name;
   req.orgId = user.orgId;
+  next();
+};
+
+// ─── requireSuperAdmin ────────────────────────────────────────────────────────
+// Requires a valid Clerk JWT AND the authenticated user's primary email must
+// match the SUPER_ADMIN_EMAIL environment variable. No team_users row required.
+export const requireSuperAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+  if (!superAdminEmail) {
+    res.status(500).json({ error: "SUPER_ADMIN_EMAIL is not configured" });
+    return;
+  }
+  if (!req.userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const clerkUser = await clerkClient.users.getUser(req.userId);
+    const emails = clerkUser.emailAddresses.map(e => e.emailAddress.toLowerCase());
+    if (!emails.includes(superAdminEmail.toLowerCase())) {
+      res.status(403).json({ error: "Forbidden: super admin access required" });
+      return;
+    }
+    req.superAdminEmail = superAdminEmail;
+  } catch {
+    res.status(500).json({ error: "Could not verify identity" });
+    return;
+  }
   next();
 };
 
