@@ -3,6 +3,7 @@ import { clerkClient } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 import { db, teamUsersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { verifyImpersonationToken } from "../lib/impersonation";
 
 declare global {
   namespace Express {
@@ -13,6 +14,8 @@ declare global {
       role?: string;
       isProvisioned?: boolean;
       superAdminEmail?: string;
+      isImpersonating?: boolean;
+      _impersonationDenied?: boolean;
     }
   }
 }
@@ -51,6 +54,45 @@ export const orgContextMiddleware = async (
       }
     }
     // ── End duplicate-cookie detection ─────────────────────────────────────
+
+    // ── Impersonation header ────────────────────────────────────────────────
+    const impersonateHeader = req.headers["x-forge-impersonate"];
+    if (typeof impersonateHeader === "string" && impersonateHeader) {
+      const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+      if (superAdminEmail && userId) {
+        const payload = verifyImpersonationToken(impersonateHeader);
+        if (payload) {
+          // Verify the requestor is actually the super admin
+          try {
+            const clerkUser = await clerkClient.users.getUser(userId);
+            const emails = clerkUser.emailAddresses.map((e) => e.emailAddress.toLowerCase());
+            if (emails.includes(superAdminEmail.toLowerCase())) {
+              req.userId = userId;
+              req.orgId = payload.orgId;
+              req.isProvisioned = true;
+              req.isImpersonating = true;
+              req.actorName = "[Platform Admin]";
+              next();
+              return;
+            }
+            // Not a superadmin — flag for rejection
+            req._impersonationDenied = true;
+          } catch {
+            req._impersonationDenied = true;
+          }
+        } else {
+          // Token present but invalid/expired — flag for rejection
+          req._impersonationDenied = true;
+        }
+      } else {
+        // No SUPER_ADMIN_EMAIL configured or no userId — flag for rejection
+        req._impersonationDenied = true;
+      }
+      next();
+      return;
+    }
+    // ── End impersonation header ────────────────────────────────────────────
+
     if (userId) {
       req.userId = userId;
       const [user] = await db
@@ -102,11 +144,16 @@ export const requireClerkAuth = (
 // ─── requireAuth ─────────────────────────────────────────────────────────────
 // Requires a valid Clerk JWT AND an existing team_users row (provisioned member).
 // Returns 401 if no JWT; 403 if JWT present but user is not yet provisioned.
+// Also rejects non-superadmin requests that present an X-Forge-Impersonate header.
 export const requireAuth = (
   req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
+  if (req._impersonationDenied) {
+    res.status(401).json({ error: "Unauthorized: invalid or forbidden impersonation token" });
+    return;
+  }
   if (!req.userId) {
     setDupCookieHint(req, res);
     res.status(401).json({ error: "Unauthorized" });

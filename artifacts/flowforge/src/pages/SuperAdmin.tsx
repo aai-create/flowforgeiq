@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/react";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import {
   Building2, Plus, UserPlus, RefreshCw, Check, Copy, X,
   ChevronRight, Users, Mail, Shield, Clock, Trash2, MailX,
-  ArrowLeft,
+  ArrowLeft, LogIn,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
+import { useImpersonation } from "@/lib/useImpersonation";
 
 interface Org {
   id: number;
@@ -580,12 +581,15 @@ function OrgDetailModal({
 
 export function SuperAdmin() {
   const { user, isLoaded } = useUser();
+  const [, navigate] = useLocation();
+  const { enter: enterImpersonation } = useImpersonation();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewOrg, setShowNewOrg] = useState(false);
   const [inviteOrg, setInviteOrg] = useState<Org | null>(null);
   const [detailOrg, setDetailOrg] = useState<Org | null>(null);
+  const [switchingOrgId, setSwitchingOrgId] = useState<number | null>(null);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress;
   const isSuperAdmin = SUPER_ADMIN_EMAIL && userEmail?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
@@ -606,6 +610,27 @@ export function SuperAdmin() {
       setError("Could not load organizations");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const switchToOrg = async (org: Org) => {
+    setSwitchingOrgId(org.id);
+    try {
+      const res = await fetch(`${basePath}/api/superadmin/orgs/${org.id}/impersonate`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        setError(d.error ?? "Failed to switch to org");
+        return;
+      }
+      const data = await res.json() as { token: string };
+      enterImpersonation(data.token);
+      navigate("/inbox");
+    } catch {
+      setError("Could not switch to organization");
+    } finally {
+      setSwitchingOrgId(null);
     }
   };
 
@@ -703,6 +728,16 @@ export function SuperAdmin() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2 justify-end" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => { void switchToOrg(org); }}
+                              disabled={switchingOrgId === org.id}
+                              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-amber-300 text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50"
+                            >
+                              {switchingOrgId === org.id
+                                ? <RefreshCw className="w-3 h-3 animate-spin" />
+                                : <LogIn className="w-3 h-3" />}
+                              Switch to Org
+                            </button>
                             <button
                               onClick={() => setInviteOrg(org)}
                               className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-[#9000FF]/30 text-[#9000FF] rounded-md hover:bg-[#9000FF]/5 transition-colors"

@@ -25,6 +25,8 @@ import { LandingPage } from "@/pages/Landing";
 import { ShortcutsGuide } from "@/pages/ShortcutsGuide";
 import { ShortcutsRedirect } from "@/pages/ShortcutsRedirect";
 import { SuperAdmin } from "@/pages/SuperAdmin";
+import { ImpersonationCtx, useImpersonationProvider, useImpersonation } from "@/lib/useImpersonation";
+import { LogOut } from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -141,12 +143,44 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function ImpersonationBanner() {
+  const { active, orgName, exit } = useImpersonation();
+  const [, navigate] = useLocation();
+
+  if (!active) return null;
+
+  const handleExit = () => {
+    exit();
+    navigate("/superadmin");
+  };
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between px-4 py-2 bg-amber-500 text-white text-xs font-semibold shadow-md">
+      <div className="flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />
+        <span>Viewing as <strong>{orgName}</strong> — Platform Admin session</span>
+      </div>
+      <button
+        onClick={handleExit}
+        className="flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md transition-colors font-bold text-white"
+      >
+        <LogOut className="w-3 h-3" />
+        Exit
+      </button>
+    </div>
+  );
+}
+
 function AppLayout() {
   useProvisionUser();
+  const { active } = useImpersonation();
   return (
     <TooltipProvider>
       <CopilotProvider>
-        <Router />
+        <ImpersonationBanner />
+        <div className={active ? "pt-9" : undefined}>
+          <Router />
+        </div>
         <Toaster />
       </CopilotProvider>
     </TooltipProvider>
@@ -236,6 +270,7 @@ function Router() {
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
+  const impersonation = useImpersonationProvider();
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -245,10 +280,12 @@ function ClerkProviderWithRoutes() {
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
-      <QueryClientProvider client={queryClient}>
-        <ClerkQueryClientCacheInvalidator />
-        <AppLayout />
-      </QueryClientProvider>
+      <ImpersonationCtx.Provider value={impersonation}>
+        <QueryClientProvider client={queryClient}>
+          <ClerkQueryClientCacheInvalidator />
+          <AppLayout />
+        </QueryClientProvider>
+      </ImpersonationCtx.Provider>
     </ClerkProvider>
   );
 }

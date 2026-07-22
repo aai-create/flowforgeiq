@@ -5,6 +5,7 @@ import { requireSuperAdmin } from "../middlewares/requireAuth";
 import crypto from "node:crypto";
 import * as postmark from "postmark";
 import { resolveBaseUrl } from "../lib/resolveBaseUrl";
+import { signImpersonationToken } from "../lib/impersonation";
 
 function slugifyOrgName(name: string): string {
   return name
@@ -241,6 +242,34 @@ router.delete("/superadmin/orgs/:id/invitations/:invId", requireSuperAdmin, asyn
     return;
   }
 
+  res.json({ ok: true });
+});
+
+// ─── Impersonation endpoints ──────────────────────────────────────────────────
+
+router.post("/superadmin/orgs/:id/impersonate", requireSuperAdmin, async (req, res) => {
+  const orgId = Number(req.params.id);
+  if (!orgId || isNaN(orgId)) {
+    res.status(400).json({ error: "Invalid org id" });
+    return;
+  }
+
+  const [org] = await db
+    .select({ id: organizationsTable.id, name: organizationsTable.name, slug: organizationsTable.slug })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.id, orgId));
+
+  if (!org) {
+    res.status(404).json({ error: "Organization not found" });
+    return;
+  }
+
+  const token = signImpersonationToken({ orgId: org.id, orgName: org.name, orgSlug: org.slug });
+  res.json({ token, orgId: org.id, orgName: org.name, orgSlug: org.slug });
+});
+
+// No-op: client discards the token locally; kept for future blocklist support
+router.delete("/superadmin/impersonate", requireSuperAdmin, (_req, res) => {
   res.json({ ok: true });
 });
 
