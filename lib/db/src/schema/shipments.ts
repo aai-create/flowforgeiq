@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, index, unique } from "drizzle-orm/pg-core";
 import { dealsTable } from "./deals";
 import { buyersTable } from "./buyers";
 import { createInsertSchema } from "drizzle-zod";
@@ -7,7 +7,7 @@ import { organizationsTable } from "./organizations";
 
 export const shipmentsTable = pgTable("shipments", {
   id: serial("id").primaryKey(),
-  poNumber: text("po_number").notNull().unique(),
+  poNumber: text("po_number").notNull(),
   product: text("product").notNull(),
   category: text("category").notNull(),
   supplierId: integer("supplier_id").notNull(),
@@ -28,7 +28,10 @@ export const shipmentsTable = pgTable("shipments", {
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-}, (t) => [index("shipments_org_id_idx").on(t.orgId)]);
+}, (t) => [
+  index("shipments_org_id_idx").on(t.orgId),
+  unique("shipments_org_po_uniq").on(t.orgId, t.poNumber),
+]);
 
 export const insertShipmentSchema = createInsertSchema(shipmentsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertShipment = z.infer<typeof insertShipmentSchema>;
