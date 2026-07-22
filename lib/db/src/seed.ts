@@ -187,6 +187,9 @@ async function main() {
     name: "FlowForge Demo",
     slug: "flowforge-demo",
   });
+  // Advance the sequence past the explicitly-inserted id so the next INSERT
+  // via nextval() doesn't collide with the seeded row.
+  await db.execute(sql`SELECT setval('organizations_id_seq', (SELECT MAX(id) FROM organizations))`);
 
   console.log("Inserting stages...");
   await db.insert(stagesTable).values(data.stages.map(s => ({ ...s, orgId: DEFAULT_ORG_ID })));
