@@ -30,6 +30,56 @@ export const MobileCaptureResponse = zod.object({
 
 
 /**
+ * @summary Parse and import an uploaded XLSX spreadsheet (admin only)
+ */
+export const ImportDataQueryParams = zod.object({
+  "dryRun": zod.coerce.boolean().optional().describe('When true, parse and validate but do not write to DB')
+})
+
+export const ImportDataBody = zod.object({
+  "file": zod.instanceof(File)
+})
+
+export const ImportDataResponse = zod.object({
+  "dryRun": zod.boolean().optional(),
+  "suppliers": zod.array(zod.object({
+  "row": zod.number().optional(),
+  "data": zod.object({
+
+}).passthrough().optional()
+})).optional(),
+  "shipments": zod.array(zod.object({
+  "row": zod.number().optional(),
+  "data": zod.object({
+
+}).passthrough().optional()
+})).optional(),
+  "payments": zod.array(zod.object({
+  "row": zod.number().optional(),
+  "data": zod.object({
+
+}).passthrough().optional()
+})).optional(),
+  "errors": zod.array(zod.object({
+  "sheet": zod.string().optional(),
+  "row": zod.number().optional(),
+  "column": zod.string().optional(),
+  "message": zod.string().optional()
+})).optional(),
+  "inserted": zod.object({
+  "suppliers": zod.number().optional(),
+  "shipments": zod.number().optional(),
+  "payments": zod.number().optional()
+}).optional(),
+  "skipped": zod.object({
+  "suppliers": zod.number().optional(),
+  "shipments": zod.number().optional(),
+  "payments": zod.number().optional()
+}).optional()
+})
+
+
+/**
  * @summary List contact routing rules for the org
  */
 export const ListContactRulesResponseItem = zod.object({

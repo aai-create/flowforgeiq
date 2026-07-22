@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle } from "lucide-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle, Upload, FileSpreadsheet, TriangleAlert } from "lucide-react";
 import { useOnboardingState } from "@/hooks/useOnboardingState";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings, useGetOrg, useUpdateOrg, getGetOrgQueryKey } from "@workspace/api-client-react";
 import type { Stage, CreateDeviceTokenResponse } from "@workspace/api-client-react";
@@ -134,6 +134,287 @@ function CopilotSettingsSection() {
           >
             {saved ? <><Check className="w-3 h-3" />Saved</> : updateMutation.isPending ? "Saving…" : <><Save className="w-3 h-3" />Save</>}
           </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface ImportValidationErr {
+  sheet: string;
+  row: number;
+  column: string;
+  message: string;
+}
+
+interface ImportPreview {
+  suppliers: { row: number; data: Record<string, unknown> }[];
+  shipments: { row: number; data: Record<string, unknown> }[];
+  payments:  { row: number; data: Record<string, unknown> }[];
+  errors: ImportValidationErr[];
+}
+
+interface ImportResult {
+  inserted: { suppliers: number; shipments: number; payments: number };
+  skipped:  { suppliers: number; shipments: number; payments: number };
+}
+
+function ImportDataSection() {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const [dragActive, setDragActive] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const runDryRun = useCallback(async (f: File) => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreview(null);
+    setImportResult(null);
+    setImportError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await fetch(`${basePath}/api/import/data?dryRun=true`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        setPreviewError(err.error ?? "Failed to parse file");
+        return;
+      }
+      const data = await res.json() as ImportPreview;
+      setPreview(data);
+    } catch {
+      setPreviewError("Could not reach the server. Please try again.");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [basePath]);
+
+  const handleFiles = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const f = files[0];
+    if (!f.name.endsWith(".xlsx")) {
+      setPreviewError("Please upload an .xlsx file.");
+      return;
+    }
+    setFile(f);
+    void runDryRun(f);
+  }, [runDryRun]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const handleConfirmImport = async () => {
+    if (!file) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${basePath}/api/import/data?dryRun=false`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string; errors?: ImportValidationErr[] };
+        setImportError(err.error ?? "Import failed");
+        return;
+      }
+      const data = await res.json() as ImportResult;
+      setImportResult(data);
+      setPreview(null);
+      setFile(null);
+    } catch {
+      setImportError("Could not reach the server. Please try again.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const hasErrors = (preview?.errors?.length ?? 0) > 0;
+  const canConfirm = !!preview && !hasErrors && !previewLoading;
+
+  return (
+    <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-1">
+        <FileSpreadsheet className="w-3.5 h-3.5 text-[#9000FF]" />
+        <h2 className="text-sm font-bold text-[#212833]">Import Data</h2>
+      </div>
+      <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">
+        Bulk-import suppliers, shipments, and payments from a spreadsheet. Download the pre-filled template, fill in your data, then upload it here.
+      </p>
+
+      {/* Download template */}
+      <a
+        href={`${basePath}/api/import/template`}
+        download="flowforge-import-template.xlsx"
+        className="inline-flex items-center gap-2 px-4 py-2 mb-5 text-xs font-semibold text-white bg-[#9000FF] hover:bg-[#7A00D9] rounded-md transition-colors"
+      >
+        <Download className="w-3.5 h-3.5" />
+        Download Template
+      </a>
+
+      {/* Drop zone */}
+      <div
+        onDragOver={e => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors mb-4 ${
+          dragActive
+            ? "border-[#9000FF] bg-[#9000FF]/5"
+            : "border-[#E5EAF0] hover:border-[#9000FF]/40 hover:bg-[#F7F9FA]"
+        }`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx"
+          className="hidden"
+          onChange={e => handleFiles(e.target.files)}
+        />
+        <Upload className="w-6 h-6 mx-auto mb-2 text-[#9E9FAE]" />
+        {file ? (
+          <div>
+            <p className="text-xs font-semibold text-[#212833]">{file.name}</p>
+            <p className="text-[10px] text-[#9E9FAE] mt-0.5">Click or drag to replace</p>
+          </div>
+        ) : (
+          <div>
+            <p className="text-xs font-semibold text-[#5E687B]">Drag &amp; drop your .xlsx file here</p>
+            <p className="text-[10px] text-[#9E9FAE] mt-0.5">or click to browse</p>
+          </div>
+        )}
+      </div>
+
+      {/* Loading */}
+      {previewLoading && (
+        <div className="flex items-center gap-2 text-xs text-[#9E9FAE] mb-4">
+          <RefreshCw className="w-3 h-3 animate-spin" /> Parsing file…
+        </div>
+      )}
+
+      {/* Parse error */}
+      {previewError && (
+        <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 mb-4 flex items-start gap-2">
+          <TriangleAlert className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{previewError}</p>
+        </div>
+      )}
+
+      {/* Preview */}
+      {preview && (
+        <div className="mb-4 space-y-3">
+          {/* Row counts */}
+          <div className="flex gap-3">
+            {[
+              { label: "Suppliers", count: preview.suppliers.length },
+              { label: "Shipments", count: preview.shipments.length },
+              { label: "Payments",  count: preview.payments.length },
+            ].map(({ label, count }) => (
+              <div key={label} className="flex-1 bg-[#F7F9FA] border border-[#E5EAF0] rounded-lg p-3 text-center">
+                <p className="text-xl font-bold text-[#212833]">{count}</p>
+                <p className="text-[10px] text-[#9E9FAE] font-medium">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Validation errors */}
+          {preview.errors.length > 0 && (
+            <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+              <p className="text-xs font-bold text-red-700 mb-2 flex items-center gap-1.5">
+                <TriangleAlert className="w-3 h-3" />
+                {preview.errors.length} validation {preview.errors.length === 1 ? "error" : "errors"} — fix before importing
+              </p>
+              <ul className="space-y-1 max-h-32 overflow-y-auto">
+                {preview.errors.map((e, i) => (
+                  <li key={i} className="text-[11px] text-red-600">
+                    <span className="font-semibold">{e.sheet} row {e.row}</span> · {e.column}: {e.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* First 5 rows preview per sheet */}
+          {[
+            { label: "Suppliers", rows: preview.suppliers.slice(0, 5) },
+            { label: "Shipments", rows: preview.shipments.slice(0, 5) },
+            { label: "Payments",  rows: preview.payments.slice(0, 5) },
+          ].map(({ label, rows }) => rows.length > 0 && (
+            <details key={label} className="border border-[#E5EAF0] rounded-lg overflow-hidden">
+              <summary className="px-3 py-2 bg-[#FAFBFC] text-xs font-semibold text-[#5E687B] cursor-pointer hover:bg-[#F0F4F8] transition-colors list-none flex items-center justify-between">
+                <span>{label} — first {rows.length} row{rows.length !== 1 ? "s" : ""}</span>
+                <ChevronDown className="w-3 h-3" />
+              </summary>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="bg-[#F7F9FA] border-b border-[#E5EAF0]">
+                      <th className="px-2 py-1.5 text-left font-semibold text-[#9E9FAE]">#</th>
+                      {Object.keys(rows[0].data).map(k => (
+                        <th key={k} className="px-2 py-1.5 text-left font-semibold text-[#9E9FAE] whitespace-nowrap">{k}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(({ row, data }) => (
+                      <tr key={row} className="border-b border-[#F0F4F8] hover:bg-[#FAFBFC]">
+                        <td className="px-2 py-1.5 text-[#9E9FAE]">{row}</td>
+                        {Object.values(data).map((v, i) => (
+                          <td key={i} className="px-2 py-1.5 text-[#212833] whitespace-nowrap max-w-[140px] truncate">{String(v ?? "")}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {/* Confirm import */}
+      {preview && !hasErrors && (
+        <button
+          onClick={() => void handleConfirmImport()}
+          disabled={!canConfirm || importing}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-md transition-colors"
+        >
+          {importing
+            ? <><RefreshCw className="w-3 h-3 animate-spin" />Importing…</>
+            : <><Check className="w-3.5 h-3.5" />Confirm Import</>}
+        </button>
+      )}
+
+      {/* Import error */}
+      {importError && (
+        <div className="mt-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 flex items-start gap-2">
+          <TriangleAlert className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{importError}</p>
+        </div>
+      )}
+
+      {/* Success toast */}
+      {importResult && (
+        <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-lg px-3.5 py-3 flex items-start gap-2.5">
+          <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-emerald-800">Import complete</p>
+            <p className="text-[11px] text-emerald-700 mt-0.5">
+              Inserted {importResult.inserted.suppliers} supplier{importResult.inserted.suppliers !== 1 ? "s" : ""},{" "}
+              {importResult.inserted.shipments} shipment{importResult.inserted.shipments !== 1 ? "s" : ""},{" "}
+              {importResult.inserted.payments} payment{importResult.inserted.payments !== 1 ? "s" : ""}.{" "}
+              Skipped (already existed): {importResult.skipped.suppliers} supplier{importResult.skipped.suppliers !== 1 ? "s" : ""},{" "}
+              {importResult.skipped.shipments} shipment{importResult.skipped.shipments !== 1 ? "s" : ""},{" "}
+              {importResult.skipped.payments} payment{importResult.skipped.payments !== 1 ? "s" : ""}.
+            </p>
+          </div>
         </div>
       )}
     </section>
@@ -1638,6 +1919,7 @@ export function Settings() {
               <MobileAppSection />
               <HelpOnboardingSection />
               <CopilotSettingsSection />
+              {myRole === "admin" && <ImportDataSection />}
               <section className="bg-white border border-[#E5EAF0] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#212833] mb-1">{t("settings.general.poNumbering")}</h2>
                 <p className="text-xs text-[#5E687B] mb-5 leading-relaxed">{t("settings.general.poNumberingDesc")}</p>

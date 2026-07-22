@@ -711,6 +711,22 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Import data note */}
+        <div className="section-panel p-4 flex items-start gap-3">
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5"
+            style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}
+          >
+            <ExternalLink size={13} color="hsl(var(--primary))" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Import Data</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Bulk import of suppliers, shipments, and payments is available on the desktop version of FlowForgeIQ. Open <span className="font-medium text-foreground">Settings → General</span> on a desktop browser to upload your spreadsheet.
+            </p>
+          </div>
+        </div>
+
         {/* Onboarding tour */}
         <div className="section-panel p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">

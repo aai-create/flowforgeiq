@@ -54,6 +54,65 @@ paths:
         "401":
           description: Unauthorized
 
+  /import/template:
+    get:
+      operationId: downloadImportTemplate
+      tags: [settings]
+      summary: Download the pre-filled XLSX import template (admin only)
+      responses:
+        "200":
+          description: XLSX template file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin required
+        "404":
+          description: Template file not found
+
+  /import/data:
+    post:
+      operationId: importData
+      tags: [settings]
+      summary: Parse and import an uploaded XLSX spreadsheet (admin only)
+      parameters:
+        - in: query
+          name: dryRun
+          schema: { type: boolean }
+          description: "When true, parse and validate but do not write to DB"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Import result (dry run or actual)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportResult" }
+        "400":
+          description: No file uploaded
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin required
+        "422":
+          description: Validation errors
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportValidationError" }
+
   /settings/contact-rules:
     get:
       operationId: listContactRules
@@ -3489,6 +3548,66 @@ components:
         createdBy:          { type: ["string", "null"] }
         createdAt:          { type: string, format: date-time }
         updatedAt:          { type: string, format: date-time }
+
+    ImportValidationError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              sheet:   { type: string }
+              row:     { type: integer }
+              column:  { type: string }
+              message: { type: string }
+
+    ImportResult:
+      type: object
+      properties:
+        dryRun: { type: boolean }
+        suppliers:
+          type: array
+          items:
+            type: object
+            properties:
+              row:  { type: integer }
+              data: { type: object }
+        shipments:
+          type: array
+          items:
+            type: object
+            properties:
+              row:  { type: integer }
+              data: { type: object }
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              row:  { type: integer }
+              data: { type: object }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              sheet:   { type: string }
+              row:     { type: integer }
+              column:  { type: string }
+              message: { type: string }
+        inserted:
+          type: object
+          properties:
+            suppliers: { type: integer }
+            shipments:  { type: integer }
+            payments:   { type: integer }
+        skipped:
+          type: object
+          properties:
+            suppliers: { type: integer }
+            shipments:  { type: integer }
+            payments:   { type: integer }
 
     CreateContactRuleBody:
       type: object

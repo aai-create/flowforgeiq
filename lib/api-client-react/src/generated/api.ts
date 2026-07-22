@@ -62,6 +62,10 @@ import type {
   GmailOAuthCallbackParams,
   GmailStatus,
   HealthStatus,
+  ImportDataBody,
+  ImportDataParams,
+  ImportResult,
+  ImportValidationError,
   InboundEmailAddress,
   InboundEmailHealth,
   InboundEmailWebhook,
@@ -214,6 +218,164 @@ export const useMobileCapture = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMobileCaptureMutationOptions(options));
+    }
+
+export const getDownloadImportTemplateUrl = () => {
+
+
+
+
+  return `/api/import/template`
+}
+
+/**
+ * @summary Download the pre-filled XLSX import template (admin only)
+ */
+export const downloadImportTemplate = async ( options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadImportTemplateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadImportTemplateQueryKey = () => {
+    return [
+    `/api/import/template`
+    ] as const;
+    }
+
+
+export const getDownloadImportTemplateQueryOptions = <TData = Awaited<ReturnType<typeof downloadImportTemplate>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadImportTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadImportTemplateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadImportTemplate>>> = ({ signal }) => downloadImportTemplate({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadImportTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadImportTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof downloadImportTemplate>>>
+export type DownloadImportTemplateQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download the pre-filled XLSX import template (admin only)
+ */
+
+export function useDownloadImportTemplate<TData = Awaited<ReturnType<typeof downloadImportTemplate>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadImportTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadImportTemplateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getImportDataUrl = (params?: ImportDataParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/import/data?${stringifiedParams}` : `/api/import/data`
+}
+
+/**
+ * @summary Parse and import an uploaded XLSX spreadsheet (admin only)
+ */
+export const importData = async (importDataBody: ImportDataBody,
+    params?: ImportDataParams, options?: RequestInit): Promise<ImportResult> => {
+    const formData = new FormData();
+formData.append(`file`, importDataBody.file);
+
+  return customFetch<ImportResult>(getImportDataUrl(params),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getImportDataMutationOptions = <TError = ErrorType<void | ImportValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importData>>, TError,{data: BodyType<ImportDataBody>;params?: ImportDataParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importData>>, TError,{data: BodyType<ImportDataBody>;params?: ImportDataParams}, TContext> => {
+
+const mutationKey = ['importData'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importData>>, {data: BodyType<ImportDataBody>;params?: ImportDataParams}> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  importData(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportDataMutationResult = NonNullable<Awaited<ReturnType<typeof importData>>>
+    export type ImportDataMutationBody = BodyType<ImportDataBody>
+    export type ImportDataMutationError = ErrorType<void | ImportValidationError>
+
+    /**
+ * @summary Parse and import an uploaded XLSX spreadsheet (admin only)
+ */
+export const useImportData = <TError = ErrorType<void | ImportValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importData>>, TError,{data: BodyType<ImportDataBody>;params?: ImportDataParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importData>>,
+        TError,
+        {data: BodyType<ImportDataBody>;params?: ImportDataParams},
+        TContext
+      > => {
+      return useMutation(getImportDataMutationOptions(options));
     }
 
 export const getListContactRulesUrl = () => {

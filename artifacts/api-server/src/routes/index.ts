@@ -25,6 +25,7 @@ import shortcutsRouter from "./shortcuts";
 import contactRulesRouter from "./contact-rules";
 import reportsRouter from "./reports";
 import onboardingRouter from "./onboarding";
+import importRouter from "./import";
 
 const router: IRouter = Router();
 
@@ -60,6 +61,7 @@ protectedRouter.use(pushTokensRouter);
 protectedRouter.use(contactRulesRouter);
 protectedRouter.use(reportsRouter);
 protectedRouter.use(onboardingRouter);
+protectedRouter.use(importRouter);
 
 router.use(protectedRouter);
 

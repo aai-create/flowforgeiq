@@ -1721,6 +1721,67 @@ export interface ContactRoutingRule {
   updatedAt: string;
 }
 
+export type ImportValidationErrorErrorsItem = {
+  sheet?: string;
+  row?: number;
+  column?: string;
+  message?: string;
+};
+
+export interface ImportValidationError {
+  errors?: ImportValidationErrorErrorsItem[];
+}
+
+export type ImportResultSuppliersItemData = { [key: string]: unknown };
+
+export type ImportResultSuppliersItem = {
+  row?: number;
+  data?: ImportResultSuppliersItemData;
+};
+
+export type ImportResultShipmentsItemData = { [key: string]: unknown };
+
+export type ImportResultShipmentsItem = {
+  row?: number;
+  data?: ImportResultShipmentsItemData;
+};
+
+export type ImportResultPaymentsItemData = { [key: string]: unknown };
+
+export type ImportResultPaymentsItem = {
+  row?: number;
+  data?: ImportResultPaymentsItemData;
+};
+
+export type ImportResultErrorsItem = {
+  sheet?: string;
+  row?: number;
+  column?: string;
+  message?: string;
+};
+
+export type ImportResultInserted = {
+  suppliers?: number;
+  shipments?: number;
+  payments?: number;
+};
+
+export type ImportResultSkipped = {
+  suppliers?: number;
+  shipments?: number;
+  payments?: number;
+};
+
+export interface ImportResult {
+  dryRun?: boolean;
+  suppliers?: ImportResultSuppliersItem[];
+  shipments?: ImportResultShipmentsItem[];
+  payments?: ImportResultPaymentsItem[];
+  errors?: ImportResultErrorsItem[];
+  inserted?: ImportResultInserted;
+  skipped?: ImportResultSkipped;
+}
+
 /**
  * Messaging channel; defaults to email when omitted
  */
@@ -1750,6 +1811,17 @@ export interface PatchContactRuleBody {
   active?: boolean;
   shipmentId?: number;
 }
+
+export type ImportDataParams = {
+/**
+ * When true, parse and validate but do not write to DB
+ */
+dryRun?: boolean;
+};
+
+export type ImportDataBody = {
+  file: Blob;
+};
 
 export type CreateDeviceTokenBody = {
   /** @maxLength 80 */
