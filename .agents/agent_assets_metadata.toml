@@ -71,3 +71,9 @@ id = "rwD39MuZvgC_IVYCwvf-k"
 uri = "file://.local/outputs/FlowForgeIQ.pdf"
 type = "pdf"
 title = "FlowForgeIQ.pdf"
+
+[[outputs]]
+id = "XIWkw-OIuDFAGqGlP0ie_"
+uri = "file://attached_assets/flowforge-seed-import.xlsx"
+type = "table"
+title = "FlowForge Seed Data Import"
