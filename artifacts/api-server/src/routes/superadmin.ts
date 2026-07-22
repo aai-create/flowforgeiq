@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, teamUsersTable, teamInvitationsTable, organizationsTable } from "@workspace/db";
+import { db, teamUsersTable, teamInvitationsTable, organizationsTable, stagesTable } from "@workspace/db";
 import { eq, sql, isNull, and } from "drizzle-orm";
 import { requireSuperAdmin } from "../middlewares/requireAuth";
 import crypto from "node:crypto";
@@ -61,6 +61,25 @@ router.post("/superadmin/orgs", requireSuperAdmin, async (req, res) => {
     .insert(organizationsTable)
     .values({ name: name.trim(), slug })
     .returning();
+
+  // Seed the default pipeline stages for every new org so the UI can render
+  // shipments immediately without a separate setup step.
+  const DEFAULT_STAGES = [
+    { id: "spec",       label: "Spec Sheet",        sortOrder: 0 },
+    { id: "quotes",     label: "Factory Quotes",     sortOrder: 1 },
+    { id: "sample_ord", label: "Sample Order",       sortOrder: 2 },
+    { id: "sample_apr", label: "Sample Approval",    sortOrder: 3 },
+    { id: "po_issued",  label: "PO Issued",          sortOrder: 4 },
+    { id: "production", label: "Production",         sortOrder: 5 },
+    { id: "qc",         label: "QC Inspection",      sortOrder: 6 },
+    { id: "ex_factory", label: "Ex-Factory",         sortOrder: 7 },
+    { id: "in_transit", label: "In Transit",         sortOrder: 8 },
+    { id: "payment",    label: "Payment Clearance",  sortOrder: 9 },
+    { id: "delivered",  label: "Delivered",          sortOrder: 10 },
+  ];
+  await db.insert(stagesTable).values(
+    DEFAULT_STAGES.map(s => ({ ...s, orgId: org.id })),
+  ).onConflictDoNothing();
 
   res.status(201).json({ org });
 });

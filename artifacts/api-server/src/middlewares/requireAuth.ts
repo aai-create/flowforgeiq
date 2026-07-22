@@ -181,6 +181,11 @@ export const requireManager = async (
     res.status(403).json({ error: "Forbidden: account not provisioned" });
     return;
   }
+  // Impersonation sessions already have orgId + role set by orgContextMiddleware.
+  if (req.isImpersonating) {
+    next();
+    return;
+  }
   const [user] = await db
     .select()
     .from(teamUsersTable)
@@ -212,6 +217,13 @@ export const requireAdmin = async (
   }
   if (!req.isProvisioned) {
     res.status(403).json({ error: "Forbidden: account not provisioned" });
+    return;
+  }
+  // Impersonation sessions already have orgId + role set by orgContextMiddleware.
+  // Re-querying team_users would overwrite the impersonated orgId with the
+  // superadmin's own orgId, so skip the DB round-trip in that case.
+  if (req.isImpersonating) {
+    next();
     return;
   }
   const [user] = await db
