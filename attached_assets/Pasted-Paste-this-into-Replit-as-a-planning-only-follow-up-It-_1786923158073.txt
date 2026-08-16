@@ -1,0 +1,342 @@
+Paste this into Replit as a **planning-only** follow-up. It incorporates the Signal Inbox architecture feedback and explicitly separates optional commercial supplier quotes from AI-generated response drafts.
+
+```text
+Revise `docs/signal-inbox-prototype-plan.md` before implementing any code.
+
+This is a planning-only task. Do not modify schema, API routes, frontend code, migrations, dependencies, or generated files. Update only the plan document and report the design decisions made.
+
+# Product Goal
+
+FlowForgeIQ needs a review-first, bidirectional Signal Inbox:
+
+inbound communication
+→ normalized message/signal
+→ AI assessment
+→ editable AI draft
+→ explicit human approval
+→ outbound dispatch through the originating supported channel.
+
+For the prototype:
+- Gmail is the only live outbound delivery channel.
+- Postmark-originated inbound email may be auto-assessed after safe ingestion.
+- Outlook, SMS, WhatsApp Business, WeChat, iMessage, and other channels are architecture stubs or inbound-only states unless already securely supported in the codebase.
+- Personal WhatsApp must not be treated as a supported integration.
+- The existing Copilot Queue must continue to work without behavior regressions.
+- Signal Inbox is a dedicated product surface accessible from the existing `Home.tsx` navigation, not a replacement for the Copilot Queue.
+
+# Critical Terminology
+
+Do not conflate these two concepts:
+
+1. **AI draft / Copilot proposal**
+   - An AI-generated response draft or recommended action.
+   - Created from an inbound message for Signal Inbox review.
+   - Stored using the existing `copilot_proposals` domain.
+   - Must be distinguishable from existing trigger-engine proposals.
+
+2. **Commercial proposal / supplier quote**
+   - A supplier’s pricing offer, quote, commercial terms, or pricing schedule associated with a deal.
+   - This is optional for a deal.
+   - It is not required to create, manage, progress, communicate about, or close a deal.
+   - It must never be confused in UI labels, data models, or documentation with an AI draft/Copilot proposal.
+
+Prefer the following user-facing vocabulary:
+- “AI draft” or “Copilot draft” for AI-generated replies.
+- “Supplier quote” or “commercial quote” for supplier pricing/offer information.
+- “Customer proposal” or “sales proposal” for an offer FlowForgeIQ users send to a customer.
+
+# Existing Architecture
+
+Inspect the actual codebase before finalizing the revision, especially:
+
+- `artifacts/api-server/src/routes/messages.ts`
+- `artifacts/api-server/src/routes/webhooks.ts`
+- `artifacts/api-server/src/routes/copilot.ts`
+- `artifacts/api-server/src/routes/integrations.ts`
+- `artifacts/api-server/src/routes/index.ts`
+- `lib/db/src/schema/messages.ts`
+- `lib/db/src/schema/copilot.ts`
+- `lib/api-spec/openapi.yaml`
+- `artifacts/flowforge/src/pages/CopilotQueue.tsx`
+- `artifacts/flowforge/src/pages/Home.tsx`
+- `artifacts/flowforge/src/App.tsx`
+
+The revised plan should continue to prefer the prototype approach of reusing the existing `messages` and `copilot_proposals` domains rather than introducing new database tables, unless inspection reveals that reuse is impossible or unsafe.
+
+# Signal Inbox Scope
+
+Document a Signal Inbox that:
+
+- Lists inbound communications across available channels.
+- Lets a user assess an inbound message.
+- Creates an editable AI draft reply.
+- Requires explicit approval before any external reply is sent.
+- Sends through Gmail only when the originating email/channel is supported and configured.
+- Displays a clear “channel not configured” or “channel not yet wired” state for unsupported outbound channels.
+- Lets a user skip an item without deleting message history.
+- Keeps the existing Copilot Queue behavior unchanged.
+- Makes Signal Inbox-generated AI drafts distinguishable from trigger-engine Copilot proposals.
+
+# Inbox Workflow State
+
+Treat `messages.signal_status` as an inbox workflow state only. It is not the complete source of truth for AI-draft state or provider delivery state.
+
+Document this workflow:
+
+new
+→ assessing
+→ draft_ready
+→ approved
+→ sending
+→ sent
+
+Additional valid terminal/recovery paths:
+
+draft_ready → skipped
+approved → draft_ready when the approved draft is edited
+sending → send_failed when Gmail delivery fails
+send_failed → approved or sending only through an explicit user retry flow
+
+Rules:
+
+- `new`: message is in the Signal Inbox and has not yet been assessed.
+- `assessing`: assessment has started; the UI should prevent duplicate assessment requests.
+- `draft_ready`: an editable AI draft is available and awaiting human review.
+- `approved`: the specific current draft version has been explicitly approved.
+- `sending`: an approved reply is currently being dispatched.
+- `sent`: Gmail has confirmed creation of the outbound provider message.
+- `send_failed`: the send attempt failed; retain the draft and context for review/retry.
+- `skipped`: hidden from the default Signal Inbox filter but retained in history.
+- Do not use `assessed` as a separate state unless the codebase requires a clear business distinction from `draft_ready`.
+- Editing any approved AI draft must invalidate approval and transition the message back to `draft_ready`.
+- A message must not be marked `sent` until Gmail confirms successful creation of the outbound message.
+- A message may never be marked `sent` for an unwired/non-configured channel.
+
+# AI Draft Linkage and Idempotency
+
+Document a single active Signal Inbox AI-draft linkage for each inbound message.
+
+Preferred convention, subject to validation against the existing schema:
+
+- `copilot_proposals.source = "signal_inbox"`
+- `copilot_proposals.trigger_ref = "signal_inbox:message:<messageId>"`
+
+The plan must specify:
+
+- How Signal Inbox AI drafts are queried separately from trigger-engine Copilot proposals.
+- How assessment is idempotent and does not create duplicate active AI drafts.
+- How reassessment behaves: update or supersede the active Signal Inbox AI draft, with an audit record.
+- How editing works using the existing proposal/draft model.
+- How draft revision/version is represented, either using existing fields or a lightweight deterministic content/version method.
+- How approval is invalidated when an approved AI draft is changed.
+
+Do not call these records “supplier proposals” in code comments, API names, UI labels, or documentation.
+
+# Send Flow and Delivery Safety
+
+The plan must specify that approval and transport delivery are separate backend state transitions, even if the UI eventually offers a convenient “Approve & Send” action.
+
+Required server-side flow:
+
+1. Validate that the message belongs to the current tenant/workspace and user has permission.
+2. Validate that an AI draft exists and is in an approvable state.
+3. Record human approval of the current draft version.
+4. Evaluate channel configuration and reply-thread requirements.
+5. Create or reserve an idempotent delivery attempt.
+6. Dispatch using a shared Gmail reply/send helper.
+7. Persist Gmail’s outbound provider message ID and thread ID.
+8. Mark the inbox item `sent` only after confirmed Gmail success.
+9. Mark it `send_failed` with safe error context if dispatch fails.
+10. Audit every relevant state transition.
+
+Document an idempotency strategy that prevents duplicate emails if an API call times out or the user retries:
+
+`signal_inbox:<messageId>:<copilotProposalId>:<draftRevision>`
+
+Expected behavior:
+
+- If the same idempotency key has already sent successfully, return the prior result and do not call Gmail again.
+- If a delivery is already in progress, return a clear in-progress/conflict result.
+- If delivery fails definitively, allow a deliberate retry with a distinct audited attempt.
+- Never assume a send failed solely because the client timed out.
+
+The plan must extract the existing Gmail send and outbound-message-persist logic from `POST /messages/:id/send-reply` into a shared helper/service used by both the existing endpoint and the future Signal Inbox dispatch endpoint.
+
+# Gmail Reply Threading
+
+Document the reply-thread requirements for supported email signals:
+
+- Reuse the inbound provider message/thread identifiers when available.
+- Preserve reply metadata/headers and Gmail threading behavior supported by the current implementation.
+- Persist the outbound Gmail provider message ID and thread ID.
+- Do not silently convert a thread reply into a new email.
+- Follow existing project rules for recipients, reply-all behavior, sender identity, and HTML/text rendering.
+
+# Postmark Inbound and Auto-assessment
+
+The plan must define a safe Postmark flow:
+
+1. Validate the inbound webhook using the existing verification/authentication pattern.
+2. Resolve the tenant/workspace.
+3. Normalize and persist the inbound message idempotently.
+4. Create or update the Signal Inbox item with status `new`.
+5. Invoke the same internal assessment service used by manual “Assess.”
+6. Move the status to `draft_ready` only after successful draft creation.
+
+Do not block the Postmark webhook response on a slow AI request without documenting the project’s established background-job, queue, timeout, or retry behavior.
+
+If no background-worker mechanism exists:
+- Document the safest prototype fallback.
+- Include strict timeout/error behavior.
+- Preserve the inbound message if assessment fails.
+- Return the message to `new` or a recoverable state rather than losing it.
+
+# Optional Supplier Quotes and Deals
+
+Commercial supplier quote information is optional for a deal.
+
+Document these business rules:
+
+- Users may create, manage, progress, and communicate about deals without supplier quote information.
+- Supplier quote data must never block deal creation, deal stage changes, Signal Inbox workflows, document workflows, RFQs, task creation, or external replies.
+- Lack of quote data is a valid business state, not an error.
+- Use explicit states such as:
+  - `quote_not_required`
+  - `quote_pending`
+  - `quote_received`
+  - `margin_unknown`
+  - `margin_calculable`
+  - `margin_at_risk`
+- Do not represent unknown costs/revenue/margin as zero.
+- A supplier quote may arrive after a deal is already underway, through email, an RFQ response, an uploaded document, manual entry, or a future supplier portal/integration.
+- Signal Inbox assessment may identify an inbound communication as containing a supplier quote, but must not assume:
+  - Every inbound message belongs to a deal.
+  - Every deal requires a supplier quote.
+  - Margin can be calculated from partial data.
+  - An inferred deal link should update commercial status without user confirmation.
+- When sufficient quote/cost and expected revenue information exists, FlowForgeIQ may calculate or display profit/margin signals.
+- The user must confirm or correct an inferred message/quote-to-deal association before it changes commercial or profit/margin status for a deal.
+- Quote extraction, quote document parsing, and detailed profitability calculations are future work unless existing models already support them cleanly.
+
+# Intended Prototype APIs
+
+The revised plan should include an endpoint proposal aligned to current API and OpenAPI conventions:
+
+- `GET /signal-inbox`
+  - Paginated/filterable list.
+  - Default excludes `skipped`.
+  - Filters include channel and workflow status.
+  - Returns list-card data rather than raw provider payloads.
+
+- `POST /signal-inbox/:messageId/assess`
+  - Idempotent.
+  - Creates or updates the linked Signal Inbox AI draft.
+  - Transitions `new` to `assessing` to `draft_ready`, with recoverable error behavior.
+
+- `POST /signal-inbox/:messageId/approve`
+  - Approves only the current AI-draft revision.
+  - Does not claim the message was sent.
+
+- `POST /signal-inbox/:messageId/send`
+  - Requires approved current draft.
+  - Uses the centralized shared Gmail delivery helper.
+  - Is idempotent.
+  - Handles configured Gmail vs unsupported/unconfigured channel states safely.
+
+- `POST /signal-inbox/:messageId/skip`
+  - Sets `signal_status = skipped`.
+  - Preserves the message, AI-draft relationship, and audit trail.
+
+Use exact endpoint names only if they fit the existing router naming convention; otherwise document the compatible alternative.
+
+# Intended UI
+
+Document a new `SignalInbox` page integrated into the existing `Home.tsx` navigation.
+
+Design principles:
+
+- Do not change existing Copilot Queue behavior.
+- Reuse existing component library, React Query/API hooks, route patterns, localization, and accessibility conventions.
+- Extract reusable UI pieces from `CopilotQueue.tsx`, such as `ProposalCard` and `EditDraftModal`, rather than duplicating large components.
+- Do not make `CopilotQueue.tsx` or `Home.tsx` substantially more monolithic.
+
+The planned layout:
+
+- Left panel: channel and workflow-status filters.
+- Centre panel: inbox list/cards with sender, channel, subject/preview, status, urgency/risk, timestamp, and draft availability.
+- Right panel: selected message/conversation detail, AI assessment, editable AI draft, policy/status warnings, and actions.
+
+Required UI actions:
+
+- Assess.
+- Edit AI draft.
+- Approve.
+- Send after approval.
+- Skip.
+- Retry a failed send only where allowed.
+- Clear explanation for unsupported outbound channels.
+
+A badge in navigation should count actionable items, preferably `draft_ready` plus `send_failed`, subject to existing UI conventions.
+
+# Security, Authorization, and Audit
+
+Document explicit safeguards:
+
+- Every API request and database lookup is tenant/workspace scoped.
+- Signal Inbox authorization follows existing message and Copilot permission patterns.
+- Validate Postmark/Gmail/webhook signatures through existing mechanisms.
+- Do not expose provider credentials, raw webhook secrets, or excessive raw message payloads through list endpoints.
+- Do not render untrusted inbound HTML without the project’s established sanitization strategy.
+- Record audit events for:
+  - inbound message capture;
+  - assessment start/success/failure;
+  - AI-draft creation/reassessment;
+  - draft edit;
+  - approval;
+  - send attempt;
+  - send success;
+  - send failure;
+  - skip;
+  - non-configured-channel delivery attempt.
+- Do not add secrets to source control, fixtures, logs, generated output, or example environment files.
+
+# Testing and Definition of Done
+
+Add acceptance criteria and test coverage for:
+
+1. Existing message reply behavior remains functional after extraction of the shared Gmail send helper.
+2. Existing Copilot Queue behavior remains functional.
+3. Tenant/workspace isolation applies to every Signal Inbox query and mutation.
+4. Repeated assessment requests do not create duplicate active AI drafts.
+5. Editing an approved AI draft invalidates approval.
+6. Sending before approval is rejected.
+7. Sending on an unsupported/unconfigured channel does not create a false `sent` state.
+8. Gmail sends are idempotent and do not duplicate after retry/timeout behavior.
+9. Gmail outbound messages preserve thread/reply context and provider IDs.
+10. Gmail failure produces `send_failed`, preserves review context, and supports controlled retry.
+11. Skipping hides the item from the default view without destroying audit/history.
+12. Postmark inbound auto-assessment is safely idempotent and recoverable.
+13. A deal without supplier quote information remains valid and is not blocked by any Signal Inbox or commercial-status workflow.
+14. User confirmation is required before an inferred supplier quote/message association updates a deal’s commercial or margin status.
+
+# Deliverable
+
+Revise `docs/signal-inbox-prototype-plan.md` with:
+
+- Actual codebase findings.
+- The architecture and state-machine decisions above.
+- Exact schema/API/UI change plan that fits the repository.
+- The distinction between AI drafts and optional supplier commercial quotes.
+- A migration plan using the repository’s existing migration workflow.
+- Testing plan.
+- Rollout/demo plan.
+- Explicit assumptions, constraints, and deferred work.
+
+At completion, report:
+1. The files inspected.
+2. The plan sections updated.
+3. Any design conflicts with the current schema or architecture.
+4. Any choices that need human confirmation before implementation.
+```
+
+Sources
