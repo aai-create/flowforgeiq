@@ -11,7 +11,10 @@ import type { CopilotProposalPayload } from './copilotProposalPayload';
 
 export interface CopilotProposal {
   id: number;
-  shipmentId: number;
+  /** @nullable */
+  shipmentId?: number | null;
+  /** copilot_trigger | signal_inbox */
+  source?: string;
   triggerType: string;
   /** @nullable */
   triggerRef?: string | null;

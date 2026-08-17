@@ -1404,6 +1404,158 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/PredictionAccuracyReport" }
 
+  /signal-inbox:
+    get:
+      operationId: listSignalInbox
+      tags: [messages]
+      summary: List inbound signals with their linked AI drafts
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+          description: "Filter by signal_status; default excludes 'skipped'"
+        - in: query
+          name: channel
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Signal inbox items
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SignalInboxItem" }
+        "401":
+          description: Unauthorized
+
+  /signal-inbox/{messageId}/assess:
+    post:
+      operationId: assessSignal
+      tags: [messages]
+      summary: Run AI assessment on an inbound signal and create a linked AI draft
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Assessment result (idempotent — returns existing draft if already assessed)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalInboxAssessResult" }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message not found
+        "409":
+          description: Assessment already in progress
+
+  /signal-inbox/{messageId}/approve:
+    post:
+      operationId: approveSignal
+      tags: [messages]
+      summary: Approve the current AI draft (does not send)
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalInboxAssessResult" }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message or draft not found
+        "409":
+          description: Message is not in draft_ready state
+
+  /signal-inbox/{messageId}/send:
+    post:
+      operationId: sendSignal
+      tags: [messages]
+      summary: Dispatch the approved reply through the originating channel
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Send result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalInboxSendResult" }
+        "400":
+          description: Channel not configured or message not approved
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message or draft not found
+        "409":
+          description: Send already in progress
+
+  /signal-inbox/{messageId}/skip:
+    post:
+      operationId: skipSignal
+      tags: [messages]
+      summary: Skip a signal — hides from default view, preserves history
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Skipped
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message not found
+
+  /signal-inbox/{messageId}/draft:
+    patch:
+      operationId: updateSignalDraft
+      tags: [messages]
+      summary: Update the AI draft body for a signal
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [draftBody]
+              properties:
+                draftBody: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalInboxAssessResult" }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message or draft not found
+
   /copilot/proposals:
     get:
       operationId: listCopilotProposals
@@ -2688,6 +2840,7 @@ components:
         rawChatText:            { type: ["string", "null"], description: "Original pasted or forwarded chat text for audit" }
         routedToClerkUserId:    { type: ["string", "null"], description: "Clerk user ID of the team member whose plus-token received this email" }
         routedToUserName:       { type: ["string", "null"], description: "Display name of the team member this email was addressed to (resolved from routedToClerkUserId)" }
+        signalStatus:           { type: string, description: "Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped" }
         aiRoutingGuess:
           type: ["object", "null"]
           description: "AI's best guess for assignment (when confidence is low)"
@@ -3049,12 +3202,44 @@ components:
         correctedValue: { type: string }
         createdAt: { type: string, format: date-time }
 
+    SignalInboxItem:
+      type: object
+      required: [message]
+      properties:
+        message:
+          $ref: "#/components/schemas/Message"
+        proposal:
+          oneOf:
+            - $ref: "#/components/schemas/CopilotProposal"
+            - type: "null"
+
+    SignalInboxAssessResult:
+      type: object
+      required: [message]
+      properties:
+        message:    { $ref: "#/components/schemas/Message" }
+        proposal:   { $ref: "#/components/schemas/CopilotProposal" }
+
+    SignalInboxSendResult:
+      type: object
+      required: [message, dispatched]
+      properties:
+        message:           { $ref: "#/components/schemas/Message" }
+        proposal:
+          oneOf:
+            - $ref: "#/components/schemas/CopilotProposal"
+            - type: "null"
+        dispatched:        { type: boolean }
+        channelNotWired:   { type: boolean }
+        outboundMessageId: { type: ["integer", "null"] }
+
     CopilotProposal:
       type: object
-      required: [id, shipmentId, triggerType, actionType, payload, reasoning, confidence, status, createdAt, updatedAt]
+      required: [id, triggerType, actionType, payload, reasoning, confidence, status, createdAt, updatedAt]
       properties:
         id:                  { type: integer }
-        shipmentId:          { type: integer }
+        shipmentId:          { type: ["integer", "null"] }
+        source:              { type: string, description: "copilot_trigger | signal_inbox" }
         triggerType:         { type: string }
         triggerRef:          { type: ["string", "null"] }
         actionType:          { type: string }

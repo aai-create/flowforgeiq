@@ -26,6 +26,7 @@ import contactRulesRouter from "./contact-rules";
 import reportsRouter from "./reports";
 import onboardingRouter from "./onboarding";
 import importRouter from "./import";
+import signalInboxRouter from "./signal-inbox";
 
 const router: IRouter = Router();
 
@@ -62,6 +63,7 @@ protectedRouter.use(contactRulesRouter);
 protectedRouter.use(reportsRouter);
 protectedRouter.use(onboardingRouter);
 protectedRouter.use(importRouter);
+protectedRouter.use(signalInboxRouter);
 
 router.use(protectedRouter);
 

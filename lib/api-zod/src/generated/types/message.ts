@@ -73,6 +73,8 @@ export interface Message {
      * @nullable
      */
   routedToUserName?: string | null;
+  /** Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped */
+  signalStatus?: string;
   /**
      * AI's best guess for assignment (when confidence is low)
      * @nullable

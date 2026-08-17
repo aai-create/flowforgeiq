@@ -742,6 +742,8 @@ export interface Message {
      * @nullable
      */
   routedToUserName?: string | null;
+  /** Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped */
+  signalStatus?: string;
   /**
      * AI's best guess for assignment (when confidence is low)
      * @nullable
@@ -1099,7 +1101,10 @@ export type CopilotProposalAuditTrailItem = { [key: string]: unknown };
 
 export interface CopilotProposal {
   id: number;
-  shipmentId: number;
+  /** @nullable */
+  shipmentId?: number | null;
+  /** copilot_trigger | signal_inbox */
+  source?: string;
   triggerType: string;
   /** @nullable */
   triggerRef?: string | null;
@@ -1140,6 +1145,25 @@ export interface CopilotProposal {
   sparseDaysInStage?: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SignalInboxItem {
+  message: Message;
+  proposal?: CopilotProposal | null;
+}
+
+export interface SignalInboxAssessResult {
+  message: Message;
+  proposal?: CopilotProposal;
+}
+
+export interface SignalInboxSendResult {
+  message: Message;
+  proposal?: CopilotProposal | null;
+  dispatched: boolean;
+  channelNotWired?: boolean;
+  /** @nullable */
+  outboundMessageId?: number | null;
 }
 
 export type CopilotProposalInputPayload = { [key: string]: unknown };
@@ -1890,6 +1914,20 @@ export type GetPipelineReportParams = {
  * When provided, return the full shipment list for this agent (clerkUserId) instead of the per-agent summary.
  */
 assignedUserId?: string;
+};
+
+export type ListSignalInboxParams = {
+/**
+ * Filter by signal_status; default excludes 'skipped'
+ */
+status?: string;
+channel?: string;
+limit?: number;
+offset?: number;
+};
+
+export type UpdateSignalDraftBody = {
+  draftBody: string;
 };
 
 export type ListCopilotProposalsParams = {

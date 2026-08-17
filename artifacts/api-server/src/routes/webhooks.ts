@@ -261,7 +261,7 @@ Reply with JSON only (no markdown):
 
 // ─── AI reply drafting ────────────────────────────────────────────────────────
 
-async function draftReplyWithAI(
+export async function draftReplyWithAI(
   emailBody: string,
   subject: string,
   shipment: ShipmentRecord | null,

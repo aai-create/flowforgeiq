@@ -76,6 +76,7 @@ import type {
   ListMessagesParams,
   ListSampleRequestsParams,
   ListShipmentsParams,
+  ListSignalInboxParams,
   Message,
   MessageAssignInput,
   MessageInput,
@@ -116,6 +117,9 @@ import type {
   ShipmentCreate,
   ShipmentPrediction,
   ShipmentUpdate,
+  SignalInboxAssessResult,
+  SignalInboxItem,
+  SignalInboxSendResult,
   Stage,
   StageCreate,
   StageEvent,
@@ -134,6 +138,7 @@ import type {
   TestGmailSendBody,
   UpdateInboundHandleBody,
   UpdateOrgBody,
+  UpdateSignalDraftBody,
   UploadDocumentBody
 } from './api.schemas';
 
@@ -5438,6 +5443,442 @@ export function useGetPredictionAccuracy<TData = Awaited<ReturnType<typeof getPr
 
 
 
+
+export const getListSignalInboxUrl = (params?: ListSignalInboxParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/signal-inbox?${stringifiedParams}` : `/api/signal-inbox`
+}
+
+/**
+ * @summary List inbound signals with their linked AI drafts
+ */
+export const listSignalInbox = async (params?: ListSignalInboxParams, options?: RequestInit): Promise<SignalInboxItem[]> => {
+
+  return customFetch<SignalInboxItem[]>(getListSignalInboxUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSignalInboxQueryKey = (params?: ListSignalInboxParams,) => {
+    return [
+    `/api/signal-inbox`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSignalInboxQueryOptions = <TData = Awaited<ReturnType<typeof listSignalInbox>>, TError = ErrorType<void>>(params?: ListSignalInboxParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSignalInbox>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSignalInboxQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSignalInbox>>> = ({ signal }) => listSignalInbox(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSignalInbox>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSignalInboxQueryResult = NonNullable<Awaited<ReturnType<typeof listSignalInbox>>>
+export type ListSignalInboxQueryError = ErrorType<void>
+
+
+/**
+ * @summary List inbound signals with their linked AI drafts
+ */
+
+export function useListSignalInbox<TData = Awaited<ReturnType<typeof listSignalInbox>>, TError = ErrorType<void>>(
+ params?: ListSignalInboxParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSignalInbox>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSignalInboxQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAssessSignalUrl = (messageId: number,) => {
+
+
+
+
+  return `/api/signal-inbox/${messageId}/assess`
+}
+
+/**
+ * @summary Run AI assessment on an inbound signal and create a linked AI draft
+ */
+export const assessSignal = async (messageId: number, options?: RequestInit): Promise<SignalInboxAssessResult> => {
+
+  return customFetch<SignalInboxAssessResult>(getAssessSignalUrl(messageId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAssessSignalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assessSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assessSignal>>, TError,{messageId: number}, TContext> => {
+
+const mutationKey = ['assessSignal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assessSignal>>, {messageId: number}> = (props) => {
+          const {messageId} = props ?? {};
+
+          return  assessSignal(messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssessSignalMutationResult = NonNullable<Awaited<ReturnType<typeof assessSignal>>>
+
+    export type AssessSignalMutationError = ErrorType<void>
+
+    /**
+ * @summary Run AI assessment on an inbound signal and create a linked AI draft
+ */
+export const useAssessSignal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assessSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assessSignal>>,
+        TError,
+        {messageId: number},
+        TContext
+      > => {
+      return useMutation(getAssessSignalMutationOptions(options));
+    }
+
+export const getApproveSignalUrl = (messageId: number,) => {
+
+
+
+
+  return `/api/signal-inbox/${messageId}/approve`
+}
+
+/**
+ * @summary Approve the current AI draft (does not send)
+ */
+export const approveSignal = async (messageId: number, options?: RequestInit): Promise<SignalInboxAssessResult> => {
+
+  return customFetch<SignalInboxAssessResult>(getApproveSignalUrl(messageId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getApproveSignalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number}, TContext> => {
+
+const mutationKey = ['approveSignal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveSignal>>, {messageId: number}> = (props) => {
+          const {messageId} = props ?? {};
+
+          return  approveSignal(messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveSignalMutationResult = NonNullable<Awaited<ReturnType<typeof approveSignal>>>
+
+    export type ApproveSignalMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve the current AI draft (does not send)
+ */
+export const useApproveSignal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveSignal>>,
+        TError,
+        {messageId: number},
+        TContext
+      > => {
+      return useMutation(getApproveSignalMutationOptions(options));
+    }
+
+export const getSendSignalUrl = (messageId: number,) => {
+
+
+
+
+  return `/api/signal-inbox/${messageId}/send`
+}
+
+/**
+ * @summary Dispatch the approved reply through the originating channel
+ */
+export const sendSignal = async (messageId: number, options?: RequestInit): Promise<SignalInboxSendResult> => {
+
+  return customFetch<SignalInboxSendResult>(getSendSignalUrl(messageId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSendSignalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number}, TContext> => {
+
+const mutationKey = ['sendSignal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendSignal>>, {messageId: number}> = (props) => {
+          const {messageId} = props ?? {};
+
+          return  sendSignal(messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendSignalMutationResult = NonNullable<Awaited<ReturnType<typeof sendSignal>>>
+
+    export type SendSignalMutationError = ErrorType<void>
+
+    /**
+ * @summary Dispatch the approved reply through the originating channel
+ */
+export const useSendSignal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendSignal>>,
+        TError,
+        {messageId: number},
+        TContext
+      > => {
+      return useMutation(getSendSignalMutationOptions(options));
+    }
+
+export const getSkipSignalUrl = (messageId: number,) => {
+
+
+
+
+  return `/api/signal-inbox/${messageId}/skip`
+}
+
+/**
+ * @summary Skip a signal — hides from default view, preserves history
+ */
+export const skipSignal = async (messageId: number, options?: RequestInit): Promise<Message> => {
+
+  return customFetch<Message>(getSkipSignalUrl(messageId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSkipSignalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof skipSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof skipSignal>>, TError,{messageId: number}, TContext> => {
+
+const mutationKey = ['skipSignal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof skipSignal>>, {messageId: number}> = (props) => {
+          const {messageId} = props ?? {};
+
+          return  skipSignal(messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SkipSignalMutationResult = NonNullable<Awaited<ReturnType<typeof skipSignal>>>
+
+    export type SkipSignalMutationError = ErrorType<void>
+
+    /**
+ * @summary Skip a signal — hides from default view, preserves history
+ */
+export const useSkipSignal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof skipSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof skipSignal>>,
+        TError,
+        {messageId: number},
+        TContext
+      > => {
+      return useMutation(getSkipSignalMutationOptions(options));
+    }
+
+export const getUpdateSignalDraftUrl = (messageId: number,) => {
+
+
+
+
+  return `/api/signal-inbox/${messageId}/draft`
+}
+
+/**
+ * @summary Update the AI draft body for a signal
+ */
+export const updateSignalDraft = async (messageId: number,
+    updateSignalDraftBody: UpdateSignalDraftBody, options?: RequestInit): Promise<SignalInboxAssessResult> => {
+
+  return customFetch<SignalInboxAssessResult>(getUpdateSignalDraftUrl(messageId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateSignalDraftBody,)
+  }
+);}
+
+
+
+
+export const getUpdateSignalDraftMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSignalDraft>>, TError,{messageId: number;data: BodyType<UpdateSignalDraftBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSignalDraft>>, TError,{messageId: number;data: BodyType<UpdateSignalDraftBody>}, TContext> => {
+
+const mutationKey = ['updateSignalDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSignalDraft>>, {messageId: number;data: BodyType<UpdateSignalDraftBody>}> = (props) => {
+          const {messageId,data} = props ?? {};
+
+          return  updateSignalDraft(messageId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSignalDraftMutationResult = NonNullable<Awaited<ReturnType<typeof updateSignalDraft>>>
+    export type UpdateSignalDraftMutationBody = BodyType<UpdateSignalDraftBody>
+    export type UpdateSignalDraftMutationError = ErrorType<void>
+
+    /**
+ * @summary Update the AI draft body for a signal
+ */
+export const useUpdateSignalDraft = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSignalDraft>>, TError,{messageId: number;data: BodyType<UpdateSignalDraftBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSignalDraft>>,
+        TError,
+        {messageId: number;data: BodyType<UpdateSignalDraftBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateSignalDraftMutationOptions(options));
+    }
 
 export const getListCopilotProposalsUrl = (params?: ListCopilotProposalsParams,) => {
   const normalizedParams = new URLSearchParams();

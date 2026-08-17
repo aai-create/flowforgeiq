@@ -311,7 +311,7 @@ function ProposalCard({
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const payload = getPayload(proposal);
-  const poLabel = shipmentMap.get(proposal.shipmentId) ?? `Shipment #${proposal.shipmentId}`;
+  const poLabel = shipmentMap.get(proposal.shipmentId ?? 0) ?? `Shipment #${proposal.shipmentId ?? "??"}`;
   const isPending = proposal.status === "pending" || proposal.status === "edited";
   const isAutoExecuted = proposal.status === "auto_executed";
   const draftBody = (payload.draftBody as string) || (payload.messageSnippet as string) || "";
@@ -712,18 +712,20 @@ export function CopilotQueue() {
   // Build a map of shipmentId → PO number from proposals payload
   const shipmentMap = new Map<number, string>();
   for (const p of proposals) {
-    if (!shipmentMap.has(p.shipmentId)) {
+    const sid = p.shipmentId ?? null;
+    if (sid !== null && !shipmentMap.has(sid)) {
       const payload = p.payload as Record<string, unknown>;
-      shipmentMap.set(p.shipmentId, (payload.poNumber as string) || `PO #${p.shipmentId}`);
+      shipmentMap.set(sid, (payload.poNumber as string) || `PO #${sid}`);
     }
   }
 
   // Enrich shipmentMap from summary recentActions too
   if (summary?.recentActions) {
     for (const p of summary.recentActions) {
-      if (!shipmentMap.has(p.shipmentId)) {
+      const sid = p.shipmentId ?? null;
+      if (sid !== null && !shipmentMap.has(sid)) {
         const payload = p.payload as Record<string, unknown>;
-        shipmentMap.set(p.shipmentId, (payload.poNumber as string) || `PO #${p.shipmentId}`);
+        shipmentMap.set(sid, (payload.poNumber as string) || `PO #${sid}`);
       }
     }
   }

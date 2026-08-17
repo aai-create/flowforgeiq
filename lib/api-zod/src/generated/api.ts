@@ -1252,6 +1252,7 @@ export const ListMessagesResponseItem = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -1326,6 +1327,7 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -1392,6 +1394,7 @@ export const UpdateMessageResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -1451,6 +1454,7 @@ export const AssignMessageResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2045,6 +2049,470 @@ export const GetPredictionAccuracyResponse = zod.object({
 })
 
 
+/**
+ * @summary List inbound signals with their linked AI drafts
+ */
+export const listSignalInboxQueryLimitDefault = 50;
+export const listSignalInboxQueryOffsetDefault = 0;
+
+export const ListSignalInboxQueryParams = zod.object({
+  "status": zod.coerce.string().optional().describe('Filter by signal_status; default excludes \'skipped\''),
+  "channel": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().default(listSignalInboxQueryLimitDefault),
+  "offset": zod.coerce.number().default(listSignalInboxQueryOffsetDefault)
+})
+
+export const listSignalInboxResponseMessageDirectionDefault = `inbound`;
+
+export const ListSignalInboxResponseItem = zod.object({
+  "message": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(listSignalInboxResponseMessageDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
+}),
+  "proposal": zod.union([zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()]).optional()
+})
+export const ListSignalInboxResponse = zod.array(ListSignalInboxResponseItem)
+
+
+/**
+ * @summary Run AI assessment on an inbound signal and create a linked AI draft
+ */
+export const AssessSignalParams = zod.object({
+  "messageId": zod.coerce.number()
+})
+
+export const assessSignalResponseMessageDirectionDefault = `inbound`;
+
+export const AssessSignalResponse = zod.object({
+  "message": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(assessSignalResponseMessageDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
+}),
+  "proposal": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional()
+})
+
+
+/**
+ * @summary Approve the current AI draft (does not send)
+ */
+export const ApproveSignalParams = zod.object({
+  "messageId": zod.coerce.number()
+})
+
+export const approveSignalResponseMessageDirectionDefault = `inbound`;
+
+export const ApproveSignalResponse = zod.object({
+  "message": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(approveSignalResponseMessageDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
+}),
+  "proposal": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional()
+})
+
+
+/**
+ * @summary Dispatch the approved reply through the originating channel
+ */
+export const SendSignalParams = zod.object({
+  "messageId": zod.coerce.number()
+})
+
+export const sendSignalResponseMessageDirectionDefault = `inbound`;
+
+export const SendSignalResponse = zod.object({
+  "message": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(sendSignalResponseMessageDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
+}),
+  "proposal": zod.union([zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "dispatched": zod.boolean(),
+  "channelNotWired": zod.boolean().optional(),
+  "outboundMessageId": zod.number().nullish()
+})
+
+
+/**
+ * @summary Skip a signal — hides from default view, preserves history
+ */
+export const SkipSignalParams = zod.object({
+  "messageId": zod.coerce.number()
+})
+
+export const skipSignalResponseDirectionDefault = `inbound`;
+
+export const SkipSignalResponse = zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(skipSignalResponseDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
+})
+
+
+/**
+ * @summary Update the AI draft body for a signal
+ */
+export const UpdateSignalDraftParams = zod.object({
+  "messageId": zod.coerce.number()
+})
+
+export const UpdateSignalDraftBody = zod.object({
+  "draftBody": zod.string()
+})
+
+export const updateSignalDraftResponseMessageDirectionDefault = `inbound`;
+
+export const UpdateSignalDraftResponse = zod.object({
+  "message": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish().describe('null for needs-review messages not yet assigned to a shipment'),
+  "supplierId": zod.number().nullish(),
+  "sender": zod.string(),
+  "recipient": zod.string().nullish().describe('Outbound recipient — supplier email or name'),
+  "channel": zod.string(),
+  "subject": zod.string().nullish().describe('Subject line for outbound email messages'),
+  "direction": zod.enum(['inbound', 'outbound']).default(updateSignalDraftResponseMessageDirectionDefault),
+  "snippet": zod.string(),
+  "fullBody": zod.string(),
+  "aiDraft": zod.string(),
+  "aiAction": zod.string(),
+  "aiTags": zod.array(zod.string()),
+  "unread": zod.boolean(),
+  "isFlagged": zod.boolean(),
+  "receivedAt": zod.coerce.date(),
+  "routingStatus": zod.enum(['routed', 'needs-review']).describe('routed = auto-assigned; needs-review = awaiting manual assignment'),
+  "routingConfidence": zod.number().nullish().describe('0–1 confidence of the auto-routing decision'),
+  "matchMethod": zod.string().nullish().describe('How the sender was matched: exact-email | exact-domain | fuzzy-name | buyer-learned | ai-inferred | unresolvable'),
+  "rawSenderEmail": zod.string().nullish().describe('The original sender email address'),
+  "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
+  "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
+  "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "aiRoutingGuess": zod.object({
+  "buyerName": zod.string().nullish(),
+  "shipmentId": zod.number().nullish(),
+  "confidence": zod.number().optional(),
+  "reasoning": zod.string().optional()
+}).nullish().describe('AI\'s best guess for assignment (when confidence is low)'),
+  "pendingExtractionFields": zod.object({
+  "exFactoryDate": zod.string().nullish(),
+  "quantity": zod.number().nullish(),
+  "delayDays": zod.number().nullish(),
+  "newStatus": zod.string().nullish(),
+  "confidence": zod.number().optional()
+}).nullish().describe('Low-confidence field extractions awaiting human confirmation'),
+  "inactiveContactRule": zod.object({
+  "fromEmail": zod.string().optional().describe('The sender email address that had the rule'),
+  "oldPoNumber": zod.string().optional().describe('PO number of the shipment that closed and deactivated the rule'),
+  "oldShipmentId": zod.number().optional().describe('DB id of the shipment that closed')
+}).nullish().describe('Deactivated routing rule for this sender — their previous shipment closed')
+}),
+  "proposal": zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
+  "triggerType": zod.string(),
+  "triggerRef": zod.string().nullish(),
+  "actionType": zod.string(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "reasoning": zod.string(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "snoozedUntil": zod.coerce.date().nullish(),
+  "editedPayload": zod.record(zod.string(), zod.unknown()).nullish(),
+  "userEditedContent": zod.string().nullish().describe('Extracted edited draftBody text saved when user approves an edit'),
+  "editDistance": zod.number().nullish().describe('Normalized 0–1 edit distance between AI draft and user edit; 0 = identical, 1 = fully rewritten'),
+  "auditTrail": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "sparseThreadWarning": zod.boolean().nullish().describe('True when the thread has fewer messages than usual for the current stage duration — possible capture gap'),
+  "sparseMessageCount": zod.number().nullish().describe('Number of messages linked to this shipment at proposal time'),
+  "sparseDaysInStage": zod.number().nullish().describe('Days the shipment has been in its current stage at proposal time'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional()
+})
+
+
 export const ListCopilotProposalsQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "shipmentId": zod.coerce.number().optional()
@@ -2052,7 +2520,8 @@ export const ListCopilotProposalsQueryParams = zod.object({
 
 export const ListCopilotProposalsResponseItem = zod.object({
   "id": zod.number(),
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
   "triggerType": zod.string(),
   "triggerRef": zod.string().nullish(),
   "actionType": zod.string(),
@@ -2097,7 +2566,8 @@ export const UpdateCopilotProposalBody = zod.object({
 
 export const UpdateCopilotProposalResponse = zod.object({
   "id": zod.number(),
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
   "triggerType": zod.string(),
   "triggerRef": zod.string().nullish(),
   "actionType": zod.string(),
@@ -2127,7 +2597,8 @@ export const TriggerCopilotResponse = zod.object({
   "autoExecuted": zod.number(),
   "proposals": zod.array(zod.object({
   "id": zod.number(),
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
   "triggerType": zod.string(),
   "triggerRef": zod.string().nullish(),
   "actionType": zod.string(),
@@ -2158,7 +2629,8 @@ export const GetCopilotSummaryResponse = zod.object({
   "highlights": zod.array(zod.string()).optional(),
   "recentActions": zod.array(zod.object({
   "id": zod.number(),
-  "shipmentId": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "source": zod.string().optional().describe('copilot_trigger | signal_inbox'),
   "triggerType": zod.string(),
   "triggerRef": zod.string().nullish(),
   "actionType": zod.string(),

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, copilotProposalsTable, autonomyPoliciesTable, shipmentsTable, messagesTable, suppliersTable, paymentsTable } from "@workspace/db";
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { resolveOrgId, requireAdmin } from "../middlewares/requireAuth";
 import {
   CreateCopilotProposalBody,
@@ -61,7 +61,11 @@ router.get("/copilot/proposals", async (req, res) => {
   const orgId = await resolveOrgId(req);
   const query = ListCopilotProposalsQueryParams.parse(req.query);
 
-  const conditions: Parameters<typeof and>[0][] = [eq(copilotProposalsTable.orgId, orgId)];
+  const conditions: Parameters<typeof and>[0][] = [
+    eq(copilotProposalsTable.orgId, orgId),
+    // Exclude Signal Inbox AI drafts from the Copilot Queue — they have their own surface
+    or(isNull(copilotProposalsTable.source), eq(copilotProposalsTable.source, "copilot_trigger"))!,
+  ];
   if (query.status) conditions.push(eq(copilotProposalsTable.status, query.status));
   if (query.shipmentId) conditions.push(eq(copilotProposalsTable.shipmentId, query.shipmentId));
 

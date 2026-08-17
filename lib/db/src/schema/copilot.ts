@@ -5,8 +5,9 @@ import { organizationsTable } from "./organizations";
 
 export const copilotProposalsTable = pgTable("copilot_proposals", {
   id: serial("id").primaryKey(),
-  shipmentId: integer("shipment_id").notNull(),
-  triggerType: text("trigger_type").notNull(), // message_received | payment_overdue | stage_idle | port_delay | no_response_48h | doc_missing
+  shipmentId: integer("shipment_id"), // nullable: Signal Inbox AI drafts may not have a shipment yet
+  source: text("source").notNull().default("copilot_trigger"), // copilot_trigger | signal_inbox
+  triggerType: text("trigger_type").notNull(), // message_received | payment_overdue | stage_idle | port_delay | no_response_48h | doc_missing | signal_inbox
   triggerRef: text("trigger_ref"), // e.g. "message:42" or "payment:7"
   actionType: text("action_type").notNull(), // reply | nudge | stage_advance | payment_reminder | doc_request | escalation
   payload: jsonb("payload").notNull().default({}), // e.g. { draftBody, channel, stageId, amount }
