@@ -25,6 +25,8 @@ import { LandingPage } from "@/pages/Landing";
 import { ShortcutsGuide } from "@/pages/ShortcutsGuide";
 import { ShortcutsRedirect } from "@/pages/ShortcutsRedirect";
 import { SuperAdmin } from "@/pages/SuperAdmin";
+import { OrgPicker } from "@/pages/OrgPicker";
+import { useMyOrgs } from "@/lib/useMyOrgs";
 import { ImpersonationCtx, useImpersonationProvider, useImpersonation } from "@/lib/useImpersonation";
 import { LogOut } from "lucide-react";
 
@@ -207,11 +209,37 @@ function RiskRadarPage() {
   return <RiskRadar onNavigateToShipment={id => navigate(`/orders?shipment=${id}&from=risk-radar`)} />;
 }
 
+// After Clerk sign-in, multi-org users must pick a workspace before the app
+// loads. Single-org (and unprovisioned) users pass straight through.
+function OrgGate({ children }: { children: React.ReactNode }) {
+  const { data, isLoading } = useMyOrgs();
+  if (isLoading) return null;
+  if (data && data.orgs.length > 1 && data.selectedOrgId === null) {
+    return <Redirect to="/select-org" />;
+  }
+  return <>{children}</>;
+}
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return (
     <>
       <Show when="signed-in">
-        <Component />
+        <OrgGate>
+          <Component />
+        </OrgGate>
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/sign-in" />
+      </Show>
+    </>
+  );
+}
+
+function SelectOrgPage() {
+  return (
+    <>
+      <Show when="signed-in">
+        <OrgPicker />
       </Show>
       <Show when="signed-out">
         <Redirect to="/sign-in" />
@@ -261,6 +289,7 @@ function Router() {
       <Route path="/sign-up/*?" component={SignUpPage} />
       <Route path="/shortcuts" component={ShortcutsGuide} />
       <Route path="/shortcuts-redirect" component={ShortcutsRedirect} />
+      <Route path="/select-org" component={SelectOrgPage} />
       <Route path="/accept-invite" component={AcceptInvite} />
       <Route path="/superadmin" component={SuperAdmin} />
       <Route component={NotFound} />

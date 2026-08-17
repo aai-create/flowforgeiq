@@ -50,7 +50,7 @@ router.get("/settings/inbound-health", requireAuth, async (req, res) => {
       const [teamUser] = await db
         .select({ inboundHandle: teamUsersTable.inboundHandle, inboundToken: teamUsersTable.inboundToken })
         .from(teamUsersTable)
-        .where(eq(teamUsersTable.clerkUserId, userId));
+        .where(and(eq(teamUsersTable.clerkUserId, userId), eq(teamUsersTable.orgId, orgId)));
       inboundEmailAddress = buildAddress(localPart, domain, teamUser?.inboundHandle, teamUser?.inboundToken);
     }
   } catch {
@@ -113,7 +113,8 @@ router.get("/settings/inbound-email", async (req, res) => {
       const [teamUser] = await db
         .select({ inboundHandle: teamUsersTable.inboundHandle, inboundToken: teamUsersTable.inboundToken })
         .from(teamUsersTable)
-        .where(eq(teamUsersTable.clerkUserId, userId));
+        // req.orgId is resolved by orgContextMiddleware (ff-org-id cookie aware)
+        .where(and(eq(teamUsersTable.clerkUserId, userId), eq(teamUsersTable.orgId, req.orgId)));
       inboundEmailAddress = buildAddress(localPart, domain, teamUser?.inboundHandle, teamUser?.inboundToken);
     }
   } catch {
@@ -159,10 +160,12 @@ router.put("/settings/inbound-email", requireAuth, async (req, res) => {
     return;
   }
 
+  // Scope to the active org: a multi-org user has one membership row (and one
+  // inbound handle) per org, and inbound_handle is globally unique.
   await db
     .update(teamUsersTable)
     .set({ inboundHandle: normalized })
-    .where(eq(teamUsersTable.clerkUserId, req.userId!));
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, req.orgId)));
 
   const base = process.env.INBOUND_EMAIL_BASE ?? "iq@flowforgeiq.com";
   const [localPart, domain] = base.split("@") as [string, string];

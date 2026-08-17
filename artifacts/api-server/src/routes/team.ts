@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, teamUsersTable, teamInvitationsTable, organizationsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, requireAdmin, requireClerkAuth } from "../middlewares/requireAuth";
+import { parseOrgIdCookie, setOrgIdCookie } from "../lib/orgCookie";
 import { clerkClient } from "@clerk/express";
 import crypto from "node:crypto";
 import * as postmark from "postmark";
@@ -25,16 +26,16 @@ function slugifyName(name: string): string {
 async function generateUniqueHandle(name: string): Promise<string> {
   const base = slugifyName(name);
   let candidate = base;
-  let suffix = 2;
-  while (true) {
+  for (let suffix = 2; suffix <= 100; suffix++) {
     const [existing] = await db
       .select({ h: teamUsersTable.inboundHandle })
       .from(teamUsersTable)
       .where(eq(teamUsersTable.inboundHandle, candidate));
     if (!existing) return candidate;
     candidate = `${base}${suffix}`;
-    suffix++;
   }
+  // Extremely unlikely: fall back to a random suffix rather than looping forever.
+  return `${base}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
 const router: IRouter = Router();
@@ -264,19 +265,22 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
     return;
   }
 
-  await db
-    .update(teamInvitationsTable)
-    .set({ acceptedAt: new Date() })
-    .where(eq(teamInvitationsTable.id, inv.id));
-
-  const existing = await db
+  // Membership is per (clerkUserId, orgId): a user already provisioned in another
+  // org still needs a NEW row for the invitation's org (multi-org support).
+  // Create/verify the membership BEFORE consuming the invitation so a failed
+  // insert doesn't burn the token.
+  const existingInOrg = await db
     .select()
     .from(teamUsersTable)
-    .where(eq(teamUsersTable.clerkUserId, req.userId!));
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, inv.orgId)));
 
-  if (existing.length === 0) {
+  if (existingInOrg.length === 0) {
+    const anyExisting = await db
+      .select()
+      .from(teamUsersTable)
+      .where(eq(teamUsersTable.clerkUserId, req.userId!));
     const clerkEmail = inv.email;
-    const clerkName = clerkEmail.split("@")[0] ?? "Team Member";
+    const clerkName = anyExisting[0]?.name ?? clerkEmail.split("@")[0] ?? "Team Member";
     const handle = await generateUniqueHandle(clerkName);
     await db.insert(teamUsersTable).values({
       clerkUserId: req.userId!,
@@ -287,18 +291,26 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
       inboundHandle: handle,
       orgId: inv.orgId,
     });
-  } else if (!existing[0]!.inboundHandle) {
-    const handle = await generateUniqueHandle(existing[0]!.name);
+  } else if (!existingInOrg[0]!.inboundHandle) {
+    const handle = await generateUniqueHandle(existingInOrg[0]!.name);
     await db
       .update(teamUsersTable)
       .set({ inboundHandle: handle })
-      .where(eq(teamUsersTable.clerkUserId, req.userId!));
+      .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, inv.orgId)));
   }
+
+  await db
+    .update(teamInvitationsTable)
+    .set({ acceptedAt: new Date() })
+    .where(eq(teamInvitationsTable.id, inv.id));
+
+  // Point the org-selection cookie at the newly joined org so the user lands there.
+  setOrgIdCookie(res, inv.orgId);
 
   const [user] = await db
     .select()
     .from(teamUsersTable)
-    .where(eq(teamUsersTable.clerkUserId, req.userId!));
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, inv.orgId)));
 
   res.json({ user });
 });
@@ -404,11 +416,56 @@ router.post("/team/provision-self", requireClerkAuth, async (req, res) => {
   res.status(201).json({ user });
 });
 
+// ─── Org selection ───────────────────────────────────────────────────────────
+// Lists the orgs the authenticated Clerk user belongs to. Only requires a valid
+// Clerk JWT (no provisioning / org selection yet), so it works right after sign-in.
+router.get("/team/my-orgs", requireClerkAuth, async (req, res) => {
+  const rows = await db
+    .select({
+      orgId: teamUsersTable.orgId,
+      orgName: organizationsTable.name,
+      role: teamUsersTable.role,
+    })
+    .from(teamUsersTable)
+    .innerJoin(organizationsTable, eq(organizationsTable.id, teamUsersTable.orgId))
+    .where(eq(teamUsersTable.clerkUserId, req.userId!));
+
+  // Report which org the current ff-org-id cookie selects, if it's valid for
+  // this user (the cookie is HttpOnly so the client can't read it directly).
+  const cookieOrgId = parseOrgIdCookie(req.headers.cookie);
+  const selectedOrgId =
+    cookieOrgId !== null && rows.some(r => r.orgId === cookieOrgId) ? cookieOrgId : null;
+
+  res.json({ orgs: rows, selectedOrgId });
+});
+
+// Persists the chosen org in a short-lived HttpOnly cookie after verifying the
+// user actually belongs to it. Requires only a Clerk JWT.
+router.post("/team/select-org", requireClerkAuth, async (req, res) => {
+  const { orgId } = req.body as { orgId?: unknown };
+  if (typeof orgId !== "number" || !Number.isInteger(orgId) || orgId < 1) {
+    res.status(400).json({ error: "orgId must be a positive integer" });
+    return;
+  }
+  const [membership] = await db
+    .select({ orgId: teamUsersTable.orgId })
+    .from(teamUsersTable)
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, orgId)));
+  if (!membership) {
+    res.status(403).json({ error: "You are not a member of that organization" });
+    return;
+  }
+  setOrgIdCookie(res, orgId);
+  res.json({ ok: true });
+});
+
 router.get("/team/me", requireAuth, async (req, res) => {
+  // Scope to the active org so multi-org users get the membership/role for
+  // the workspace they selected, not an arbitrary row.
   const [user] = await db
     .select()
     .from(teamUsersTable)
-    .where(eq(teamUsersTable.clerkUserId, req.userId!));
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, req.orgId)));
   if (!user) {
     res.status(404).json({ error: "Not provisioned" });
     return;

@@ -2,8 +2,9 @@ import { getAuth } from "@clerk/express";
 import { clerkClient } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 import { db, teamUsersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { verifyImpersonationToken } from "../lib/impersonation";
+import { parseOrgIdCookie } from "../lib/orgCookie";
 
 declare global {
   namespace Express {
@@ -95,14 +96,39 @@ export const orgContextMiddleware = async (
 
     if (userId) {
       req.userId = userId;
-      const [user] = await db
-        .select({
-          orgId: teamUsersTable.orgId,
-          name: teamUsersTable.name,
-          role: teamUsersTable.role,
-        })
-        .from(teamUsersTable)
-        .where(eq(teamUsersTable.clerkUserId, userId));
+      // ── Org selection cookie ──────────────────────────────────────────────
+      // Multi-org users pick an org via POST /team/select-org, which sets the
+      // ff-org-id cookie. If present and valid, scope the lookup to that org;
+      // a stale/spoofed cookie simply falls back to the first valid row.
+      const selectedOrgId = parseOrgIdCookie(req.headers.cookie);
+      let user:
+        | { orgId: number; name: string; role: string }
+        | undefined;
+      if (selectedOrgId !== null) {
+        [user] = await db
+          .select({
+            orgId: teamUsersTable.orgId,
+            name: teamUsersTable.name,
+            role: teamUsersTable.role,
+          })
+          .from(teamUsersTable)
+          .where(
+            and(
+              eq(teamUsersTable.clerkUserId, userId),
+              eq(teamUsersTable.orgId, selectedOrgId),
+            ),
+          );
+      }
+      if (!user) {
+        [user] = await db
+          .select({
+            orgId: teamUsersTable.orgId,
+            name: teamUsersTable.name,
+            role: teamUsersTable.role,
+          })
+          .from(teamUsersTable)
+          .where(eq(teamUsersTable.clerkUserId, userId));
+      }
       if (user) {
         req.actorName = user.name;
         req.orgId = user.orgId;
@@ -186,10 +212,12 @@ export const requireManager = async (
     next();
     return;
   }
+  // Scope to the org already resolved by orgContextMiddleware (cookie-aware),
+  // so multi-org users keep their selected org and per-org role.
   const [user] = await db
     .select()
     .from(teamUsersTable)
-    .where(eq(teamUsersTable.clerkUserId, req.userId));
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId), eq(teamUsersTable.orgId, req.orgId)));
   if (!user) {
     res.status(403).json({ error: "Forbidden: not a team member" });
     return;
@@ -226,10 +254,11 @@ export const requireAdmin = async (
     next();
     return;
   }
+  // Scope to the org already resolved by orgContextMiddleware (cookie-aware).
   const [user] = await db
     .select()
     .from(teamUsersTable)
-    .where(eq(teamUsersTable.clerkUserId, req.userId));
+    .where(and(eq(teamUsersTable.clerkUserId, req.userId), eq(teamUsersTable.orgId, req.orgId)));
   if (!user) {
     res.status(403).json({ error: "Forbidden: not a team member" });
     return;

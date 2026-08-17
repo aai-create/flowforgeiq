@@ -11,4 +11,5 @@
 - [Mobile Metro build port](mobile-metro-build-port.md) — mobile build script uses METRO_BUILD_PORT=8083 for expo start during deploy builds; avoids conflict with dev workflow on 8081.
 - [EAS Clerk SPM nil target](eas-clerk-spm-nil-target.md) — @clerk/expo v3.x + RN 0.81.x + CocoaPods 1.16.x: multi-layer fix needed; see topic file.
 - [EAS Clerk no such module ClerkExpo](eas-clerk-no-module-clerkexpo.md) — After nil-guard prevents crash, ClerkKit is never linked → import ClerkExpo fails; fix: wire ClerkKit to user project FlowForge target in post_install.
+- [Org selection cookie](org-selection-cookie.md) — team_users queries for the active workspace must be scoped to req.orgId; never import constants from requireAuth into routes (tests mock it wholesale).
 - [FlowForge provision-self testing limitation](flowforge-provision-self-testing.md) — testClerkAuth e2e can't provision a 2nd+ test user (invite-only after first member) and Clerk userId isn't retrievable client-side; blocks e2e for any auth-gated flow beyond the first user.

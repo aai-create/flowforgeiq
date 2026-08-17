@@ -384,12 +384,14 @@ describe("POST /team/accept-invite — invitation acceptance and account provisi
 
   it("success path: valid token + matching email → 200 + user row created", async () => {
     // DB call sequence (in order):
-    //  1. find invitation by token          → [VALID_INVITATION]
-    //  2. check existing team_users row     → [] (new user)
-    //  3. generateUniqueHandle uniqueness   → [] (handle not taken)
-    //  4. final select after insert         → [PROVISIONED_USER]
+    //  1. find invitation by token             → [VALID_INVITATION]
+    //  2. existing membership in invited org   → [] (new membership)
+    //  3. any existing row (name reuse)        → [] (brand-new user)
+    //  4. generateUniqueHandle uniqueness      → [] (handle not taken)
+    //  5. final select after insert            → [PROVISIONED_USER]
     mockDbSelectFromWhere
       .mockResolvedValueOnce([VALID_INVITATION])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([PROVISIONED_USER]);
@@ -475,5 +477,35 @@ describe("POST /team/accept-invite — invitation acceptance and account provisi
 
     expect(res.status).toBe(200);
     expect(res.body.user.clerkUserId).toBe(CLERK_USER_ID);
+  });
+
+  it("user already in org 1 accepts an invite to org 2 → new membership row created for org 2", async () => {
+    const ORG2_INVITATION = { ...VALID_INVITATION, orgId: 2, role: "manager" };
+    const ORG2_USER = { ...PROVISIONED_USER, orgId: 2, role: "manager", inboundHandle: "invited2" };
+    // DB call sequence (in order):
+    //  1. find invitation by token             → [ORG2_INVITATION]
+    //  2. existing membership in org 2         → [] (not a member there yet)
+    //  3. any existing row (name reuse)        → [PROVISIONED_USER] (org 1 row)
+    //  4. generateUniqueHandle uniqueness      → [] (handle free)
+    //  5. final select (org 2 row)             → [ORG2_USER]
+    mockDbSelectFromWhere
+      .mockResolvedValueOnce([ORG2_INVITATION])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([PROVISIONED_USER])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([ORG2_USER]);
+
+    const app = await buildTestApp();
+    const res = await request(app)
+      .post("/team/accept-invite")
+      .send({ token: FIXTURE_TOKEN });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.orgId).toBe(2);
+    expect(res.body.user.role).toBe("manager");
+    // The org-selection cookie should point at the newly joined org
+    const setCookie = res.headers["set-cookie"]?.[0] ?? "";
+    expect(setCookie).toContain("ff-org-id=2");
+    expect(setCookie).toContain("HttpOnly");
   });
 });

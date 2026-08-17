@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
-import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle, Upload, FileSpreadsheet, TriangleAlert } from "lucide-react";
+import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle, Upload, FileSpreadsheet, TriangleAlert, ArrowLeftRight } from "lucide-react";
 import { useOnboardingState } from "@/hooks/useOnboardingState";
 import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings, useGetOrg, useUpdateOrg, getGetOrgQueryKey } from "@workspace/api-client-react";
 import type { Stage, CreateDeviceTokenResponse } from "@workspace/api-client-react";
@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { SECTION_LABEL, PAGE_TITLE, BODY_MUTED } from "@/lib/typography";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMyOrgs } from "@/lib/useMyOrgs";
 
 type SettingsTab = "general" | "pipeline" | "channels" | "team";
 
@@ -1779,6 +1780,8 @@ export function Settings() {
 
   const { signOut } = useClerk();
   const { user } = useUser();
+  const { data: myOrgsData } = useMyOrgs();
+  const isMultiOrg = (myOrgsData?.orgs.length ?? 0) > 1;
 
   const [myRole, setMyRole] = useState<string>("member");
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -1854,6 +1857,15 @@ export function Settings() {
                 </div>
                 <span className={BODY_MUTED}>{user.fullName ?? user.primaryEmailAddress?.emailAddress}</span>
               </div>
+              {isMultiOrg && (
+                <button
+                  onClick={() => navigate("/select-org")}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] rounded-md transition-colors"
+                >
+                  <ArrowLeftRight className="w-3 h-3" />
+                  Switch workspace
+                </button>
+              )}
               <button
                 onClick={() => void signOut()}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#5E687B] hover:text-[#212833] hover:bg-[#E5EAF0] rounded-md transition-colors"
