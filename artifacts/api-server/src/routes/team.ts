@@ -290,7 +290,7 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
       inboundToken: generateInboundToken(),
       inboundHandle: handle,
       orgId: inv.orgId,
-    });
+    }).onConflictDoNothing();
   } else if (!existingInOrg[0]!.inboundHandle) {
     const handle = await generateUniqueHandle(existingInOrg[0]!.name);
     await db
