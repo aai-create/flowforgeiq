@@ -1014,6 +1014,20 @@ function buildMessages(s: ShipmentDef, supplierIdRef: () => number, buyerIdRef: 
   }
 }
 
+// ── Completion metadata ───────────────────────────────────────────────────────
+
+/**
+ * Expected message count per PO number, derived from the static buildMessages
+ * definitions. Exported so seedFab4DemoOnce can verify per-shipment completeness
+ * without re-running the full seed logic. If message content changes, this map
+ * updates automatically at build time.
+ */
+export const EXPECTED_MESSAGE_COUNTS: Readonly<Record<string, number>> = Object.freeze(
+  Object.fromEntries(
+    SHIPMENTS.map(s => [s.poNumber, buildMessages(s, () => 0, () => null).length])
+  )
+);
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 // True when this file is the entry point (tsx direct execution), false when
@@ -1172,7 +1186,42 @@ export async function seedFab4Demo(): Promise<void> {
       .where(and(eq(shipmentsTable.orgId, newOrgId), eq(shipmentsTable.poNumber, s.poNumber)));
     if (existingShipment) {
       shipmentIdByPoNumber.set(s.poNumber, existingShipment.id);
-      console.log(`  → ${s.poNumber} already exists — skipping`);
+      // Guard against the rare case where the seed crashed between the shipment
+      // insert and the payment insert: backfill payments if none exist yet.
+      const [existingPayment] = await db
+        .select({ id: paymentsTable.id })
+        .from(paymentsTable)
+        .where(eq(paymentsTable.shipmentId, existingShipment.id))
+        .limit(1);
+      if (!existingPayment) {
+        await db.insert(paymentsTable).values([
+          {
+            orgId: newOrgId,
+            shipmentId: existingShipment.id,
+            label: "Deposit (30%)",
+            percent: 30,
+            amountUsd: s.deposit.amountUsd,
+            paid: s.deposit.paid,
+            dueDate: new Date(s.exFactoryDate),
+            sortOrder: 0,
+            paidAt: s.deposit.paid ? new Date(s.exFactoryDate) : null,
+          },
+          {
+            orgId: newOrgId,
+            shipmentId: existingShipment.id,
+            label: "Balance (70%)",
+            percent: 70,
+            amountUsd: s.balance.amountUsd,
+            paid: s.balance.paid,
+            dueDate: new Date(s.dueDate),
+            sortOrder: 1,
+            paidAt: s.balance.paid ? new Date(s.dueDate) : null,
+          },
+        ]);
+        console.log(`  → ${s.poNumber} already exists — payments backfilled`);
+      } else {
+        console.log(`  → ${s.poNumber} already exists — skipping`);
+      }
       continue;
     }
 
@@ -1260,6 +1309,10 @@ export async function seedFab4Demo(): Promise<void> {
   }
 
   // ── Step 7: Seed messages ─────────────────────────────────────────────────
+  // Each shipment's messages are inserted inside a single transaction so that
+  // a crash mid-batch leaves the shipment with ZERO messages rather than a
+  // partial set. On the next boot the existence check sees 0 and re-inserts
+  // the full batch, making the step fully resumable.
   console.log("\nStep 7: Inserting messages...");
   const now = new Date();
   let totalMessages = 0;
@@ -1268,45 +1321,60 @@ export async function seedFab4Demo(): Promise<void> {
     const shipmentId = shipmentIdByPoNumber.get(s.poNumber);
     if (!shipmentId) continue;
 
-    // Check if messages already exist
-    const existingMsgs = await db
-      .select({ id: messagesTable.id })
+    const messages = buildMessages(s, () => supplierNameToId.get(s.supplierName)!, () => buyerNameToId.get(s.customerName) ?? null);
+    const expectedCount = messages.length;
+
+    // Count existing messages for this shipment.
+    const [{ existingCount }] = await db
+      .select({ existingCount: sql<number>`count(*)::int` })
       .from(messagesTable)
       .where(and(eq(messagesTable.orgId, newOrgId), eq(messagesTable.shipmentId, shipmentId)));
 
-    if (existingMsgs.length > 0) {
-      console.log(`  → ${s.poNumber}: ${existingMsgs.length} messages already exist — skipping`);
-      totalMessages += existingMsgs.length;
+    if (existingCount >= expectedCount) {
+      // Complete batch already present — nothing to do.
+      console.log(`  → ${s.poNumber}: ${existingCount} messages already exist — skipping`);
+      totalMessages += existingCount;
       continue;
     }
 
-    const messages = buildMessages(s, () => supplierNameToId.get(s.supplierName)!, () => buyerNameToId.get(s.customerName) ?? null);
+    // Insert (or repair a legacy partial batch from a pre-transaction run) inside
+    // a single transaction so a crash leaves the shipment with 0 messages and
+    // the step can be retried cleanly on next boot.
+    await db.transaction(async (tx) => {
+      if (existingCount > 0) {
+        // Partial batch from before the transaction fix — delete and re-insert.
+        console.log(`  ↻ ${s.poNumber}: ${existingCount}/${expectedCount} partial messages — repairing`);
+        await tx.delete(messagesTable).where(
+          and(eq(messagesTable.orgId, newOrgId), eq(messagesTable.shipmentId, shipmentId))
+        );
+      }
 
-    for (const m of messages) {
-      const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
-      const supplierId = m.supplierName ? (supplierNameToId.get(m.supplierName) ?? null) : null;
+      for (const m of messages) {
+        const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
+        const supplierId = m.supplierName ? (supplierNameToId.get(m.supplierName) ?? null) : null;
 
-      await db.insert(messagesTable).values({
-        orgId: newOrgId,
-        shipmentId,
-        supplierId,
-        sender: m.sender,
-        recipient: m.recipient ?? null,
-        channel: m.channel,
-        direction: m.direction,
-        snippet: m.snippet,
-        fullBody: m.fullBody,
-        unread: m.unread,
-        receivedAt,
-        routingStatus: m.routingStatus,
-        aiDraft: "",
-        aiAction: "",
-        aiTags: [],
-        signalStatus: "new",
-      });
-      totalMessages++;
-    }
+        await tx.insert(messagesTable).values({
+          orgId: newOrgId,
+          shipmentId,
+          supplierId,
+          sender: m.sender,
+          recipient: m.recipient ?? null,
+          channel: m.channel,
+          direction: m.direction,
+          snippet: m.snippet,
+          fullBody: m.fullBody,
+          unread: m.unread,
+          receivedAt,
+          routingStatus: m.routingStatus,
+          aiDraft: "",
+          aiAction: "",
+          aiTags: [],
+          signalStatus: "new",
+        });
+      }
+    });
 
+    totalMessages += messages.length;
     console.log(`  ✓ ${s.poNumber} [${s.currentStageId}]: ${messages.length} messages`);
   }
 
