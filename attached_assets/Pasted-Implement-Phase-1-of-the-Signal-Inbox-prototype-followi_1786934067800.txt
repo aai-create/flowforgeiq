@@ -1,0 +1,107 @@
+Implement Phase 1 of the Signal Inbox prototype, following the implementation plan in `docs/signal-inbox-prototype-plan.md`.
+
+Goal:
+Add a channel-neutral persistence model for inbound and outbound communications, AI assessments, proposed actions, and auditable delivery attempts.
+
+Important constraints:
+- First inspect the project’s existing database/schema/data-access conventions and reuse them.
+- If a suitable existing messages or conversations model exists, extend it minimally instead of creating redundant tables.
+- Do not replace or break current `messages`, `integrations`, `webhooks`, or copilot functionality.
+- Preserve tenant/workspace isolation and existing auth conventions everywhere.
+- Use migrations and generated types exactly as the repository currently does.
+- Store sensitive raw provider payloads only where existing security/storage patterns permit. For the prototype, storing a redacted JSON payload or metadata is acceptable if no secure blob-storage abstraction exists.
+
+Create or extend entities equivalent to:
+
+1. `signal_conversations`
+   - id
+   - tenant/workspace id
+   - channel
+   - external thread/conversation id
+   - normalized participant metadata
+   - subject/title
+   - last_message_at
+   - status: open, pending_review, resolved, archived
+   - created_at, updated_at
+   - unique constraint suitable for tenant + channel + external thread id
+
+2. `signals`
+   - id
+   - tenant/workspace id
+   - conversation id
+   - channel: gmail, outlook, sms, whatsapp_business, simulator
+   - direction: inbound, outbound
+   - provider_message_id
+   - provider_thread_id or reply context
+   - sender and recipients as structured JSON using existing project conventions
+   - subject
+   - body_text
+   - optional body_html
+   - attachment metadata only; do not implement binary attachment handling yet
+   - received_at / sent_at
+   - raw_payload_ref or redacted raw payload JSON
+   - created_at
+   - idempotency uniqueness for tenant + channel + provider_message_id
+
+3. `signal_assessments`
+   - id
+   - signal id
+   - status: pending, completed, failed
+   - intent
+   - urgency
+   - confidence
+   - summary
+   - extracted_entities JSON
+   - risks JSON
+   - recommended_action
+   - draft_reply
+   - model/provider metadata placeholders
+   - created_at, updated_at
+
+4. `signal_actions`
+   - id
+   - tenant/workspace id
+   - signal id
+   - action type: draft_reply, send_reply, create_task, escalate, dismiss
+   - status: proposed, approved, rejected, sent, failed
+   - editable content/body
+   - approved_by user id if available
+   - approved_at
+   - created_at, updated_at
+
+5. `signal_deliveries`
+   - id
+   - action id
+   - channel
+   - provider delivery/message id
+   - status: pending, sent, failed
+   - error code/message
+   - attempted_at
+   - completed_at
+
+6. `signal_audit_events`
+   - id
+   - tenant/workspace id
+   - conversation id
+   - signal id nullable
+   - actor type: user, system, ai, provider
+   - actor id nullable
+   - event type
+   - metadata JSON
+   - created_at
+
+Implementation requirements:
+- Add enums/validation schemas/types consistently with the codebase.
+- Add a repository/service layer only if that is the project’s convention.
+- Expose no public functionality yet except any minimal internal helpers needed by later phases.
+- Seed or fixture data is allowed only if it follows existing dev/test practices.
+- Add focused unit/integration tests for:
+  - tenant scoping;
+  - idempotent inbound message creation;
+  - conversation resolution by thread;
+  - creation of an assessment and proposed draft action;
+  - audit event generation.
+- Run the appropriate typecheck, tests, lint, and migration validation. Fix errors you introduce.
+- Update `docs/signal-inbox-prototype-plan.md` with the implemented schema/data-model decisions.
+
+Do not add real Gmail, Outlook, Twilio, or WhatsApp SDKs in this phase.
