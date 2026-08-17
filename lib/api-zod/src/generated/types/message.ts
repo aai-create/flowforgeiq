@@ -73,7 +73,7 @@ export interface Message {
      * @nullable
      */
   routedToUserName?: string | null;
-  /** Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped */
+  /** Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action. */
   signalStatus?: string;
   /**
      * AI's best guess for assignment (when confidence is low)

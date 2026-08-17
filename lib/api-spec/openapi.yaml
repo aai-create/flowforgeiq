@@ -2840,7 +2840,7 @@ components:
         rawChatText:            { type: ["string", "null"], description: "Original pasted or forwarded chat text for audit" }
         routedToClerkUserId:    { type: ["string", "null"], description: "Clerk user ID of the team member whose plus-token received this email" }
         routedToUserName:       { type: ["string", "null"], description: "Display name of the team member this email was addressed to (resolved from routedToClerkUserId)" }
-        signalStatus:           { type: string, description: "Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped" }
+        signalStatus:           { type: string, description: "Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action." }
         aiRoutingGuess:
           type: ["object", "null"]
           description: "AI's best guess for assignment (when confidence is low)"

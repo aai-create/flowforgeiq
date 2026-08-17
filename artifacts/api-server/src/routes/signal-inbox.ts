@@ -32,6 +32,15 @@ import { resolveOrgId } from "../middlewares/requireAuth";
 import { draftReplyWithAI } from "./webhooks";
 import { buildRawEmail, getValidAccessToken } from "./integrations";
 import { ListMessagesResponseItem } from "@workspace/api-zod";
+import {
+  transitionSignalStatus,
+  SignalInboxTransitionError,
+  ASSESS_FROM_STATUSES,
+  SEND_FROM_STATUSES,
+  SKIP_BLOCKED_STATUSES,
+  EDIT_BLOCKED_STATUSES,
+  type SignalStatus,
+} from "../lib/signal-inbox-workflow";
 
 const router: IRouter = Router();
 
@@ -79,9 +88,6 @@ function parseAuditTrail(value: unknown): Record<string, unknown>[] {
 }
 
 const ASSESS_TIMEOUT_MS = Number(process.env.SIGNAL_INBOX_ASSESS_TIMEOUT_MS ?? "10000");
-
-// Statuses that block edits and skips
-const TERMINAL_STATUSES = ["sending", "sent", "send_uncertain", "skipped"] as const;
 
 // ─── GET /signal-inbox ───────────────────────────────────────────────────────
 
@@ -169,15 +175,30 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
     return;
   }
 
+  // Validate the transition before touching the DB — surface a clean 409 for invalid source states
+  let assessingStatus: SignalStatus;
+  try {
+    assessingStatus = transitionSignalStatus(msg.signalStatus as SignalStatus, "startAssess");
+  } catch (e) {
+    if (e instanceof SignalInboxTransitionError) {
+      res.status(409).json({
+        error: "Assessment already in progress or message cannot be assessed in its current state",
+        currentStatus: msg.signalStatus,
+      });
+      return;
+    }
+    throw e;
+  }
+
   // Atomic claim: transition to 'assessing' only from valid source states
   const claimed = await db
     .update(messagesTable)
-    .set({ signalStatus: "assessing" })
+    .set({ signalStatus: assessingStatus })
     .where(
       and(
         eq(messagesTable.id, messageId),
         eq(messagesTable.orgId, orgId),
-        inArray(messagesTable.signalStatus, ["new", "draft_ready", "send_failed"]),
+        inArray(messagesTable.signalStatus, ASSESS_FROM_STATUSES),
       ),
     )
     .returning({ id: messagesTable.id });
@@ -185,6 +206,7 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
   if (claimed.length === 0) {
     res.status(409).json({
       error: "Assessment already in progress or message cannot be assessed in its current state",
+      currentStatus: msg.signalStatus,
     });
     return;
   }
@@ -255,7 +277,7 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
     // we do NOT overwrite the skip and we do NOT create/update the draft record.
     const finalised = await db
       .update(messagesTable)
-      .set({ signalStatus: "draft_ready" })
+      .set({ signalStatus: transitionSignalStatus("assessing", "assessSucceeded") })
       .where(
         and(
           eq(messagesTable.id, messageId),
@@ -289,7 +311,7 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
     // (don't overwrite a concurrent /skip)
     await db
       .update(messagesTable)
-      .set({ signalStatus: "new" })
+      .set({ signalStatus: transitionSignalStatus("assessing", "assessFailed") })
       .where(
         and(
           eq(messagesTable.id, messageId),
@@ -317,7 +339,7 @@ router.post("/signal-inbox/:messageId/approve", async (req, res) => {
   // Conditional: only from 'draft_ready'
   const approved = await db
     .update(messagesTable)
-    .set({ signalStatus: "approved" })
+    .set({ signalStatus: transitionSignalStatus("draft_ready", "approve") })
     .where(
       and(
         eq(messagesTable.id, messageId),
@@ -384,7 +406,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
     return;
   }
 
-  if (!["approved", "send_failed"].includes(msg.signalStatus)) {
+  if (!SEND_FROM_STATUSES.includes(msg.signalStatus as SignalStatus)) {
     const isInProgress = ["sending", "send_uncertain", "sent"].includes(msg.signalStatus);
     res.status(isInProgress ? 409 : 400).json({
       error: isInProgress
@@ -404,12 +426,12 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
   // Step 1: Atomic claim — only one concurrent request can own 'sending'
   const claimed = await db
     .update(messagesTable)
-    .set({ signalStatus: "sending" })
+    .set({ signalStatus: transitionSignalStatus(msg.signalStatus as SignalStatus, "startSend") })
     .where(
       and(
         eq(messagesTable.id, messageId),
         eq(messagesTable.orgId, orgId),
-        inArray(messagesTable.signalStatus, ["approved", "send_failed"]),
+        inArray(messagesTable.signalStatus, SEND_FROM_STATUSES),
       ),
     )
     .returning({ id: messagesTable.id });
@@ -423,12 +445,14 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
   const draftBody = String(payload.draftBody ?? "");
   const channel = String(payload.channel ?? msg.channel);
 
+  const revertedStatus = transitionSignalStatus("sending", "revertSend"); // "sending" → "approved"
+
   // Only Gmail is wired in this prototype
   if (channel !== "email") {
     // Revert message to approved — channel not wired is not a failure state
     await db
       .update(messagesTable)
-      .set({ signalStatus: "approved" })
+      .set({ signalStatus: revertedStatus })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
 
     await db
@@ -445,7 +469,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
       .where(eq(copilotProposalsTable.id, proposal.id));
 
     res.json({
-      message: ListMessagesResponseItem.parse({ ...msg, signalStatus: "approved" }),
+      message: ListMessagesResponseItem.parse({ ...msg, signalStatus: revertedStatus }),
       proposal,
       dispatched: false,
       channelNotWired: true,
@@ -462,7 +486,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
   if (!cred) {
     await db
       .update(messagesTable)
-      .set({ signalStatus: "approved" })
+      .set({ signalStatus: revertedStatus })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
 
     res.status(400).json({
@@ -476,7 +500,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
   if (!accessToken) {
     await db
       .update(messagesTable)
-      .set({ signalStatus: "approved" })
+      .set({ signalStatus: revertedStatus })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
 
     res.status(400).json({
@@ -548,7 +572,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
 
       const [failedMsg] = await db
         .update(messagesTable)
-        .set({ signalStatus: "send_failed" })
+        .set({ signalStatus: transitionSignalStatus("sending", "sendFailed") })
         .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
         .returning();
 
@@ -584,7 +608,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
 
     const [uncertainMsg] = await db
       .update(messagesTable)
-      .set({ signalStatus: "send_uncertain" })
+      .set({ signalStatus: transitionSignalStatus("sending", "sendUncertain") })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
       .returning();
 
@@ -650,7 +674,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
     // Third: mark the inbound message as sent
     const [sentMsg] = await db
       .update(messagesTable)
-      .set({ signalStatus: "sent" })
+      .set({ signalStatus: transitionSignalStatus("sending", "sendSucceeded") })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
       .returning();
 
@@ -676,7 +700,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
     // Best-effort: push message to send_uncertain so operators see it
     await db
       .update(messagesTable)
-      .set({ signalStatus: "send_uncertain" })
+      .set({ signalStatus: transitionSignalStatus("sending", "sendUncertain") })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
       .catch(() => { /* already done our best */ });
 
@@ -706,15 +730,40 @@ router.post("/signal-inbox/:messageId/skip", async (req, res) => {
   const messageId = Number(req.params.messageId);
   const orgId = await resolveOrgId(req);
 
-  // Conditional: allow skip from any non-terminal state
+  const [msg] = await db
+    .select()
+    .from(messagesTable)
+    .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
+
+  if (!msg) {
+    res.status(404).json({ error: "Message not found" });
+    return;
+  }
+
+  // Validate transition — throws SignalInboxTransitionError for blocked statuses
+  let nextStatus: SignalStatus;
+  try {
+    nextStatus = transitionSignalStatus(msg.signalStatus as SignalStatus, "skip");
+  } catch (e) {
+    if (e instanceof SignalInboxTransitionError) {
+      res.status(409).json({
+        error: "Cannot skip — message is in a terminal state",
+        currentStatus: msg.signalStatus,
+      });
+      return;
+    }
+    throw e;
+  }
+
+  // Conditional atomic update — protects against concurrent state change between fetch and update
   const updated = await db
     .update(messagesTable)
-    .set({ signalStatus: "skipped" })
+    .set({ signalStatus: nextStatus })
     .where(
       and(
         eq(messagesTable.id, messageId),
         eq(messagesTable.orgId, orgId),
-        not(inArray(messagesTable.signalStatus, ["sent", "send_uncertain", "skipped", "sending"])),
+        not(inArray(messagesTable.signalStatus, SKIP_BLOCKED_STATUSES)),
       ),
     )
     .returning();
@@ -725,14 +774,9 @@ router.post("/signal-inbox/:messageId/skip", async (req, res) => {
       .from(messagesTable)
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
 
-    if (!current) {
-      res.status(404).json({ error: "Message not found" });
-      return;
-    }
-
     res.status(409).json({
-      error: "Cannot skip — message is in a terminal state",
-      currentStatus: current.signalStatus,
+      error: "Cannot skip — message state changed concurrently",
+      currentStatus: current?.signalStatus ?? "unknown",
     });
     return;
   }
@@ -773,13 +817,19 @@ router.patch("/signal-inbox/:messageId/draft", async (req, res) => {
     return;
   }
 
-  // Block edits once a send is in flight or the message is in a terminal state
-  if ((TERMINAL_STATUSES as readonly string[]).includes(msg.signalStatus)) {
-    res.status(409).json({
-      error: `Cannot edit draft — message is in '${msg.signalStatus}' state`,
-      currentStatus: msg.signalStatus,
-    });
-    return;
+  // Validate transition — throws SignalInboxTransitionError for blocked statuses (sending/sent/send_uncertain/skipped)
+  let nextStatus: SignalStatus;
+  try {
+    nextStatus = transitionSignalStatus(msg.signalStatus as SignalStatus, "editDraft");
+  } catch (e) {
+    if (e instanceof SignalInboxTransitionError) {
+      res.status(409).json({
+        error: `Cannot edit draft — message is in '${msg.signalStatus}' state`,
+        currentStatus: msg.signalStatus,
+      });
+      return;
+    }
+    throw e;
   }
 
   const proposal = await findActiveSignalDraft(messageId, orgId);
@@ -788,8 +838,8 @@ router.patch("/signal-inbox/:messageId/draft", async (req, res) => {
     return;
   }
 
-  const wasApproved = msg.signalStatus === "approved";
-  const action = wasApproved ? "edited_after_approval" : "draft_edited";
+  const approvalInvalidated = nextStatus !== (msg.signalStatus as SignalStatus);
+  const action = approvalInvalidated ? "edited_after_approval" : "draft_edited";
 
   const originalPayload = proposal.payload as Record<string, unknown>;
   const originalBody = String(originalPayload.draftBody ?? "");
@@ -813,10 +863,10 @@ router.patch("/signal-inbox/:messageId/draft", async (req, res) => {
 
   // Editing after approval reverts to draft_ready — must re-approve before sending
   let updatedMsg = msg;
-  if (wasApproved) {
+  if (approvalInvalidated) {
     const [m] = await db
       .update(messagesTable)
-      .set({ signalStatus: "draft_ready" })
+      .set({ signalStatus: nextStatus })
       .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
       .returning();
     updatedMsg = m;

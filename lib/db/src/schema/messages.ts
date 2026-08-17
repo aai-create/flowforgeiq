@@ -28,7 +28,7 @@ export const messagesTable = pgTable("messages", {
   pendingExtractionFields: jsonb("pending_extraction_fields"),
   rawChatText: text("raw_chat_text"),
   routedToClerkUserId: text("routed_to_clerk_user_id"),
-  signalStatus: text("signal_status").notNull().default("new"), // new | assessing | draft_ready | approved | sending | sent | send_failed | skipped
+  signalStatus: text("signal_status").notNull().default("new"), // new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
 }, (t) => [
   index("messages_org_id_idx").on(t.orgId),

@@ -1252,7 +1252,7 @@ export const ListMessagesResponseItem = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -1327,7 +1327,7 @@ export const ListNeedsReviewMessagesResponseItem = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -1394,7 +1394,7 @@ export const UpdateMessageResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -1454,7 +1454,7 @@ export const AssignMessageResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2089,7 +2089,7 @@ export const ListSignalInboxResponseItem = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2169,7 +2169,7 @@ export const AssessSignalResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2248,7 +2248,7 @@ export const ApproveSignalResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2327,7 +2327,7 @@ export const SendSignalResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2408,7 +2408,7 @@ export const SkipSignalResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
@@ -2468,7 +2468,7 @@ export const UpdateSignalDraftResponse = zod.object({
   "rawChatText": zod.string().nullish().describe('Original pasted or forwarded chat text for audit'),
   "routedToClerkUserId": zod.string().nullish().describe('Clerk user ID of the team member whose plus-token received this email'),
   "routedToUserName": zod.string().nullish().describe('Display name of the team member this email was addressed to (resolved from routedToClerkUserId)'),
-  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | skipped'),
+  "signalStatus": zod.string().optional().describe('Signal Inbox lifecycle state: new | assessing | draft_ready | approved | sending | sent | send_failed | send_uncertain | skipped. send_uncertain is terminal and non-retryable — the email may have been sent; check Gmail via the audit trail dispatchKey before any manual action.'),
   "aiRoutingGuess": zod.object({
   "buyerName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
