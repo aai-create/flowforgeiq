@@ -1,0 +1,295 @@
+Implement Signal Inbox Phase 2: safe AI-draft editing, explicit approval, and Gmail-first dispatch readiness.
+
+This is an incremental implementation task. Do not redesign or duplicate Phase 1.
+
+# First inspect before editing
+
+Read the current implementation and tests, especially:
+
+- `docs/signal-inbox-prototype-plan.md`
+- `artifacts/api-server/src/routes/signal-inbox.ts`
+- `artifacts/api-server/src/routes/messages.ts`
+- `artifacts/api-server/src/routes/copilot.ts`
+- `artifacts/api-server/src/routes/webhooks.ts`
+- `artifacts/api-server/src/routes/index.ts`
+- the current Signal Inbox route and workflow tests
+- `lib/db/src/schema/messages.ts`
+- `lib/db/src/schema/copilot.ts`
+- `lib/api-spec/openapi.yaml`
+- existing Gmail integration/configuration helpers
+- existing message reply/send implementation
+- existing audit/activity/event patterns
+- generated API client/codegen conventions
+
+Before changing anything, identify exactly which Signal Inbox endpoints, state helpers, proposal fields, and tests Phase 1 already implemented.
+
+Do not reimplement existing endpoints or change their external behavior unless required for safe draft revision, approval, or dispatch semantics.
+
+# Goal
+
+Complete the backend workflow required for a human-reviewed Gmail reply:
+
+inbound Signal Inbox message
+→ assessed AI draft
+→ user edits AI draft
+→ explicit approval of the current revision
+→ controlled Gmail dispatch
+→ confirmed sent or recoverable send_failed state.
+
+Gmail is the only channel that may actually send in this phase.
+
+All other channels must remain non-sending:
+- Return a clear supported/unsupported or not-configured domain result.
+- Never claim successful delivery.
+- Never set `signal_status = sent` for an unwired channel.
+- Do not add Outlook, SMS, WhatsApp Business, personal WhatsApp, iMessage, WeChat, or generic adapter implementations.
+
+# Terminology — mandatory
+
+Maintain the distinction between:
+
+1. AI draft / Copilot proposal
+- AI-generated response draft stored in `copilot_proposals`.
+- Used by Signal Inbox.
+- May be edited, approved, and sent.
+
+2. Supplier quote / commercial quote
+- Optional commercial information associated with a deal.
+- Out of scope.
+- Do not add quote, deal, cost, margin, or profitability functionality.
+- Do not call AI drafts “supplier proposals.”
+
+# Required work
+
+## 1. Reuse/extract the existing Gmail reply behavior
+
+Inspect the existing Gmail send/reply implementation in `messages.ts` and its supporting services.
+
+Extract the shared Gmail reply/send and outbound-message-persistence behavior into the smallest appropriate reusable service/helper. Follow existing project boundaries and naming conventions.
+
+The existing message reply endpoint and the Signal Inbox dispatch path must use the same shared implementation for:
+
+- sender identity;
+- recipient/reply-to behavior;
+- Gmail thread/reply context;
+- Gmail provider call;
+- outbound message persistence;
+- provider message/thread ID persistence;
+- error normalization;
+- audit/activity behavior where existing patterns support it.
+
+Constraints:
+
+- Preserve all existing `POST /messages/:id/send-reply` behavior.
+- Add regression tests proving the existing endpoint remains functional after extraction.
+- Do not refactor unrelated messaging or integration code.
+- Do not add a new third-party dependency unless the existing Gmail integration cannot be reused without it.
+
+## 2. AI-draft edit endpoint and revision behavior
+
+Inspect the actual Phase 1 routes and existing Copilot proposal update behavior.
+
+Implement or extend the smallest compatible Signal Inbox endpoint for editing the active AI draft. Use existing API naming conventions; preferred shape only if compatible:
+
+`PATCH /signal-inbox/:messageId/draft`
+
+Requirements:
+
+- Resolve the active Signal Inbox AI draft using the Phase 1 source/origin and trigger-reference convention.
+- Scope message and proposal lookup to the authenticated organization/tenant.
+- Allow edits only when the message is in a state where the draft may be edited.
+- Validate non-empty reply content and existing project length/content rules.
+- Persist the revised AI-draft content using the existing `copilot_proposals` model.
+- If a draft was previously approved:
+  - invalidate that approval;
+  - transition the message to `draft_ready`;
+  - record an audit/activity event through existing mechanisms.
+- Maintain a deterministic draft revision/version identifier for approval and send idempotency:
+  - Reuse an existing proposal version/update timestamp/revision field if available.
+  - Otherwise derive an internal revision safely without adding a broad new table.
+  - Document the chosen implementation.
+- Do not modify unrelated trigger-engine Copilot proposals.
+
+## 3. Explicit approval of the current draft revision
+
+Review the current Phase 1 approve endpoint before changing it.
+
+Ensure approval means:
+
+- The user explicitly approves the current AI-draft revision.
+- The approval is tenant/workspace scoped and permission checked.
+- Approval cannot occur if:
+  - there is no active Signal Inbox AI draft;
+  - the message is not `draft_ready`;
+  - the draft is empty;
+  - the requested/current revision does not match the latest stored revision.
+- Approval transitions the message to `approved`.
+- Approval must be invalidated after any edit.
+- Approval does not itself send an external message.
+- Record audit/activity information using existing patterns.
+- Preserve or extend the current endpoint rather than creating overlapping approval endpoints.
+
+If the current schema has no dedicated `approvedBy` / `approvedAt` fields for this relationship, use the project’s existing audit/activity model and document the limitation rather than adding a new generic table in this phase.
+
+## 4. Gmail-first dispatch endpoint
+
+Implement or extend a Signal Inbox send endpoint, using current naming conventions. Preferred shape:
+
+`POST /signal-inbox/:messageId/send`
+
+Required preconditions:
+
+- Current user is authorized and message belongs to their organization/tenant.
+- The message has an active Signal Inbox AI draft.
+- The draft is non-empty.
+- The currently stored draft revision matches the approved revision.
+- `signal_status` is `approved`.
+- The source/originating channel is supported for outbound dispatch.
+- For this phase, only Gmail-backed email messages may dispatch.
+
+State behavior:
+
+1. Validate preconditions.
+2. Reserve or create an idempotent send attempt before provider dispatch.
+3. Transition to `sending`.
+4. Call the extracted shared Gmail send helper.
+5. On confirmed provider success:
+   - persist outbound message and provider IDs;
+   - transition to `sent`;
+   - record audit/activity information;
+   - return the persisted outbound message/delivery result.
+6. On known delivery failure:
+   - transition to `send_failed`;
+   - preserve the AI draft and approval context for controlled retry;
+   - record a safe, user-actionable error result;
+   - never falsely mark as sent.
+
+Non-Gmail / unconfigured channel behavior:
+
+- Do not call an external provider.
+- Do not create an outbound message falsely marked as sent.
+- Return a typed/consistent “channel not configured” or “channel unsupported” response.
+- Keep the message in a safe reviewable state; document the exact chosen state transition.
+- Add an audit/activity record if existing conventions support it.
+
+## 5. Idempotency and retry safety
+
+Implement delivery idempotency with the Phase 1 message/proposal linkage and a current draft revision.
+
+Preferred logical key:
+
+`signal_inbox:<messageId>:<copilotProposalId>:<draftRevision>`
+
+Adapt that key to existing persistence capabilities without introducing a new generic delivery table.
+
+Required behavior:
+
+- Repeated send requests for the same approved draft revision must not send duplicate Gmail messages.
+- If a previous request already completed successfully, return the persisted result without another Gmail call.
+- If a send is actively in progress, return a clear in-progress/conflict result.
+- If a known failure occurred, require an explicit retry path; do not silently resend.
+- An edited draft produces a new revision and requires new approval before send.
+- Do not treat a client timeout as proof that Gmail failed.
+- Document any residual ambiguity that cannot be eliminated with current storage/provider interfaces.
+
+If the current schema cannot persist enough idempotency state safely, stop and identify the smallest schema addition needed. Do not invent a generic delivery subsystem.
+
+## 6. API specification and generated client
+
+- Update `lib/api-spec/openapi.yaml` for any new or changed Signal Inbox draft/edit/approval/send contracts.
+- Use schemas consistent with current API conventions.
+- Include appropriate success, validation, unauthorized, not-found, invalid-state, unsupported-channel, and duplicate/in-progress response shapes where current API conventions support them.
+- Run the established API code generation workflow.
+- Do not hand-edit generated client code.
+- Preserve compatibility for existing messages and Copilot APIs.
+
+# Non-goals
+
+Do not implement:
+
+- Signal Inbox frontend/UI.
+- New inbox list/detail APIs already completed in Phase 1.
+- New generic signal/conversation/action/delivery/audit tables.
+- New provider adapter framework.
+- Gmail OAuth setup flows, new credential storage, or new provider SDKs.
+- Postmark auto-assessment changes unless essential to preserve existing contracts.
+- Actual automated/LLM assessment changes.
+- Any automatic external sending.
+- Outlook, SMS, WhatsApp Business, personal WhatsApp, iMessage, WeChat, Slack, Teams, or other channel support.
+- Supplier quote ingestion, quote extraction, deal linkage, margin calculations, or profitability states.
+
+# Tests
+
+Add or update focused tests using existing project conventions.
+
+Required coverage:
+
+1. Existing `POST /messages/:id/send-reply` behavior is preserved after Gmail helper extraction.
+2. Signal Inbox draft edit:
+   - updates the active Signal Inbox AI draft;
+   - enforces tenant/workspace isolation;
+   - rejects invalid/empty drafts;
+   - invalidates prior approval;
+   - returns message to `draft_ready`.
+3. Approval:
+   - only permits the current non-empty draft revision;
+   - rejects invalid message state;
+   - is tenant/organization scoped;
+   - does not send.
+4. Gmail send:
+   - rejects send before approval;
+   - rejects stale approval after a draft edit;
+   - uses the shared Gmail helper;
+   - preserves reply/thread context passed to the helper;
+   - persists/returns success appropriately;
+   - transitions `approved -> sending -> sent` only after confirmed provider success.
+5. Failure:
+   - Gmail failure transitions to `send_failed`;
+   - does not mark sent;
+   - preserves review/retry context.
+6. Unsupported/unconfigured channel:
+   - does not call Gmail;
+   - does not create a false sent state;
+   - returns the expected domain response.
+7. Idempotency:
+   - duplicate send request for same approved revision produces one provider send;
+   - completed success returns the prior result;
+   - in-progress request is protected;
+   - retry is explicit after known failure.
+8. Regression:
+   - Phase 1 Signal Inbox workflow/route tests remain passing.
+   - Existing Copilot and message route tests remain passing.
+
+# Validation
+
+Run and fix failures caused by this work:
+
+- Typecheck.
+- Relevant backend/unit/integration tests.
+- Lint, if configured.
+- OpenAPI validation and client generation.
+- Re-run typecheck after codegen.
+- Standard migration/schema sync validation only if a schema change is truly required.
+
+Do not add a migration unless implementation requires a minimal, justified persistence addition for draft approval or delivery idempotency. If needed, stop and explain the exact addition before making it.
+
+# Documentation and final report
+
+Update `docs/signal-inbox-prototype-plan.md` only to record material implementation decisions:
+
+- Shared Gmail helper location and behavior.
+- Draft revision mechanism.
+- Approval representation.
+- Delivery idempotency strategy.
+- Retry semantics.
+- Unsupported channel behavior.
+- Any schema change or deliberately deferred limitation.
+
+At completion, report:
+
+1. Files inspected and changed.
+2. Existing Phase 1 functionality reused versus extended.
+3. Gmail helper extraction details and regression coverage.
+4. Draft revision, approval, and idempotency implementation.
+5. Test and validation commands run with results.
+6. Any schema limitation, delivery ambiguity, or item requiring human approval before the frontend phase.
