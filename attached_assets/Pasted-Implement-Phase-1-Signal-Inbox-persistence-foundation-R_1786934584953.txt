@@ -1,0 +1,235 @@
+Implement Phase 1: Signal Inbox persistence foundation.
+
+Read these first and treat them as the source of truth:
+
+- `docs/signal-inbox-prototype-plan.md`
+- `lib/db/src/schema/messages.ts`
+- `lib/db/src/schema/copilot.ts`
+- `artifacts/api-server/src/routes/messages.ts`
+- `artifacts/api-server/src/routes/copilot.ts`
+- `artifacts/api-server/src/routes/webhooks.ts`
+- `artifacts/api-server/src/routes/index.ts`
+- `lib/api-spec/openapi.yaml`
+- current database migration configuration, migration journal, package scripts, and migration validation/check scripts
+- existing message, copilot, and route tests
+- current tenant/organization authorization conventions
+
+Do not redo planning. Implement the persistence/schema portion of the committed Signal Inbox plan, adapting only where the actual implementation differs from the plan. If there is a material conflict, stop before inventing a new architecture and document the conflict clearly.
+
+# Goal
+
+Create the smallest safe persistence foundation for a review-first Signal Inbox by extending existing `messages` and `copilot_proposals`.
+
+Do not build a parallel generic communications subsystem.
+
+Do not create new tables named or equivalent to:
+- signals
+- signal_conversations
+- signal_assessments
+- signal_actions
+- signal_deliveries
+- signal_audit_events
+
+Reuse the current message, Copilot proposal, audit/activity, tenant, and authorization patterns.
+
+# Terminology — mandatory
+
+Keep these concepts separate in schema names, API names, comments, UI-ready labels, and documentation:
+
+1. AI draft / Copilot proposal
+- An AI-generated reply draft or recommended action.
+- Persisted in the existing `copilot_proposals` domain.
+- May be generated for a Signal Inbox message.
+
+2. Supplier quote / commercial quote
+- Supplier pricing, commercial terms, or a commercial offer associated with a deal.
+- Optional for a deal.
+- Not part of this implementation phase.
+- Do not add quote, margin, profitability, or deal-commercial fields.
+- Do not use the word “proposal” alone where it could be confused with a supplier quote.
+
+# Required changes
+
+## 1. Message inbox workflow field
+
+Extend the existing `messages` table/schema with a narrowly scoped Signal Inbox workflow field named:
+
+`signalStatus` in TypeScript
+`signal_status` in the database
+
+Use a database representation and TypeScript type consistent with the repository’s existing enum/text conventions.
+
+Supported workflow values:
+
+- `new`
+- `assessing`
+- `draft_ready`
+- `approved`
+- `sending`
+- `sent`
+- `send_failed`
+- `skipped`
+
+Rules:
+
+- This is an inbox workflow state only; it is not the only source of truth for AI-draft state or provider-delivery state.
+- Do not silently surface existing historical messages as actionable Signal Inbox items.
+- Follow the exact legacy-message default/backfill decision in `docs/signal-inbox-prototype-plan.md`.
+- If the plan’s decision conflicts with current schema constraints or actual production-safe migration requirements, use the safest non-disruptive option and update the plan with the rationale.
+- Add an index only if it matches the expected tenant-scoped inbox query shape and follows existing database/index conventions.
+- Ensure all resulting inbox queries can be scoped by organization/tenant.
+
+## 2. Copilot proposal source discriminator
+
+Inspect the current `copilot_proposals` schema and API carefully.
+
+- If a suitable existing discriminator already distinguishes proposal origin/type, reuse it.
+- Otherwise add the smallest compatible source/origin field necessary to distinguish:
+  - `copilot_trigger`
+  - `signal_inbox`
+
+Use the naming convention already present in the codebase. Prefer `source` only if there is no better established equivalent.
+
+Requirements:
+
+- Existing trigger-engine/Copilot Queue proposals must retain their current meaning and behavior.
+- Existing records must receive a safe backward-compatible default equivalent to `copilot_trigger`.
+- Signal Inbox AI drafts must be queryable separately from trigger-engine proposals.
+- Regenerate/update OpenAPI schemas and frontend generated client types/hooks only if this repository’s current API/codegen architecture requires it for the modified model.
+
+## 3. Signal Inbox AI-draft linkage
+
+Implement a reusable internal lookup/helper for the one-active-AI-draft-per-message rule.
+
+Preferred convention, unless the committed plan or existing code defines a better compatible one:
+
+- proposal source/origin: `signal_inbox`
+- proposal trigger reference: `signal_inbox:message:<messageId>`
+
+Requirements:
+
+- Lookup is organization/tenant scoped.
+- Repeated lookup/creation attempts for the same message resolve to the same active Signal Inbox AI draft.
+- Do not create duplicate active Signal Inbox AI drafts.
+- Do not alter existing trigger-engine proposal references.
+- Use the project’s established repository/service/data-access structure.
+- Add a database constraint/index only if it can be done safely within existing schema patterns; otherwise implement robust transactional/application-level idempotency and document the limitation.
+- Do not implement live AI assessment in this phase. The helper may accept placeholder draft/proposal data needed for tests and later phases.
+
+## 4. Workflow transition helper
+
+Add a small internal domain helper/service for Signal Inbox workflow transitions. Keep it isolated and unit-testable.
+
+It must support/document:
+
+- `new -> assessing`
+- `assessing -> draft_ready`
+- `draft_ready -> approved`
+- `approved -> sending`
+- `sending -> sent`
+- `draft_ready -> skipped`
+- `approved -> draft_ready` when the AI draft is edited
+- `sending -> send_failed`
+- explicit controlled retry transition from `send_failed`
+
+Rules:
+
+- Invalid transitions are rejected with clear domain errors.
+- Changing an approved AI draft invalidates approval and returns the message to `draft_ready`.
+- No action may create a `sent` state for an unsupported or unconfigured channel.
+- Do not add actual provider dispatch or a public Signal Inbox API in this phase.
+- Use existing audit/activity mechanisms where available for state changes. If no reusable audit mechanism exists, document that future requirement rather than building a separate audit table now.
+
+## 5. API contract alignment
+
+This phase is persistence-first, but the schema must be ready for the next API phase.
+
+- Update `lib/api-spec/openapi.yaml` only for shared model schemas/types that are already exposed through existing message or Copilot APIs.
+- Do not add the future `/signal-inbox` routes yet.
+- If model schemas used by the generated frontend client change, run the project’s normal code generation process.
+- Do not hand-edit generated client files.
+- Preserve backward compatibility for existing message and Copilot API consumers wherever practical.
+
+# Explicit non-goals
+
+Do not implement any of the following in this phase:
+
+- Signal Inbox API endpoints.
+- Signal Inbox frontend page/navigation.
+- Deterministic or LLM-based assessment.
+- Gmail sending or a shared Gmail delivery helper.
+- Postmark auto-assessment.
+- Outlook, SMS, WhatsApp Business, personal WhatsApp, iMessage, WeChat, or other adapters.
+- New generic signal/conversation/action/delivery/audit tables.
+- Supplier quote extraction or linking.
+- Deal-level quote, price, cost, margin, or profitability logic.
+- Any requirement that deals must contain supplier quote information.
+
+# Migration discipline
+
+The repository has previously experienced migration/schema drift and deployment failures. Follow its current migration process exactly.
+
+1. Modify the TypeScript schema.
+2. Generate a migration using the standard project command. Do not use `db push`.
+3. Review generated SQL, migration journal entries, and snapshots.
+4. Ensure the migration is safe for an empty database and for existing data.
+5. Apply it through the standard local/dev migration command.
+6. Run the repository’s migration sync/check validation.
+7. Do not manually edit migration snapshots or journal metadata unless the project’s established generation workflow requires it.
+8. Do not introduce idempotent SQL unnecessarily. If the current project’s operational policy requires idempotent migration guards, follow that established policy and document why.
+9. Confirm the migration does not cause historical messages to appear as active Signal Inbox items by default.
+
+# Tests
+
+Add or update tests in the repository’s existing style. Cover:
+
+1. The schema/default/backfill behavior for `signal_status`.
+2. Existing messages remain usable after the schema change.
+3. Existing Copilot proposals keep their existing source/origin semantics.
+4. Existing or migrated proposals are treated as `copilot_trigger` unless explicitly Signal Inbox sourced.
+5. Tenant/organization-scoped lookup of a Signal Inbox AI draft.
+6. Repeated creation/lookup resolves one active Signal Inbox AI draft per message.
+7. Signal Inbox and trigger-engine Copilot proposals remain distinguishable.
+8. Every permitted workflow transition succeeds.
+9. Invalid workflow transitions fail.
+10. Editing an approved AI draft invalidates approval and returns the message to `draft_ready`.
+11. No helper can mark a message `sent` outside an allowed delivery-confirmation path.
+12. Historical messages do not become unexpectedly actionable by default.
+13. Relevant existing message/Copilot route tests still pass.
+
+# Required validation
+
+Run and fix failures caused by this work:
+
+- Typecheck.
+- Relevant unit/integration tests.
+- Lint, if configured.
+- Standard migration generation.
+- Standard migration application.
+- Migration synchronization/check script.
+- API/client codegen, if model schema changes require it.
+- Re-run typecheck after generated code changes.
+
+# Documentation
+
+Update `docs/signal-inbox-prototype-plan.md` only where implementation details materially differ from the committed plan. Add:
+
+- Actual schema fields and defaults added.
+- Legacy-message migration behavior.
+- The exact proposal source/origin mapping used.
+- The exact Signal Inbox AI-draft linkage convention used.
+- Workflow transition implementation and audit approach.
+- Migration file name and validation results.
+- Any intentionally deferred database constraint or race-condition limitation.
+- Confirmation that supplier quotes remain optional for deals and are out of scope.
+
+# Completion report
+
+At the end, report:
+
+1. Files changed.
+2. Migration name and whether it was generated, applied, and validated.
+3. Exact defaults/backfill behavior for existing messages and Copilot proposals.
+4. The active Signal Inbox AI-draft linkage and idempotency approach.
+5. Tests and validation commands run, with results.
+6. Any conflict with the committed plan or any item requiring human approval before Phase 2.
