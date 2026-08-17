@@ -9,7 +9,8 @@
     "build-seed-data": "tsx ./src/build-seed-data.ts",
     "capture-docs": "tsx ./src/capture-docs-screenshots.ts",
     "verify-wipe": "tsx ./src/verify-wipe.ts",
-    "generate-import-template": "tsx ./src/generate-import-template.ts"
+    "generate-import-template": "tsx ./src/generate-import-template.ts",
+    "seed-fab4demo": "tsx ./src/seed-fab4demo.ts"
   },
   "devDependencies": {
     "@e965/xlsx": "^0.20.3",
@@ -20,6 +21,7 @@
   "dependencies": {
     "@types/pg": "^8.20.0",
     "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:",
     "exceljs": "^4.4.0",
     "pg": "^8.20.0"
   }
