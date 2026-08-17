@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "./lib/migrations";
+import { seedFab4DemoOnce } from "./lib/seedFab4DemoOnce";
 
 const rawPort = process.env["PORT"];
 
@@ -17,7 +18,13 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 runMigrations()
-  .then(() => {
+  .then(async () => {
+    // Seed Fab4Demo org on first boot if it doesn't exist yet.
+    // This is intentionally fire-and-forget: seeding failure never prevents startup.
+    seedFab4DemoOnce().catch((err) =>
+      logger.error({ err }, "seedFab4DemoOnce unexpected rejection"),
+    );
+
     app.listen(port, (err) => {
       if (err) {
         logger.error({ err }, "Error listening on port");

@@ -292,4 +292,29 @@ router.delete("/superadmin/impersonate", requireSuperAdmin, (_req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Fab4Demo seed endpoint ────────────────────────────────────────────────────
+// Executes the seed-fab4demo script against whichever DATABASE_URL is active
+// (production when called on the production server). Protected by requireSuperAdmin.
+router.post("/superadmin/seed-fab4demo", requireSuperAdmin, async (req, res) => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const execFileAsync = promisify(execFile);
+
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      "pnpm",
+      ["--filter", "@workspace/scripts", "seed-fab4demo"],
+      {
+        env: process.env,
+        cwd: "/home/runner/workspace",
+        timeout: 180_000,
+      },
+    );
+    res.json({ ok: true, output: stdout, stderr: stderr || undefined });
+  } catch (err: unknown) {
+    const e = err as { message?: string; stdout?: string; stderr?: string };
+    res.status(500).json({ ok: false, error: e.message, output: e.stdout, stderr: e.stderr });
+  }
+});
+
 export default router;
