@@ -23,8 +23,11 @@ import {
   shipmentsTable,
   paymentsTable,
   messagesTable,
+  stagesTable,
+  rfqsTable,
+  rfqQuotesTable,
 } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 
 // ── Clerk REST helper ────────────────────────────────────────────────────────
 
@@ -1028,6 +1031,165 @@ export const EXPECTED_MESSAGE_COUNTS: Readonly<Record<string, number>> = Object.
   )
 );
 
+/** Number of pipeline stage rows expected for the org. */
+export const EXPECTED_STAGE_COUNT = 11;
+
+/** Number of unrouted (needs_review, shipmentId IS NULL) inbox messages expected. */
+export const EXPECTED_UNROUTED_MESSAGE_COUNT = 5;
+
+// ── Pipeline stage definitions ────────────────────────────────────────────────
+
+const STAGES: Array<{ id: string; label: string; sortOrder: number }> = [
+  { id: "spec",       label: "Spec Sheet",       sortOrder: 0  },
+  { id: "quotes",     label: "Factory Quotes",    sortOrder: 1  },
+  { id: "sample_ord", label: "Sample Order",      sortOrder: 2  },
+  { id: "sample_apr", label: "Sample Approval",   sortOrder: 3  },
+  { id: "po_issued",  label: "PO Issued",         sortOrder: 4  },
+  { id: "production", label: "Production",         sortOrder: 5  },
+  { id: "qc",         label: "QC Inspection",     sortOrder: 6  },
+  { id: "ex_factory", label: "Ex-Factory",         sortOrder: 7  },
+  { id: "in_transit", label: "In Transit",         sortOrder: 8  },
+  { id: "payment",    label: "Payment Clearance",  sortOrder: 9  },
+  { id: "delivered",  label: "Delivered",          sortOrder: 10 },
+];
+
+// ── RFQ definitions ───────────────────────────────────────────────────────────
+
+interface RfqQuoteDef {
+  factoryName: string;
+  unitPriceUsd: number;
+  leadTimeDays: number;
+  moq: number;
+  status: "received" | "accepted" | "rejected";
+  sortOrder: number;
+}
+
+interface RfqDef {
+  buyerName: string;
+  product: string;
+  category: string;
+  quantity: number;
+  targetPriceUsd: number;
+  /** Positive = future deadline (days from now), negative = past (cancelled). */
+  deadlineDaysFromNow: number;
+  status: "open" | "accepted" | "cancelled";
+  notes?: string;
+  quotes: RfqQuoteDef[];
+}
+
+const RFQ_DEFS: RfqDef[] = [
+  {
+    buyerName: "Forever 21",
+    product: "Chrome Retail Hanger — Velvet Grip (MOQ Inquiry)",
+    category: "Hangers",
+    quantity: 20000,
+    targetPriceUsd: 0.85,
+    deadlineDaysFromNow: 45,
+    status: "open",
+    notes: "Buyer evaluating two suppliers — no quotes received yet.",
+    quotes: [],
+  },
+  {
+    buyerName: "Cedar Hollow Homes",
+    product: "Powder-Coat Hanger — Matte White Slim",
+    category: "Hangers",
+    quantity: 5000,
+    targetPriceUsd: 1.20,
+    deadlineDaysFromNow: 30,
+    status: "open",
+    notes: "Two quotes received — awaiting buyer decision.",
+    quotes: [
+      { factoryName: "Guangzhou Metalworks",  unitPriceUsd: 1.10, leadTimeDays: 30, moq: 2000, status: "received", sortOrder: 0 },
+      { factoryName: "Foshan Precision Parts", unitPriceUsd: 1.05, leadTimeDays: 35, moq: 3000, status: "received", sortOrder: 1 },
+    ],
+  },
+  {
+    buyerName: "Vellum Studio",
+    product: "LED Track Light — 4000K Wash — 18W",
+    category: "Lighting",
+    quantity: 2000,
+    targetPriceUsd: 8.50,
+    deadlineDaysFromNow: 60,
+    status: "accepted",
+    notes: "Shenzhen LEDPro accepted at $7.90/unit.",
+    quotes: [
+      { factoryName: "Shenzhen LEDPro", unitPriceUsd: 7.90, leadTimeDays: 28, moq: 500, status: "accepted", sortOrder: 0 },
+    ],
+  },
+  {
+    buyerName: "Pioneer Goods Co.",
+    product: "LED Display Spot — 3000K — 12W",
+    category: "Lighting",
+    quantity: 3000,
+    targetPriceUsd: 6.80,
+    deadlineDaysFromNow: 35,
+    status: "open",
+    notes: "One quote received — reviewing with buyer.",
+    quotes: [
+      { factoryName: "Dongguan BrightTech", unitPriceUsd: 6.50, leadTimeDays: 25, moq: 1000, status: "received", sortOrder: 0 },
+    ],
+  },
+  {
+    buyerName: "Marlowe & Sons",
+    product: "Velvet Non-Slip Hanger — Kids Size",
+    category: "Hangers",
+    quantity: 8000,
+    targetPriceUsd: 0.55,
+    deadlineDaysFromNow: -14,
+    status: "cancelled",
+    notes: "Buyer cancelled — budget constraints.",
+    quotes: [],
+  },
+];
+
+// ── Unrouted inbox message definitions ───────────────────────────────────────
+
+interface UnroutedMessageDef {
+  sender: string;
+  channel: string;
+  snippet: string;
+  fullBody: string;
+  daysAgo: number;
+}
+
+const UNROUTED_MESSAGES: UnroutedMessageDef[] = [
+  {
+    sender: "buying@forever21.com",
+    channel: "email",
+    snippet: "Hi, following up on our hanger inquiry — can you confirm if Tianjin can handle 20k units?",
+    fullBody: `Hi,\n\nFollowing up on our recent hanger inquiry.\n\nWe're looking to place an order for approximately 20,000 units of the velvet grip chrome hanger.\n\nCould you confirm whether Tianjin Wire Works can accommodate this volume, and if so, what the lead time would be?\n\nWe'd also appreciate an updated proforma if you have one ready.\n\nBest regards,\nBuying Team\nForever 21`,
+    daysAgo: 2,
+  },
+  {
+    sender: "+86 138 0013 8000",
+    channel: "whatsapp",
+    snippet: "Alex pls confirm deposit for PO-1005 wire sent? We need to start cutting Monday",
+    fullBody: `Alex pls confirm deposit for PO-1005 wire sent? We need to start cutting Monday otherwise timeline will slip. Please advise ASAP`,
+    daysAgo: 1,
+  },
+  {
+    sender: "procurement@cedarhollowgroup.com",
+    channel: "email",
+    snippet: "Could you send an update on our open orders? We have a board meeting next week.",
+    fullBody: `Hi,\n\nHope you're well. We have our quarterly board meeting next week and need to give an update on our open purchase orders.\n\nCould you send over a status summary for all our current shipments? Lead times, any risks, and expected delivery dates would be very helpful.\n\nThanks in advance,\nProcurement\nCedar Hollow Group`,
+    daysAgo: 3,
+  },
+  {
+    sender: "noreply@freightos.com",
+    channel: "email",
+    snippet: "Your quote for CSLU container SHFE→LA is ready — USD 2,840 all-in",
+    fullBody: `Your Freightos freight quote is ready.\n\nRoute: Shanghai (SHFE) → Los Angeles (LA)\nContainer: 1x20' FCL\nTotal: USD 2,840 all-in (includes origin charges, ocean freight, destination THC)\nValidity: 7 days\nTransit time: ~28 days\n\nLog in to Freightos to book or compare more quotes.\n\nhttps://app.freightos.com/quotes/xxxxxxxx\n\n— The Freightos Team`,
+    daysAgo: 1,
+  },
+  {
+    sender: "sales@shenzhenledpro.cn",
+    channel: "email",
+    snippet: "Balance invoice attached for PO-1011. Please arrange payment at your convenience.",
+    fullBody: `Dear FlowForge Team,\n\nPlease find attached our balance invoice for PO-1011-4500110188 (LED Track Light — 4000K Wash — 18W).\n\nInvoice details:\n• Invoice No: SLPO-2026-0411\n• Amount: USD 6,426.00\n• Due: Upon receipt\n\nBank details have been provided previously. Please do not hesitate to contact us if you have any questions.\n\nBest regards,\nSales Team\nShenzhen LEDPro Co., Ltd`,
+    daysAgo: 4,
+  },
+];
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 // True when this file is the entry point (tsx direct execution), false when
@@ -1378,8 +1540,144 @@ export async function seedFab4Demo(): Promise<void> {
     console.log(`  ✓ ${s.poNumber} [${s.currentStageId}]: ${messages.length} messages`);
   }
 
-  // ── Step 8: Verify ────────────────────────────────────────────────────────
-  console.log("\nStep 8: Verification...");
+  // ── Step 8: Seed pipeline stages ─────────────────────────────────────────
+  console.log("\nStep 8: Inserting pipeline stages...");
+  let stageCount = 0;
+  for (const stage of STAGES) {
+    const [existing] = await db
+      .select({ orgId: stagesTable.orgId })
+      .from(stagesTable)
+      .where(and(eq(stagesTable.orgId, newOrgId), eq(stagesTable.id, stage.id)));
+    if (existing) {
+      stageCount++;
+      console.log(`  → ${stage.id} already exists — skipping`);
+      continue;
+    }
+    await db.insert(stagesTable).values({ orgId: newOrgId, id: stage.id, label: stage.label, sortOrder: stage.sortOrder });
+    stageCount++;
+    console.log(`  ✓ ${stage.id} (${stage.label})`);
+  }
+
+  // ── Step 9: Seed RFQs ─────────────────────────────────────────────────────
+  console.log("\nStep 9: Inserting RFQs...");
+  // (now is already defined above in Step 7 — reused here for deadline offsets)
+  // Map rfq key → DB id, for quote insertion
+  const rfqKeyToId = new Map<string, number>();
+  for (const rfq of RFQ_DEFS) {
+    const rfqKey = `${rfq.buyerName}||${rfq.product}`;
+    const [existing] = await db
+      .select({ id: rfqsTable.id })
+      .from(rfqsTable)
+      .where(and(
+        eq(rfqsTable.orgId, newOrgId),
+        eq(rfqsTable.buyerName, rfq.buyerName),
+        eq(rfqsTable.product, rfq.product),
+      ));
+    if (existing) {
+      rfqKeyToId.set(rfqKey, existing.id);
+      console.log(`  → RFQ "${rfq.product}" (${rfq.buyerName}) already exists — skipping`);
+      continue;
+    }
+    const deadline = new Date(now.getTime() + rfq.deadlineDaysFromNow * 24 * 60 * 60 * 1000);
+    const [inserted] = await db
+      .insert(rfqsTable)
+      .values({
+        orgId: newOrgId,
+        buyerName: rfq.buyerName,
+        product: rfq.product,
+        category: rfq.category,
+        quantity: rfq.quantity,
+        targetPriceUsd: rfq.targetPriceUsd,
+        deadline,
+        status: rfq.status,
+        notes: rfq.notes ?? null,
+      })
+      .returning({ id: rfqsTable.id });
+    rfqKeyToId.set(rfqKey, inserted!.id);
+    console.log(`  ✓ RFQ "${rfq.product}" (${rfq.buyerName}) status=${rfq.status} id=${inserted!.id}`);
+  }
+
+  // ── Step 10: Seed RFQ quotes ──────────────────────────────────────────────
+  console.log("\nStep 10: Inserting RFQ quotes...");
+  for (const rfq of RFQ_DEFS) {
+    if (rfq.quotes.length === 0) continue;
+    const rfqKey = `${rfq.buyerName}||${rfq.product}`;
+    const rfqId = rfqKeyToId.get(rfqKey);
+    if (!rfqId) {
+      console.warn(`  ⚠ Could not find RFQ id for "${rfq.product}" — skipping quotes`);
+      continue;
+    }
+    for (const q of rfq.quotes) {
+      const [existing] = await db
+        .select({ id: rfqQuotesTable.id })
+        .from(rfqQuotesTable)
+        .where(and(
+          eq(rfqQuotesTable.rfqId, rfqId),
+          eq(rfqQuotesTable.factoryName, q.factoryName),
+        ));
+      if (existing) {
+        console.log(`  → Quote from ${q.factoryName} for rfqId=${rfqId} already exists — skipping`);
+        continue;
+      }
+      const supplierId = supplierNameToId.get(q.factoryName) ?? null;
+      await db.insert(rfqQuotesTable).values({
+        orgId: newOrgId,
+        rfqId,
+        factoryName: q.factoryName,
+        supplierId,
+        unitPriceUsd: q.unitPriceUsd,
+        leadTimeDays: q.leadTimeDays,
+        moq: q.moq,
+        status: q.status,
+        sortOrder: q.sortOrder,
+        country: "CN",
+      });
+      console.log(`  ✓ Quote from ${q.factoryName} $${q.unitPriceUsd}/unit (rfqId=${rfqId})`);
+    }
+  }
+
+  // ── Step 11: Seed unrouted inbox messages ─────────────────────────────────
+  console.log("\nStep 11: Inserting unrouted inbox messages...");
+  let unroutedCount = 0;
+  for (const m of UNROUTED_MESSAGES) {
+    const [existing] = await db
+      .select({ id: messagesTable.id })
+      .from(messagesTable)
+      .where(and(
+        eq(messagesTable.orgId, newOrgId),
+        eq(messagesTable.sender, m.sender),
+        eq(messagesTable.channel, m.channel),
+        isNull(messagesTable.shipmentId),
+      ));
+    if (existing) {
+      unroutedCount++;
+      console.log(`  → Unrouted msg from ${m.sender} (${m.channel}) already exists — skipping`);
+      continue;
+    }
+    const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
+    await db.insert(messagesTable).values({
+      orgId: newOrgId,
+      shipmentId: null,
+      supplierId: null,
+      sender: m.sender,
+      channel: m.channel,
+      direction: "inbound",
+      snippet: m.snippet,
+      fullBody: m.fullBody,
+      unread: true,
+      routingStatus: "needs_review",
+      receivedAt,
+      aiDraft: "",
+      aiAction: "",
+      aiTags: [],
+      signalStatus: "new",
+    });
+    unroutedCount++;
+    console.log(`  ✓ Unrouted msg from ${m.sender} (${m.channel})`);
+  }
+
+  // ── Step 12: Verify ───────────────────────────────────────────────────────
+  console.log("\nStep 12: Verification...");
 
   const orgRow = await db.select().from(organizationsTable).where(eq(organizationsTable.id, newOrgId));
   const memberRows = await db.select().from(teamUsersTable).where(eq(teamUsersTable.orgId, newOrgId));
@@ -1388,22 +1686,28 @@ export async function seedFab4Demo(): Promise<void> {
   const shipmentRows = await db.select().from(shipmentsTable).where(eq(shipmentsTable.orgId, newOrgId));
   const paymentRows = await db.select().from(paymentsTable).where(eq(paymentsTable.orgId, newOrgId));
   const messageRows = await db.select().from(messagesTable).where(eq(messagesTable.orgId, newOrgId));
+  const stageRows = await db.select().from(stagesTable).where(eq(stagesTable.orgId, newOrgId));
+  const rfqRows = await db.select().from(rfqsTable).where(eq(rfqsTable.orgId, newOrgId));
+  const rfqQuoteRows = await db.select().from(rfqQuotesTable).where(eq(rfqQuotesTable.orgId, newOrgId));
 
   // Message count per shipment
   const msgCountBySipment = new Map<number, number>();
-  for (const msg of messageRows) {
-    const sid = msg.shipmentId ?? 0;
+  const unroutedMsgCount = messageRows.filter(m => m.shipmentId === null && m.routingStatus === "needs_review").length;
+  for (const msg of messageRows.filter(m => m.shipmentId !== null)) {
+    const sid = msg.shipmentId!;
     msgCountBySipment.set(sid, (msgCountBySipment.get(sid) ?? 0) + 1);
   }
 
   console.log("\n=== Verification Summary ===");
-  console.log(`Org:       ${orgRow[0]?.name} (id=${newOrgId}, slug=${orgRow[0]?.slug})`);
-  console.log(`Members:   ${memberRows.length} (${memberRows.map(m => m.email).join(", ")})`);
-  console.log(`Buyers:    ${buyerRows.length} (${buyerRows.map(b => b.name).join(", ")})`);
-  console.log(`Suppliers: ${supplierRows.length}`);
-  console.log(`Shipments: ${shipmentRows.length}`);
-  console.log(`Payments:  ${paymentRows.length}`);
-  console.log(`Messages:  ${messageRows.length} total`);
+  console.log(`Org:             ${orgRow[0]?.name} (id=${newOrgId}, slug=${orgRow[0]?.slug})`);
+  console.log(`Members:         ${memberRows.length} (${memberRows.map(m => m.email).join(", ")})`);
+  console.log(`Buyers:          ${buyerRows.length} (${buyerRows.map(b => b.name).join(", ")})`);
+  console.log(`Suppliers:       ${supplierRows.length}`);
+  console.log(`Stages:          ${stageRows.length}${stageRows.length < EXPECTED_STAGE_COUNT ? " ⚠️ BELOW EXPECTED" : ""}`);
+  console.log(`Shipments:       ${shipmentRows.length}`);
+  console.log(`Payments:        ${paymentRows.length}`);
+  console.log(`Messages:        ${messageRows.length} total (${unroutedMsgCount} unrouted needs_review)`);
+  console.log(`RFQs:            ${rfqRows.length} (${rfqQuoteRows.length} quotes)`);
   console.log("\nMessages per shipment:");
   for (const ship of shipmentRows) {
     const count = msgCountBySipment.get(ship.id) ?? 0;

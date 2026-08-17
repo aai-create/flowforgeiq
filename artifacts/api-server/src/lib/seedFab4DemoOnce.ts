@@ -9,12 +9,17 @@
  * logged but never prevents the server from starting.
  */
 
-import { db, messagesTable, organizationsTable, shipmentsTable } from "@workspace/db";
-import { count, eq, and, inArray } from "drizzle-orm";
+import { db, messagesTable, organizationsTable, shipmentsTable, stagesTable } from "@workspace/db";
+import { count, eq, and, inArray, isNull } from "drizzle-orm";
 // Static import so esbuild bundles the seed function directly into the server
 // bundle. This avoids the subprocess approach (pnpm) which fails in production
 // because pnpm is not on PATH in the deployed container.
-import { seedFab4Demo, EXPECTED_MESSAGE_COUNTS } from "@workspace/scripts/src/seed-fab4demo.js";
+import {
+  seedFab4Demo,
+  EXPECTED_MESSAGE_COUNTS,
+  EXPECTED_STAGE_COUNT,
+  EXPECTED_UNROUTED_MESSAGE_COUNT,
+} from "@workspace/scripts/src/seed-fab4demo.js";
 import { logger } from "./logger";
 
 /** PO numbers expected in a fully-seeded Fab4Demo org. */
@@ -27,7 +32,7 @@ const EXPECTED_PO_NUMBERS = Object.keys(EXPECTED_MESSAGE_COUNTS);
  * shipments are missing messages.
  */
 async function isFullySeeded(orgId: number): Promise<boolean> {
-  // One query: join shipments with their message counts for the known PO set.
+  // 1. Per-PO message counts — must all match exactly.
   const rows = await db
     .select({
       poNumber: shipmentsTable.poNumber,
@@ -50,10 +55,29 @@ async function isFullySeeded(orgId: number): Promise<boolean> {
     .groupBy(shipmentsTable.poNumber);
 
   if (rows.length !== EXPECTED_PO_NUMBERS.length) return false;
+  if (!rows.every(r => r.msgCount === EXPECTED_MESSAGE_COUNTS[r.poNumber])) return false;
 
-  return rows.every(
-    r => r.msgCount === EXPECTED_MESSAGE_COUNTS[r.poNumber],
-  );
+  // 2. Pipeline stages — all 11 must exist for this org.
+  const [{ stageCount }] = await db
+    .select({ stageCount: count(stagesTable.id) })
+    .from(stagesTable)
+    .where(eq(stagesTable.orgId, orgId));
+  if (stageCount < EXPECTED_STAGE_COUNT) return false;
+
+  // 3. Unrouted inbox messages — at least the expected number must exist.
+  const [{ unroutedCount }] = await db
+    .select({ unroutedCount: count(messagesTable.id) })
+    .from(messagesTable)
+    .where(
+      and(
+        eq(messagesTable.orgId, orgId),
+        eq(messagesTable.routingStatus, "needs_review"),
+        isNull(messagesTable.shipmentId),
+      ),
+    );
+  if (unroutedCount < EXPECTED_UNROUTED_MESSAGE_COUNT) return false;
+
+  return true;
 }
 
 export async function seedFab4DemoOnce(): Promise<void> {
