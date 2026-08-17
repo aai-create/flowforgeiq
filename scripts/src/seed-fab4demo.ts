@@ -28,8 +28,8 @@ import { eq, and, sql } from "drizzle-orm";
 
 // ── Clerk REST helper ────────────────────────────────────────────────────────
 
+// Read at module load; guarded inside seedFab4Demo() before use.
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
-if (!CLERK_SECRET_KEY) throw new Error("CLERK_SECRET_KEY env var must be set");
 
 async function clerkGetUserByEmail(email: string): Promise<{ id: string; firstName: string | null; lastName: string | null } | null> {
   const url = `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}&limit=5`;
@@ -1016,7 +1016,14 @@ function buildMessages(s: ShipmentDef, supplierIdRef: () => number, buyerIdRef: 
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-async function main() {
+// True when this file is the entry point (tsx direct execution), false when
+// bundled and imported inside the API server.
+const isCli =
+  import.meta.url.endsWith("/seed-fab4demo.ts") ||
+  import.meta.url.endsWith("/seed-fab4demo.js");
+
+export async function seedFab4Demo(): Promise<void> {
+  if (!CLERK_SECRET_KEY) throw new Error("CLERK_SECRET_KEY env var must be set");
   console.log("=== Fab4Demo Seed Script ===\n");
 
   // ── Step 1: Create the org ────────────────────────────────────────────────
@@ -1336,11 +1343,16 @@ async function main() {
     console.log(`  ${ship.poNumber} [${ship.currentStageId}]: ${count} messages${flag}`);
   }
 
-  await pool.end();
+  // Only close the pool when running as a standalone CLI script, not when
+  // imported and called from within the running API server.
+  if (isCli) await pool.end();
   console.log("\n✅ Fab4Demo seed complete!");
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+// ── CLI entry point ───────────────────────────────────────────────────────────
+if (isCli) {
+  seedFab4Demo().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}

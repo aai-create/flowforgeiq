@@ -293,27 +293,18 @@ router.delete("/superadmin/impersonate", requireSuperAdmin, (_req, res) => {
 });
 
 // ─── Fab4Demo seed endpoint ────────────────────────────────────────────────────
-// Executes the seed-fab4demo script against whichever DATABASE_URL is active
-// (production when called on the production server). Protected by requireSuperAdmin.
-router.post("/superadmin/seed-fab4demo", requireSuperAdmin, async (req, res) => {
-  const { execFile } = await import("node:child_process");
-  const { promisify } = await import("node:util");
-  const execFileAsync = promisify(execFile);
-
+// Runs the seed against whichever DATABASE_URL is active (production when
+// called on the production server). Uses the exported seedFab4Demo() function
+// directly so pnpm is not required on PATH (it is absent in deployed containers).
+// Protected by requireSuperAdmin.
+router.post("/superadmin/seed-fab4demo", requireSuperAdmin, async (_req, res) => {
   try {
-    const { stdout, stderr } = await execFileAsync(
-      "pnpm",
-      ["--filter", "@workspace/scripts", "seed-fab4demo"],
-      {
-        env: process.env,
-        cwd: "/home/runner/workspace",
-        timeout: 180_000,
-      },
-    );
-    res.json({ ok: true, output: stdout, stderr: stderr || undefined });
+    const { seedFab4Demo } = await import("@workspace/scripts/src/seed-fab4demo.js");
+    await seedFab4Demo();
+    res.json({ ok: true });
   } catch (err: unknown) {
-    const e = err as { message?: string; stdout?: string; stderr?: string };
-    res.status(500).json({ ok: false, error: e.message, output: e.stdout, stderr: e.stderr });
+    const e = err as { message?: string };
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 

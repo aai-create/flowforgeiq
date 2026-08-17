@@ -2,29 +2,20 @@
  * seedFab4DemoOnce
  *
  * Called once at server startup (after migrations). If the Fab4Demo org
- * (slug="fab4demo") is absent from the database, it executes
- *   pnpm --filter @workspace/scripts seed-fab4demo
- * using the same DATABASE_URL and CLERK_SECRET_KEY that the running server
- * already has — so it targets the correct database (production or dev)
- * automatically.
+ * (slug="fab4demo") is absent from the database, it calls seedFab4Demo()
+ * directly — no subprocess, no PATH dependency.
  *
  * The function is intentionally fire-and-forget: a seeding failure is
  * logged but never prevents the server from starting.
  */
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { db, organizationsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+// Static import so esbuild bundles the seed function directly into the server
+// bundle. This avoids the subprocess approach (pnpm) which fails in production
+// because pnpm is not on PATH in the deployed container.
+import { seedFab4Demo } from "@workspace/scripts/src/seed-fab4demo.js";
 import { logger } from "./logger";
-
-const execFileAsync = promisify(execFile);
-
-/** Resolve the monorepo root regardless of the server's cwd. */
-function workspaceRoot(): string {
-  // In both dev and production the monorepo is at /home/runner/workspace.
-  return process.env.WORKSPACE_ROOT ?? "/home/runner/workspace";
-}
 
 export async function seedFab4DemoOnce(): Promise<void> {
   try {
@@ -39,20 +30,8 @@ export async function seedFab4DemoOnce(): Promise<void> {
       return;
     }
 
-    logger.info("seedFab4DemoOnce: Fab4Demo org not found — running seed script");
-
-    const { stdout, stderr } = await execFileAsync(
-      "pnpm",
-      ["--filter", "@workspace/scripts", "seed-fab4demo"],
-      {
-        cwd: workspaceRoot(),
-        env: process.env,
-        timeout: 300_000, // 5 minutes
-      },
-    );
-
-    if (stdout) logger.info({ output: stdout }, "seedFab4DemoOnce: seed stdout");
-    if (stderr) logger.warn({ stderr }, "seedFab4DemoOnce: seed stderr");
+    logger.info("seedFab4DemoOnce: Fab4Demo org not found — running seed");
+    await seedFab4Demo();
     logger.info("seedFab4DemoOnce: seed complete");
   } catch (err) {
     // Seeding failure must never crash the server.

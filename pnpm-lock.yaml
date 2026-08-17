@@ -209,6 +209,9 @@ importers:
       '@workspace/integrations-openai-ai-server':
         specifier: workspace:*
         version: link:../../lib/integrations-openai-ai-server
+      '@workspace/scripts':
+        specifier: workspace:*
+        version: link:../../scripts
       bplist-creator:
         specifier: ^0.1.1
         version: 0.1.1
