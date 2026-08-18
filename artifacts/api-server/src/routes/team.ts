@@ -282,6 +282,9 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
     const clerkEmail = inv.email;
     const clerkName = anyExisting[0]?.name ?? clerkEmail.split("@")[0] ?? "Team Member";
     const handle = await generateUniqueHandle(clerkName);
+    // Use onConflictDoUpdate so a user who is already in another org gets moved
+    // to the invited org rather than having the insert silently dropped.
+    // (The team_users PK is clerk_user_id alone, so one row per user.)
     await db.insert(teamUsersTable).values({
       clerkUserId: req.userId!,
       email: clerkEmail,
@@ -290,7 +293,15 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
       inboundToken: generateInboundToken(),
       inboundHandle: handle,
       orgId: inv.orgId,
-    }).onConflictDoNothing();
+    }).onConflictDoUpdate({
+      target: teamUsersTable.clerkUserId,
+      set: {
+        orgId: inv.orgId,
+        role: inv.role,
+        email: clerkEmail,
+        name: clerkName,
+      },
+    });
   } else if (!existingInOrg[0]!.inboundHandle) {
     const handle = await generateUniqueHandle(existingInOrg[0]!.name);
     await db
