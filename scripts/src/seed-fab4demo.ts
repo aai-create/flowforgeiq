@@ -1140,6 +1140,35 @@ const RFQ_DEFS: RfqDef[] = [
     notes: "Buyer cancelled — budget constraints.",
     quotes: [],
   },
+  {
+    buyerName: "Atelier Nord",
+    product: "LED Pendant Light — 2700K Warm — 15W",
+    category: "Lighting",
+    quantity: 800,
+    targetPriceUsd: 9.50,
+    deadlineDaysFromNow: 105,
+    status: "open",
+    notes: "Buyer comparing three quotes — price and CRI rating are key factors.",
+    quotes: [
+      { factoryName: "Dongguan BrightTech",  unitPriceUsd: 9.20, leadTimeDays: 30, moq: 500,  status: "received", sortOrder: 0 },
+      { factoryName: "Shenzhen LEDPro",       unitPriceUsd: 8.75, leadTimeDays: 35, moq: 500,  status: "received", sortOrder: 1 },
+      { factoryName: "Guangzhou Metalworks",  unitPriceUsd: 11.40, leadTimeDays: 28, moq: 1000, status: "rejected", sortOrder: 2 },
+    ],
+  },
+  {
+    buyerName: "Northbound Outfitters",
+    product: "Powder-Coat Hanger — Forest Green Slim",
+    category: "Hangers",
+    quantity: 5000,
+    targetPriceUsd: 1.00,
+    deadlineDaysFromNow: 58,
+    status: "accepted",
+    notes: "Foshan Precision Parts accepted — moving to sampling stage.",
+    quotes: [
+      { factoryName: "Foshan Precision Parts", unitPriceUsd: 0.95, leadTimeDays: 28, moq: 3000, status: "accepted", sortOrder: 0 },
+      { factoryName: "Tianjin Wire Works",      unitPriceUsd: 1.10, leadTimeDays: 32, moq: 5000, status: "rejected", sortOrder: 1 },
+    ],
+  },
 ];
 
 // ── Unrouted inbox message definitions ───────────────────────────────────────
