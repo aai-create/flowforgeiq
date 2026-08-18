@@ -26,6 +26,7 @@ vi.mock("@workspace/db", () => ({
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
         returning: mockDbInsertReturning,
+        onConflictDoNothing: vi.fn().mockResolvedValue([]),
       }),
     }),
     select: vi.fn().mockReturnValue({
@@ -388,12 +389,14 @@ describe("POST /team/accept-invite — invitation acceptance and account provisi
     //  2. existing membership in invited org   → [] (new membership)
     //  3. any existing row (name reuse)        → [] (brand-new user)
     //  4. generateUniqueHandle uniqueness      → [] (handle not taken)
-    //  5. final select after insert            → [PROVISIONED_USER]
+    //  5. post-insert confirmation select      → [PROVISIONED_USER]
+    //  6. final select after acceptedAt update → [PROVISIONED_USER]
     mockDbSelectFromWhere
       .mockResolvedValueOnce([VALID_INVITATION])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([PROVISIONED_USER])
       .mockResolvedValueOnce([PROVISIONED_USER]);
 
     // The Clerk mock already returns emailAddresses containing INVITED_EMAIL
@@ -487,12 +490,14 @@ describe("POST /team/accept-invite — invitation acceptance and account provisi
     //  2. existing membership in org 2         → [] (not a member there yet)
     //  3. any existing row (name reuse)        → [PROVISIONED_USER] (org 1 row)
     //  4. generateUniqueHandle uniqueness      → [] (handle free)
-    //  5. final select (org 2 row)             → [ORG2_USER]
+    //  5. post-insert confirmation select      → [ORG2_USER]
+    //  6. final select (org 2 row)             → [ORG2_USER]
     mockDbSelectFromWhere
       .mockResolvedValueOnce([ORG2_INVITATION])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([PROVISIONED_USER])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([ORG2_USER])
       .mockResolvedValueOnce([ORG2_USER]);
 
     const app = await buildTestApp();

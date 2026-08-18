@@ -282,26 +282,35 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
     const clerkEmail = inv.email;
     const clerkName = anyExisting[0]?.name ?? clerkEmail.split("@")[0] ?? "Team Member";
     const handle = await generateUniqueHandle(clerkName);
-    // Use onConflictDoUpdate so a user who is already in another org gets moved
-    // to the invited org rather than having the insert silently dropped.
-    // (The team_users PK is clerk_user_id alone, so one row per user.)
-    await db.insert(teamUsersTable).values({
-      clerkUserId: req.userId!,
-      email: clerkEmail,
-      name: clerkName,
-      role: inv.role,
-      inboundToken: generateInboundToken(),
-      inboundHandle: handle,
-      orgId: inv.orgId,
-    }).onConflictDoUpdate({
-      target: teamUsersTable.clerkUserId,
-      set: {
-        orgId: inv.orgId,
-        role: inv.role,
+    // Use onConflictDoNothing so Postgres resolves the conflict against whatever
+    // constraint exists (single-column PK or composite PK) without needing an
+    // explicit target. After the attempt we re-query to confirm the row exists.
+    try {
+      await db.insert(teamUsersTable).values({
+        clerkUserId: req.userId!,
         email: clerkEmail,
         name: clerkName,
-      },
-    });
+        role: inv.role,
+        inboundToken: generateInboundToken(),
+        inboundHandle: handle,
+        orgId: inv.orgId,
+      }).onConflictDoNothing();
+    } catch (err) {
+      req.log.error({ err }, "team_users insert failed during accept-invite");
+      res.status(500).json({ error: "Could not join org, please contact support." });
+      return;
+    }
+
+    // Confirm the row actually exists (insert may have been a no-op for some constraint).
+    const [inserted] = await db
+      .select()
+      .from(teamUsersTable)
+      .where(and(eq(teamUsersTable.clerkUserId, req.userId!), eq(teamUsersTable.orgId, inv.orgId)));
+    if (!inserted) {
+      req.log.error({ userId: req.userId, orgId: inv.orgId }, "team_users row missing after insert attempt");
+      res.status(500).json({ error: "Could not join org, please contact support." });
+      return;
+    }
   } else if (!existingInOrg[0]!.inboundHandle) {
     const handle = await generateUniqueHandle(existingInOrg[0]!.name);
     await db
