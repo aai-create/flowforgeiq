@@ -1037,6 +1037,9 @@ export const EXPECTED_STAGE_COUNT = 11;
 /** Number of unrouted (needs_review, shipmentId IS NULL) inbox messages expected. */
 export const EXPECTED_UNROUTED_MESSAGE_COUNT = 5;
 
+/** Total number of RFQ rows expected for the org. */
+export const EXPECTED_RFQ_COUNT = 7;
+
 // ── Pipeline stage definitions ────────────────────────────────────────────────
 
 const STAGES: Array<{ id: string; label: string; sortOrder: number }> = [

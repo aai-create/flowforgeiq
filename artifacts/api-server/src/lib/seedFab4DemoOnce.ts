@@ -9,7 +9,7 @@
  * logged but never prevents the server from starting.
  */
 
-import { db, messagesTable, organizationsTable, shipmentsTable, stagesTable } from "@workspace/db";
+import { db, messagesTable, organizationsTable, rfqsTable, shipmentsTable, stagesTable } from "@workspace/db";
 import { count, eq, and, inArray, isNull } from "drizzle-orm";
 // Static import so esbuild bundles the seed function directly into the server
 // bundle. This avoids the subprocess approach (pnpm) which fails in production
@@ -19,6 +19,7 @@ import {
   EXPECTED_MESSAGE_COUNTS,
   EXPECTED_STAGE_COUNT,
   EXPECTED_UNROUTED_MESSAGE_COUNT,
+  EXPECTED_RFQ_COUNT,
 } from "@workspace/scripts/src/seed-fab4demo.js";
 import { logger } from "./logger";
 
@@ -76,6 +77,13 @@ async function isFullySeeded(orgId: number): Promise<boolean> {
       ),
     );
   if (unroutedCount < EXPECTED_UNROUTED_MESSAGE_COUNT) return false;
+
+  // 4. RFQ count — all expected RFQs must exist.
+  const [{ rfqCount }] = await db
+    .select({ rfqCount: count(rfqsTable.id) })
+    .from(rfqsTable)
+    .where(eq(rfqsTable.orgId, orgId));
+  if (rfqCount < EXPECTED_RFQ_COUNT) return false;
 
   return true;
 }
