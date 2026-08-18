@@ -1469,6 +1469,7 @@ export const RfqQuoteStatus = {
   pending: 'pending',
   received: 'received',
   accepted: 'accepted',
+  rejected: 'rejected',
 } as const;
 
 export interface RfqQuote {
@@ -1494,6 +1495,7 @@ export const RfqQuoteCreateStatus = {
   pending: 'pending',
   received: 'received',
   accepted: 'accepted',
+  rejected: 'rejected',
 } as const;
 
 export interface RfqQuoteCreate {
@@ -1514,6 +1516,7 @@ export const RfqQuoteUpdateStatus = {
   pending: 'pending',
   received: 'received',
   accepted: 'accepted',
+  rejected: 'rejected',
 } as const;
 
 export interface RfqQuoteUpdate {

@@ -2939,7 +2939,7 @@ export const ListRfqsResponseItem = zod.object({
   "leadTimeDays": zod.number(),
   "moq": zod.number(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['pending', 'received', 'accepted']),
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
   "sortOrder": zod.number()
 }))
 })
@@ -2989,7 +2989,7 @@ export const GetRfqResponse = zod.object({
   "leadTimeDays": zod.number(),
   "moq": zod.number(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['pending', 'received', 'accepted']),
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
   "sortOrder": zod.number()
 }))
 })
@@ -3035,7 +3035,7 @@ export const UpdateRfqResponse = zod.object({
   "leadTimeDays": zod.number(),
   "moq": zod.number(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['pending', 'received', 'accepted']),
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
   "sortOrder": zod.number()
 }))
 })
@@ -3053,7 +3053,7 @@ export const AddRfqQuoteBody = zod.object({
   "leadTimeDays": zod.number(),
   "moq": zod.number(),
   "notes": zod.string().optional(),
-  "status": zod.enum(['pending', 'received', 'accepted']).optional()
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']).optional()
 })
 
 
@@ -3069,7 +3069,7 @@ export const UpdateRfqQuoteBody = zod.object({
   "leadTimeDays": zod.number().optional(),
   "moq": zod.number().optional(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['pending', 'received', 'accepted']).optional()
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']).optional()
 })
 
 export const UpdateRfqQuoteResponse = zod.object({
@@ -3082,7 +3082,7 @@ export const UpdateRfqQuoteResponse = zod.object({
   "leadTimeDays": zod.number(),
   "moq": zod.number(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['pending', 'received', 'accepted']),
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
   "sortOrder": zod.number()
 })
 

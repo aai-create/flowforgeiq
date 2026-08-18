@@ -3550,7 +3550,7 @@ components:
         leadTimeDays:  { type: integer }
         moq:           { type: integer }
         notes:         { type: ["string", "null"] }
-        status:        { type: string, enum: [pending, received, accepted] }
+        status:        { type: string, enum: [pending, received, accepted, rejected] }
         sortOrder:     { type: integer }
 
     RfqQuoteCreate:
@@ -3564,7 +3564,7 @@ components:
         leadTimeDays: { type: integer }
         moq:          { type: integer }
         notes:        { type: string }
-        status:       { type: string, enum: [pending, received, accepted] }
+        status:       { type: string, enum: [pending, received, accepted, rejected] }
 
     RfqQuoteUpdate:
       type: object
@@ -3575,7 +3575,7 @@ components:
         leadTimeDays: { type: integer }
         moq:          { type: integer }
         notes:        { type: ["string", "null"] }
-        status:       { type: string, enum: [pending, received, accepted] }
+        status:       { type: string, enum: [pending, received, accepted, rejected] }
 
     RfqWithQuotes:
       type: object

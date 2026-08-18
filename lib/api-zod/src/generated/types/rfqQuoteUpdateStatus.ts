@@ -13,4 +13,5 @@ export const RfqQuoteUpdateStatus = {
   pending: 'pending',
   received: 'received',
   accepted: 'accepted',
+  rejected: 'rejected',
 } as const;
