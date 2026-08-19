@@ -29,51 +29,60 @@ id = "_9ZvNMjB4OrocZCpIN4zd"
 uri = "file://sample-pos/PO-1001-778143.pdf"
 type = "pdf"
 title = "PO-1001-778143 — Chrome Retail Hanger Heavy Duty Top (Marlowe & Sons → Tianjin Wire Works)"
+logical_id = "06d462e0-164c-4718-a699-d92ce0155e5f"
 
 [[outputs]]
 id = "5iUfazw9pjuA8Irx-6fwg"
 uri = "file://sample-pos/PO-1002-783656.pdf"
 type = "pdf"
 title = "PO-1002-783656 — Chrome Retail Hanger Slim Profile Bottom (Vellum Studio → Guangzhou Metalworks)"
+logical_id = "1fe39d92-6216-49d1-bce2-164248302dea"
 
 [[outputs]]
 id = "rVDUsOCbX5_qw2abY0swq"
 uri = "file://sample-pos/PO-1006-P201466120.pdf"
 type = "pdf"
 title = "PO-1006-P201466120 — Powder-Coat Hanger Charcoal Bottom (Northbound Outfitters → Guangzhou Metalworks)"
+logical_id = "5f4323b9-5325-4721-8f63-999ba164e7c0"
 
 [[outputs]]
 id = "KxVGwz_-aiPzwFrNB2ft0"
 uri = "file://sample-pos/PO-1007-P201472890.pdf"
 type = "pdf"
 title = "PO-1007-P201472890 — Powder-Coat Hanger Bronze Petite (Marlowe & Sons → Foshan Precision Parts)"
+logical_id = "dad4613c-a06c-485b-8e99-9de11f75b648"
 
 [[outputs]]
 id = "Qbw0tKw_pcJDj7FTZkLZR"
 uri = "file://artifacts/flowforge-video/public/audio/bg_music.mp3"
 type = "audio"
 title = "background music"
+logical_id = "3e660ff3-db0f-4883-bf5c-708b4872bdef"
 
 [[outputs]]
 id = "alm0jt9W5JG1He3PaZumx"
 uri = "file://.local/outputs/FlowForge-Sourcing.pptx"
 type = "slides"
 title = "FlowForge-Sourcing.pptx"
+logical_id = "766fc807-2ed0-4a39-b2dc-05b39b73455b"
 
 [[outputs]]
 id = "-PiE-lHJleuKji-b-yaAu"
 uri = "file://.local/outputs/FlowForge-Sourcing.pdf"
 type = "pdf"
 title = "FlowForge-Sourcing.pdf"
+logical_id = "2b3b6238-0c3c-4070-b50f-2acb198162eb"
 
 [[outputs]]
 id = "rwD39MuZvgC_IVYCwvf-k"
 uri = "file://.local/outputs/FlowForgeIQ.pdf"
 type = "pdf"
 title = "FlowForgeIQ.pdf"
+logical_id = "b7ad2f44-9a65-4120-8d30-8e41973a72cf"
 
 [[outputs]]
 id = "XIWkw-OIuDFAGqGlP0ie_"
 uri = "file://attached_assets/flowforge-seed-import.xlsx"
 type = "table"
 title = "FlowForge Seed Data Import"
+logical_id = "c290120c-0301-4e35-ac68-51f26cb8618a"
