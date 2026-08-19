@@ -99,4 +99,17 @@ size = 828676
 mtime_ms = 1787156196817
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:330b8c81-d5cd-45d0-a77b-b0b6763ac1d1/02b5963a-8927-478c-835e-7c12246001db/ba2358a2-c02d-4cb9-a551-d13113041f1a"
 storage_version_token = "1787156236893886"
+
+[[outputs]]
+id = "e9M7-XxADn6_0ORBmt5oM"
+uri = "file://artifacts/mockup-sandbox/variant-c-signal-atlas.png"
+type = "image"
+title = "Signal Atlas — Mobile PWA Variant C"
+description = "Six-screen, 2× visual board for FlowForge operational triage: unified signals, My Focus, relationship atlas, shipment drawer, RFQ decision, and agenda."
+logical_id = "14cfe75c-7b42-4b85-a809-2ed3070d4217"
+content_hash = "sha256:37b96963176146484e3e1f2cf85901b60708bccd6da77e89fcf3859aa119dd70"
+size = 1169849
+mtime_ms = 1787156611086
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:330b8c81-d5cd-45d0-a77b-b0b6763ac1d1/14cfe75c-7b42-4b85-a809-2ed3070d4217/06f7bee1-cc93-481a-9cfb-de0ce188331f"
+storage_version_token = "1787156660303212"
 content_type = "image/png"

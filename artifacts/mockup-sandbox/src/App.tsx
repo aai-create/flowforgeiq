@@ -97,21 +97,29 @@ function getPreviewExamplePath(): string {
 }
 
 function Gallery() {
+  const basePath = getBasePath();
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
-      <div className="text-center max-w-md">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-3">
-          Component Preview Server
-        </h1>
-        <p className="text-gray-500 mb-4">
-          This server renders individual components for the workspace canvas.
+    <div className="min-h-screen bg-[#151126] flex flex-col items-center px-4 py-8">
+      <div className="w-full max-w-[980px] flex items-center justify-between gap-4 mb-5">
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.18em] text-white/50 uppercase">
+            FlowForge / mobile PWA study
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-white mt-1">
+            Signal Atlas
+          </h1>
+        </div>
+        <p className="text-xs text-white/45 text-right">
+          Variant C · six-screen board
         </p>
-        <p className="text-sm text-gray-400">
-          Access component previews at{" "}
-          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
-            {getPreviewExamplePath()}
-          </code>
-        </p>
+      </div>
+      <div className="w-full max-w-[980px] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 bg-[#f4f1f8]">
+        <img
+          src={`${basePath}/variant-c-signal-atlas.png`}
+          alt="Signal Atlas mobile PWA design variant showing six phone screens"
+          className="block w-full h-auto"
+        />
       </div>
     </div>
   );
