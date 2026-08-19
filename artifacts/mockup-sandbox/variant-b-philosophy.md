@@ -1,0 +1,11 @@
+# Fluid Command
+
+Fluid Command treats the interface as a responsive field of attention rather than a stack of screens. The command surface is the calm, constant horizon: one familiar line at the top that lets a person search, move, and decide without first navigating a maze. The rest of the composition is allowed to change its posture around that fixed point. Work arrives as concentrated cards, not dense grids, and urgency gathers in deliberate, visible signals rather than noisy decoration.
+
+Space is an active material. Cards sit in a measured rhythm of pause, cluster, and release, with enough negative space around every decision to make the system feel fast even when it is information-rich. Bottom sheets, action strips, and floating controls rise from the reachable edge of the screen like useful instruments. Their geometry is soft but disciplined: rounded corners hold dense operational detail with a composure that feels meticulously crafted rather than merely friendly.
+
+Purple is used as kinetic energy, never wallpaper. It names the current action, the unresolved count, the path forward. White provides the calm field where information can be trusted; charcoal provides the authority that anchors labels and outcomes. Muted blue-grey is reserved for supporting context. This confident restraint is painstakingly calibrated so that a high-risk score can feel immediate without making the entire interface feel alarmed.
+
+The grid is quiet but exacting. An eight-point rhythm governs every offset, while the command bar and action strip make the top and bottom of the frame read as a single continuous instrument. Badge counts behave as live punctuation: small, bright accumulations that turn attention toward what needs it. In the section launcher, the dense field of choices remains orderly because every tile is afforded equal visual gravity, rhythm, and breathing room.
+
+Typography is compact, direct, and spatially aware. Display labels use a tighter, more deliberate weight; supporting information recedes without disappearing. This is master-level spatial orchestration: each card, arc, chip, and icon is tuned through painstaking attention to elevation, proximity, and contrast. The final expression should feel like the product of deep expertise—an operational workspace polished until every shadow and every gap earns its place.

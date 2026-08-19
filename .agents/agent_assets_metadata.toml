@@ -86,3 +86,17 @@ uri = "file://attached_assets/flowforge-seed-import.xlsx"
 type = "table"
 title = "FlowForge Seed Data Import"
 logical_id = "c290120c-0301-4e35-ac68-51f26cb8618a"
+
+[[outputs]]
+id = "HYDpW-pLuZ1iJT7fkmDcW"
+uri = "file://artifacts/mockup-sandbox/variant-b-fluid-command.png"
+type = "image"
+title = "FlowForge Mobile — Fluid Command"
+description = "Six-screen, 2× mobile PWA concept board for the Fluid Command design direction."
+logical_id = "02b5963a-8927-478c-835e-7c12246001db"
+content_hash = "sha256:11eb2fa5afcc3e339da110ce342a98121a676cb23600f8affb4377c29cc6fa9f"
+size = 828676
+mtime_ms = 1787156196817
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:330b8c81-d5cd-45d0-a77b-b0b6763ac1d1/02b5963a-8927-478c-835e-7c12246001db/ba2358a2-c02d-4cb9-a551-d13113041f1a"
+storage_version_token = "1787156236893886"
+content_type = "image/png"
