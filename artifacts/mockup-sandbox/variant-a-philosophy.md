@@ -1,0 +1,11 @@
+# Enterprise Rail
+
+Enterprise Rail inherits the discipline of a well-run desktop workspace and compresses it without apology. The grid is the operating system: an eight-point cadence governs every inset, row, and card edge so the interface retains its composure at phone scale. Space is cool, clear, and honestly bounded; white modules sit on a pale gray field like precisely filed work orders. The visual calm is deliberately, meticulously crafted rather than merely minimal.
+
+Purple is the single warm signal in an otherwise neutral field. It is not a decorative wash: it marks agency, selection, priority, and the one next action that matters. Charcoal carries the structural weight of information; cool borders make hierarchy tangible without adding visual noise. This restraint requires painstaking calibration—the smallest active edge, score pill, and timeline node is placed with master-level attention so colour communicates before copy does.
+
+Typography compresses the familiar desktop hierarchy rather than inventing a mobile dialect. Inter at practical 400, 500, and 600 weights creates fast scanning: strong identifiers first, operational evidence second, and metadata in a measured whisper. Labels behave like engineering annotations—compact, aligned, and consistently spaced—so dense order, shipment, and supplier data stays legible under pressure. Every baseline should feel as though it was patiently refined over countless hours.
+
+The navigation rail is a portable piece of enterprise architecture. The bottom strip exposes the five habitual destinations; the left drawer reveals the complete system in clear semantic groups. This is not a consumer-app simplification. It is a carefully proportioned field instrument that lets an experienced operator move from inbox to risk to reporting with the same mental map they use at a desk.
+
+Sheets, cards, tables, and timelines are treated as precise physical surfaces. Rounded corners soften the device boundary, while crisp borders and modest elevation preserve the rigor of a working tool. Safe areas are never an afterthought: the status line, tab strip, and home indicator form a measured perimeter around the content. The final composition should read as the product of deep expertise and pixel-perfect craftsmanship—an exacting miniature of a mature operations workspace.

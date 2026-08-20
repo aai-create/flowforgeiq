@@ -102,3 +102,31 @@ type = "image"
 title = "Signal Atlas — Mobile PWA design"
 description = "Completed alternate mobile PWA design variant with a unified operational signal feed, shipment context, and visual relationship views."
 logical_id = "14cfe75c-7b42-4b85-a809-2ed3070d4217"
+
+[[outputs]]
+id = "4DLh8DR0XkyuXrDPsJprb"
+uri = "file://artifacts/mockup-sandbox/variant-a-enterprise-rail.png"
+type = "image"
+title = "Enterprise Rail — Mobile PWA Variant A"
+description = "A 2800 × 4500, six-screen high-fidelity FlowForge mobile PWA visual mockup with the Enterprise Rail navigation model."
+logical_id = "bf830bf6-d7f0-402c-beac-29e48781ce05"
+content_hash = "sha256:97392cfe8935ea077b66cb67ac0035286dd912afcfbe8504d154eb3cc7aab016"
+size = 2659358
+mtime_ms = 1787156263312
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:330b8c81-d5cd-45d0-a77b-b0b6763ac1d1/bf830bf6-d7f0-402c-beac-29e48781ce05/e920f61b-42b7-4b67-ae5c-8619aced404f"
+storage_version_token = "1787156390421048"
+content_type = "image/png"
+
+[[outputs]]
+id = "vmJ3xNs7WCyre5FFjq5nQ"
+uri = "file://artifacts/mockup-sandbox/variant-a-philosophy.md"
+type = "text"
+title = "Enterprise Rail design philosophy"
+description = "The companion visual manifesto defining the grid, color, type, and craftsmanship principles behind Variant A."
+logical_id = "407dd561-d6b2-4fe2-bcb5-eeb940763673"
+content_hash = "sha256:981db2af0c8ae84bd04890da487c9bdef616f40b7f71a2254a568beb0dcaa277"
+size = 2346
+mtime_ms = 1787156175421
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:330b8c81-d5cd-45d0-a77b-b0b6763ac1d1/407dd561-d6b2-4fe2-bcb5-eeb940763673/53478fc9-770b-4191-a132-376cc79de41c"
+storage_version_token = "1787156390973210"
+content_type = "text/markdown"
