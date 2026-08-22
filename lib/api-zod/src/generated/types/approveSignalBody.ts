@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateSignalDraftBody = {
-  /**
-     * @minLength 1
-     * @maxLength 100000
-     */
-  draftBody: string;
+export type ApproveSignalBody = {
+  /** SHA-256 identity of the exact active draft body */
+  draftRevision?: string;
 };

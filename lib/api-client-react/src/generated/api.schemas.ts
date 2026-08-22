@@ -1164,6 +1164,8 @@ export interface SignalInboxSendResult {
   channelNotWired?: boolean;
   /** @nullable */
   outboundMessageId?: number | null;
+  alreadySent?: boolean;
+  uncertain?: boolean;
 }
 
 export type CopilotProposalInputPayload = { [key: string]: unknown };
@@ -1929,7 +1931,23 @@ limit?: number;
 offset?: number;
 };
 
+export type ApproveSignalBody = {
+  /** SHA-256 identity of the exact active draft body */
+  draftRevision?: string;
+};
+
+export type SendSignalBody = {
+  /** Must be true to explicitly retry a prior provider failure */
+  retry?: boolean;
+  /** SHA-256 identity of the exact approved draft body */
+  draftRevision?: string;
+};
+
 export type UpdateSignalDraftBody = {
+  /**
+     * @minLength 1
+     * @maxLength 100000
+     */
   draftBody: string;
 };
 

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, gmailCredentialsTable, teamUsersTable, pushTokensTable, contactRoutingRulesTable } from "@workspace/db";
+import { db, messagesTable, suppliersTable, shipmentsTable, buyerEmailsTable, teamUsersTable, pushTokensTable, contactRoutingRulesTable } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
 import { sendExpoPushNotifications } from "../lib/pushNotifications";
@@ -11,7 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { z } from "zod/v4";
 import { ingestDocumentFromBase64 } from "./webhooks";
-import { buildRawEmail, getValidAccessToken } from "./integrations";
+import { sendViaGmail, GmailNotConnectedError, GmailSendError } from "../lib/gmailSend";
 import { normaliseChat } from "../lib/chatNormalise";
 import { extractFromChatText } from "../lib/extraction";
 
@@ -261,73 +261,34 @@ router.post("/messages/:id/send-reply", async (req, res) => {
     return;
   }
 
-  const [cred] = await db.select().from(gmailCredentialsTable).where(eq(gmailCredentialsTable.orgId, orgId)).limit(1);
-  if (!cred) {
-    res.status(400).json({ error: "Gmail not connected. Connect your Gmail account in Settings first." });
-    return;
-  }
-
-  const accessToken = await getValidAccessToken(cred);
-  if (!accessToken) {
-    res.status(401).json({ error: "Gmail token expired and could not be refreshed. Reconnect Gmail in Settings." });
-    return;
-  }
-
   const recipientEmail = input.to ?? msg.rawSenderEmail ?? msg.sender;
   const subject = input.subject ?? (msg.subject ? `Re: ${msg.subject}` : `Re: FlowForge inquiry`);
-
-  const raw = buildRawEmail({
-    from: cred.gmailAddress,
-    to: recipientEmail,
-    subject,
-    body: input.body,
-  });
-
-  const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ raw }),
-  });
-
-  if (!gmailRes.ok) {
-    const errText = await gmailRes.text();
-    req.log.error({ status: gmailRes.status, body: errText }, "send-reply: Gmail API error");
-    res.status(500).json({ error: "Gmail send failed", details: errText });
-    return;
-  }
-
-  const outbound = await db
-    .insert(messagesTable)
-    .values({
-      shipmentId: msg.shipmentId ?? null,
-      supplierId: msg.supplierId ?? null,
-      sender: cred.gmailAddress,
-      recipient: recipientEmail,
-      channel: "email",
-      subject,
-      direction: "outbound",
-      snippet: input.body.slice(0, 200),
-      fullBody: input.body,
-      aiDraft: "",
-      aiAction: "",
-      aiTags: [],
-      unread: false,
-      isFlagged: false,
-      routingStatus: "routed",
-      receivedAt: new Date(),
+  try {
+    const result = await sendViaGmail({
       orgId,
-    })
-    .returning();
-
-  req.log.info(
-    { from: cred.gmailAddress, to: recipientEmail, messageId: id },
-    "send-reply: sent via Gmail",
-  );
-
-  res.status(201).json(ListMessagesResponseItem.parse(outbound[0]));
+      to: recipientEmail,
+      subject,
+      body: input.body,
+      sourceMessageId: id,
+      shipmentId: msg.shipmentId,
+      supplierId: msg.supplierId,
+    }, req.log);
+    const [outbound] = await db
+      .select()
+      .from(messagesTable)
+      .where(and(eq(messagesTable.id, result.outboundMessageId), eq(messagesTable.orgId, orgId)));
+    res.status(201).json(ListMessagesResponseItem.parse(outbound));
+  } catch (err) {
+    if (err instanceof GmailNotConnectedError) {
+      res.status(err.reason === "not_connected" ? 400 : 401).json({ error: err.message });
+      return;
+    }
+    if (err instanceof GmailSendError) {
+      res.status(500).json({ error: "Gmail send failed", details: err.detail });
+      return;
+    }
+    throw err;
+  }
 });
 
 const CHAT_ROUTING_THRESHOLD = 0.65;

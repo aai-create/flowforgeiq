@@ -2221,6 +2221,10 @@ export const ApproveSignalParams = zod.object({
   "messageId": zod.coerce.number()
 })
 
+export const ApproveSignalBody = zod.object({
+  "draftRevision": zod.string().optional().describe('SHA-256 identity of the exact active draft body')
+})
+
 export const approveSignalResponseMessageDirectionDefault = `inbound`;
 
 export const ApproveSignalResponse = zod.object({
@@ -2300,6 +2304,11 @@ export const SendSignalParams = zod.object({
   "messageId": zod.coerce.number()
 })
 
+export const SendSignalBody = zod.object({
+  "retry": zod.boolean().optional().describe('Must be true to explicitly retry a prior provider failure'),
+  "draftRevision": zod.string().optional().describe('SHA-256 identity of the exact approved draft body')
+})
+
 export const sendSignalResponseMessageDirectionDefault = `inbound`;
 
 export const SendSignalResponse = zod.object({
@@ -2371,7 +2380,9 @@ export const SendSignalResponse = zod.object({
 }),zod.null()]).optional(),
   "dispatched": zod.boolean(),
   "channelNotWired": zod.boolean().optional(),
-  "outboundMessageId": zod.number().nullish()
+  "outboundMessageId": zod.number().nullish(),
+  "alreadySent": zod.boolean().optional(),
+  "uncertain": zod.boolean().optional()
 })
 
 
@@ -2437,8 +2448,12 @@ export const UpdateSignalDraftParams = zod.object({
   "messageId": zod.coerce.number()
 })
 
+export const updateSignalDraftBodyDraftBodyMax = 100000;
+
+
+
 export const UpdateSignalDraftBody = zod.object({
-  "draftBody": zod.string()
+  "draftBody": zod.string().min(1).max(updateSignalDraftBodyDraftBodyMax)
 })
 
 export const updateSignalDraftResponseMessageDirectionDefault = `inbound`;

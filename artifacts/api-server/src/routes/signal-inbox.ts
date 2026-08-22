@@ -24,14 +24,14 @@
  */
 
 import { Router, type IRouter } from "express";
-import { db, messagesTable, copilotProposalsTable, gmailCredentialsTable, shipmentsTable } from "@workspace/db";
+import { db, messagesTable, copilotProposalsTable, shipmentsTable } from "@workspace/db";
 import { and, desc, eq, ne, inArray, not } from "drizzle-orm";
-import { randomUUID } from "node:crypto";
 import { z } from "zod/v4";
 import { resolveOrgId } from "../middlewares/requireAuth";
 import { draftReplyWithAI } from "./webhooks";
-import { buildRawEmail, getValidAccessToken } from "./integrations";
+import { sendViaGmail, GmailNotConnectedError, GmailSendError } from "../lib/gmailSend";
 import { ListMessagesResponseItem } from "@workspace/api-zod";
+import { draftRevision } from "../lib/draftRevision";
 import {
   transitionSignalStatus,
   SignalInboxTransitionError,
@@ -85,6 +85,17 @@ function appendAudit(
 /** Parse auditTrail stored as unknown JSON to typed array. */
 function parseAuditTrail(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+}
+
+function approvedRevision(auditTrail: unknown): string | null {
+  const entries = parseAuditTrail(auditTrail);
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    if (entries[i].action === "approved" && typeof entries[i].note === "string") {
+      const match = (entries[i].note as string).match(/draftRevision=([a-f0-9]{64})/);
+      if (match) return match[1];
+    }
+  }
+  return null;
 }
 
 const ASSESS_TIMEOUT_MS = Number(process.env.SIGNAL_INBOX_ASSESS_TIMEOUT_MS ?? "10000");
@@ -329,10 +340,25 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
 router.post("/signal-inbox/:messageId/approve", async (req, res) => {
   const messageId = Number(req.params.messageId);
   const orgId = await resolveOrgId(req);
+  const requestedRevision = typeof req.body?.draftRevision === "string" ? req.body.draftRevision : undefined;
 
   const proposal = await findActiveSignalDraft(messageId, orgId);
   if (!proposal) {
     res.status(404).json({ error: "No active AI draft found for this message" });
+    return;
+  }
+  const payload = (proposal.editedPayload ?? proposal.payload) as Record<string, unknown>;
+  const body = String(payload.draftBody ?? "").trim();
+  if (!body) {
+    res.status(400).json({ error: "Cannot approve an empty AI draft" });
+    return;
+  }
+  const currentRevision = draftRevision(proposal.id, body);
+  if (requestedRevision && requestedRevision !== currentRevision) {
+    res.status(409).json({
+      error: "Draft revision is stale. Reload the current draft before approving.",
+      currentRevision,
+    });
     return;
   }
 
@@ -366,10 +392,10 @@ router.post("/signal-inbox/:messageId/approve", async (req, res) => {
     .update(copilotProposalsTable)
     .set({
       status: "approved",
-      auditTrail: appendAudit(parseAuditTrail(proposal.auditTrail), "approved", "user"),
+      auditTrail: appendAudit(parseAuditTrail(proposal.auditTrail), "approved", "user", `draftRevision=${currentRevision}`),
       updatedAt: new Date(),
     })
-    .where(eq(copilotProposalsTable.id, proposal.id))
+    .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)))
     .returning();
 
   req.log.info({ messageId, proposalId: proposal.id }, "signal-inbox: approved");
@@ -395,6 +421,8 @@ router.post("/signal-inbox/:messageId/approve", async (req, res) => {
 router.post("/signal-inbox/:messageId/send", async (req, res) => {
   const messageId = Number(req.params.messageId);
   const orgId = await resolveOrgId(req);
+  const retry = req.body?.retry === true;
+  const requestedRevision = typeof req.body?.draftRevision === "string" ? req.body.draftRevision : undefined;
 
   const [msg] = await db
     .select()
@@ -403,6 +431,30 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
 
   if (!msg) {
     res.status(404).json({ error: "Message not found" });
+    return;
+  }
+
+  if (msg.signalStatus === "sent") {
+    const proposal = await findActiveSignalDraft(messageId, orgId);
+    if (!proposal) {
+      res.status(409).json({ error: "Send already in progress or message has been dispatched", currentStatus: msg.signalStatus });
+      return;
+    }
+    res.json({
+      message: ListMessagesResponseItem.parse(msg),
+      proposal,
+      dispatched: true,
+      channelNotWired: false,
+      alreadySent: true,
+    });
+    return;
+  }
+
+  if (msg.signalStatus === "send_failed" && !retry) {
+    res.status(409).json({
+      error: "A previous Gmail send failed. Set retry=true to explicitly retry the current approved draft.",
+      currentStatus: msg.signalStatus,
+    });
     return;
   }
 
@@ -443,6 +495,31 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
 
   const payload = (proposal.editedPayload ?? proposal.payload) as Record<string, unknown>;
   const draftBody = String(payload.draftBody ?? "");
+  if (!draftBody.trim()) {
+    await db.update(messagesTable).set({ signalStatus: "approved" })
+      .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId), eq(messagesTable.signalStatus, "sending")));
+    res.status(400).json({ error: "Cannot send an empty AI draft" });
+    return;
+  }
+  const currentRevision = draftRevision(proposal.id, draftBody);
+  if (approvedRevision(proposal.auditTrail) !== currentRevision) {
+    await db.update(messagesTable).set({ signalStatus: "approved" })
+      .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId), eq(messagesTable.signalStatus, "sending")));
+    res.status(409).json({
+      error: "Approval is stale. Approve the current draft revision before sending.",
+      currentRevision,
+    });
+    return;
+  }
+  if (requestedRevision && requestedRevision !== currentRevision) {
+    await db.update(messagesTable).set({ signalStatus: "approved" })
+      .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId), eq(messagesTable.signalStatus, "sending")));
+    res.status(409).json({
+      error: "Draft revision is stale. Reload and approve the current draft before sending.",
+      currentRevision,
+    });
+    return;
+  }
   const channel = String(payload.channel ?? msg.channel);
 
   const revertedStatus = transitionSignalStatus("sending", "revertSend"); // "sending" → "approved"
@@ -466,7 +543,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
         ),
         updatedAt: new Date(),
       })
-      .where(eq(copilotProposalsTable.id, proposal.id));
+      .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)));
 
     res.json({
       message: ListMessagesResponseItem.parse({ ...msg, signalStatus: revertedStatus }),
@@ -477,44 +554,11 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
     return;
   }
 
-  const [cred] = await db
-    .select()
-    .from(gmailCredentialsTable)
-    .where(eq(gmailCredentialsTable.orgId, orgId))
-    .limit(1);
-
-  if (!cred) {
-    await db
-      .update(messagesTable)
-      .set({ signalStatus: revertedStatus })
-      .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
-
-    res.status(400).json({
-      error: "Gmail not connected. Connect your Gmail account in Settings first.",
-      channelNotConfigured: true,
-    });
-    return;
-  }
-
-  const accessToken = await getValidAccessToken(cred);
-  if (!accessToken) {
-    await db
-      .update(messagesTable)
-      .set({ signalStatus: revertedStatus })
-      .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
-
-    res.status(400).json({
-      error: "Gmail token expired and could not be refreshed. Reconnect Gmail in Settings.",
-      channelNotConfigured: true,
-    });
-    return;
-  }
-
   const recipientEmail = msg.rawSenderEmail ?? msg.sender;
   const subject = msg.subject ? `Re: ${msg.subject}` : `Re: FlowForge inquiry`;
 
   // Step 2: Pre-dispatch persistence — durable proof of intent before network call
-  const dispatchKey = randomUUID();
+  const dispatchKey = `signal_inbox:${messageId}:${proposal.id}:${currentRevision}`;
   const baseAuditTrail = parseAuditTrail(proposal.auditTrail);
 
   await db
@@ -529,64 +573,45 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
       ),
       updatedAt: new Date(),
     })
-    .where(eq(copilotProposalsTable.id, proposal.id));
-
-  const raw = buildRawEmail({
-    from: cred.gmailAddress,
-    to: recipientEmail,
-    subject,
-    body: draftBody,
-  });
+    .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)));
 
   // ─── Gmail network call ───────────────────────────────────────────────────
 
-  let gmailData: { id: string; threadId: string };
+  let gmailData: { gmailMessageId: string; gmailThreadId: string; outboundMessageId: number; fromAddress: string };
 
   try {
-    const gmailRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ raw }),
-    });
-
-    if (!gmailRes.ok) {
-      // Gmail rejected the request — safe to retry
-      req.log.error({ status: gmailRes.status, messageId, dispatchKey }, "signal-inbox: Gmail rejected");
-
-      await db
-        .update(copilotProposalsTable)
-        .set({
-          status: "pending",
-          auditTrail: appendAudit(
-            baseAuditTrail,
-            "send_failed",
-            "system",
-            `Gmail returned HTTP ${gmailRes.status}. dispatchKey=${dispatchKey}. Draft preserved for retry.`,
-          ),
-          updatedAt: new Date(),
-        })
-        .where(eq(copilotProposalsTable.id, proposal.id));
-
-      const [failedMsg] = await db
-        .update(messagesTable)
-        .set({ signalStatus: transitionSignalStatus("sending", "sendFailed") })
-        .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
-        .returning();
-
-      res.status(500).json({
-        error: "Gmail send failed. Draft preserved — you can retry.",
-        message: ListMessagesResponseItem.parse(failedMsg),
-        proposal,
-        dispatched: false,
-      });
+    gmailData = await sendViaGmail({
+      orgId,
+      to: recipientEmail,
+      subject,
+      body: draftBody,
+      sourceMessageId: messageId,
+      shipmentId: msg.shipmentId,
+      supplierId: msg.supplierId,
+      threadId: typeof payload.threadId === "string" ? payload.threadId : undefined,
+      inReplyToMessageId: typeof payload.inReplyToMessageId === "string" ? payload.inReplyToMessageId : undefined,
+    }, req.log);
+  } catch (fetchErr) {
+    if (fetchErr instanceof GmailNotConnectedError) {
+      await db.update(messagesTable).set({ signalStatus: revertedStatus })
+        .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
+      res.status(400).json({ error: fetchErr.message, channelNotConfigured: true });
       return;
     }
-
-    gmailData = (await gmailRes.json()) as { id: string; threadId: string };
-  } catch (fetchErr) {
+    if (fetchErr instanceof GmailSendError) {
+      await db.update(copilotProposalsTable).set({
+        status: "pending",
+        auditTrail: appendAudit(baseAuditTrail, "send_failed", "system",
+          `Gmail returned HTTP ${fetchErr.status}. dispatchKey=${dispatchKey}. Draft preserved for retry.`),
+        updatedAt: new Date(),
+      }).where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)));
+      const [failedMsg] = await db.update(messagesTable)
+        .set({ signalStatus: transitionSignalStatus("sending", "sendFailed") })
+        .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId))).returning();
+      res.status(500).json({ error: "Gmail send failed. Draft preserved — you can retry.",
+        message: ListMessagesResponseItem.parse(failedMsg), proposal, dispatched: false });
+      return;
+    }
     // Network/transport error — delivery ambiguous; do NOT allow retry
     req.log.error(
       { messageId, dispatchKey, err: fetchErr instanceof Error ? fetchErr.message : String(fetchErr) },
@@ -604,7 +629,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
         ),
         updatedAt: new Date(),
       })
-      .where(eq(copilotProposalsTable.id, proposal.id));
+      .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)));
 
     const [uncertainMsg] = await db
       .update(messagesTable)
@@ -639,39 +664,15 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
           baseAuditTrail,
           "send_success",
           "system",
-          `Dispatched via Gmail. gmailMessageId=${gmailData.id} dispatchKey=${dispatchKey}`,
+          `Dispatched via Gmail. gmailMessageId=${gmailData.gmailMessageId} dispatchKey=${dispatchKey}`,
         ),
         updatedAt: new Date(),
       })
-      .where(eq(copilotProposalsTable.id, proposal.id))
+    .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)))
       .returning();
 
-    // Second: insert the outbound message row
-    const [outbound] = await db
-      .insert(messagesTable)
-      .values({
-        shipmentId: msg.shipmentId ?? null,
-        supplierId: msg.supplierId ?? null,
-        sender: cred.gmailAddress,
-        recipient: recipientEmail,
-        channel: "email",
-        subject,
-        direction: "outbound",
-        snippet: draftBody.slice(0, 200),
-        fullBody: draftBody,
-        aiDraft: "",
-        aiAction: "",
-        aiTags: [],
-        unread: false,
-        isFlagged: false,
-        routingStatus: "routed",
-        signalStatus: "sent",
-        receivedAt: new Date(),
-        orgId,
-      })
-      .returning();
-
-    // Third: mark the inbound message as sent
+    // The shared helper already persisted the outbound message.
+    // Then mark the inbound message as sent.
     const [sentMsg] = await db
       .update(messagesTable)
       .set({ signalStatus: transitionSignalStatus("sending", "sendSucceeded") })
@@ -679,7 +680,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
       .returning();
 
     req.log.info(
-      { messageId, gmailMessageId: gmailData.id, outboundId: outbound.id, dispatchKey },
+      { messageId, gmailMessageId: gmailData.gmailMessageId, outboundId: gmailData.outboundMessageId, dispatchKey },
       "signal-inbox: sent via Gmail",
     );
 
@@ -688,12 +689,12 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
       proposal: updatedProposal,
       dispatched: true,
       channelNotWired: false,
-      outboundMessageId: outbound.id,
+      outboundMessageId: gmailData.outboundMessageId,
     });
   } catch (finalizationErr) {
     // Email was sent. DB finalization failed. Mark uncertain — do NOT retry.
     req.log.error(
-      { messageId, dispatchKey, gmailMessageId: gmailData.id, err: String(finalizationErr) },
+      { messageId, dispatchKey, gmailMessageId: gmailData.gmailMessageId, err: String(finalizationErr) },
       "signal-inbox: DB finalization failed after Gmail success",
     );
 
@@ -715,7 +716,7 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
       error:
         "Email was sent via Gmail but the delivery record could not be fully saved. " +
         "Do NOT retry — check Gmail for confirmation. " +
-        `Gmail Message-ID: ${gmailData.id}. Audit trail contains the dispatch key.`,
+        `Gmail Message-ID: ${gmailData.gmailMessageId}. Audit trail contains the dispatch key.`,
       message: ListMessagesResponseItem.parse(uncertainMsg ?? msg),
       proposal: { ...proposal, status: "auto_executed" },
       dispatched: true,
@@ -789,7 +790,7 @@ router.post("/signal-inbox/:messageId/skip", async (req, res) => {
         auditTrail: appendAudit(parseAuditTrail(proposal.auditTrail), "skipped", "user"),
         updatedAt: new Date(),
       })
-      .where(eq(copilotProposalsTable.id, proposal.id));
+      .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)));
   }
 
   req.log.info({ messageId }, "signal-inbox: skipped");
@@ -799,7 +800,7 @@ router.post("/signal-inbox/:messageId/skip", async (req, res) => {
 // ─── PATCH /signal-inbox/:messageId/draft ────────────────────────────────────
 
 const UpdateDraftBody = z.object({
-  draftBody: z.string().min(1),
+  draftBody: z.string().trim().min(1).max(100_000),
 });
 
 router.patch("/signal-inbox/:messageId/draft", async (req, res) => {
@@ -858,7 +859,7 @@ router.patch("/signal-inbox/:messageId/draft", async (req, res) => {
       auditTrail: appendAudit(parseAuditTrail(proposal.auditTrail), action, "user"),
       updatedAt: new Date(),
     })
-    .where(eq(copilotProposalsTable.id, proposal.id))
+    .where(and(eq(copilotProposalsTable.id, proposal.id), eq(copilotProposalsTable.orgId, orgId)))
     .returning();
 
   // Editing after approval reverts to draft_ready — must re-approve before sending
@@ -867,8 +868,16 @@ router.patch("/signal-inbox/:messageId/draft", async (req, res) => {
     const [m] = await db
       .update(messagesTable)
       .set({ signalStatus: nextStatus })
-      .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)))
+      .where(and(
+        eq(messagesTable.id, messageId),
+        eq(messagesTable.orgId, orgId),
+        eq(messagesTable.signalStatus, "approved"),
+      ))
       .returning();
+    if (!m) {
+      res.status(409).json({ error: "Draft state changed concurrently; reload before editing." });
+      return;
+    }
     updatedMsg = m;
   }
 

@@ -15,4 +15,6 @@ export interface SignalInboxSendResult {
   channelNotWired?: boolean;
   /** @nullable */
   outboundMessageId?: number | null;
+  alreadySent?: boolean;
+  uncertain?: boolean;
 }

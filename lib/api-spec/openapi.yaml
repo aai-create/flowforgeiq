@@ -1462,6 +1462,14 @@ paths:
       operationId: approveSignal
       tags: [messages]
       summary: Approve the current AI draft (does not send)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                draftRevision: { type: string, description: "SHA-256 identity of the exact active draft body" }
       parameters:
         - name: messageId
           in: path
@@ -1478,13 +1486,22 @@ paths:
         "404":
           description: Message or draft not found
         "409":
-          description: Message is not in draft_ready state
+           description: Message is not in draft_ready state or the draft revision is stale
 
   /signal-inbox/{messageId}/send:
     post:
       operationId: sendSignal
       tags: [messages]
       summary: Dispatch the approved reply through the originating channel
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                retry: { type: boolean, description: "Must be true to explicitly retry a prior provider failure" }
+                draftRevision: { type: string, description: "SHA-256 identity of the exact approved draft body" }
       parameters:
         - name: messageId
           in: path
@@ -1503,7 +1520,7 @@ paths:
         "404":
           description: Message or draft not found
         "409":
-          description: Send already in progress
+           description: Send already in progress, already dispatched, or draft revision is stale
 
   /signal-inbox/{messageId}/skip:
     post:
@@ -1544,7 +1561,7 @@ paths:
               type: object
               required: [draftBody]
               properties:
-                draftBody: { type: string }
+                draftBody: { type: string, minLength: 1, maxLength: 100000 }
       responses:
         "200":
           description: Updated
@@ -1555,6 +1572,8 @@ paths:
           description: Unauthorized
         "404":
           description: Message or draft not found
+        "409":
+          description: Draft cannot be edited in the current workflow state
 
   /copilot/proposals:
     get:
@@ -3232,6 +3251,8 @@ components:
         dispatched:        { type: boolean }
         channelNotWired:   { type: boolean }
         outboundMessageId: { type: ["integer", "null"] }
+        alreadySent:       { type: boolean }
+        uncertain:         { type: boolean }
 
     CopilotProposal:
       type: object

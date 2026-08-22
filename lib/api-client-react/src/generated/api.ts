@@ -22,6 +22,7 @@ import type {
 import type {
   AcceptInvite200,
   AcceptInviteBody,
+  ApproveSignalBody,
   AutonomyPolicy,
   AutonomyPolicyInput,
   BuyerCreate,
@@ -113,6 +114,7 @@ import type {
   SendReplyInput,
   SendRfqEmailBody,
   SendRfqEmailResponse,
+  SendSignalBody,
   Shipment,
   ShipmentCreate,
   ShipmentPrediction,
@@ -5609,14 +5611,16 @@ export const getApproveSignalUrl = (messageId: number,) => {
 /**
  * @summary Approve the current AI draft (does not send)
  */
-export const approveSignal = async (messageId: number, options?: RequestInit): Promise<SignalInboxAssessResult> => {
+export const approveSignal = async (messageId: number,
+    approveSignalBody?: ApproveSignalBody, options?: RequestInit): Promise<SignalInboxAssessResult> => {
 
   return customFetch<SignalInboxAssessResult>(getApproveSignalUrl(messageId),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      approveSignalBody,)
   }
 );}
 
@@ -5624,8 +5628,8 @@ export const approveSignal = async (messageId: number, options?: RequestInit): P
 
 
 export const getApproveSignalMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number;data?: BodyType<ApproveSignalBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number;data?: BodyType<ApproveSignalBody>}, TContext> => {
 
 const mutationKey = ['approveSignal'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -5637,10 +5641,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveSignal>>, {messageId: number}> = (props) => {
-          const {messageId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveSignal>>, {messageId: number;data?: BodyType<ApproveSignalBody>}> = (props) => {
+          const {messageId,data} = props ?? {};
 
-          return  approveSignal(messageId,requestOptions)
+          return  approveSignal(messageId,data,requestOptions)
         }
 
 
@@ -5651,18 +5655,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ApproveSignalMutationResult = NonNullable<Awaited<ReturnType<typeof approveSignal>>>
-
+    export type ApproveSignalMutationBody = BodyType<ApproveSignalBody> | undefined
     export type ApproveSignalMutationError = ErrorType<void>
 
     /**
  * @summary Approve the current AI draft (does not send)
  */
 export const useApproveSignal = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveSignal>>, TError,{messageId: number;data?: BodyType<ApproveSignalBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof approveSignal>>,
         TError,
-        {messageId: number},
+        {messageId: number;data?: BodyType<ApproveSignalBody>},
         TContext
       > => {
       return useMutation(getApproveSignalMutationOptions(options));
@@ -5679,14 +5683,16 @@ export const getSendSignalUrl = (messageId: number,) => {
 /**
  * @summary Dispatch the approved reply through the originating channel
  */
-export const sendSignal = async (messageId: number, options?: RequestInit): Promise<SignalInboxSendResult> => {
+export const sendSignal = async (messageId: number,
+    sendSignalBody?: SendSignalBody, options?: RequestInit): Promise<SignalInboxSendResult> => {
 
   return customFetch<SignalInboxSendResult>(getSendSignalUrl(messageId),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sendSignalBody,)
   }
 );}
 
@@ -5694,8 +5700,8 @@ export const sendSignal = async (messageId: number, options?: RequestInit): Prom
 
 
 export const getSendSignalMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number;data?: BodyType<SendSignalBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number;data?: BodyType<SendSignalBody>}, TContext> => {
 
 const mutationKey = ['sendSignal'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -5707,10 +5713,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendSignal>>, {messageId: number}> = (props) => {
-          const {messageId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendSignal>>, {messageId: number;data?: BodyType<SendSignalBody>}> = (props) => {
+          const {messageId,data} = props ?? {};
 
-          return  sendSignal(messageId,requestOptions)
+          return  sendSignal(messageId,data,requestOptions)
         }
 
 
@@ -5721,18 +5727,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SendSignalMutationResult = NonNullable<Awaited<ReturnType<typeof sendSignal>>>
-
+    export type SendSignalMutationBody = BodyType<SendSignalBody> | undefined
     export type SendSignalMutationError = ErrorType<void>
 
     /**
  * @summary Dispatch the approved reply through the originating channel
  */
 export const useSendSignal = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSignal>>, TError,{messageId: number;data?: BodyType<SendSignalBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof sendSignal>>,
         TError,
-        {messageId: number},
+        {messageId: number;data?: BodyType<SendSignalBody>},
         TContext
       > => {
       return useMutation(getSendSignalMutationOptions(options));
