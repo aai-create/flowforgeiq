@@ -1,0 +1,134 @@
+You probably **should not keep both as two top-level user-facing destinations** unless they have genuinely different jobs. For FlowForgeIQ, I’d keep one clear **Inbox** and make “Signal” an internal technical concept or a filter/category.
+
+The current app already has a substantial `Home.tsx` work surface, so adding two similarly named navigation items would likely confuse users more than it helps. 
+
+## The distinction today
+
+| Name | What it implies | Best use |
+|---|---|---|
+| Inbox | “Show me work that needs my attention.” | User-facing product area |
+| Signal Inbox | “A normalized, AI-processed communication event.” | Internal architecture/domain name |
+| Copilot Queue | “Show me AI-generated recommendations awaiting review.” | AI/workflow feature area |
+
+Your new workflow is fundamentally an inbox:
+
+```text
+Incoming email/chat/message
+→ AI understands it
+→ user reviews a suggested response
+→ user approves or handles it
+```
+
+A buyer, procurement manager, or sales operator should not need to know that the system calls incoming events “signals.”
+
+## Why keeping both could hurt
+
+If the sidebar has:
+
+```text
+Inbox
+Signal Inbox
+Copilot Queue
+```
+
+users will immediately wonder:
+
+- “Which inbox should I check?”
+- “Is Signal Inbox only for email?”
+- “Are messages duplicated?”
+- “Does one of these include urgent work and the other not?”
+- “Do I need to clear both before I’m done?”
+
+That is a product-tax you should avoid early.
+
+## My recommendation
+
+### User-facing naming
+
+Use one primary nav item:
+
+```text
+Inbox
+```
+
+Then make Signal Inbox the **first tab or default category** inside it:
+
+```text
+Inbox
+├─ Messages            — inbound Gmail / Outlook / future SMS, WhatsApp Business
+├─ AI drafts           — messages with a prepared draft awaiting review
+├─ Needs attention     — urgent, failed, or escalated items
+├─ Sent / Completed    — completed communication work
+└─ Skipped             — intentionally dismissed items
+```
+
+Or simplify further for the first release:
+
+```text
+Inbox
+├─ Needs review
+├─ Ready to send
+├─ Failed
+├─ Sent
+└─ Skipped
+```
+
+The channel becomes a badge/filter—Gmail, Outlook, SMS, WhatsApp Business—not a separate navigation destination.
+
+### Internal naming
+
+Keep the technical vocabulary in code and documentation:
+
+- `signal-inbox.ts`
+- `signal_status`
+- `signal_inbox` source
+- `SignalInboxItem`
+- `signal_inbox:message:<messageId>`
+
+That gives you a clean, extensible implementation model without forcing your customers to learn internal terminology.
+
+## Where Copilot Queue fits
+
+There is a legitimate distinction between **Inbox** and **Copilot Queue**:
+
+| Area | Primary question it answers | Example |
+|---|---|---|
+| Inbox | “What communication needs handling?” | Supplier asks for a delivery-date update |
+| Copilot Queue | “What should I decide or do?” | AI detects shipment risk and recommends escalation |
+| Deals / Orders | “What is happening with the commercial operation?” | Margin unknown because a supplier quote has not arrived |
+
+An inbound message can create an AI draft in Inbox. A separate operational event can create a Copilot recommendation in the Copilot Queue. The same underlying deal may appear in both—but for different user decisions.
+
+## A clean rule
+
+Use this rule throughout the product:
+
+> **Inbox is for incoming communication. Copilot Queue is for AI-recommended operational decisions.**
+
+If an incoming message contains something significant—say an RFQ quote that could impact timing or margins—the Inbox handles the communication response, while Copilot Queue can optionally surface a separate operational recommendation:
+
+```text
+Inbox:
+“Supplier replied with revised pricing. Review and send response.”
+
+Copilot Queue:
+“Revised supplier pricing may reduce expected margin below target. Review the deal.”
+```
+
+They are related, but users should not have to choose between two “inboxes.”
+
+## Low-cost adjustment
+
+Before Phase 3 UI work, change the public feature wording from:
+
+```text
+Signal Inbox
+```
+
+to:
+
+```text
+Inbox
+```
+
+Keep “Signal Inbox” in backend/API/internal docs. This is a small content-and-navigation decision now that avoids a much more expensive rename later, while preserving all the Phase 1 and 2 technical design work.
