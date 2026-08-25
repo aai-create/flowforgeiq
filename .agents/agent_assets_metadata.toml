@@ -130,3 +130,10 @@ mtime_ms = 1787156175421
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:330b8c81-d5cd-45d0-a77b-b0b6763ac1d1/407dd561-d6b2-4fe2-bcb5-eeb940763673/53478fc9-770b-4191-a132-376cc79de41c"
 storage_version_token = "1787156390973210"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "i0cQski3uMQvr4ym8YQhi"
+uri = "file://artifacts/flowforge-mobile-web/public/flowforge-logo.png"
+type = "image"
+title = "FlowForgeIQ logo"
+description = "Official FlowForgeIQ logo in PNG format, 622 × 580 px."
