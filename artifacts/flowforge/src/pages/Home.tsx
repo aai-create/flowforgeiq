@@ -2936,7 +2936,7 @@ export default function Home() {
                   ? (shipments.find(s => s.id === selectedShipmentId)?.po ?? "Inbox")
                   : supplierFilter ?? (channelFilter !== "all" ? channelFilter[0].toUpperCase() + channelFilter.slice(1) : "Inbox"))
               : activeView === "copilot"       ? "Copilot Queue"
-              : activeView === "signal-inbox"  ? "Signal Inbox"
+              : activeView === "signal-inbox"  ? "Inbox"
               : "Doc Intelligence"
           }
           breadcrumbSegments={breadcrumbSegments}
@@ -2953,21 +2953,6 @@ export default function Home() {
           counts={{ inbox: unreadCount > 0 ? unreadCount : null }}
         >
           <div className="flex-1 overflow-y-auto" />
-
-          {/* Signal Inbox nav entry */}
-          <div className="shrink-0 px-2 pt-2">
-            <button
-              onClick={() => setActiveView("signal-inbox")}
-              className={`w-full flex items-center gap-2 py-1.5 px-2 rounded-md text-sm font-semibold transition-colors ${
-                activeView === "signal-inbox"
-                  ? "bg-[#9000FF]/10 text-[#9000FF]"
-                  : "text-[#5E687B] hover:bg-[#9000FF]/5 hover:text-[#9000FF]"
-              }`}
-            >
-              <Inbox className="w-4 h-4" />
-              Signal Inbox
-            </button>
-          </div>
 
           {/* Import Documents */}
           <div className="shrink-0 p-2 border-t border-[#E5EAF0]">

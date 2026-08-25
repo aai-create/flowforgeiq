@@ -50,7 +50,7 @@ export function NavSidebar({
   ];
 
   function isActive(id: string, to: string) {
-    if (id === "inbox") return location === to || location === "/";
+    if (id === "inbox") return location === to || location === "/" || location === "/signal-inbox";
     if (id === "myOrders") return location === to || location === "/command";
     return location === to;
   }

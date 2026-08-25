@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CopilotProvider } from "@/lib/CopilotContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import { InboxHub } from "@/pages/InboxHub";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { Atelier } from "@/pages/Atelier";
 import { RFQs } from "@/pages/RFQs";
@@ -257,7 +258,7 @@ function RootPage() {
   );
 }
 
-const InboxPage = () => <ProtectedRoute component={Home} />;
+const InboxPage = () => <ProtectedRoute component={InboxHub} />;
 const CalendarRoutePage = () => <ProtectedRoute component={CalendarPage} />;
 const OrdersPage = () => <ProtectedRoute component={Atelier} />;
 const RFQsPage = () => <ProtectedRoute component={RFQs} />;
@@ -274,6 +275,8 @@ function Router() {
     <Switch>
       <Route path="/" component={RootPage} />
       <Route path="/inbox" component={InboxPage} />
+      {/* Legacy alias: keep old Signal Inbox bookmarks and links in the same workflow. */}
+      <Route path="/signal-inbox" component={InboxPage} />
       <Route path="/calendar" component={CalendarRoutePage} />
       <Route path="/orders" component={OrdersPage} />
       <Route path="/command" component={OrdersPage} />

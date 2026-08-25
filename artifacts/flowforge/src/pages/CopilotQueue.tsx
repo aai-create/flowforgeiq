@@ -824,7 +824,8 @@ export function CopilotQueue() {
               )}
             </div>
             <p className="text-[11px] text-[#5E687B] max-w-lg">
-              {summary?.highlights?.[0] ?? "Your AI copilot is watching all active shipments. Approve, edit, or reject proposed actions below."}
+              Copilot Queue contains AI-recommended operational actions for shipments, documents, payments, timing, margin, and risk. Customer and supplier replies belong in Inbox.{" "}
+              {summary?.highlights?.[0] ?? "Approve, edit, or reject proposed actions below."}
             </p>
           </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListSignalInbox,
@@ -19,7 +20,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SignalStatus = "new" | "assessing" | "draft_ready" | "approved" | "sending" | "sent" | "send_failed" | "skipped";
-type Filter = "active" | "draft_ready" | "approved" | "sent" | "skipped";
+export type Filter = "needs-review" | "ai-drafts" | "ready-to-send" | "failed" | "sent" | "skipped";
 
 interface Message {
   id: number;
@@ -57,14 +58,14 @@ function channelIcon(channel: string, sz = 14) {
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
-    new:             "New",
-    assessing:       "Assessing…",
-    draft_ready:     "Draft Ready",
-    approved:        "Approved",
+    new:             "Needs review",
+    assessing:       "Needs review",
+    draft_ready:     "AI draft",
+    approved:        "Ready to send",
     sending:         "Sending…",
     sent:            "Sent",
-    send_failed:     "Send Failed",
-    send_uncertain:  "Uncertain",
+    send_failed:     "Failed",
+    send_uncertain:  "Delivery uncertain",
     skipped:         "Skipped",
   };
   return map[status] ?? status;
@@ -104,13 +105,42 @@ function getDraftBody(proposal: Proposal | null): string {
   return "";
 }
 
-const FILTER_LABELS: Record<Filter, string> = {
-  active:      "Active",
-  draft_ready: "Draft Ready",
-  approved:    "Approved",
-  sent:        "Sent",
-  skipped:     "Skipped",
+export const FILTER_LABELS: Record<Filter, string> = {
+  "needs-review":  "Needs review",
+  "ai-drafts":     "AI drafts",
+  "ready-to-send": "Ready to send",
+  failed:          "Failed",
+  sent:            "Sent",
+  skipped:         "Skipped",
 };
+
+const NEEDS_REVIEW_STATUSES = new Set([
+  "new",
+  "assessing",
+  "draft_ready",
+  "approved",
+  "send_failed",
+  "send_uncertain",
+]);
+
+export function filterFromSearch(search: string): Filter {
+  const params = new URLSearchParams(search);
+  const value = params.get("filter") ?? params.get("status") ?? params.get("activeView");
+  if (value === "draft_ready" || value === "ai-drafts") return "ai-drafts";
+  if (value === "approved" || value === "ready-to-send") return "ready-to-send";
+  if (value === "send_failed" || value === "send_uncertain" || value === "failed") return "failed";
+  if (value === "sent") return "sent";
+  if (value === "skipped") return "skipped";
+  return "needs-review";
+}
+
+export function isFilterMatch(filter: Filter, status: string): boolean {
+  if (filter === "needs-review") return NEEDS_REVIEW_STATUSES.has(status);
+  if (filter === "ai-drafts") return status === "draft_ready";
+  if (filter === "ready-to-send") return status === "approved";
+  if (filter === "failed") return status === "send_failed" || status === "send_uncertain";
+  return status === filter;
+}
 
 // ─── Signal List Item ─────────────────────────────────────────────────────────
 function SignalListItem({
@@ -454,32 +484,32 @@ function SignalDetailPanel({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function SignalInbox() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<Filter>("active");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const search = useSearch();
+  const [filter, setFilter] = useState<Filter>(() => filterFromSearch(search));
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const value = new URLSearchParams(search).get("messageId") ?? new URLSearchParams(search).get("message");
+    const id = value ? Number(value) : NaN;
+    return Number.isInteger(id) && id > 0 ? id : null;
+  });
 
-  // Status query param mapping
-  const statusParam = filter === "active" ? undefined : filter === "draft_ready" ? "draft_ready" : filter;
+  // The public views are client-side buckets over the existing workflow states.
+  // Only Skipped needs a status request because the API's default excludes it.
+  const statusParam = filter === "skipped" ? "skipped" : undefined;
 
   const { data: items = [], isFetching } = useListSignalInbox(
     { status: statusParam },
     { query: { queryKey: getListSignalInboxQueryKey({ status: statusParam }), refetchInterval: 15000 } },
   );
 
+  const allItems = items as SignalInboxItem[];
+  const filteredItems = allItems.filter(item =>
+    isFilterMatch(filter, (item.message as unknown as Message).signalStatus ?? "new"),
+  );
+
   // Selected item
-  const selectedItem = (items as SignalInboxItem[]).find(
+  const selectedItem = filteredItems.find(
     (i) => (i.message as unknown as Message).id === selectedId,
   ) ?? null;
-
-  // Auto-select first item when filter changes
-  React.useEffect(() => {
-    const first = (items as SignalInboxItem[])[0];
-    if (first) {
-      setSelectedId((first.message as unknown as Message).id);
-    } else {
-      setSelectedId(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
 
   // Invalidate after any mutation
   const invalidate = useCallback(() => {
@@ -496,20 +526,22 @@ export function SignalInbox() {
   // Per-item mutation state (whether the mutation is for the selected item)
   const selectedMsg = selectedItem ? (selectedItem.message as unknown as Message) : null;
 
-  // Active filter: show anything not skipped
-  const filteredItems = filter === "active"
-    ? (items as SignalInboxItem[]).filter(i => {
-        const s = (i.message as unknown as Message).signalStatus ?? "new";
-        return s !== "skipped" && s !== "sent";
-      })
-    : (items as SignalInboxItem[]);
+  // Keep a selected message when it remains in view; otherwise select the first
+  // message in the new view. This preserves context across refreshes and filters.
+  React.useEffect(() => {
+    if (selectedId !== null && filteredItems.some(item => (item.message as unknown as Message).id === selectedId)) {
+      return;
+    }
+    const first = filteredItems[0];
+    setSelectedId(first ? (first.message as unknown as Message).id : null);
+  }, [filter, filteredItems, selectedId]);
 
   // Counts for badge
-  const draftReadyCount = (items as SignalInboxItem[]).filter(
+  const draftReadyCount = allItems.filter(
     i => (i.message as unknown as Message).signalStatus === "draft_ready",
   ).length;
 
-  const sendFailedCount = (items as SignalInboxItem[]).filter(
+  const sendFailedCount = allItems.filter(
     i => (i.message as unknown as Message).signalStatus === "send_failed",
   ).length;
 
@@ -522,7 +554,7 @@ export function SignalInbox() {
         {/* Toolbar */}
         <div className="px-3 py-2 border-b border-[#E5EAF0] flex items-center gap-2 shrink-0 bg-[#F7F9FA]">
           <Inbox size={14} className="text-[#9000FF]" />
-          <span className="text-xs font-bold text-[#212833]">Signal Inbox</span>
+            <span className="text-xs font-bold text-[#212833]">Inbox</span>
           {badgeCount > 0 && (
             <span className="ml-auto text-[9px] font-bold bg-[#9000FF] text-white px-1.5 py-0.5 rounded-full">
               {badgeCount}
@@ -554,7 +586,7 @@ export function SignalInbox() {
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
               <Inbox size={28} className="text-[#E5EAF0]" />
               <span className="text-xs text-[#9E9FAE]">
-                {filter === "active" ? "No active signals" : `No ${FILTER_LABELS[filter].toLowerCase()} signals`}
+                 No {FILTER_LABELS[filter].toLowerCase()} messages
               </span>
             </div>
           ) : (
@@ -578,7 +610,10 @@ export function SignalInbox() {
             item={selectedItem}
             onAssess={() => assess({ messageId: selectedMsg.id })}
             onApprove={() => approve({ messageId: selectedMsg.id })}
-            onSend={() => send({ messageId: selectedMsg.id })}
+            onSend={() => send({
+              messageId: selectedMsg.id,
+              ...(selectedMsg.signalStatus === "send_failed" ? { data: { retry: true } } : {}),
+            })}
             onSkip={() => skip({ messageId: selectedMsg.id })}
             onDraftEdit={body => updateDraft({ messageId: selectedMsg.id, data: { draftBody: body } })}
             isAssessing={isAssessing}
@@ -593,7 +628,7 @@ export function SignalInbox() {
               <Sparkles size={24} className="text-[#9000FF]" />
             </div>
             <div>
-              <div className="text-sm font-bold text-[#212833] mb-1">Signal Inbox</div>
+              <div className="text-sm font-bold text-[#212833] mb-1">Inbox</div>
               <div className="text-xs text-[#9E9FAE] max-w-xs">
                 Inbound signals are triaged here. Select a message to review, assess, and approve an AI-generated reply before sending.
               </div>
