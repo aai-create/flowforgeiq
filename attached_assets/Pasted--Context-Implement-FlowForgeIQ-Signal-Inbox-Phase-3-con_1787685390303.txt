@@ -1,0 +1,286 @@
+# Context
+
+Implement FlowForgeIQ Signal Inbox Phase 3: consolidate the public communication experience under one user-facing “Inbox.”
+
+Phase 1 and Phase 2 are complete.
+
+Phase 1 established the Signal Inbox persistence, workflow, route/API foundation, and tests.
+
+Phase 2 established revision-safe Gmail dispatch:
+- AI drafts can be edited.
+- Editing invalidates prior approval.
+- Approval applies to the current draft revision.
+- Gmail sending is protected by the current dispatch/idempotency flow.
+- Existing Gmail reply behavior and Signal Inbox Gmail behavior have provider-focused regression coverage.
+
+The public product currently has overlapping communication destinations:
+- A standard Inbox destination in `NavSidebar.tsx`.
+- A separate Signal Inbox entry/view in `Home.tsx`.
+- Existing Signal Inbox UI and backend workflow implemented under the `signal-inbox` domain.
+
+The product decision is:
+
+> Inbox = handle communication.  
+> Copilot Queue = review AI-recommended operational decisions.
+
+Signal Inbox remains an internal/domain/API term only. Do not rename backend routes, schema fields, API types, proposal-source values, workflow-state values, or internal domain identifiers in this phase.
+
+# Goal
+
+Make **Inbox** the only user-facing navigation destination for communication work.
+
+Inbox should cover:
+- Incoming supplier/customer messages.
+- Messages requiring assessment.
+- AI drafts awaiting review.
+- Approved replies ready to send.
+- Failed sends requiring resolution.
+- Sent and skipped communication history.
+
+Copilot Queue should remain a separate product surface for operational decisions, including:
+- Shipment escalation.
+- Missing-document follow-up.
+- Payment-related actions.
+- Timing, margin, or risk warnings.
+- Other AI-recommended operational actions that are not primarily communication handling.
+
+# Read before editing
+
+Inspect the actual current repository before changing code:
+
+- `artifacts/flowforge/src/components/NavSidebar.tsx`
+- `artifacts/flowforge/src/pages/Home.tsx`
+- `artifacts/flowforge/src/pages/SignalInbox.tsx`
+- `artifacts/flowforge/src/pages/CopilotQueue.tsx`
+- `artifacts/flowforge/src/App.tsx`
+- current frontend routing/navigation-state helpers
+- current frontend API hooks and generated client conventions
+- relevant frontend page/component/navigation tests
+- localization/i18n files and conventions
+- `docs/signal-inbox-prototype-plan.md`
+- existing Signal Inbox Phase 1 and Phase 2 tests
+- existing Gmail reply/provider-behavior tests
+
+Do not assume the exact routing mechanism from this prompt. Determine whether the current app uses route paths, `Home.tsx` active-view state, URL query parameters, or a combination, then use the smallest backward-compatible change.
+
+# Existing interfaces and constraints
+
+Preserve all completed backend and workflow behavior.
+
+Do not alter:
+
+- Signal Inbox draft revision semantics.
+- Approval invalidation behavior.
+- Gmail dispatch and idempotency behavior.
+- Shared Gmail reply helper behavior.
+- Existing Signal Inbox backend route contracts.
+- Existing Phase 1 or Phase 2 backend tests.
+- Existing Gmail provider-behavior tests.
+
+Signal Inbox internal concepts must remain unchanged:
+
+- `signal-inbox`
+- `signal_status`
+- `SignalInboxItem`
+- `signal_inbox`
+- `signal_inbox:message:<messageId>`
+- Existing Signal Inbox API routes and generated client models.
+- Existing Signal Inbox workflow states.
+
+The public naming must change, but internal architecture must not.
+
+# Non-goals
+
+Do not:
+
+- Change Signal Inbox backend/API routes.
+- Rename internal Signal Inbox identifiers.
+- Change database schema or create migrations.
+- Change Gmail send, approval, thread handling, idempotency, or delivery behavior.
+- Add Outlook, SMS, WhatsApp, iMessage, WeChat, Slack, Teams, or any other integration.
+- Add Gmail OAuth, connection settings, or provider configuration.
+- Add automatic sending.
+- Change AI assessment logic.
+- Merge Copilot Queue and Inbox into one page.
+- Move operational recommendations into Inbox.
+- Move communication work into Copilot Queue.
+- Add supplier quote extraction, deal linking, margin/profit calculations, or commercial deal fields.
+- Add dependencies.
+- Hand-edit generated API client code.
+- Refactor unrelated navigation, components, styling, or routing.
+- Alter existing provider-behavior test intent merely to make the test suite pass.
+
+# Implementation requirements
+
+## 1. One public Inbox destination
+
+Make the existing public Inbox destination render the existing Signal Inbox communication workflow.
+
+Requirements:
+
+- The public sidebar/navigation label must be `Inbox`.
+- The Inbox destination must present the existing Signal Inbox functionality.
+- Preserve current Signal Inbox list/detail behavior, filters, AI-draft editing, approval, send state, failed-send handling, retry behavior where supported, sent view, and skipped view.
+- Page heading, visible navigation labels, breadcrumbs, document title if applicable, empty states, help text, and user-facing descriptions must say `Inbox`, not `Signal Inbox`.
+- Do not duplicate `SignalInbox.tsx` into another large page just to rename it.
+- Reuse, compose, or minimally rename existing components according to repository conventions.
+- Do not expose internal words such as “signal,” “signal status,” or `signal_inbox` in normal user-facing copy.
+
+## 2. Remove duplicate public navigation
+
+Remove the extra user-facing Signal Inbox destination from primary navigation.
+
+Requirements:
+
+- Users must not see `Inbox` and `Signal Inbox` as peer navigation items.
+- Keep one communication destination named `Inbox`.
+- Preserve the existing sidebar hierarchy and visual design as much as possible.
+- If Signal Inbox currently has an actionable-work badge/count, move it to the public Inbox item.
+- Do not create a second badge for the same communication workload.
+- Do not show a badge if the current API cannot provide an accurate, efficient count without new backend work.
+
+For a badge, actionable work should include only the statuses that require attention, where currently available:
+
+- `new`
+- `draft_ready`
+- `approved`
+- `send_failed`
+
+Do not count `sent` or `skipped`.
+
+If an accurate count would require a new API endpoint, broad client-side loading, or a backend query redesign, do not build it in this phase. Preserve no badge and document the limitation.
+
+## 3. Preserve legacy Signal Inbox access
+
+Preserve backward compatibility for existing Signal Inbox links, bookmarks, and routes/state.
+
+Requirements:
+
+- Existing links, routes, active-view values, and state values that previously opened Signal Inbox must still reach the same communication workflow.
+- Prefer a clean redirect or alias to the public Inbox destination.
+- Do not redirect-loop.
+- Preserve selected message, query parameters, filters, and other context when current routing patterns make that feasible.
+- Do not break existing browser back/forward behavior.
+- Existing external/internal links that use `signal-inbox` may remain supported technically but must render the public Inbox experience.
+- Add focused routing/navigation tests for the legacy alias behavior.
+
+## 4. Inbox information architecture
+
+Use user-facing labels that describe the user’s work, not the internal state-machine implementation.
+
+The intended Inbox views/filters are:
+
+- `Needs review`
+  - New or unassessed communication and drafts requiring human attention.
+- `AI drafts`
+  - Messages with an AI draft ready for editing/review/approval.
+- `Ready to send`
+  - Approved replies awaiting delivery.
+- `Failed`
+  - Send failures requiring review or an explicit retry.
+- `Sent`
+  - Completed outbound communication.
+- `Skipped`
+  - Intentionally dismissed communication.
+
+Implementation guidance:
+
+- Map these labels to existing `signal_status` values without changing backend state names.
+- Do not force every filter if `SignalInbox.tsx` already has a clearer compact filter design.
+- Default the Inbox to actionable work.
+- Keep Sent and Skipped reachable, but do not include them in the default attention view.
+- Preserve existing channel badges/filters, such as Gmail and future channels, where already supported.
+- Avoid user-facing “Signal” terminology.
+
+## 5. Clarify Copilot Queue
+
+Keep Copilot Queue functionally separate and do not change its backend/API contracts.
+
+Add concise explanatory copy, using existing visual, localization, and empty-state patterns:
+
+> Review AI-recommended actions for shipments, documents, payments, and risk.
+
+Requirements:
+
+- Do not call Copilot Queue an Inbox.
+- Do not frame it as a place to reply to customer or supplier messages.
+- Do not remove or alter existing Copilot Queue items, sorting, filtering, or actions.
+- Keep the change limited to product clarity, page header, supporting description, and/or empty-state guidance.
+- Preserve all current behavior.
+
+## 6. Design, accessibility, and responsiveness
+
+- Reuse existing UI components, iconography, visual tokens, localization, and navigation patterns.
+- Preserve responsive behavior.
+- Ensure active navigation state is correct for Inbox, including legacy Signal Inbox aliases.
+- Use accessible labels for navigation controls, status filters, and badge counts.
+- Preserve current safe treatment of untrusted inbound message content.
+- Do not make the page more monolithic; extract only small cohesive components if the current implementation needs it.
+
+# Tests and acceptance criteria
+
+Add or update tests using the repository’s existing test conventions.
+
+Required acceptance criteria:
+
+1. Primary navigation displays one user-facing communication destination named `Inbox`.
+2. Users do not see a separate peer navigation item called `Signal Inbox`.
+3. Selecting Inbox opens the existing Signal Inbox communication workflow.
+4. Existing unrelated Inbox/navigation behavior remains unchanged.
+5. Existing Signal Inbox links, routes, and active-view state values resolve to Inbox without a redirect loop.
+6. Legacy aliases preserve selected message/filter/query context where supported by the existing routing implementation.
+7. Inbox defaults to actionable communication work.
+8. Sent and Skipped communication remain accessible through available filters/views.
+9. Existing Signal Inbox actions continue to work unchanged:
+   - assess;
+   - edit AI draft;
+   - approve;
+   - send;
+   - retry failed send where already supported;
+   - skip.
+10. The public Inbox does not expose internal Signal Inbox terminology in ordinary labels, headings, empty states, or explanatory text.
+11. Copilot Queue remains separate and includes clear explanatory copy about operational recommendations.
+12. Existing Signal Inbox frontend tests, navigation tests, and Copilot Queue tests remain passing.
+13. Existing Phase 1 and Phase 2 Signal Inbox workflow, Gmail dispatch, and Gmail provider-behavior tests continue to pass unchanged.
+14. No API, backend route, schema, migration, provider-integration, dependency, or generated-client changes are introduced.
+
+# Validation
+
+Run and report:
+
+- Frontend typecheck.
+- Relevant frontend component/page/navigation tests.
+- Existing Signal Inbox frontend tests.
+- Existing Copilot Queue tests.
+- Relevant backend regression tests for Signal Inbox workflow and Gmail provider behavior.
+- Workspace typecheck if this is the repository’s normal validation path.
+- Lint only if a configured script exists.
+- `git diff --check`.
+
+Fix all failures introduced by this task.
+
+# Documentation
+
+Update `docs/signal-inbox-prototype-plan.md` only if necessary to record the public-product terminology decision:
+
+- Public product name: `Inbox`.
+- Internal/backend/domain name remains: `Signal Inbox`.
+- Inbox is for communication handling.
+- Copilot Queue is for AI-recommended operational decisions.
+- Legacy Signal Inbox deep links are retained as aliases/redirects.
+
+Do not rewrite the broader architecture plan.
+
+# Required final report
+
+Report:
+
+1. Files inspected and changed.
+2. The exact public navigation change made.
+3. How Inbox is wired to the existing Signal Inbox UI.
+4. How legacy Signal Inbox deep links, aliases, routes, or active-view values are preserved.
+5. How actionable Inbox badge/count behavior was handled, including any intentional omission.
+6. How internal Signal Inbox identifiers and backend behavior were intentionally preserved.
+7. Copilot Queue explanatory copy added.
+8. Tests and validation commands run, with results.
+9. Any routing limitation, deferred refinement, or concern requiring follow-up.
