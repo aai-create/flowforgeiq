@@ -154,6 +154,41 @@ function matchEmailToLearnedBuyer(
   return null;
 }
 
+function getInboundGmailMetadata(payload: unknown): {
+  gmailThreadId: string | null;
+  gmailMessageId: string | null;
+} {
+  const body = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
+  const headers = Array.isArray(body.Headers) ? body.Headers : [];
+
+  const headerValue = (...names: string[]): string | null => {
+    const wanted = new Set(names.map((name) => name.toLowerCase()));
+    const header = headers.find((candidate) => {
+      if (!candidate || typeof candidate !== "object") return false;
+      const record = candidate as Record<string, unknown>;
+      return typeof record.Name === "string" && wanted.has(record.Name.toLowerCase());
+    }) as Record<string, unknown> | undefined;
+    return typeof header?.Value === "string" && header.Value.trim() ? header.Value.trim() : null;
+  };
+
+  const value = (...keys: string[]): string | null => {
+    for (const key of keys) {
+      const candidate = body[key];
+      if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    }
+    return null;
+  };
+
+  return {
+    gmailThreadId:
+      value("GmailThreadId", "gmailThreadId", "ThreadID", "threadId") ??
+      headerValue("X-Gmail-Thread-ID", "Gmail-Thread-ID"),
+    gmailMessageId:
+      value("MessageID", "GmailMessageId", "GmailMessageID", "gmailMessageId", "messageId") ??
+      headerValue("Message-ID", "In-Reply-To"),
+  };
+}
+
 // ─── PO / shipment reference scanning ─────────────────────────────────────────
 
 function scanForShipmentMatch(
@@ -764,6 +799,7 @@ router.post("/webhooks/email", async (req, res) => {
   }
 
   const { From, Subject, TextBody, Attachments, To, OriginalRecipient } = parsed.data;
+  const { gmailThreadId, gmailMessageId } = getInboundGmailMetadata(req.body);
 
   // ── Per-user routing via plus-token in the To/OriginalRecipient header ───────
   const toAddress = OriginalRecipient ?? To ?? "";
@@ -813,6 +849,8 @@ router.post("/webhooks/email", async (req, res) => {
       routingConfidence: 0,
       matchMethod: "unresolvable",
       rawSenderEmail: From ?? null,
+      gmailThreadId,
+      gmailMessageId,
       aiRoutingGuess: null,
       receivedAt: new Date(),
       routedToClerkUserId: null,
@@ -845,6 +883,8 @@ router.post("/webhooks/email", async (req, res) => {
       routingConfidence: 0,
       matchMethod: "unresolvable",
       rawSenderEmail: From ?? null,
+      gmailThreadId,
+      gmailMessageId,
       aiRoutingGuess: null,
       receivedAt: new Date(),
       routedToClerkUserId: null,
@@ -987,6 +1027,8 @@ router.post("/webhooks/email", async (req, res) => {
             routingConfidence: 1.0,
             matchMethod: "contact-rule",
             rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
+            gmailThreadId,
+            gmailMessageId,
             aiRoutingGuess: null,
             receivedAt: new Date(),
             routedToClerkUserId: ctx.scopedClerkUserId,
@@ -1210,6 +1252,8 @@ router.post("/webhooks/email", async (req, res) => {
       routingConfidence: finalConfidence,
       matchMethod: finalMatchMethod,
       rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
+      gmailThreadId,
+      gmailMessageId,
       aiRoutingGuess: aiGuess ?? null,
       receivedAt: new Date(),
       routedToClerkUserId: ctx.scopedClerkUserId,

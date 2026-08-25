@@ -24,6 +24,8 @@ export const messagesTable = pgTable("messages", {
   routingConfidence: real("routing_confidence"),
   matchMethod: text("match_method"),
   rawSenderEmail: text("raw_sender_email"),
+  gmailThreadId: text("gmail_thread_id"),
+  gmailMessageId: text("gmail_message_id"),
   aiRoutingGuess: jsonb("ai_routing_guess"),
   pendingExtractionFields: jsonb("pending_extraction_fields"),
   rawChatText: text("raw_chat_text"),

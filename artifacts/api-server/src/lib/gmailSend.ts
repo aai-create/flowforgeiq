@@ -126,6 +126,8 @@ export async function sendViaGmail(opts: GmailSendOptions, log: Logger): Promise
       routingStatus: "routed",
       signalStatus: "sent",
       receivedAt: new Date(),
+       gmailThreadId: gmailData.threadId,
+       gmailMessageId: gmailData.id,
       orgId,
     })
     .returning();

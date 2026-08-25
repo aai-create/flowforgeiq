@@ -701,6 +701,8 @@ describe("Step 8: Gmail provider behavior — legacy replies and Signal Inbox", 
       subject: "Packing list",
       rawSenderEmail: "raw-sender@example.com",
       sender: "fallback@example.com",
+      gmailThreadId: "gmail-thread-inbound",
+      gmailMessageId: "<inbound-message@example.com>",
     });
     const outbound = {
       ...msg,
@@ -734,8 +736,52 @@ describe("Step 8: Gmail provider behavior — legacy replies and Signal Inbox", 
         subject: "Re: Packing list",
         body: "Thanks for the update",
         sourceMessageId: 42,
+         threadId: "gmail-thread-inbound",
+         inReplyToMessageId: "<inbound-message@example.com>",
         shipmentId: 12,
         supplierId: 34,
+      },
+      expect.anything(),
+    );
+  });
+
+  it("legacy send-reply safely falls back when the inbound message has no Gmail metadata", async () => {
+    const msg = makeMessage({
+      rawSenderEmail: "supplier@example.com",
+      gmailThreadId: null,
+      gmailMessageId: null,
+    });
+    const outbound = {
+      ...msg,
+      id: 102,
+      direction: "outbound",
+      sender: "me@example.com",
+      recipient: "supplier@example.com",
+      fullBody: "Please resend the document",
+    };
+    selectQueue = [[msg], [outbound]];
+    mockSendViaGmail.mockResolvedValueOnce({
+      gmailMessageId: "gmail-message-fallback",
+      gmailThreadId: "new-gmail-thread",
+      fromAddress: "me@example.com",
+      outboundMessageId: outbound.id,
+    });
+
+    const app = await buildTestApp();
+    const res = await request(app)
+      .post("/messages/42/send-reply")
+      .send({ body: "Please resend the document" });
+
+    expect(res.status).toBe(201);
+    expect(mockSendViaGmail).toHaveBeenCalledWith(
+      {
+        orgId: 1,
+        to: "supplier@example.com",
+        subject: "Re: RE: Order update",
+        body: "Please resend the document",
+        sourceMessageId: 42,
+        shipmentId: null,
+        supplierId: null,
       },
       expect.anything(),
     );

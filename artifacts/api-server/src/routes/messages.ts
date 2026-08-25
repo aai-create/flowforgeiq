@@ -270,6 +270,8 @@ router.post("/messages/:id/send-reply", async (req, res) => {
       subject,
       body: input.body,
       sourceMessageId: id,
+       ...(msg.gmailThreadId ? { threadId: msg.gmailThreadId } : {}),
+       ...(msg.gmailMessageId ? { inReplyToMessageId: msg.gmailMessageId } : {}),
       shipmentId: msg.shipmentId,
       supplierId: msg.supplierId,
     }, req.log);
