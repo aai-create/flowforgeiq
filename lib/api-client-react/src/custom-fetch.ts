@@ -6,7 +6,13 @@ export type ErrorType<T = unknown> = ApiError<T>;
 
 export type BodyType<T> = T;
 
-export type AuthTokenGetter = () => Promise<string | null> | string | null;
+export type AuthTokenGetterOptions = {
+  skipCache?: boolean;
+};
+
+export type AuthTokenGetter = (
+  options?: AuthTokenGetterOptions,
+) => Promise<string | null> | string | null;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
@@ -199,6 +205,25 @@ export class ApiError<T = unknown> extends Error {
   }
 }
 
+function createClerkTokenUnavailableError(
+  requestInfo: { method: string; url: string },
+): ApiError<{ message: string }> {
+  const response = new Response(
+    JSON.stringify({ message: "Clerk token unavailable" }),
+    {
+      status: 401,
+      statusText: "Unauthorized",
+      headers: { "content-type": "application/json" },
+    },
+  );
+
+  return new ApiError(
+    response,
+    { message: "Clerk token unavailable" },
+    requestInfo,
+  );
+}
+
 export class ResponseParseError extends Error {
   readonly name = "ResponseParseError";
   readonly status: number;
@@ -349,18 +374,46 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
+  const requestInfo = { method, url: resolveUrl(input) };
+  const hadAuthorizationHeader = headers.has("authorization");
+
   // Attach bearer token when an auth getter is configured and no
   // Authorization header has been explicitly provided.
   if (_authTokenGetter && !headers.has("authorization")) {
-    const token = await _authTokenGetter();
+    let token: string | null;
+    try {
+      token = await _authTokenGetter();
+    } catch {
+      throw createClerkTokenUnavailableError(requestInfo);
+    }
+
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
   }
 
-  const requestInfo = { method, url: resolveUrl(input) };
+  // Clone Request inputs before the first fetch so a retry can safely replay
+  // request bodies as well as headers.
+  const initialInput = isRequest(input) ? input.clone() : input;
+  const retryInput = isRequest(input) ? input.clone() : input;
+  let response = await fetch(initialInput, { ...init, method, headers });
 
-  const response = await fetch(input, { ...init, method, headers });
+  if (response.status === 401 && _authTokenGetter) {
+    let freshToken: string | null;
+    try {
+      freshToken = await _authTokenGetter({ skipCache: true });
+    } catch {
+      throw createClerkTokenUnavailableError(requestInfo);
+    }
+
+    if (freshToken) {
+      headers.set("authorization", `Bearer ${freshToken}`);
+    } else if (!hadAuthorizationHeader) {
+      headers.delete("authorization");
+    }
+
+    response = await fetch(retryInput, { ...init, method, headers });
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

@@ -83,7 +83,7 @@ function SignInPage() {
 function AuthTokenSyncer() {
   const { getToken } = useAuth();
   useEffect(() => {
-    setAuthTokenGetter(() => getToken());
+    setAuthTokenGetter((options) => getToken(options));
   }, [getToken]);
   return null;
 }
