@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useSearch, useLocation } from "wouter";
 import { Settings2, Save, Eye, RefreshCw, MessageCircle, MessageSquare, Mail, Copy, Check, Smartphone, ChevronDown, ChevronRight, ExternalLink, Zap, Users, Trash2, Plus, UserPlus, LogOut, Crown, GitBranch, GripVertical, Pencil, X, Globe, Download, PlayCircle, Key, AlertTriangle, Upload, FileSpreadsheet, TriangleAlert, ArrowLeftRight } from "lucide-react";
 import { useOnboardingState } from "@/hooks/useOnboardingState";
-import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings, useGetOrg, useUpdateOrg, getGetOrgQueryKey } from "@workspace/api-client-react";
+import { useGetPoNumberingConfig, useUpdatePoNumberingConfig, useGetInboundEmailAddress, useUpdateInboundEmailHandle, useListStages, useCreateStage, useUpdateStage, useDeleteStage, useReorderStages, useListDeviceTokens, useCreateDeviceToken, useDeleteDeviceToken, getListDeviceTokensQueryKey, useGetCopilotSettings, useUpdateCopilotSettings, useGetOrg, useUpdateOrg, getGetOrgQueryKey, useGetGmailStatus } from "@workspace/api-client-react";
 import type { Stage, CreateDeviceTokenResponse } from "@workspace/api-client-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useUser, useClerk } from "@clerk/react";
@@ -13,6 +13,7 @@ import i18n from "@/i18n";
 import { SECTION_LABEL, PAGE_TITLE, BODY_MUTED } from "@/lib/typography";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMyOrgs } from "@/lib/useMyOrgs";
+import { GmailConnectionCard } from "@/components/GmailConnectionCard";
 
 type SettingsTab = "general" | "pipeline" | "channels" | "team";
 
@@ -1740,6 +1741,7 @@ export function Settings() {
   const { data: config, isLoading } = useGetPoNumberingConfig();
   const updateMutation = useUpdatePoNumberingConfig();
   const { data: inboundEmailData, refetch: refetchInboundEmail } = useGetInboundEmailAddress();
+  const { data: gmailStatus, refetch: refetchGmailStatus } = useGetGmailStatus();
   const inboundEmail = inboundEmailData?.inboundEmailAddress || "ai@flowforge.com";
   const [emailCopied, setEmailCopied] = useState(false);
   const search = useSearch();
@@ -2160,6 +2162,12 @@ export function Settings() {
                   )}
                 </div>
               </section>
+
+              <GmailConnectionCard
+                status={gmailStatus}
+                isAdmin={myRole === "admin"}
+                onStatusChange={() => { void refetchGmailStatus(); }}
+              />
 
               {/* Mobile Capture */}
               <div>
