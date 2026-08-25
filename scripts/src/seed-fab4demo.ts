@@ -1230,34 +1230,48 @@ const isCli =
   import.meta.url.endsWith("/seed-fab4demo.ts") ||
   import.meta.url.endsWith("/seed-fab4demo.js");
 
-export async function seedFab4Demo(): Promise<void> {
+interface SeedLogger {
+  info(message: string): void;
+}
+
+function formatStepError(step: number, label: string, error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  return new Error(`Step ${step} (${label}): ${message}`, {
+    cause: error,
+  });
+}
+
+export async function seedFab4Demo(seedLogger: SeedLogger = console): Promise<void> {
   if (!CLERK_SECRET_KEY) throw new Error("CLERK_SECRET_KEY env var must be set");
   console.log("=== Fab4Demo Seed Script ===\n");
 
   // ── Step 1: Create the org ────────────────────────────────────────────────
-  console.log("Step 1: Creating Fab4Demo organization...");
-  
-  // Check if it already exists
-  const [existingOrg] = await db
-    .select()
-    .from(organizationsTable)
-    .where(eq(organizationsTable.slug, "fab4demo"));
-
   let newOrgId: number;
-  if (existingOrg) {
-    console.log(`  → Org already exists with id=${existingOrg.id}. Using existing org.`);
-    newOrgId = existingOrg.id;
-  } else {
-    const [org] = await db
-      .insert(organizationsTable)
-      .values({ name: "Fab4Demo", slug: "fab4demo", visibilityMode: "shared" })
-      .returning();
-    newOrgId = org!.id;
-    console.log(`  → Created org id=${newOrgId}`);
+  seedLogger.info("Step 1: Creating Fab4Demo organization");
+  try {
+    // Check if it already exists
+    const [existingOrg] = await db
+      .select()
+      .from(organizationsTable)
+      .where(eq(organizationsTable.slug, "fab4demo"));
+
+    if (existingOrg) {
+      console.log(`  → Org already exists with id=${existingOrg.id}. Using existing org.`);
+      newOrgId = existingOrg.id;
+    } else {
+      const [org] = await db
+        .insert(organizationsTable)
+        .values({ name: "Fab4Demo", slug: "fab4demo", visibilityMode: "shared" })
+        .returning();
+      newOrgId = org!.id;
+      console.log(`  → Created org id=${newOrgId}`);
+    }
+  } catch (error) {
+    throw formatStepError(1, "Create Fab4Demo organization", error);
   }
+  seedLogger.info("Step 1 complete");
 
   // ── Step 2: Resolve Clerk user IDs ────────────────────────────────────────
-  console.log("\nStep 2: Resolving Clerk user IDs...");
   const resolvedMembers: Array<{
     clerkUserId: string;
     email: string;
@@ -1266,447 +1280,495 @@ export async function seedFab4Demo(): Promise<void> {
     handle: string;
   }> = [];
 
-  for (const member of TEAM_MEMBERS) {
-    const clerkUser = await clerkGetUserByEmail(member.email);
-    if (!clerkUser) {
-      console.warn(`  ⚠ Could not find Clerk user for ${member.email} — skipping`);
-      continue;
+  seedLogger.info("Step 2: Resolving Clerk user IDs");
+  try {
+    for (const member of TEAM_MEMBERS) {
+      const clerkUser = await clerkGetUserByEmail(member.email);
+      if (!clerkUser) {
+        console.warn(`  ⚠ Could not find Clerk user for ${member.email} — skipping`);
+        continue;
+      }
+      resolvedMembers.push({
+        clerkUserId: clerkUser.id,
+        email: member.email,
+        displayName: member.displayName,
+        role: member.role,
+        handle: member.handle,
+      });
+      console.log(`  ✓ ${member.email} → ${clerkUser.id}`);
     }
-    resolvedMembers.push({
-      clerkUserId: clerkUser.id,
-      email: member.email,
-      displayName: member.displayName,
-      role: member.role,
-      handle: member.handle,
-    });
-    console.log(`  ✓ ${member.email} → ${clerkUser.id}`);
+  } catch (error) {
+    throw formatStepError(2, "Resolve Clerk user IDs", error);
   }
+  seedLogger.info("Step 2 complete");
 
   // ── Step 3: Insert team_users ─────────────────────────────────────────────
-  // Note: the live DB has a single-column PK on clerk_user_id (not composite),
-  // so a Clerk user can only belong to one org row. Users already in team_users
-  // (org 1 — FlowForge Demo) cannot be re-inserted for org 3. We skip them and
-  // log a warning rather than failing the whole script.
-  console.log("\nStep 3: Inserting team members...");
+  // team_users uses a composite PK on (clerk_user_id, org_id), so a Clerk user
+  // can belong to multiple organizations. The existence check must be scoped to
+  // Fab4Demo rather than treating membership in another org as a conflict.
   let memberCount = 0;
-  for (const m of resolvedMembers) {
-    // Check if already exists anywhere (PK is just clerk_user_id)
-    const [existing] = await db
-      .select()
-      .from(teamUsersTable)
-      .where(eq(teamUsersTable.clerkUserId, m.clerkUserId));
+  seedLogger.info("Step 3: Inserting team members");
+  try {
+    for (const m of resolvedMembers) {
+      // Check the composite (clerk_user_id, org_id) membership key.
+      const [existing] = await db
+        .select()
+        .from(teamUsersTable)
+        .where(and(
+          eq(teamUsersTable.clerkUserId, m.clerkUserId),
+          eq(teamUsersTable.orgId, newOrgId),
+        ));
 
-    if (existing) {
-      if (existing.orgId === newOrgId) {
+      if (existing) {
         console.log(`  → ${m.email} already in Fab4Demo — skipping`);
-      } else {
-        console.warn(`  ⚠ ${m.email} is in org ${existing.orgId} — DB PK prevents multi-org rows, skipping`);
+        continue;
       }
-      continue;
+
+      // Handle uniqueness: inbound_token and inbound_handle are globally unique
+      const token = generateInboundToken();
+      const [handleConflict] = await db
+        .select()
+        .from(teamUsersTable)
+        .where(eq(teamUsersTable.inboundHandle, m.handle));
+      const handle = handleConflict ? `${m.handle}-fab4` : m.handle;
+
+      await db.insert(teamUsersTable).values({
+        clerkUserId: m.clerkUserId,
+        email: m.email,
+        name: m.displayName,
+        role: m.role,
+        inboundToken: token,
+        inboundHandle: handle,
+        orgId: newOrgId,
+      });
+      memberCount++;
+      console.log(`  ✓ ${m.email} inserted (role: ${m.role}, handle: ${handle})`);
     }
-
-    // Handle uniqueness: inbound_token and inbound_handle are globally unique
-    const token = generateInboundToken();
-    const [handleConflict] = await db
-      .select()
-      .from(teamUsersTable)
-      .where(eq(teamUsersTable.inboundHandle, m.handle));
-    const handle = handleConflict ? `${m.handle}-fab4` : m.handle;
-
-    await db.insert(teamUsersTable).values({
-      clerkUserId: m.clerkUserId,
-      email: m.email,
-      name: m.displayName,
-      role: m.role,
-      inboundToken: token,
-      inboundHandle: handle,
-      orgId: newOrgId,
-    });
-    memberCount++;
-    console.log(`  ✓ ${m.email} inserted (role: ${m.role}, handle: ${handle})`);
+  } catch (error) {
+    throw formatStepError(3, "Insert team members", error);
   }
+  seedLogger.info("Step 3 complete");
 
   // ── Step 4: Copy buyers ───────────────────────────────────────────────────
-  console.log("\nStep 4: Inserting buyers...");
   const buyerNameToId = new Map<string, number>();
-  for (const b of BUYERS) {
-    const [existing] = await db
-      .select()
-      .from(buyersTable)
-      .where(and(eq(buyersTable.orgId, newOrgId), eq(buyersTable.name, b.name)));
-    if (existing) {
-      buyerNameToId.set(b.name, existing.id);
-      console.log(`  → ${b.name} already exists — skipping`);
-      continue;
+  seedLogger.info("Step 4: Inserting buyers");
+  try {
+    for (const b of BUYERS) {
+      const [existing] = await db
+        .select()
+        .from(buyersTable)
+        .where(and(eq(buyersTable.orgId, newOrgId), eq(buyersTable.name, b.name)));
+      if (existing) {
+        buyerNameToId.set(b.name, existing.id);
+        console.log(`  → ${b.name} already exists — skipping`);
+        continue;
+      }
+      const [inserted] = await db
+        .insert(buyersTable)
+        .values({ name: b.name, contactName: b.contactName, email: b.email, phone: b.phone, region: b.region, orgId: newOrgId })
+        .returning();
+      buyerNameToId.set(b.name, inserted!.id);
+      console.log(`  ✓ ${b.name} (id=${inserted!.id})`);
     }
-    const [inserted] = await db
-      .insert(buyersTable)
-      .values({ name: b.name, contactName: b.contactName, email: b.email, phone: b.phone, region: b.region, orgId: newOrgId })
-      .returning();
-    buyerNameToId.set(b.name, inserted!.id);
-    console.log(`  ✓ ${b.name} (id=${inserted!.id})`);
+  } catch (error) {
+    throw formatStepError(4, "Insert buyers", error);
   }
+  seedLogger.info("Step 4 complete");
 
   // ── Step 5: Seed suppliers ────────────────────────────────────────────────
-  console.log("\nStep 5: Inserting suppliers...");
   const supplierNameToId = new Map<string, number>();
-  for (const s of SUPPLIERS) {
-    const [existing] = await db
-      .select()
-      .from(suppliersTable)
-      .where(and(eq(suppliersTable.orgId, newOrgId), eq(suppliersTable.name, s.name)));
-    if (existing) {
-      supplierNameToId.set(s.name, existing.id);
-      console.log(`  → ${s.name} already exists — skipping`);
-      continue;
+  seedLogger.info("Step 5: Inserting suppliers");
+  try {
+    for (const s of SUPPLIERS) {
+      const [existing] = await db
+        .select()
+        .from(suppliersTable)
+        .where(and(eq(suppliersTable.orgId, newOrgId), eq(suppliersTable.name, s.name)));
+      if (existing) {
+        supplierNameToId.set(s.name, existing.id);
+        console.log(`  → ${s.name} already exists — skipping`);
+        continue;
+      }
+      const [inserted] = await db
+        .insert(suppliersTable)
+        .values({ name: s.name, country: s.country, contactEmail: s.contactEmail, contactName: s.contactName, whatsAppNumber: s.whatsAppNumber, paymentTerms: s.paymentTerms, orgId: newOrgId })
+        .returning();
+      supplierNameToId.set(s.name, inserted!.id);
+      console.log(`  ✓ ${s.name} (id=${inserted!.id})`);
     }
-    const [inserted] = await db
-      .insert(suppliersTable)
-      .values({ name: s.name, country: s.country, contactEmail: s.contactEmail, contactName: s.contactName, whatsAppNumber: s.whatsAppNumber, paymentTerms: s.paymentTerms, orgId: newOrgId })
-      .returning();
-    supplierNameToId.set(s.name, inserted!.id);
-    console.log(`  ✓ ${s.name} (id=${inserted!.id})`);
+  } catch (error) {
+    throw formatStepError(5, "Insert suppliers", error);
   }
+  seedLogger.info("Step 5 complete");
 
   // ── Step 6: Seed shipments, deals, payments ───────────────────────────────
-  console.log("\nStep 6: Inserting shipments, deals and payments...");
   const shipmentIdByPoNumber = new Map<string, number>();
-
-  for (const s of SHIPMENTS) {
-    // Skip if already exists
-    const [existingShipment] = await db
-      .select()
-      .from(shipmentsTable)
-      .where(and(eq(shipmentsTable.orgId, newOrgId), eq(shipmentsTable.poNumber, s.poNumber)));
-    if (existingShipment) {
-      shipmentIdByPoNumber.set(s.poNumber, existingShipment.id);
-      // Guard against the rare case where the seed crashed between the shipment
-      // insert and the payment insert: backfill payments if none exist yet.
-      const [existingPayment] = await db
-        .select({ id: paymentsTable.id })
-        .from(paymentsTable)
-        .where(eq(paymentsTable.shipmentId, existingShipment.id))
-        .limit(1);
-      if (!existingPayment) {
-        await db.insert(paymentsTable).values([
-          {
-            orgId: newOrgId,
-            shipmentId: existingShipment.id,
-            label: "Deposit (30%)",
-            percent: 30,
-            amountUsd: s.deposit.amountUsd,
-            paid: s.deposit.paid,
-            dueDate: new Date(s.exFactoryDate),
-            sortOrder: 0,
-            paidAt: s.deposit.paid ? new Date(s.exFactoryDate) : null,
-          },
-          {
-            orgId: newOrgId,
-            shipmentId: existingShipment.id,
-            label: "Balance (70%)",
-            percent: 70,
-            amountUsd: s.balance.amountUsd,
-            paid: s.balance.paid,
-            dueDate: new Date(s.dueDate),
-            sortOrder: 1,
-            paidAt: s.balance.paid ? new Date(s.dueDate) : null,
-          },
-        ]);
-        console.log(`  → ${s.poNumber} already exists — payments backfilled`);
-      } else {
-        console.log(`  → ${s.poNumber} already exists — skipping`);
+  seedLogger.info("Step 6: Inserting shipments, deals and payments");
+  try {
+    for (const s of SHIPMENTS) {
+      // Skip if already exists
+      const [existingShipment] = await db
+        .select()
+        .from(shipmentsTable)
+        .where(and(eq(shipmentsTable.orgId, newOrgId), eq(shipmentsTable.poNumber, s.poNumber)));
+      if (existingShipment) {
+        shipmentIdByPoNumber.set(s.poNumber, existingShipment.id);
+        // Guard against the rare case where the seed crashed between the shipment
+        // insert and the payment insert: backfill payments if none exist yet.
+        const [existingPayment] = await db
+          .select({ id: paymentsTable.id })
+          .from(paymentsTable)
+          .where(eq(paymentsTable.shipmentId, existingShipment.id))
+          .limit(1);
+        if (!existingPayment) {
+          await db.insert(paymentsTable).values([
+            {
+              orgId: newOrgId,
+              shipmentId: existingShipment.id,
+              label: "Deposit (30%)",
+              percent: 30,
+              amountUsd: s.deposit.amountUsd,
+              paid: s.deposit.paid,
+              dueDate: new Date(s.exFactoryDate),
+              sortOrder: 0,
+              paidAt: s.deposit.paid ? new Date(s.exFactoryDate) : null,
+            },
+            {
+              orgId: newOrgId,
+              shipmentId: existingShipment.id,
+              label: "Balance (70%)",
+              percent: 70,
+              amountUsd: s.balance.amountUsd,
+              paid: s.balance.paid,
+              dueDate: new Date(s.dueDate),
+              sortOrder: 1,
+              paidAt: s.balance.paid ? new Date(s.dueDate) : null,
+            },
+          ]);
+          console.log(`  → ${s.poNumber} already exists — payments backfilled`);
+        } else {
+          console.log(`  → ${s.poNumber} already exists — skipping`);
+        }
+        continue;
       }
-      continue;
-    }
 
-    const supplierId = supplierNameToId.get(s.supplierName);
-    if (!supplierId) {
-      console.error(`  ✗ Supplier "${s.supplierName}" not found — skipping ${s.poNumber}`);
-      continue;
-    }
+      const supplierId = supplierNameToId.get(s.supplierName);
+      if (!supplierId) {
+        console.error(`  ✗ Supplier "${s.supplierName}" not found — skipping ${s.poNumber}`);
+        continue;
+      }
 
-    const buyerId = buyerNameToId.get(s.customerName) ?? null;
+      const buyerId = buyerNameToId.get(s.customerName) ?? null;
 
-    // Create deal
-    const [existingDeal] = await db
-      .select()
-      .from(dealsTable)
-      .where(and(eq(dealsTable.orgId, newOrgId), eq(dealsTable.buyerPoNumber, s.poNumber)));
+      // Create deal
+      const [existingDeal] = await db
+        .select()
+        .from(dealsTable)
+        .where(and(eq(dealsTable.orgId, newOrgId), eq(dealsTable.buyerPoNumber, s.poNumber)));
 
-    let dealId: number;
-    if (existingDeal) {
-      dealId = existingDeal.id;
-    } else {
-      const [newDeal] = await db
-        .insert(dealsTable)
+      let dealId: number;
+      if (existingDeal) {
+        dealId = existingDeal.id;
+      } else {
+        const [newDeal] = await db
+          .insert(dealsTable)
+          .values({
+            orgId: newOrgId,
+            buyerPoNumber: s.poNumber,
+            customerName: s.customerName,
+            buyerTotalUsd: s.buyerTotalUsd,
+            buyerUnitPrice: 0,
+            buyerQuantity: 0,
+          })
+          .returning();
+        dealId = newDeal!.id;
+      }
+
+      const [inserted] = await db
+        .insert(shipmentsTable)
         .values({
           orgId: newOrgId,
-          buyerPoNumber: s.poNumber,
+          poNumber: s.poNumber,
+          product: s.product,
+          category: s.category,
+          supplierId,
           customerName: s.customerName,
-          buyerTotalUsd: s.buyerTotalUsd,
-          buyerUnitPrice: 0,
-          buyerQuantity: 0,
+          buyerId,
+          dealId,
+          status: "on-track",
+          currentStageId: s.currentStageId,
+          dueDate: new Date(s.dueDate),
+          exFactoryDate: new Date(s.exFactoryDate),
+          destination: "USA",
+          via: s.via,
         })
         .returning();
-      dealId = newDeal!.id;
+
+      shipmentIdByPoNumber.set(s.poNumber, inserted!.id);
+
+      // Payments
+      await db.insert(paymentsTable).values([
+        {
+          orgId: newOrgId,
+          shipmentId: inserted!.id,
+          label: "Deposit (30%)",
+          percent: 30,
+          amountUsd: s.deposit.amountUsd,
+          paid: s.deposit.paid,
+          dueDate: new Date(s.exFactoryDate),
+          sortOrder: 0,
+          paidAt: s.deposit.paid ? new Date(s.exFactoryDate) : null,
+        },
+        {
+          orgId: newOrgId,
+          shipmentId: inserted!.id,
+          label: "Balance (70%)",
+          percent: 70,
+          amountUsd: s.balance.amountUsd,
+          paid: s.balance.paid,
+          dueDate: new Date(s.dueDate),
+          sortOrder: 1,
+          paidAt: s.balance.paid ? new Date(s.dueDate) : null,
+        },
+      ]);
+
+      console.log(`  ✓ ${s.poNumber} [${s.currentStageId}] → shipment id=${inserted!.id}`);
     }
-
-    const [inserted] = await db
-      .insert(shipmentsTable)
-      .values({
-        orgId: newOrgId,
-        poNumber: s.poNumber,
-        product: s.product,
-        category: s.category,
-        supplierId,
-        customerName: s.customerName,
-        buyerId,
-        dealId,
-        status: "on-track",
-        currentStageId: s.currentStageId,
-        dueDate: new Date(s.dueDate),
-        exFactoryDate: new Date(s.exFactoryDate),
-        destination: "USA",
-        via: s.via,
-      })
-      .returning();
-
-    shipmentIdByPoNumber.set(s.poNumber, inserted!.id);
-
-    // Payments
-    await db.insert(paymentsTable).values([
-      {
-        orgId: newOrgId,
-        shipmentId: inserted!.id,
-        label: "Deposit (30%)",
-        percent: 30,
-        amountUsd: s.deposit.amountUsd,
-        paid: s.deposit.paid,
-        dueDate: new Date(s.exFactoryDate),
-        sortOrder: 0,
-        paidAt: s.deposit.paid ? new Date(s.exFactoryDate) : null,
-      },
-      {
-        orgId: newOrgId,
-        shipmentId: inserted!.id,
-        label: "Balance (70%)",
-        percent: 70,
-        amountUsd: s.balance.amountUsd,
-        paid: s.balance.paid,
-        dueDate: new Date(s.dueDate),
-        sortOrder: 1,
-        paidAt: s.balance.paid ? new Date(s.dueDate) : null,
-      },
-    ]);
-
-    console.log(`  ✓ ${s.poNumber} [${s.currentStageId}] → shipment id=${inserted!.id}`);
+  } catch (error) {
+    throw formatStepError(6, "Insert shipments, deals and payments", error);
   }
+  seedLogger.info("Step 6 complete");
 
   // ── Step 7: Seed messages ─────────────────────────────────────────────────
   // Each shipment's messages are inserted inside a single transaction so that
   // a crash mid-batch leaves the shipment with ZERO messages rather than a
   // partial set. On the next boot the existence check sees 0 and re-inserts
   // the full batch, making the step fully resumable.
-  console.log("\nStep 7: Inserting messages...");
   const now = new Date();
   let totalMessages = 0;
 
-  for (const s of SHIPMENTS) {
-    const shipmentId = shipmentIdByPoNumber.get(s.poNumber);
-    if (!shipmentId) continue;
+  seedLogger.info("Step 7: Inserting messages");
+  try {
+    for (const s of SHIPMENTS) {
+      const shipmentId = shipmentIdByPoNumber.get(s.poNumber);
+      if (!shipmentId) continue;
 
-    const messages = buildMessages(s, () => supplierNameToId.get(s.supplierName)!, () => buyerNameToId.get(s.customerName) ?? null);
-    const expectedCount = messages.length;
+      const messages = buildMessages(s, () => supplierNameToId.get(s.supplierName)!, () => buyerNameToId.get(s.customerName) ?? null);
+      const expectedCount = messages.length;
 
-    // Count existing messages for this shipment.
-    const [{ existingCount }] = await db
-      .select({ existingCount: sql<number>`count(*)::int` })
-      .from(messagesTable)
-      .where(and(eq(messagesTable.orgId, newOrgId), eq(messagesTable.shipmentId, shipmentId)));
+      // Count existing messages for this shipment.
+      const [{ existingCount }] = await db
+        .select({ existingCount: sql<number>`count(*)::int` })
+        .from(messagesTable)
+        .where(and(eq(messagesTable.orgId, newOrgId), eq(messagesTable.shipmentId, shipmentId)));
 
-    if (existingCount >= expectedCount) {
-      // Complete batch already present — nothing to do.
-      console.log(`  → ${s.poNumber}: ${existingCount} messages already exist — skipping`);
-      totalMessages += existingCount;
-      continue;
+      if (existingCount >= expectedCount) {
+        // Complete batch already present — nothing to do.
+        console.log(`  → ${s.poNumber}: ${existingCount} messages already exist — skipping`);
+        totalMessages += existingCount;
+        continue;
+      }
+
+      // Insert (or repair a legacy partial batch from a pre-transaction run) inside
+      // a single transaction so a crash leaves the shipment with 0 messages and
+      // the step can be retried cleanly on next boot.
+      await db.transaction(async (tx) => {
+        if (existingCount > 0) {
+          // Partial batch from before the transaction fix — delete and re-insert.
+          console.log(`  ↻ ${s.poNumber}: ${existingCount}/${expectedCount} partial messages — repairing`);
+          await tx.delete(messagesTable).where(
+            and(eq(messagesTable.orgId, newOrgId), eq(messagesTable.shipmentId, shipmentId))
+          );
+        }
+
+        for (const m of messages) {
+          const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
+          const supplierId = m.supplierName ? (supplierNameToId.get(m.supplierName) ?? null) : null;
+
+          await tx.insert(messagesTable).values({
+            orgId: newOrgId,
+            shipmentId,
+            supplierId,
+            sender: m.sender,
+            recipient: m.recipient ?? null,
+            channel: m.channel,
+            direction: m.direction,
+            snippet: m.snippet,
+            fullBody: m.fullBody,
+            unread: m.unread,
+            receivedAt,
+            routingStatus: m.routingStatus,
+            aiDraft: "",
+            aiAction: "",
+            aiTags: [],
+            signalStatus: "new",
+          });
+        }
+      });
+
+      totalMessages += messages.length;
+      console.log(`  ✓ ${s.poNumber} [${s.currentStageId}]: ${messages.length} messages`);
     }
-
-    // Insert (or repair a legacy partial batch from a pre-transaction run) inside
-    // a single transaction so a crash leaves the shipment with 0 messages and
-    // the step can be retried cleanly on next boot.
-    await db.transaction(async (tx) => {
-      if (existingCount > 0) {
-        // Partial batch from before the transaction fix — delete and re-insert.
-        console.log(`  ↻ ${s.poNumber}: ${existingCount}/${expectedCount} partial messages — repairing`);
-        await tx.delete(messagesTable).where(
-          and(eq(messagesTable.orgId, newOrgId), eq(messagesTable.shipmentId, shipmentId))
-        );
-      }
-
-      for (const m of messages) {
-        const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
-        const supplierId = m.supplierName ? (supplierNameToId.get(m.supplierName) ?? null) : null;
-
-        await tx.insert(messagesTable).values({
-          orgId: newOrgId,
-          shipmentId,
-          supplierId,
-          sender: m.sender,
-          recipient: m.recipient ?? null,
-          channel: m.channel,
-          direction: m.direction,
-          snippet: m.snippet,
-          fullBody: m.fullBody,
-          unread: m.unread,
-          receivedAt,
-          routingStatus: m.routingStatus,
-          aiDraft: "",
-          aiAction: "",
-          aiTags: [],
-          signalStatus: "new",
-        });
-      }
-    });
-
-    totalMessages += messages.length;
-    console.log(`  ✓ ${s.poNumber} [${s.currentStageId}]: ${messages.length} messages`);
+  } catch (error) {
+    throw formatStepError(7, "Insert messages", error);
   }
+  seedLogger.info("Step 7 complete");
 
   // ── Step 8: Seed pipeline stages ─────────────────────────────────────────
-  console.log("\nStep 8: Inserting pipeline stages...");
   let stageCount = 0;
-  for (const stage of STAGES) {
-    const [existing] = await db
-      .select({ orgId: stagesTable.orgId })
-      .from(stagesTable)
-      .where(and(eq(stagesTable.orgId, newOrgId), eq(stagesTable.id, stage.id)));
-    if (existing) {
+  seedLogger.info("Step 8: Inserting pipeline stages");
+  try {
+    for (const stage of STAGES) {
+      const [existing] = await db
+        .select({ orgId: stagesTable.orgId })
+        .from(stagesTable)
+        .where(and(eq(stagesTable.orgId, newOrgId), eq(stagesTable.id, stage.id)));
+      if (existing) {
+        stageCount++;
+        console.log(`  → ${stage.id} already exists — skipping`);
+        continue;
+      }
+      await db.insert(stagesTable).values({ orgId: newOrgId, id: stage.id, label: stage.label, sortOrder: stage.sortOrder });
       stageCount++;
-      console.log(`  → ${stage.id} already exists — skipping`);
-      continue;
+      console.log(`  ✓ ${stage.id} (${stage.label})`);
     }
-    await db.insert(stagesTable).values({ orgId: newOrgId, id: stage.id, label: stage.label, sortOrder: stage.sortOrder });
-    stageCount++;
-    console.log(`  ✓ ${stage.id} (${stage.label})`);
+  } catch (error) {
+    throw formatStepError(8, "Insert pipeline stages", error);
   }
+  seedLogger.info("Step 8 complete");
 
   // ── Step 9: Seed RFQs ─────────────────────────────────────────────────────
-  console.log("\nStep 9: Inserting RFQs...");
   // (now is already defined above in Step 7 — reused here for deadline offsets)
   // Map rfq key → DB id, for quote insertion
   const rfqKeyToId = new Map<string, number>();
-  for (const rfq of RFQ_DEFS) {
-    const rfqKey = `${rfq.buyerName}||${rfq.product}`;
-    const [existing] = await db
-      .select({ id: rfqsTable.id })
-      .from(rfqsTable)
-      .where(and(
-        eq(rfqsTable.orgId, newOrgId),
-        eq(rfqsTable.buyerName, rfq.buyerName),
-        eq(rfqsTable.product, rfq.product),
-      ));
-    if (existing) {
-      rfqKeyToId.set(rfqKey, existing.id);
-      console.log(`  → RFQ "${rfq.product}" (${rfq.buyerName}) already exists — skipping`);
-      continue;
-    }
-    const deadline = new Date(now.getTime() + rfq.deadlineDaysFromNow * 24 * 60 * 60 * 1000);
-    const [inserted] = await db
-      .insert(rfqsTable)
-      .values({
-        orgId: newOrgId,
-        buyerName: rfq.buyerName,
-        product: rfq.product,
-        category: rfq.category,
-        quantity: rfq.quantity,
-        targetPriceUsd: rfq.targetPriceUsd,
-        deadline,
-        status: rfq.status,
-        notes: rfq.notes ?? null,
-      })
-      .returning({ id: rfqsTable.id });
-    rfqKeyToId.set(rfqKey, inserted!.id);
-    console.log(`  ✓ RFQ "${rfq.product}" (${rfq.buyerName}) status=${rfq.status} id=${inserted!.id}`);
-  }
-
-  // ── Step 10: Seed RFQ quotes ──────────────────────────────────────────────
-  console.log("\nStep 10: Inserting RFQ quotes...");
-  for (const rfq of RFQ_DEFS) {
-    if (rfq.quotes.length === 0) continue;
-    const rfqKey = `${rfq.buyerName}||${rfq.product}`;
-    const rfqId = rfqKeyToId.get(rfqKey);
-    if (!rfqId) {
-      console.warn(`  ⚠ Could not find RFQ id for "${rfq.product}" — skipping quotes`);
-      continue;
-    }
-    for (const q of rfq.quotes) {
+  seedLogger.info("Step 9: Inserting RFQs");
+  try {
+    for (const rfq of RFQ_DEFS) {
+      const rfqKey = `${rfq.buyerName}||${rfq.product}`;
       const [existing] = await db
-        .select({ id: rfqQuotesTable.id })
-        .from(rfqQuotesTable)
+        .select({ id: rfqsTable.id })
+        .from(rfqsTable)
         .where(and(
-          eq(rfqQuotesTable.rfqId, rfqId),
-          eq(rfqQuotesTable.factoryName, q.factoryName),
+          eq(rfqsTable.orgId, newOrgId),
+          eq(rfqsTable.buyerName, rfq.buyerName),
+          eq(rfqsTable.product, rfq.product),
         ));
       if (existing) {
-        console.log(`  → Quote from ${q.factoryName} for rfqId=${rfqId} already exists — skipping`);
+        rfqKeyToId.set(rfqKey, existing.id);
+        console.log(`  → RFQ "${rfq.product}" (${rfq.buyerName}) already exists — skipping`);
         continue;
       }
-      const supplierId = supplierNameToId.get(q.factoryName) ?? null;
-      await db.insert(rfqQuotesTable).values({
-        orgId: newOrgId,
-        rfqId,
-        factoryName: q.factoryName,
-        supplierId,
-        unitPriceUsd: q.unitPriceUsd,
-        leadTimeDays: q.leadTimeDays,
-        moq: q.moq,
-        status: q.status,
-        sortOrder: q.sortOrder,
-        country: "CN",
-      });
-      console.log(`  ✓ Quote from ${q.factoryName} $${q.unitPriceUsd}/unit (rfqId=${rfqId})`);
+      const deadline = new Date(now.getTime() + rfq.deadlineDaysFromNow * 24 * 60 * 60 * 1000);
+      const [inserted] = await db
+        .insert(rfqsTable)
+        .values({
+          orgId: newOrgId,
+          buyerName: rfq.buyerName,
+          product: rfq.product,
+          category: rfq.category,
+          quantity: rfq.quantity,
+          targetPriceUsd: rfq.targetPriceUsd,
+          deadline,
+          status: rfq.status,
+          notes: rfq.notes ?? null,
+        })
+        .returning({ id: rfqsTable.id });
+      rfqKeyToId.set(rfqKey, inserted!.id);
+      console.log(`  ✓ RFQ "${rfq.product}" (${rfq.buyerName}) status=${rfq.status} id=${inserted!.id}`);
     }
+  } catch (error) {
+    throw formatStepError(9, "Insert RFQs", error);
   }
+  seedLogger.info("Step 9 complete");
+
+  // ── Step 10: Seed RFQ quotes ──────────────────────────────────────────────
+  seedLogger.info("Step 10: Inserting RFQ quotes");
+  try {
+    for (const rfq of RFQ_DEFS) {
+      if (rfq.quotes.length === 0) continue;
+      const rfqKey = `${rfq.buyerName}||${rfq.product}`;
+      const rfqId = rfqKeyToId.get(rfqKey);
+      if (!rfqId) {
+        console.warn(`  ⚠ Could not find RFQ id for "${rfq.product}" — skipping quotes`);
+        continue;
+      }
+      for (const q of rfq.quotes) {
+        const [existing] = await db
+          .select({ id: rfqQuotesTable.id })
+          .from(rfqQuotesTable)
+          .where(and(
+            eq(rfqQuotesTable.rfqId, rfqId),
+            eq(rfqQuotesTable.factoryName, q.factoryName),
+          ));
+        if (existing) {
+          console.log(`  → Quote from ${q.factoryName} for rfqId=${rfqId} already exists — skipping`);
+          continue;
+        }
+        const supplierId = supplierNameToId.get(q.factoryName) ?? null;
+        await db.insert(rfqQuotesTable).values({
+          orgId: newOrgId,
+          rfqId,
+          factoryName: q.factoryName,
+          supplierId,
+          unitPriceUsd: q.unitPriceUsd,
+          leadTimeDays: q.leadTimeDays,
+          moq: q.moq,
+          status: q.status,
+          sortOrder: q.sortOrder,
+          country: "CN",
+        });
+        console.log(`  ✓ Quote from ${q.factoryName} $${q.unitPriceUsd}/unit (rfqId=${rfqId})`);
+      }
+    }
+  } catch (error) {
+    throw formatStepError(10, "Insert RFQ quotes", error);
+  }
+  seedLogger.info("Step 10 complete");
 
   // ── Step 11: Seed unrouted inbox messages ─────────────────────────────────
-  console.log("\nStep 11: Inserting unrouted inbox messages...");
   let unroutedCount = 0;
-  for (const m of UNROUTED_MESSAGES) {
-    const [existing] = await db
-      .select({ id: messagesTable.id })
-      .from(messagesTable)
-      .where(and(
-        eq(messagesTable.orgId, newOrgId),
-        eq(messagesTable.sender, m.sender),
-        eq(messagesTable.channel, m.channel),
-        isNull(messagesTable.shipmentId),
-      ));
-    if (existing) {
+  seedLogger.info("Step 11: Inserting unrouted inbox messages");
+  try {
+    for (const m of UNROUTED_MESSAGES) {
+      const [existing] = await db
+        .select({ id: messagesTable.id })
+        .from(messagesTable)
+        .where(and(
+          eq(messagesTable.orgId, newOrgId),
+          eq(messagesTable.sender, m.sender),
+          eq(messagesTable.channel, m.channel),
+          isNull(messagesTable.shipmentId),
+        ));
+      if (existing) {
+        unroutedCount++;
+        console.log(`  → Unrouted msg from ${m.sender} (${m.channel}) already exists — skipping`);
+        continue;
+      }
+      const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
+      await db.insert(messagesTable).values({
+        orgId: newOrgId,
+        shipmentId: null,
+        supplierId: null,
+        sender: m.sender,
+        channel: m.channel,
+        direction: "inbound",
+        snippet: m.snippet,
+        fullBody: m.fullBody,
+        unread: true,
+        routingStatus: "needs_review",
+        receivedAt,
+        aiDraft: "",
+        aiAction: "",
+        aiTags: [],
+        signalStatus: "new",
+      });
       unroutedCount++;
-      console.log(`  → Unrouted msg from ${m.sender} (${m.channel}) already exists — skipping`);
-      continue;
+      console.log(`  ✓ Unrouted msg from ${m.sender} (${m.channel})`);
     }
-    const receivedAt = new Date(now.getTime() - m.daysAgo * 24 * 60 * 60 * 1000);
-    await db.insert(messagesTable).values({
-      orgId: newOrgId,
-      shipmentId: null,
-      supplierId: null,
-      sender: m.sender,
-      channel: m.channel,
-      direction: "inbound",
-      snippet: m.snippet,
-      fullBody: m.fullBody,
-      unread: true,
-      routingStatus: "needs_review",
-      receivedAt,
-      aiDraft: "",
-      aiAction: "",
-      aiTags: [],
-      signalStatus: "new",
-    });
-    unroutedCount++;
-    console.log(`  ✓ Unrouted msg from ${m.sender} (${m.channel})`);
+  } catch (error) {
+    throw formatStepError(11, "Insert unrouted inbox messages", error);
   }
+  seedLogger.info("Step 11 complete");
 
   // ── Step 12: Verify ───────────────────────────────────────────────────────
   console.log("\nStep 12: Verification...");

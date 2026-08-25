@@ -16,7 +16,7 @@ export const WIPE_TABLES = [
   "rfqs", "rfq_quotes", "copilot_proposals", "autonomy_policies",
   "shipment_predictions", "stage_events", "buyer_emails",
   "extraction_corrections", "extractions", "documents",
-  "sample_requests",
+  "sample_requests", "contact_routing_rules", "device_tokens",
 ] as const;
 
 /**
@@ -28,8 +28,9 @@ export const WIPE_TABLES = [
  *   push_tokens         — device push subscriptions; not business data
  *   gmail_credentials   — OAuth tokens are hard to re-obtain; preserve across resets
  *   po_numbering_config — org-wide counter; resetting it would reissue duplicate PO numbers
+ *   copilot_settings   — org-wide copilot configuration
  */
 export const WIPE_PRESERVED_TABLES = [
   "organizations", "stages", "team_users", "team_invitations",
-  "push_tokens", "gmail_credentials", "po_numbering_config",
+  "push_tokens", "gmail_credentials", "po_numbering_config", "copilot_settings",
 ] as const;

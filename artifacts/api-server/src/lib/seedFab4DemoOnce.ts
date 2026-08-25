@@ -10,7 +10,7 @@
  */
 
 import { db, messagesTable, organizationsTable, rfqsTable, shipmentsTable, stagesTable } from "@workspace/db";
-import { count, eq, and, inArray, isNull } from "drizzle-orm";
+import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 // Static import so esbuild bundles the seed function directly into the server
 // bundle. This avoids the subprocess approach (pnpm) which fails in production
 // because pnpm is not on PATH in the deployed container.
@@ -37,7 +37,7 @@ async function isFullySeeded(orgId: number): Promise<boolean> {
   const rows = await db
     .select({
       poNumber: shipmentsTable.poNumber,
-      msgCount: count(messagesTable.id),
+      msgCount: sql<number>`count(${messagesTable.id})::int`,
     })
     .from(shipmentsTable)
     .leftJoin(
@@ -56,18 +56,18 @@ async function isFullySeeded(orgId: number): Promise<boolean> {
     .groupBy(shipmentsTable.poNumber);
 
   if (rows.length !== EXPECTED_PO_NUMBERS.length) return false;
-  if (!rows.every(r => r.msgCount === EXPECTED_MESSAGE_COUNTS[r.poNumber])) return false;
+  if (!rows.every(r => Number(r.msgCount) === EXPECTED_MESSAGE_COUNTS[r.poNumber])) return false;
 
   // 2. Pipeline stages — all 11 must exist for this org.
   const [{ stageCount }] = await db
-    .select({ stageCount: count(stagesTable.id) })
+    .select({ stageCount: sql<number>`count(${stagesTable.id})::int` })
     .from(stagesTable)
     .where(eq(stagesTable.orgId, orgId));
-  if (stageCount < EXPECTED_STAGE_COUNT) return false;
+  if (Number(stageCount) < EXPECTED_STAGE_COUNT) return false;
 
   // 3. Unrouted inbox messages — at least the expected number must exist.
   const [{ unroutedCount }] = await db
-    .select({ unroutedCount: count(messagesTable.id) })
+    .select({ unroutedCount: sql<number>`count(${messagesTable.id})::int` })
     .from(messagesTable)
     .where(
       and(
@@ -76,14 +76,14 @@ async function isFullySeeded(orgId: number): Promise<boolean> {
         isNull(messagesTable.shipmentId),
       ),
     );
-  if (unroutedCount < EXPECTED_UNROUTED_MESSAGE_COUNT) return false;
+  if (Number(unroutedCount) < EXPECTED_UNROUTED_MESSAGE_COUNT) return false;
 
   // 4. RFQ count — all expected RFQs must exist.
   const [{ rfqCount }] = await db
-    .select({ rfqCount: count(rfqsTable.id) })
+    .select({ rfqCount: sql<number>`count(${rfqsTable.id})::int` })
     .from(rfqsTable)
     .where(eq(rfqsTable.orgId, orgId));
-  if (rfqCount < EXPECTED_RFQ_COUNT) return false;
+  if (Number(rfqCount) < EXPECTED_RFQ_COUNT) return false;
 
   return true;
 }
@@ -116,7 +116,7 @@ export async function seedFab4DemoOnce(): Promise<void> {
       logger.info("seedFab4DemoOnce: Fab4Demo org not found — running seed");
     }
 
-    await seedFab4Demo();
+    await seedFab4Demo(logger);
     logger.info("seedFab4DemoOnce: seed complete");
   } catch (err) {
     // Seeding failure must never crash the server.
