@@ -49,6 +49,16 @@ const zhCN = {
     daysLate: "· 已逾期 {{days}} 天",
     daysDue: "· 还有 {{days}} 天",
   },
+  legal: {
+    privacyLink: "隐私政策",
+    termsLink: "服务条款",
+    legalNavigation: "法律信息",
+    acknowledge: "我确认已阅读隐私政策和服务条款。",
+    and: "和",
+    mustAcknowledge: "请先确认两项政策后再继续。",
+    saving: "正在保存确认…",
+    failed: "无法保存您的确认，未进行任何更改。请重试。",
+  },
   status: {
     onTrack: "正常",
     atRisk: "风险",
@@ -692,6 +702,7 @@ const zhCN = {
     networkError: "网络错误，请重试。",
     failedToAccept: "接受邀请失败。",
     goCta: "前往 FlowForgeIQ",
+    acceptButton: "确认并接受邀请",
   },
   landing: {
     headline: "供应链沟通，一站整合",

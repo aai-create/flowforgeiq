@@ -12,6 +12,7 @@ import {
   ShieldAlert, AlertTriangle, BellRing, DollarSign, Users, Truck,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LegalLinks } from "@/components/LegalLinks";
 
 // ─── Overview diagram ────────────────────────────────────────────────────────
 
@@ -377,6 +378,7 @@ export function Help() {
                 </div>
 
                 <div className="h-8" />
+                <LegalLinks className="justify-start pb-6" />
               </div>
             </ScrollArea>
           </div>

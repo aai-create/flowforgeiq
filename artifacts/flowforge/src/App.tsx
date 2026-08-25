@@ -30,6 +30,9 @@ import { OrgPicker } from "@/pages/OrgPicker";
 import { useMyOrgs } from "@/lib/useMyOrgs";
 import { ImpersonationCtx, useImpersonationProvider, useImpersonation } from "@/lib/useImpersonation";
 import { LogOut } from "lucide-react";
+import { LegalLinks } from "@/components/LegalLinks";
+import { PrivacyPolicy, TermsOfService } from "@/pages/Legal";
+import { useState } from "react";
 
 const queryClient = new QueryClient();
 
@@ -87,12 +90,23 @@ function SignInPage() {
             },
           }}
         />
+        <LegalLinks className="mt-5" />
       </div>
     </div>
   );
 }
 
 function SignUpPage() {
+  const [accepted, setAccepted] = useState(false);
+  const { isSignedIn } = useUser();
+  useEffect(() => {
+    if (!accepted || !isSignedIn) return;
+    void fetch(`${basePath}/api/team/legal-acceptance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ privacyAccepted: true, termsAccepted: true }),
+    });
+  }, [accepted, isSignedIn]);
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFBFC]" style={{ fontFamily: "Inter, sans-serif" }}>
       <div className="w-full max-w-sm px-4">
@@ -124,6 +138,11 @@ function SignUpPage() {
             },
           }}
         />
+        <label className="mt-5 flex items-start gap-2 text-left text-xs leading-5 text-[#5E687B]">
+          <input type="checkbox" required checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-1 accent-[#9000FF]" />
+          <span>I acknowledge the <a className="text-[#9000FF] hover:underline" href={`${basePath}/privacy`}>Privacy Policy</a> and <a className="text-[#9000FF] hover:underline" href={`${basePath}/terms`}>Terms of Service</a>.</span>
+        </label>
+        <LegalLinks className="mt-3" />
       </div>
     </div>
   );
@@ -294,6 +313,8 @@ function Router() {
       <Route path="/shortcuts-redirect" component={ShortcutsRedirect} />
       <Route path="/select-org" component={SelectOrgPage} />
       <Route path="/accept-invite" component={AcceptInvite} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfService} />
       <Route path="/superadmin" component={SuperAdmin} />
       <Route component={NotFound} />
     </Switch>

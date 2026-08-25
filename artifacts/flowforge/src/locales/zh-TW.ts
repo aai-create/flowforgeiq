@@ -49,6 +49,16 @@ const zhTW = {
     daysLate: "· 已逾期 {{days}} 天",
     daysDue: "· 還有 {{days}} 天",
   },
+  legal: {
+    privacyLink: "隱私權政策",
+    termsLink: "服務條款",
+    legalNavigation: "法律資訊",
+    acknowledge: "我確認已閱讀隱私權政策和服務條款。",
+    and: "和",
+    mustAcknowledge: "請先確認兩項政策後再繼續。",
+    saving: "正在儲存確認…",
+    failed: "無法儲存您的確認，未進行任何變更。請重試。",
+  },
   status: {
     onTrack: "正常",
     atRisk: "有風險",
@@ -692,6 +702,7 @@ const zhTW = {
     networkError: "網路錯誤，請重試。",
     failedToAccept: "接受邀請失敗。",
     goCta: "前往 FlowForgeIQ",
+    acceptButton: "確認並接受邀請",
   },
   landing: {
     headline: "供應鏈溝通，一站整合",

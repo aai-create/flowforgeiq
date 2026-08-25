@@ -17,6 +17,9 @@ export function AcceptInvite() {
   const [message, setMessage] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
   const [token, setToken] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [ackError, setAckError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -43,12 +46,28 @@ export function AcceptInvite() {
       })
       .catch(() => {});
 
-    fetch(`${basePath}/api/team/accept-invite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: tok }),
-    })
-      .then(async res => {
+    setStatus("loading");
+  }, [isLoaded, user]);
+
+  async function acceptInvite() {
+    if (!acknowledged) {
+      setAckError(t("legal.mustAcknowledge"));
+      return;
+    }
+    setSubmitting(true);
+    setAckError("");
+    try {
+      const acknowledgement = await fetch(`${basePath}/api/team/legal-acceptance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ privacyAccepted: true, termsAccepted: true }),
+      });
+      if (!acknowledgement.ok) throw new Error("acknowledgement");
+      const res = await fetch(`${basePath}/api/team/accept-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
         if (res.ok) {
           setStatus("success");
           setTimeout(() => navigate("/"), 2000);
@@ -66,12 +85,17 @@ export function AcceptInvite() {
             setMessage(code || t("acceptInvite.failedToAccept"));
           }
         }
-      })
-      .catch(() => {
+    } catch (error) {
+      if (error instanceof Error && error.message === "acknowledgement") {
+        setAckError(t("legal.failed"));
+      } else {
         setStatus("error");
         setMessage(t("acceptInvite.networkError"));
-      });
-  }, [isLoaded, user]);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function handleSwitchAccount() {
     const returnUrl = `${window.location.origin}/accept-invite?token=${encodeURIComponent(token)}`;
@@ -94,6 +118,18 @@ export function AcceptInvite() {
               <RefreshCw className="w-8 h-8 text-[#9000FF] animate-spin mx-auto mb-4" />
               <h2 className="text-sm font-bold text-[#212833] mb-2">{t("acceptInvite.accepting")}</h2>
               <p className="text-xs text-[#5E687B]">{t("acceptInvite.acceptingDesc")}</p>
+              {token && (
+                <div className="mt-5 text-left">
+                  <label className="flex items-start gap-2 text-xs leading-5 text-[#5E687B]">
+                    <input type="checkbox" checked={acknowledged} onChange={e => setAcknowledged(e.target.checked)} className="mt-1 accent-[#9000FF]" />
+                    <span><a className="text-[#9000FF] hover:underline" href={`${basePath}/privacy`} target="_blank" rel="noopener noreferrer">{t("legal.privacyLink")}</a>{" "}{t("legal.and")}{" "}<a className="text-[#9000FF] hover:underline" href={`${basePath}/terms`} target="_blank" rel="noopener noreferrer">{t("legal.termsLink")}</a></span>
+                  </label>
+                  {ackError && <p role="alert" className="mt-2 text-xs text-red-600">{ackError}</p>}
+                  <button type="button" disabled={submitting} onClick={acceptInvite} className="mt-4 w-full rounded-md bg-[#9000FF] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7A00D9] disabled:opacity-50">
+                    {submitting ? t("legal.saving") : t("acceptInvite.acceptButton")}
+                  </button>
+                </div>
+              )}
             </>
           )}
 

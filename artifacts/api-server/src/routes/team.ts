@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, teamUsersTable, teamInvitationsTable, organizationsTable } from "@workspace/db";
+import { db, teamUsersTable, teamInvitationsTable, organizationsTable, legalAcceptancesTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, requireAdmin, requireClerkAuth } from "../middlewares/requireAuth";
 import { parseOrgIdCookie, setOrgIdCookie } from "../lib/orgCookie";
@@ -39,6 +39,39 @@ async function generateUniqueHandle(name: string): Promise<string> {
 }
 
 const router: IRouter = Router();
+export const PRIVACY_POLICY_VERSION = "2026-08-25-v1";
+export const TERMS_OF_SERVICE_VERSION = "2026-08-25-v1";
+
+router.post("/team/legal-acceptance", requireClerkAuth, async (req, res) => {
+  const body = req.body as { privacyAccepted?: boolean; termsAccepted?: boolean };
+  if (body.privacyAccepted !== true || body.termsAccepted !== true) {
+    res.status(400).json({ error: "Both policies must be acknowledged." });
+    return;
+  }
+  try {
+    const [acceptance] = await db
+      .insert(legalAcceptancesTable)
+      .values({
+        clerkUserId: req.userId!,
+        privacyVersion: PRIVACY_POLICY_VERSION,
+        termsVersion: TERMS_OF_SERVICE_VERSION,
+        acceptedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: legalAcceptancesTable.clerkUserId,
+        set: {
+          privacyVersion: PRIVACY_POLICY_VERSION,
+          termsVersion: TERMS_OF_SERVICE_VERSION,
+          acceptedAt: new Date(),
+        },
+      })
+      .returning();
+    res.json({ acceptance });
+  } catch (err) {
+    req.log.error({ err }, "legal acknowledgement persistence failed");
+    res.status(500).json({ error: "Could not save policy acknowledgement. Please try again." });
+  }
+});
 
 router.get("/org", requireAuth, async (req, res) => {
   const [org] = await db
@@ -262,6 +295,15 @@ router.post("/team/accept-invite", requireClerkAuth, async (req, res) => {
 
   if (!clerkUserEmails.includes(inv.email.toLowerCase())) {
     res.status(403).json({ error: "This invitation was sent to a different email address." });
+    return;
+  }
+
+  const [acceptance] = await db
+    .select()
+    .from(legalAcceptancesTable)
+    .where(eq(legalAcceptancesTable.clerkUserId, req.userId!));
+  if (!acceptance || acceptance.privacyVersion !== PRIVACY_POLICY_VERSION || acceptance.termsVersion !== TERMS_OF_SERVICE_VERSION) {
+    res.status(428).json({ error: "LEGAL_ACKNOWLEDGEMENT_REQUIRED" });
     return;
   }
 

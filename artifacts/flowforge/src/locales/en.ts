@@ -49,6 +49,16 @@ const en = {
     daysLate: "· {{days}}d late",
     daysDue: "· {{days}}d",
   },
+  legal: {
+    privacyLink: "Privacy Policy",
+    termsLink: "Terms of Service",
+    legalNavigation: "Legal",
+    acknowledge: "I acknowledge the Privacy Policy and Terms of Service.",
+    and: "and",
+    mustAcknowledge: "Please acknowledge both policies before continuing.",
+    saving: "Saving acknowledgement…",
+    failed: "We couldn't save your acknowledgement. Nothing was changed; please try again.",
+  },
   status: {
     onTrack: "On Track",
     atRisk: "At Risk",
@@ -692,6 +702,7 @@ const en = {
     networkError: "Network error. Please try again.",
     failedToAccept: "Failed to accept invitation.",
     goCta: "Go to FlowForgeIQ",
+    acceptButton: "Acknowledge and accept invitation",
   },
   landing: {
     headline: "Supply-chain communication, unified",

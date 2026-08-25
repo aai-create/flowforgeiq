@@ -26,3 +26,4 @@ export * from "./device_tokens";
 export * from "./contact_routing_rules";
 export * from "./sample_requests";
 export * from "./copilot_settings";
+export * from "./legal_acceptances";
