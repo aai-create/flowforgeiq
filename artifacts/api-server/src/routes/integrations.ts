@@ -138,11 +138,26 @@ router.get("/integrations/gmail/callback", async (req, res) => {
       expires_in?: number;
     };
 
-    const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    // The Gmail API profile is authoritative for the mailbox that can send.
+    // Using oauth2/userinfo here can omit `email` when the OAuth request only
+    // contains Gmail scopes, which previously caused us to save a misleading
+    // `unknown@gmail.com` fallback.
+    const profileRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
-    const profileData = (await profileRes.json()) as { email?: string };
-    const gmailAddress = profileData.email ?? "unknown@gmail.com";
+    if (!profileRes.ok) {
+      const errText = await profileRes.text();
+      req.log.error({ status: profileRes.status, body: errText }, "gmail-oauth: profile lookup failed");
+      res.status(502).send("Could not read the connected Gmail account");
+      return;
+    }
+    const profileData = (await profileRes.json()) as { emailAddress?: string };
+    const gmailAddress = profileData.emailAddress?.trim();
+    if (!gmailAddress) {
+      req.log.error({ profileData }, "gmail-oauth: profile did not include an email address");
+      res.status(502).send("Could not read the connected Gmail account");
+      return;
+    }
 
     const tokenExpiry = tokenData.expires_in
       ? new Date(Date.now() + tokenData.expires_in * 1000)
