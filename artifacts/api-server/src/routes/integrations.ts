@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, gmailCredentialsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { resolveOrgId, requireAdmin } from "../middlewares/requireAuth";
+import { getGmailProfileAddress } from "../lib/gmailProfile";
 import { z } from "zod/v4";
 import { randomBytes, createHmac } from "crypto";
 
@@ -151,10 +152,10 @@ router.get("/integrations/gmail/callback", async (req, res) => {
       res.status(502).send("Could not read the connected Gmail account");
       return;
     }
-    const profileData = (await profileRes.json()) as { emailAddress?: string };
-    const gmailAddress = profileData.emailAddress?.trim();
+    const profileData = await profileRes.json();
+    const gmailAddress = getGmailProfileAddress(profileData);
     if (!gmailAddress) {
-      req.log.error({ profileData }, "gmail-oauth: profile did not include an email address");
+      req.log.error("gmail-oauth: profile did not include an email address");
       res.status(502).send("Could not read the connected Gmail account");
       return;
     }
