@@ -13,6 +13,7 @@ import {
 import { useTour } from "@/hooks/useTour";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import type { AuthTokenGetter } from "@workspace/api-client-react";
 import HomePage from "@/pages/Home";
 import CapturePage from "@/pages/Capture";
 import DocumentsPage from "@/pages/Documents";
@@ -22,6 +23,17 @@ import SettingsPage from "@/pages/Settings";
 import RoutingResultPage from "@/pages/RoutingResult";
 import SamplesPage from "@/pages/Samples";
 import SampleDetailPage from "@/pages/SampleDetail";
+import {
+  OrdersPage,
+  RiskPage,
+  ReportsPage,
+  MorePage,
+  RfqsPage,
+  PipelinePage,
+  DirectoryPage,
+  TasksPage,
+  CalendarPage,
+} from "@/pages/EnterprisePages";
 import { IOSInstallPrompt } from "@/components/IOSInstallPrompt";
 import { AndroidInstallPrompt } from "@/components/AndroidInstallPrompt";
 
@@ -36,6 +48,7 @@ const clerkPubKey = publishableKeyFromHost(
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+type ApiTokenGetterOptions = { skipCache?: boolean };
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -83,7 +96,12 @@ function SignInPage() {
 function AuthTokenSyncer() {
   const { getToken } = useAuth();
   useEffect(() => {
-    setAuthTokenGetter((options) => getToken(options));
+    const getClerkToken = getToken as unknown as (
+      options?: { skipCache?: boolean },
+    ) => Promise<string | null>;
+    const getApiToken: AuthTokenGetter = (options?: ApiTokenGetterOptions) =>
+      getClerkToken(options?.skipCache ? { skipCache: true } : undefined);
+    setAuthTokenGetter(getApiToken);
   }, [getToken]);
   return null;
 }
@@ -137,6 +155,16 @@ function Router() {
     <Switch>
       <Route path="/" component={() => <Redirect to="/home" />} />
       <Route path="/home" component={() => <ProtectedRoute component={HomePage} />} />
+      <Route path="/orders" component={() => <ProtectedRoute component={OrdersPage} />} />
+      <Route path="/risk" component={() => <ProtectedRoute component={RiskPage} />} />
+      <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
+      <Route path="/more" component={() => <ProtectedRoute component={MorePage} />} />
+      <Route path="/rfqs" component={() => <ProtectedRoute component={RfqsPage} />} />
+      <Route path="/pipeline" component={() => <ProtectedRoute component={PipelinePage} />} />
+      <Route path="/suppliers" component={() => <ProtectedRoute component={() => <DirectoryPage kind="suppliers" />} />} />
+      <Route path="/buyers" component={() => <ProtectedRoute component={() => <DirectoryPage kind="buyers" />} />} />
+      <Route path="/tasks" component={() => <ProtectedRoute component={TasksPage} />} />
+      <Route path="/calendar" component={() => <ProtectedRoute component={CalendarPage} />} />
       <Route path="/capture" component={() => <ProtectedRoute component={CapturePage} />} />
       <Route path="/documents" component={() => <ProtectedRoute component={DocumentsPage} />} />
       <Route path="/documents/:id" component={() => <ProtectedRoute component={DocumentDetailPage} />} />

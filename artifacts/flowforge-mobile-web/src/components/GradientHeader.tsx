@@ -1,4 +1,7 @@
 import { ArrowLeft } from "lucide-react";
+import { Menu, Search } from "lucide-react";
+import { useAppShell } from "./AppShell";
+import { useTranslation } from "react-i18next";
 
 interface GradientHeaderProps {
   subtitle?: React.ReactNode;
@@ -13,43 +16,36 @@ interface GradientHeaderProps {
 export function GradientHeader({
   title = "FlowForgeIQ",
   subtitle,
-  subtitleClassName = "text-white/55 text-[11px] font-medium tracking-[0.6px] uppercase mt-0.5",
   back,
   right,
   align = "center",
-  logoSize = 28,
 }: GradientHeaderProps) {
+  const { openDrawer } = useAppShell();
+  const { t } = useTranslation();
   return (
     <div
-      className={`status-bar-pad px-5 pb-3.5 flex items-${align} gap-3 shrink-0 page-header-gradient`}
+      className={`status-bar-pad px-4 pb-3 flex items-${align} gap-3 shrink-0 bg-card border-b border-border`}
     >
       {back && (
         <button
           onClick={back}
           className={`active:opacity-60${align === "start" ? " mt-0.5" : ""}`}
-        >
-          <ArrowLeft size={20} color="white" />
+          >
+          <ArrowLeft size={19} className="text-foreground" />
         </button>
       )}
-      <img
-        src={`${import.meta.env.BASE_URL}flowforge-logo.png`}
-        alt="FlowForgeIQ"
-        style={{
-          width: logoSize,
-          height: logoSize,
-          objectFit: "contain",
-          filter: "brightness(0) invert(1)",
-          flexShrink: 0,
-          ...(align === "start" ? { marginTop: 2 } : {}),
-        }}
-      />
-      <div className={right ? "flex-1 min-w-0" : undefined}>
-        <p className="text-white font-bold text-[17px] tracking-tight leading-tight">{title}</p>
+      {!back && (
+        <button onClick={openDrawer} className="w-9 h-9 -ml-1 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted" aria-label={t("nav.openMenu")}>
+          <Menu size={18} />
+        </button>
+      )}
+      <div className={right ? "flex-1 min-w-0" : "flex-1 min-w-0"}>
+        <p className="text-foreground font-semibold text-[16px] tracking-tight leading-tight truncate">{title}</p>
         {subtitle != null && (
-          <p className={subtitleClassName}>{subtitle}</p>
+          <p className="text-muted-foreground text-[11px] font-medium mt-0.5 truncate">{subtitle}</p>
         )}
       </div>
-      {right}
+      {right ?? (!back ? <button className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground" aria-label={t("common.search")}><Search size={17} /></button> : null)}
     </div>
   );
 }

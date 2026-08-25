@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Home, Zap, Package, FileText, Settings } from "lucide-react";
+import { Inbox, Package, RadioTower, BarChart3, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export function BottomNav() {
@@ -7,11 +7,11 @@ export function BottomNav() {
   const { t } = useTranslation();
 
   const TABS = [
-    { href: "/home", icon: Home, label: t("nav.home") },
-    { href: "/capture", icon: Zap, label: t("nav.capture") },
-    { href: "/samples", icon: Package, label: "Samples" },
-    { href: "/documents", icon: FileText, label: t("nav.docs") },
-    { href: "/settings", icon: Settings, label: t("nav.settings") },
+    { href: "/home", icon: Inbox, label: t("nav.inbox") },
+    { href: "/orders", icon: Package, label: t("nav.orders") },
+    { href: "/risk", icon: RadioTower, label: t("nav.risk") },
+    { href: "/reports", icon: BarChart3, label: t("nav.reports") },
+    { href: "/more", icon: MoreHorizontal, label: t("nav.more") },
   ];
 
   return (
@@ -19,7 +19,7 @@ export function BottomNav() {
       className="safe-bottom shrink-0 bg-card"
       style={{
         borderTop: "1px solid hsl(var(--border))",
-        boxShadow: "0 -2px 12px rgba(0,0,0,0.06)",
+        boxShadow: "0 -1px 8px rgba(15,23,42,0.06)",
       }}
     >
       <div className="flex">
@@ -30,7 +30,7 @@ export function BottomNav() {
               key={href}
               id={`bottom-nav-${href.replace("/", "")}`}
               onClick={() => navigate(href)}
-              className="flex-1 flex flex-col items-center pt-2.5 pb-2 gap-1 transition-opacity active:opacity-60"
+               className="flex-1 flex flex-col items-center pt-2.5 pb-2 gap-1 transition-opacity active:opacity-60 min-w-0"
               aria-current={active ? "page" : undefined}
             >
               <Icon
