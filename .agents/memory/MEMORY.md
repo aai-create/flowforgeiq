@@ -13,3 +13,4 @@
 - [EAS Clerk no such module ClerkExpo](eas-clerk-no-module-clerkexpo.md) — After nil-guard prevents crash, ClerkKit is never linked → import ClerkExpo fails; fix: wire ClerkKit to user project FlowForge target in post_install.
 - [Org selection cookie](org-selection-cookie.md) — team_users queries for the active workspace must be scoped to req.orgId; never import constants from requireAuth into routes (tests mock it wholesale).
 - [FlowForge provision-self testing limitation](flowforge-provision-self-testing.md) — testClerkAuth e2e can't provision a 2nd+ test user (invite-only after first member) and Clerk userId isn't retrievable client-side; blocks e2e for any auth-gated flow beyond the first user.
+- [Operations workspace shell](operations-workspace-shell.md) — Inbox and My Orders are the canonical shell; RFQs should reuse their one-sidebar, focused-workspace pattern.
