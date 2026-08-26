@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { NavSidebar } from "@/components/NavSidebar";
 import { GlobalHeader } from "@/components/GlobalHeader";
@@ -27,6 +27,10 @@ import {
   Plus, FileText, CheckCircle2, AlertCircle,
   X, Trash2, Edit2, Check, TrendingDown, TrendingUp, Minus,
   Download, ArrowRight, RefreshCw, Info, Mail, ChevronsUpDown, Package,
+  ArrowUpRight, BarChart3, Bell, Building2, CalendarDays, Circle,
+  ClipboardList, Clock3, DollarSign, Inbox, LayoutGrid, MoreHorizontal,
+  PackageCheck, Search, Settings, SlidersHorizontal, Sparkles, UserRound,
+  Users,
 } from "lucide-react";
 import { SamplesTab } from "./SamplesTab";
 import { Button } from "@/components/ui/button";
@@ -253,6 +257,10 @@ export function RFQs() {
   const sendEmailMutation = useSendRfqEmail();
 
   const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
+  const [portfolioSearch, setPortfolioSearch] = useState("");
+  const [portfolioFilter, setPortfolioFilter] = useState<"all" | "needs-review" | "no-quotes" | "accepted">("all");
+  const [showPortfolioFilters, setShowPortfolioFilters] = useState(false);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
   const [showConvert, setShowConvert] = useState(false);
   const [showAddQuote, setShowAddQuote] = useState(() => {
     try { return !!sessionStorage.getItem("rfq_quote_draft"); } catch {} return false;
@@ -315,6 +323,25 @@ export function RFQs() {
   }
 
   const selectedRfq = rfqs.find(r => r.id === selectedRfqId) ?? null;
+  const filteredRfqs = useMemo(() => {
+    const query = portfolioSearch.trim().toLowerCase();
+    return rfqs.filter(rfq => {
+      const matchesSearch = !query || [rfq.product, rfq.category, rfq.buyerName, String(rfq.id)]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+      const matchesFilter =
+        portfolioFilter === "all" ||
+        (portfolioFilter === "needs-review" && rfq.status === "open" && rfq.quotes.length > 0) ||
+        (portfolioFilter === "no-quotes" && rfq.status === "open" && rfq.quotes.length === 0) ||
+        (portfolioFilter === "accepted" && rfq.status === "accepted");
+      return matchesSearch && matchesFilter;
+    });
+  }, [portfolioFilter, portfolioSearch, rfqs]);
+  const totalQuotes = useMemo(() => rfqs.reduce((total, rfq) => total + rfq.quotes.length, 0), [rfqs]);
+  const selectedPreviewQuote = selectedRfq?.quotes.find(q => q.id === selectedQuoteId)
+    ?? selectedRfq?.quotes.find(q => q.status === "accepted")
+    ?? selectedRfq?.quotes.reduce<RfqQuote | undefined>((best, quote) => !best || quote.unitPriceUsd < best.unitPriceUsd ? quote : best, undefined);
 
   useEffect(() => {
     if (rfqs.length > 0 && selectedRfqId === null) {
@@ -575,356 +602,122 @@ export function RFQs() {
         </div>
       )}
 
-      <div className="h-screen w-full bg-[#FAFBFC] text-[#212833] overflow-hidden flex flex-col" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+      <div className="h-screen w-full overflow-hidden bg-[#f6f7f9] text-[#202632]" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+        <div className="flex h-6 items-center justify-between bg-[#e8752c] px-4 text-[10px] font-semibold tracking-[0.01em] text-white">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-white/20 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.13em]">Sourcing workspace</span>
+            <span className="text-white/85">FlowForgeIQ workspace controls</span>
+          </div>
+          <span className="flex items-center gap-1 text-white/85"><Circle size={6} fill="currentColor" /> All systems operational</span>
+        </div>
         <GlobalHeader breadcrumb="RFQs" />
 
-        {/* Tab bar */}
-        <div className="h-9 bg-white border-b border-[#E5EAF0] flex items-center px-5 gap-1 shrink-0">
-          <button
-            onClick={() => setActiveTab("rfqs")}
-            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "rfqs" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
-          >
-            <FileText className="w-3.5 h-3.5" /> RFQs
-          </button>
-          <button
-            onClick={() => setActiveTab("samples")}
-            className={`flex items-center gap-1.5 h-full px-3 text-[12px] font-semibold border-b-2 transition-colors ${activeTab === "samples" ? "border-[#9000FF] text-[#9000FF]" : "border-transparent text-[#5E687B] hover:text-[#212833]"}`}
-          >
-            <Package className="w-3.5 h-3.5" /> Samples
-          </button>
-        </div>
-
-        <div className="flex-1 flex overflow-hidden">
-
         {activeTab === "samples" ? (
-          <SamplesTab />
+          <div className="h-[calc(100vh-72px)] overflow-hidden"><SamplesTab /></div>
         ) : (
-        <>
-        <NavSidebar showBrand={false} counts={{ myOrders: null }}>
-          <div className="px-3 py-2 border-t border-[#E5EAF0]">
-            <div className="mb-1.5 px-2 flex items-center justify-between">
-              <span className={SECTION_LABEL}>{t("rfqs.sidebarTitle")}</span>
-              <button onClick={() => setShowNewRfq(true)} className="p-0.5 hover:bg-[#E5EAF0] rounded transition-colors">
-                <Plus className="w-3 h-3 text-[#5E687B]" />
-              </button>
-            </div>
-            <ScrollArea className="h-[calc(100vh-200px)]">
-              <div className="space-y-0.5 pb-2">
-                {rfqs.length === 0 && (
-                  <div className="text-center py-8 text-[#5E687B] text-xs">
-                    <FileText className="w-6 h-6 mx-auto mb-2 opacity-40" />
-                    <p>{t("rfqs.noRfqs")}</p>
-                    <button onClick={() => setShowNewRfq(true)} className="mt-2 text-[#9000FF] font-semibold hover:underline">
-                      {t("rfqs.createFirst")}
-                    </button>
-                  </div>
-                )}
-                {rfqs.map(rfq => (
-                  <button key={rfq.id} onClick={() => setSelectedRfqId(rfq.id)}
-                    className={`w-full text-left px-2 py-2 rounded-md transition-colors ${selectedRfqId === rfq.id ? "bg-white border border-[#9000FF]/20 shadow-sm" : "hover:bg-[#E5EAF0]"}`}>
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="font-semibold text-[#212833] truncate text-xs">{rfq.product}</span>
-                      <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${statusCls[rfq.status] ?? "bg-slate-100"}`}>
-                        {getStatusLabel(t)[rfq.status] ?? rfq.status}
-                      </span>
-                    </div>
-                    <div className="text-[#5E687B] text-[10px] flex items-center gap-1.5 flex-wrap">
-                      <span>{rfq.buyerName} · {rfq.quantity.toLocaleString()} units · {rfq.quotes.length} quote{rfq.quotes.length !== 1 ? "s" : ""}</span>
-                      <AssigneeBadge assigneeName={rfq.assigneeName} />
-                    </div>
+          <div className="flex h-[calc(100vh-72px)] min-h-0 overflow-hidden">
+            <NavSidebar showBrand={false} counts={{ myOrders: null }} />
+            <aside className="hidden w-[184px] shrink-0 flex-col border-r border-[#e3e6eb] bg-[#fbfbfc] xl:flex">
+              <div className="flex h-[56px] items-center gap-2 border-b border-[#e9ebef] px-4">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eeeaf9] text-[#7657c7]"><Sparkles size={14} /></div>
+                <div><p className="text-[11px] font-bold leading-3 text-[#272c37]">Sourcing</p><p className="mt-0.5 text-[9px] text-[#9299a7]">Buyer workspace</p></div>
+              </div>
+              <div className="flex-1 px-2.5 py-4">
+                <p className="px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#a0a6b1]">Workspace</p>
+                <button className="mt-2 flex w-full items-center gap-2 rounded-lg bg-[#eeebfb] px-2.5 py-2 text-left text-[#7354c5]" aria-current="page">
+                  <ClipboardList size={14} /><span className="flex-1 text-[11px] font-semibold">RFQ command center</span>
+                </button>
+                <button onClick={() => setActiveTab("rfqs")} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[#697386] hover:bg-[#f0f1f4]">
+                  <Package size={14} /><span className="text-[11px] font-medium">Samples & requests</span>
+                </button>
+                <p className="mt-7 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#a0a6b1]">Views</p>
+                {[
+                  ["Open RFQs", rfqs.filter(r => r.status === "open").length, "all"],
+                  ["Awaiting quotes", rfqs.filter(r => r.status === "open" && r.quotes.length === 0).length, "no-quotes"],
+                  ["Needs review", rfqs.filter(r => r.status === "open" && r.quotes.length > 0).length, "needs-review"],
+                  ["Accepted", rfqs.filter(r => r.status === "accepted").length, "accepted"],
+                ].map(([label, count, value]) => (
+                  <button key={label} onClick={() => setPortfolioFilter(value as typeof portfolioFilter)} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[#697386] hover:bg-[#f0f1f4]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#c1c6ce]" /><span className="flex-1 text-[11px]">{label}</span><span className="text-[10px] font-semibold text-[#a4aab5]">{count}</span>
                   </button>
                 ))}
-              </div>
-            </ScrollArea>
-          </div>
-        </NavSidebar>
-
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="h-11 border-b border-[#E5EAF0] bg-white flex items-center justify-between px-5 shrink-0">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#9000FF]" />
-              <span className="font-bold text-sm text-[#212833]">{t("rfqs.sidebarTitle")}</span>
-              {rfqs.length > 0 && (
-                <span className="text-[10px] bg-[#E5EAF0] text-[#5E687B] px-1.5 py-0.5 rounded-full font-bold">{rfqs.filter(r => r.status === "open").length} {t("rfqs.openBadge")}</span>
-              )}
-            </div>
-            <Button size="sm" onClick={() => setShowNewRfq(true)}
-              className="h-7 px-3 bg-[#9000FF] hover:bg-[#7200CC] text-white text-xs font-semibold">
-              <Plus className="w-3 h-3 mr-1" /> {t("rfqs.newRfq")}
-            </Button>
-          </div>
-
-          {/* Main content */}
-          {!selectedRfq ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-[#5E687B]">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p className="font-semibold text-sm">{t("rfqs.noRfqSelected")}</p>
-                <p className="text-xs mt-1">{t("rfqs.noRfqSelectedDesc")}</p>
-                <Button size="sm" className="mt-4 bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={() => setShowNewRfq(true)}>
-                  <Plus className="w-3 h-3 mr-1" /> {t("rfqs.newRfq")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-auto">
-              <div className="max-w-4xl mx-auto p-6">
-                {/* RFQ Header */}
-                <div className="bg-white border border-[#E5EAF0] rounded-xl p-5 mb-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-lg font-bold text-[#212833] truncate">{selectedRfq.product}</h2>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusCls[selectedRfq.status]}`}>
-                          {getStatusLabel(t)[selectedRfq.status]}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {selectedRfq.category && (
-                          <span className="text-xs text-[#5E687B] bg-[#F0F2F5] px-2 py-0.5 rounded-full">{selectedRfq.category}</span>
-                        )}
-                        <AssigneePicker
-                          assigneeId={selectedRfq.assigneeId ?? null}
-                          assigneeName={selectedRfq.assigneeName ?? null}
-                          onChange={(assigneeId) => handleRfqAssigneeChange(selectedRfq.id, assigneeId)}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {selectedRfq.status === "accepted" && (
-                        <Button size="sm" variant="outline" onClick={() => handleDownloadProforma(selectedRfq)}
-                          className="h-7 px-3 text-xs border-[#9000FF]/30 text-[#9000FF] hover:bg-[#9000FF]/5">
-                          <Download className="w-3 h-3 mr-1.5" /> {t("rfqs.proformaPdf")}
-                        </Button>
-                      )}
-                      {selectedRfq.status === "accepted" && selectedRfq.convertedShipmentId && (
-                        <Button size="sm" variant="outline" onClick={() => navigate("/")}
-                          className="h-7 px-3 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-                          <ArrowRight className="w-3 h-3 mr-1.5" /> {t("rfqs.viewPo")}
-                        </Button>
-                      )}
-                      {selectedRfq.status === "open" && (
-                        <>
-                          <Button size="sm" variant="outline" onClick={() => openSendEmail(selectedRfq)}
-                            className="h-7 px-3 text-xs border-[#E5EAF0] text-[#5E687B] hover:bg-[#F0F2F5]">
-                            <Mail className="w-3 h-3 mr-1.5" /> {t("rfqs.sendRfq")}
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => cancelRfq(selectedRfq.id)}
-                            className="h-7 px-3 text-xs text-[#5E687B] hover:text-red-600 hover:bg-red-50">
-                            {t("rfqs.cancelRfq")}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-4 mt-4">
-                    <div>
-                      <div className={`${SECTION_LABEL} mb-0.5`}>{t("rfqs.buyer")}</div>
-                      <div className={SECTION_HEADING}>{selectedRfq.buyerName}</div>
-                    </div>
-                    <div>
-                      <div className={`${SECTION_LABEL} mb-0.5`}>{t("rfqs.targetPrice")}</div>
-                      <div className={SECTION_HEADING}>{usd(selectedRfq.targetPriceUsd)} {t("common.perUnit")}</div>
-                    </div>
-                    <div>
-                      <div className={`${SECTION_LABEL} mb-0.5`}>{t("rfqs.quantity")}</div>
-                      <div className={SECTION_HEADING}>{selectedRfq.quantity.toLocaleString()} {t("common.units")}</div>
-                    </div>
-                    <div>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className={`inline-flex items-center gap-1 ${SECTION_LABEL} mb-0.5 cursor-default`}>
-                              Deadline <Info className="w-3 h-3 text-[#5E687B]/60" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[280px] text-left leading-snug">
-                            {t("rfqs.deadlineTip")}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <div className={SECTION_HEADING}>{shortDate(selectedRfq.deadline)}</div>
-                    </div>
-                  </div>
-                  {selectedRfq.notes && (
-                    <div className="mt-3 pt-3 border-t border-[#F0F2F5] text-[#5E687B] text-xs">{selectedRfq.notes}</div>
-                  )}
+                <div className="mt-7 rounded-xl border border-[#e8e5f2] bg-[#f8f6fd] p-3">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold text-[#6044a9]"><Sparkles size={11} /> Sourcing pulse</p>
+                  <p className="mt-1.5 text-[10px] leading-4 text-[#75708a]">{rfqs.filter(r => r.status === "open" && r.quotes.length > 0).length} quote decisions are ready for review.</p>
+                  <button onClick={() => setPortfolioFilter("needs-review")} className="mt-2 text-[10px] font-bold text-[#7657c7]">Review now <ArrowUpRight size={10} className="inline" /></button>
                 </div>
+              </div>
+              <div className="border-t border-[#e9ebef] px-4 py-3"><span className="flex items-center gap-2 text-[10px] font-medium text-[#7d8491]"><Users size={13} /> Team directory</span></div>
+            </aside>
 
-                {/* Quote Comparison Table */}
-                <div className="bg-white border border-[#E5EAF0] rounded-xl">
-                  <div className="px-5 py-3 border-b border-[#E5EAF0] flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-sm text-[#212833]">{t("rfqs.quoteTable")}</h3>
-                      <p className="text-[11px] text-[#5E687B] mt-0.5">{t("rfqs.quoteTableDesc")}</p>
-                    </div>
-                    {selectedRfq.status === "open" && (
-                      <Button size="sm" onClick={() => setShowAddQuote(true)}
-                        className="h-7 px-3 text-xs bg-[#9000FF] hover:bg-[#7200CC] text-white">
-                        <Plus className="w-3 h-3 mr-1" /> {t("rfqs.addQuote")}
-                      </Button>
-                    )}
+            <main className="flex min-w-0 flex-1 flex-col">
+              <header className="flex h-[56px] shrink-0 items-center gap-4 border-b border-[#e3e6eb] bg-white px-6">
+                <div className="flex min-w-0 flex-1 items-center gap-3"><p className="text-[12px] font-semibold text-[#858d9b]">Sourcing</p><span className="text-[#c4c8d0]">/</span><h1 className="truncate text-[13px] font-bold text-[#262c37]">RFQ Command Center</h1><span className="rounded-full bg-[#f0eff7] px-2 py-1 text-[9px] font-bold text-[#7256bb]">Live</span></div>
+                <div className="flex items-center gap-3"><button className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[#8c95a3] hover:bg-[#f5f6f8]" aria-label="Notifications"><Bell size={16} /><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#e8752c]" /></button><span className="hidden text-[10px] text-[#858d9b] lg:inline">Last synced moments ago</span><button onClick={() => setShowNewRfq(true)} className="flex items-center gap-1.5 rounded-lg bg-[#7457c7] px-3 py-2 text-[10px] font-bold text-white shadow-[0_4px_12px_rgba(116,87,199,0.22)]"><Plus size={13} /> New RFQ</button></div>
+              </header>
+
+              <div className="flex min-h-0 flex-1 overflow-hidden">
+                <section className="min-w-0 flex-1 overflow-y-auto bg-[#f6f7f9] px-6 py-5">
+                  <div className="flex items-start justify-between gap-5">
+                    <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8d95a3]">Active sourcing portfolio</p><h2 className="mt-1.5 text-[25px] font-bold tracking-[-0.035em] text-[#252b36]">Find the next best quote.</h2><p className="mt-1 text-[12px] text-[#858d9b]">A live view of every request, from first send to factory selection.</p></div>
+                    <button onClick={() => setShowNewRfq(true)} className="hidden shrink-0 items-center gap-2 rounded-lg bg-[#7457c7] px-3.5 py-2.5 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(116,87,199,0.22)] sm:flex"><Plus size={14} /> New RFQ</button>
                   </div>
 
-                  {selectedRfq.quotes.length === 0 ? (
-                    <div className="p-10 text-center text-[#5E687B]">
-                      <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                      <p className="text-sm font-semibold mb-1">{t("rfqs.noQuotes")}</p>
-                      <p className="text-xs">{t("rfqs.noQuotesDesc")}</p>
-                      {selectedRfq.status === "open" && (
-                        <Button size="sm" className="mt-3 bg-[#9000FF] hover:bg-[#7200CC] text-white text-xs" onClick={() => setShowAddQuote(true)}>
-                          <Plus className="w-3 h-3 mr-1" /> {t("rfqs.addFirstQuote")}
-                        </Button>
-                      )}
+                  <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    {[
+                      { label: "Total RFQs", value: rfqs.length, sub: "in this workspace", icon: ClipboardList, tone: "text-[#7256bb] bg-[#eeebfb]" },
+                      { label: "Open requests", value: rfqs.filter(r => r.status === "open").length, sub: `${rfqs.filter(r => r.status === "open" && r.quotes.length > 0).length} need attention`, icon: Clock3, tone: "text-[#a36d2a] bg-[#fff4df]" },
+                      { label: "Factory quotes", value: totalQuotes, sub: `across ${rfqs.filter(r => r.quotes.length > 0).length} requests`, icon: DollarSign, tone: "text-[#287765] bg-[#e9f6f1]" },
+                      { label: "Avg. response", value: rfqs.length ? `${(totalQuotes / rfqs.length).toFixed(1)} q` : "—", sub: "quotes per request", icon: BarChart3, tone: "text-[#496796] bg-[#e9eff8]" },
+                    ].map(({ label, value, sub, icon: Icon, tone }) => (
+                      <div key={label} className="rounded-xl border border-[#e4e7ec] bg-white p-3.5 shadow-[0_1px_2px_rgba(27,33,45,0.02)]"><div className="flex items-center gap-2"><span className={`flex h-6 w-6 items-center justify-center rounded-md ${tone}`}><Icon size={13} /></span><span className="text-[10px] font-semibold text-[#858d9b]">{label}</span></div><div className="mt-2 flex items-end justify-between"><p className="text-[21px] font-bold tracking-[-0.04em] text-[#242a35]">{value}</p><p className="text-[9px] text-[#a0a6b1]">{sub}</p></div></div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex items-center gap-3">
+                    <div className="relative min-w-0 flex-1"><Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ba2ae]" /><input value={portfolioSearch} onChange={e => setPortfolioSearch(e.target.value)} placeholder="Search product, buyer, or RFQ number" className="h-9 w-full rounded-lg border border-[#dfe3e9] bg-white pl-9 pr-3 text-[11px] text-[#313844] outline-none placeholder:text-[#a6adb8] focus:border-[#a494dc] focus:ring-2 focus:ring-[#8062d5]/10" /></div>
+                    <div className="hidden items-center rounded-lg border border-[#dfe3e9] bg-white p-0.5 md:flex">
+                      {(["all", "needs-review", "no-quotes"] as const).map(option => <button key={option} onClick={() => setPortfolioFilter(option)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#eeebfb] text-[#6e51bb]" : "text-[#89919d] hover:text-[#5c6572]"}`}>{option === "all" ? "All RFQs" : option === "needs-review" ? "Needs review" : "No quotes"}</button>)}
                     </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[#F0F2F5]">
-                            <th className={`text-left ${SECTION_LABEL} px-5 py-3`}>{t("rfqs.colFactory")}</th>
-                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colUnitPrice")}</th>
-                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colSpread")}</th>
-                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colTotal")}</th>
-                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colLeadTime")}</th>
-                            <th className={`text-right ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colMoq")}</th>
-                            <th className={`text-center ${SECTION_LABEL} px-4 py-3`}>{t("rfqs.colStatus")}</th>
-                            <th className="px-4 py-3" />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedRfq.quotes.map((q, i) => {
-                            const spread = selectedRfq.targetPriceUsd - q.unitPriceUsd;
-                            const totalEst = q.unitPriceUsd * selectedRfq.quantity;
-                            const isLowest = selectedRfq.quotes.length > 1 &&
-                              q.unitPriceUsd === Math.min(...selectedRfq.quotes.map(x => x.unitPriceUsd));
-                            const isEditing = editingQuoteId === q.id;
+                    <button onClick={() => setShowPortfolioFilters(!showPortfolioFilters)} className={`flex h-9 w-9 items-center justify-center rounded-lg border bg-white ${showPortfolioFilters ? "border-[#a494dc] text-[#7457c7]" : "border-[#dfe3e9] text-[#8d95a2]"}`} aria-label="Show RFQ filters"><SlidersHorizontal size={14} /></button>
+                  </div>
+                  {showPortfolioFilters && <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#e6e1f5] bg-[#fbfaff] px-3 py-2 text-[10px] text-[#766c8f]"><span className="font-bold text-[#6e51bb]">Filter:</span><button onClick={() => setPortfolioFilter("accepted")} className="rounded bg-[#eeeaf9] px-2 py-1 font-semibold text-[#6e51bb]">Accepted</button><button onClick={() => { setPortfolioSearch(""); setPortfolioFilter("all"); }} className="rounded px-2 py-1 hover:bg-[#efeff3]">Clear filters</button></div>}
 
-                            return (
-                              <tr key={q.id} className={`border-b border-[#F0F2F5] last:border-0 transition-colors ${q.status === "accepted" ? "bg-emerald-50/40" : isLowest ? "bg-[#F9F6FF]/60" : "hover:bg-[#FAFBFC]"}`}>
-                                {isEditing ? (
-                                  <>
-                                    <td className="px-5 py-2">
-                                      <input className="border border-[#E5EAF0] rounded px-2 py-1 text-xs w-full" value={editQuoteForm.factoryName}
-                                        onChange={e => setEditQuoteForm(f => ({ ...f, factoryName: e.target.value }))} placeholder="Factory name" />
-                                    </td>
-                                    <td className="px-4 py-2">
-                                      <input className="border border-[#E5EAF0] rounded px-2 py-1 text-xs w-24 text-right" type="number" value={editQuoteForm.unitPriceUsd}
-                                        onChange={e => setEditQuoteForm(f => ({ ...f, unitPriceUsd: e.target.value }))} placeholder="0.00" />
-                                    </td>
-                                    <td className="px-4 py-2" colSpan={2} />
-                                    <td className="px-4 py-2">
-                                      <input className="border border-[#E5EAF0] rounded px-2 py-1 text-xs w-16 text-right" type="number" value={editQuoteForm.leadTimeDays}
-                                        onChange={e => setEditQuoteForm(f => ({ ...f, leadTimeDays: e.target.value }))} placeholder="days" />
-                                    </td>
-                                    <td className="px-4 py-2">
-                                      <input className="border border-[#E5EAF0] rounded px-2 py-1 text-xs w-20 text-right" type="number" value={editQuoteForm.moq}
-                                        onChange={e => setEditQuoteForm(f => ({ ...f, moq: e.target.value }))} placeholder="MOQ" />
-                                    </td>
-                                    <td className="px-4 py-2" />
-                                    <td className="px-4 py-2">
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <button onClick={submitEditQuote} className="p-1 hover:bg-emerald-50 rounded text-emerald-600"><Check className="w-3.5 h-3.5" /></button>
-                                        <button onClick={() => setEditingQuoteId(null)} className="p-1 hover:bg-red-50 rounded text-red-400"><X className="w-3.5 h-3.5" /></button>
-                                      </div>
-                                    </td>
-                                  </>
-                                ) : (
-                                  <>
-                                    <td className="px-5 py-3">
-                                      <div className="flex items-center gap-2">
-                                        {q.status === "accepted" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                        {isLowest && q.status !== "accepted" && <span className="text-[9px] font-bold text-[#9000FF] bg-[#9000FF]/10 px-1.5 rounded">{t("rfqs.badgeLowest")}</span>}
-                                        <div>
-                                          <div className="font-semibold text-[#212833]">{q.factoryName}</div>
-                                          <div className="text-[10px] text-[#5E687B]">{fmtCountry(q.country, i18n.language)}</div>
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-semibold text-[#212833]">{usd(q.unitPriceUsd)}</td>
-                                    <td className="px-4 py-3 text-right">
-                                      <div className={`flex items-center justify-end gap-1 font-semibold text-sm ${spread > 0 ? "text-emerald-600" : spread < 0 ? "text-red-500" : "text-[#5E687B]"}`}>
-                                        {spread > 0 ? <TrendingDown className="w-3.5 h-3.5" /> : spread < 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
-                                        {spread >= 0 ? "+" : ""}{usd(Math.abs(spread))}
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-[#5E687B]">{usd(totalEst)}</td>
-                                    <td className="px-4 py-3 text-right text-[#5E687B]">{q.leadTimeDays}d</td>
-                                    <td className="px-4 py-3 text-right text-[#5E687B]">{q.moq.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-center">
-                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${quoteStatusCls[q.status]}`}>{q.status}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <div className="flex items-center gap-1 justify-end">
-                                        {selectedRfq.status === "open" && q.status !== "accepted" && (
-                                          <button onClick={() => handleUseThisQuote(q, selectedRfq)}
-                                            className="px-2 py-1 text-[10px] font-bold bg-[#9000FF] text-white rounded hover:bg-[#7200CC] whitespace-nowrap transition-colors">
-                                            {t("rfqs.useThisQuote")}
-                                          </button>
-                                        )}
-                                        {selectedRfq.status === "open" && (
-                                          <>
-                                            <button onClick={() => {
-                                              setEditingQuoteId(q.id);
-                                              setEditQuoteForm({ factoryName: q.factoryName, country: q.country, unitPriceUsd: String(q.unitPriceUsd), leadTimeDays: String(q.leadTimeDays), moq: String(q.moq), notes: q.notes ?? "", supplierId: q.supplierId ? String(q.supplierId) : "" });
-                                            }} className="p-1 hover:bg-[#E5EAF0] rounded text-[#5E687B]">
-                                              <Edit2 className="w-3 h-3" />
-                                            </button>
-                                            <button onClick={() => deleteQuote(q.id)} className="p-1 hover:bg-red-50 rounded text-[#5E687B] hover:text-red-500">
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </>
-                                )}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                  <div className="mt-3 flex items-center justify-between"><p className="text-[10px] font-semibold text-[#858d9b]">{filteredRfqs.length} requests <span className="font-normal text-[#b0b5be]">· updated moments ago</span></p><button className="flex items-center gap-1 text-[10px] font-semibold text-[#7457c7]"><CalendarDays size={12} /> Current workspace <MoreHorizontal size={11} /></button></div>
+                  <div className="mt-2 overflow-hidden rounded-xl border border-[#e1e4e9] bg-white shadow-[0_2px_5px_rgba(27,33,45,0.025)]">
+                    <div className="grid grid-cols-[minmax(220px,1.7fr)_minmax(105px,.8fr)_90px_100px_88px] items-center gap-3 border-b border-[#e9ebef] bg-[#fbfbfc] px-4 py-2.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[#9aa1ad]"><span>Request</span><span>Buyer / owner</span><span>Deadline</span><span>Quotes</span><span className="text-right">Target</span></div>
+                    {filteredRfqs.length > 0 ? filteredRfqs.map(rfq => {
+                      const isSelected = rfq.id === selectedRfq?.id;
+                      const best = rfq.quotes.length ? Math.min(...rfq.quotes.map(q => q.unitPriceUsd)) : null;
+                      const deadlineLabel = rfq.status === "accepted" ? "Accepted" : rfq.quotes.length ? "Quotes in" : "Awaiting quotes";
+                      return <button type="button" key={rfq.id} onClick={() => { setSelectedRfqId(rfq.id); setSelectedQuoteId(null); }} className={`group grid w-full grid-cols-[minmax(220px,1.7fr)_minmax(105px,.8fr)_90px_100px_88px] items-center gap-3 border-b border-[#eef0f3] px-4 py-3 text-left transition-colors last:border-b-0 ${isSelected ? "bg-[#fbfaff] shadow-[inset_3px_0_0_#8062d5]" : "hover:bg-[#fcfcfd]"}`}>
+                        <div className="min-w-0"><div className="flex items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#eeeaf9] text-[9px] font-bold text-[#7256bb]">{rfq.product.split(" ").slice(0, 2).map(part => part[0]).join("")}</span><div className="min-w-0"><p className="truncate text-[11px] font-bold text-[#2c333f]">{rfq.product} <span className="font-medium text-[#8a929f]">— {rfq.category || "General"}</span></p><div className="mt-1 flex items-center gap-2"><span className="font-mono text-[9px] text-[#a0a6b1]">RFQ-{rfq.id}</span><span className={`rounded border px-1.5 py-0.5 text-[8px] font-bold ${statusCls[rfq.status] ?? "bg-slate-100"}`}>{getStatusLabel(t)[rfq.status] ?? rfq.status}</span></div></div></div></div>
+                        <div className="min-w-0"><p className="truncate text-[10px] font-semibold text-[#4f5866]">{rfq.buyerName}</p><p className="mt-1 flex items-center gap-1 text-[9px] text-[#a0a6b1]"><UserRound size={10} /> {rfq.assigneeName || "Unassigned"}</p></div>
+                        <div><p className="text-[10px] font-semibold text-[#4f5866]">{shortDate(rfq.deadline)}</p><p className={`mt-1 text-[9px] ${rfq.status === "open" && !rfq.quotes.length ? "font-bold text-[#c87336]" : "text-[#a0a6b1]"}`}>{deadlineLabel}</p></div>
+                        <div><div className="flex items-center gap-2"><span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${rfq.quotes.length ? "bg-[#eeeaf9] text-[#7256bb]" : "bg-[#f0f1f3] text-[#a0a6b1]"}`}>{rfq.quotes.length}</span><span className="text-[10px] text-[#78818e]">{rfq.quotes.length === 1 ? "quote" : "quotes"}</span></div>{best !== null && <p className="mt-1 text-[9px] text-[#a0a6b1]">from {usd(best)}</p>}</div>
+                        <div className="text-right"><p className="text-[11px] font-bold text-[#3b4350]">{usd(rfq.targetPriceUsd)}</p><p className="mt-1 text-[9px] text-[#a0a6b1]">per unit</p></div>
+                      </button>;
+                    }) : <div className="flex flex-col items-center justify-center py-14 text-center"><Search size={20} className="text-[#b5bbc5]" /><p className="mt-3 text-[12px] font-semibold text-[#626c7a]">No RFQs match those filters</p><button onClick={() => { setPortfolioSearch(""); setPortfolioFilter("all"); }} className="mt-1 text-[10px] font-bold text-[#7457c7]">Clear filters</button></div>}
+                  </div>
+                </section>
 
-                      {/* Summary footer */}
-                      {selectedRfq.quotes.length > 0 && (
-                        <div className="px-5 py-3 border-t border-[#F0F2F5] bg-[#FAFBFC] flex items-center gap-6 text-xs text-[#5E687B]">
-                          <span>
-                            <span className="font-bold text-[#212833]">{selectedRfq.quotes.length}</span> quote{selectedRfq.quotes.length !== 1 ? "s" : ""}
-                          </span>
-                          <span>
-                            Best: <span className="font-bold text-emerald-600">{usd(Math.min(...selectedRfq.quotes.map(q => q.unitPriceUsd)))}</span>
-                          </span>
-                          <span>
-                            Target: <span className="font-bold text-[#212833]">{usd(selectedRfq.targetPriceUsd)}</span>
-                          </span>
-                          <span>
-                            Best spread: <span className={`font-bold ${selectedRfq.targetPriceUsd - Math.min(...selectedRfq.quotes.map(q => q.unitPriceUsd)) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                              {usd(selectedRfq.targetPriceUsd - Math.min(...selectedRfq.quotes.map(q => q.unitPriceUsd)))}
-                            </span>
-                          </span>
-                        </div>
-                      )}
+                <aside className="flex w-[344px] shrink-0 flex-col border-l border-[#e1e4e9] bg-white">
+                  {selectedRfq ? <>
+                    <div className="border-b border-[#e8eaee] px-5 pb-4 pt-5"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eeeaf9] text-[10px] font-bold text-[#7256bb]">{selectedRfq.product.split(" ").slice(0, 2).map(part => part[0]).join("")}</div><div className="min-w-0"><p className="font-mono text-[9px] font-bold text-[#9aa1ad]">RFQ-{selectedRfq.id}</p><h3 className="mt-1 text-[14px] font-bold leading-5 tracking-[-0.01em] text-[#272e39]">{selectedRfq.product}</h3><p className="text-[11px] text-[#7d8693]">{selectedRfq.category || "General sourcing"}</p></div></div><button onClick={() => selectedRfq.status === "open" && cancelRfq(selectedRfq.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-[#9aa1ad] hover:bg-[#f4f5f7]" aria-label="Cancel RFQ"><MoreHorizontal size={15} /></button></div><div className="mt-4 flex items-center gap-2"><span className={`rounded border px-2 py-1 text-[9px] font-bold ${statusCls[selectedRfq.status] ?? "bg-slate-100"}`}>{getStatusLabel(t)[selectedRfq.status] ?? selectedRfq.status}</span><span className="text-[10px] text-[#9aa1ad]">·</span><span className="text-[10px] text-[#7e8794]">{selectedRfq.quotes.length} factory {selectedRfq.quotes.length === 1 ? "quote" : "quotes"}</span></div></div>
+                    <div className="flex-1 overflow-y-auto px-5 py-4"><div className="grid grid-cols-2 gap-2">{[{ label: "Buyer", value: selectedRfq.buyerName, icon: Building2 }, { label: "Quantity", value: `${selectedRfq.quantity.toLocaleString()} units`, icon: ClipboardList }, { label: "Target price", value: `${usd(selectedRfq.targetPriceUsd)} / unit`, icon: DollarSign }, { label: "Deadline", value: shortDate(selectedRfq.deadline), icon: CalendarDays }].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-lg border border-[#e8eaee] bg-[#fbfbfc] p-2.5"><div className="flex items-center gap-1.5 text-[#a0a7b2]"><Icon size={11} /><span className="text-[9px] font-semibold">{label}</span></div><p className="mt-1.5 truncate text-[10px] font-bold text-[#495362]">{value}</p></div>)}</div>
+                      <div className="mt-5 flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#737d8b]">Quote snapshot</p>{selectedRfq.status === "open" && <button onClick={() => setShowAddQuote(true)} className="flex items-center gap-1 text-[10px] font-bold text-[#7457c7]"><Plus size={12} /> Add quote</button>}</div>
+                      {selectedPreviewQuote && <div className="mt-2 rounded-lg border border-[#ded7f2] bg-[#fbfaff] p-3"><div className="flex items-start justify-between gap-2"><div><p className="text-[10px] font-bold text-[#3c4552]">{selectedPreviewQuote.factoryName}</p><p className="mt-0.5 text-[9px] text-[#a0a6b1]">{fmtCountry(selectedPreviewQuote.country, i18n.language)}</p></div><span className={`rounded px-1.5 py-1 text-[8px] font-bold ${quoteStatusCls[selectedPreviewQuote.status]}`}>{selectedPreviewQuote.status}</span></div><div className="mt-3 grid grid-cols-3 gap-2 border-y border-[#eef0f2] py-2"><div><p className="text-[8px] uppercase tracking-wide text-[#a0a6b1]">Unit price</p><p className="mt-1 text-[11px] font-bold text-[#303946]">{usd(selectedPreviewQuote.unitPriceUsd)}</p></div><div><p className="text-[8px] uppercase tracking-wide text-[#a0a6b1]">Vs target</p><p className={`mt-1 text-[11px] font-bold ${selectedPreviewQuote.unitPriceUsd <= selectedRfq.targetPriceUsd ? "text-[#287765]" : "text-[#ba6c3b]"}`}>{selectedPreviewQuote.unitPriceUsd <= selectedRfq.targetPriceUsd ? "" : "+"}{((selectedPreviewQuote.unitPriceUsd - selectedRfq.targetPriceUsd) / selectedRfq.targetPriceUsd * 100).toFixed(1)}%</p></div><div><p className="text-[8px] uppercase tracking-wide text-[#a0a6b1]">Lead time</p><p className="mt-1 text-[11px] font-bold text-[#303946]">{selectedPreviewQuote.leadTimeDays} days</p></div></div><div className="mt-2 flex items-center justify-between"><span className="text-[9px] text-[#a0a6b1]">MOQ {selectedPreviewQuote.moq.toLocaleString()}</span>{selectedRfq.status === "open" && selectedPreviewQuote.status !== "accepted" && <button onClick={() => { setSelectedQuoteId(selectedPreviewQuote.id); handleUseThisQuote(selectedPreviewQuote, selectedRfq); }} className="flex items-center gap-1 text-[9px] font-bold text-[#7457c7]"><Check size={11} /> Use quote</button>}</div></div>}
+                      {!selectedPreviewQuote && <div className="mt-2 rounded-lg border border-dashed border-[#d9dde4] bg-[#fbfbfc] px-3 py-5 text-center"><DollarSign size={16} className="mx-auto text-[#9ea6b2]" /><p className="mt-2 text-[10px] font-semibold text-[#6e7785]">No factory quotes yet</p><p className="mt-1 text-[9px] leading-4 text-[#a0a6b1]">Add a quote or send this request to your factory network.</p></div>}
+                      {selectedRfq.notes && <div className="mt-4 rounded-lg bg-[#f8f7fc] p-3"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#8d95a3]">Brief notes</p><p className="mt-1.5 text-[10px] leading-4 text-[#726b85]">{selectedRfq.notes}</p></div>}
+                      <div className="mt-5 rounded-lg bg-[#f8f7fc] p-3"><p className="flex items-center gap-1.5 text-[10px] font-bold text-[#6044a9]"><Sparkles size={11} /> Next best action</p><p className="mt-1.5 text-[10px] leading-4 text-[#726b85]">{selectedRfq.quotes.length === 0 ? "Send this RFQ to your factory network before the deadline." : selectedRfq.status === "accepted" ? "Quote selected. Review the live purchase order." : "Compare lead time and landed cost before choosing a supplier."}</p></div>
                     </div>
-                  )}
-                </div>
-
-                {/* Notes */}
-                {selectedRfq.quotes.length > 0 && selectedRfq.status === "open" && (
-                  <p className="text-xs text-[#5E687B] mt-3 text-center">
-                    Click <span className="font-bold text-[#9000FF]">Use this quote</span> on the winning row to accept it and convert this RFQ to a live PO.
-                  </p>
-                )}
+                    <div className="border-t border-[#e8eaee] bg-[#fbfbfc] px-5 py-3">{selectedRfq.status === "accepted" ? <div className="flex gap-2"><button onClick={() => handleDownloadProforma(selectedRfq)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#dcdfe5] bg-white py-2 text-[10px] font-bold text-[#5d6674]"><Download size={12} /> Proforma PDF</button><button onClick={() => navigate("/")} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#7457c7] py-2 text-[10px] font-bold text-white"><ArrowRight size={12} /> View PO</button></div> : <div className="flex gap-2"><button onClick={() => openSendEmail(selectedRfq)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#dcdfe5] bg-white py-2 text-[10px] font-bold text-[#5d6674]"><Mail size={12} /> {selectedRfq.quotes.length ? "Remind factories" : "Send RFQ"}</button>{selectedPreviewQuote ? <button onClick={() => { setSelectedQuoteId(selectedPreviewQuote.id); handleUseThisQuote(selectedPreviewQuote, selectedRfq); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#7457c7] py-2 text-[10px] font-bold text-white"><Check size={12} /> Select quote</button> : <button onClick={() => setShowAddQuote(true)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dcdfe5] bg-white text-[#8a93a0]" title="Add quote"><Plus size={13} /></button>}</div>}</div>
+                  </> : <div className="flex flex-1 flex-col items-center justify-center px-6 text-center"><FileText size={28} className="text-[#b5bbc5]" /><p className="mt-3 text-[12px] font-semibold text-[#626c7a]">{t("rfqs.noRfqSelected")}</p><button onClick={() => setShowNewRfq(true)} className="mt-3 rounded-lg bg-[#7457c7] px-3 py-2 text-[10px] font-bold text-white"><Plus size={12} className="mr-1 inline" /> New RFQ</button></div>}
+                </aside>
               </div>
-            </div>
-          )}
-        </div>
-
-        </>
+            </main>
+          </div>
         )}
-
-        </div>
       </div>
 
       {/* New RFQ Modal */}
