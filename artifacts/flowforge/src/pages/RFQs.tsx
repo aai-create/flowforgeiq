@@ -613,7 +613,13 @@ export function RFQs() {
         <GlobalHeader breadcrumb="RFQs" />
 
         {activeTab === "samples" ? (
-          <div className="h-[calc(100vh-72px)] overflow-hidden"><SamplesTab /></div>
+          <div className="flex h-[calc(100vh-72px)] flex-col overflow-hidden">
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#e3e6eb] bg-white px-5">
+              <div className="flex items-center gap-2"><Package className="h-4 w-4 text-[#7457c7]" /><span className="text-sm font-bold text-[#272c37]">Samples</span></div>
+              <button onClick={() => setActiveTab("rfqs")} className="rounded-lg border border-[#dfe3e9] px-3 py-1.5 text-[10px] font-bold text-[#5d6674] hover:bg-[#f7f7f9]">Back to RFQs</button>
+            </div>
+            <div className="min-h-0 flex-1"><SamplesTab /></div>
+          </div>
         ) : (
           <div className="flex h-[calc(100vh-72px)] min-h-0 overflow-hidden">
             <NavSidebar showBrand={false} counts={{ myOrders: null }} />
@@ -627,7 +633,7 @@ export function RFQs() {
                 <button className="mt-2 flex w-full items-center gap-2 rounded-lg bg-[#eeebfb] px-2.5 py-2 text-left text-[#7354c5]" aria-current="page">
                   <ClipboardList size={14} /><span className="flex-1 text-[11px] font-semibold">RFQ command center</span>
                 </button>
-                <button onClick={() => setActiveTab("rfqs")} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[#697386] hover:bg-[#f0f1f4]">
+                <button onClick={() => setActiveTab("samples")} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[#697386] hover:bg-[#f0f1f4]">
                   <Package size={14} /><span className="text-[11px] font-medium">Samples & requests</span>
                 </button>
                 <p className="mt-7 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#a0a6b1]">Views</p>
