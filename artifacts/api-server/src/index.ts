@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "./lib/migrations";
 import { seedFab4DemoOnce } from "./lib/seedFab4DemoOnce";
+import { startEnrichmentWorker } from "./lib/enrichment-jobs";
 
 const rawPort = process.env["PORT"];
 
@@ -32,6 +33,7 @@ runMigrations()
       }
 
       logger.info({ port }, "Server listening");
+      startEnrichmentWorker();
     });
   })
   .catch((err) => {

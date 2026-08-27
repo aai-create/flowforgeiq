@@ -10,6 +10,7 @@ import {
   triageInboundEmail,
 } from "../lib/inbound-triage";
 import { makeReviewDecision, needsHumanReview } from "../lib/decision-review";
+import { enqueueMessageEnrichment } from "../lib/enrichment-jobs";
 
 const router: IRouter = Router();
 
@@ -483,18 +484,12 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   });
 
   if (!ruleMatch && directShipmentId === null && !contentTriage.suppressionReason) {
-    const requestId = req.headers["x-request-id"];
-    const correlationId = typeof requestId === "string" && requestId.trim() ? requestId : undefined;
-    setImmediate(() => {
-      enrichMessageWithAI(
-        inserted.id,
-        orgId,
-        input.senderRaw,
-        input.messageText,
-        contact.supplierId,
-        correlationId,
-      );
-    });
+    try {
+      await enqueueMessageEnrichment(orgId, inserted.id);
+    } catch (error) {
+      // The message is safely persisted; a later operator retry remains possible.
+      req.log.error({ error, messageId: inserted.id }, "capture/mobile: could not queue AI enrichment");
+    }
   }
 });
 

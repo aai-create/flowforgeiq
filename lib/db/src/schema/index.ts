@@ -28,3 +28,4 @@ export * from "./sample_requests";
 export * from "./copilot_settings";
 export * from "./legal_acceptances";
 export * from "./ai_usage";
+export * from "./ai_enrichment_jobs";

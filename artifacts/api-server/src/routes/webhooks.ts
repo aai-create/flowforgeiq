@@ -27,6 +27,7 @@ import {
   triageInboundEmail,
 } from "../lib/inbound-triage";
 import { makeReviewDecision, ROUTING_AUTO_CONFIRM_CONFIDENCE } from "../lib/decision-review";
+import { enqueueMessageEnrichment } from "../lib/enrichment-jobs";
 
 const router: IRouter = Router();
 
@@ -1205,28 +1206,13 @@ router.post("/webhooks/email", async (req, res) => {
           } catch { /* best-effort */ }
         });
 
-        if (!inboundTriage.suppressionReason) setImmediate(async () => {
+        if (!inboundTriage.suppressionReason) {
           try {
-            const shipmentForDraft = finalShipmentId
-              ? (await db.select({
-                  id: shipmentsTable.id, poNumber: shipmentsTable.poNumber, product: shipmentsTable.product,
-                  customerName: shipmentsTable.customerName, supplierId: shipmentsTable.supplierId,
-                  exFactoryDate: shipmentsTable.exFactoryDate, dueDate: shipmentsTable.dueDate,
-                }).from(shipmentsTable).where(eq(shipmentsTable.id, finalShipmentId!)))[0] ?? null
-              : null;
-            const rawBody3 = inboundTriage.normalizedBody;
-            const [draft3, tags3] = await Promise.all([
-              draftReplyWithAI(rawBody3, Subject ?? "", shipmentForDraft ?? null, scopedOrgId, msg2.id),
-              buildAiTags(rawBody3, Subject ?? ""),
-            ]);
-            const patch3: Record<string, unknown> = { aiDraft: draft3 };
-            if (tags3.length) patch3.aiTags = tags3;
-            await db.update(messagesTable).set(patch3).where(eq(messagesTable.id, msg2.id));
-            if (finalShipmentId) {
-              await extractFieldsFromEmail(rawBody3, Subject ?? "", finalShipmentId, msg2.id, scopedOrgId);
-            }
-          } catch { /* best-effort */ }
-        });
+            await enqueueMessageEnrichment(scopedOrgId, msg2.id);
+          } catch (error) {
+            req.log.error({ error, messageId: msg2.id }, "email-webhook: could not queue AI enrichment");
+          }
+        }
 
         const documentIds2: number[] = [];
         if (Attachments && Attachments.length > 0) {
@@ -1465,37 +1451,13 @@ router.post("/webhooks/email", async (req, res) => {
     }
   });
 
-  // Async: AI reply draft + field extraction
-  setImmediate(async () => {
-    try {
-      const shipment = finalShipmentId
-        ? (await db.select({
-            id: shipmentsTable.id,
-            poNumber: shipmentsTable.poNumber,
-            product: shipmentsTable.product,
-            customerName: shipmentsTable.customerName,
-            supplierId: shipmentsTable.supplierId,
-            exFactoryDate: shipmentsTable.exFactoryDate,
-            dueDate: shipmentsTable.dueDate,
-          }).from(shipmentsTable).where(eq(shipmentsTable.id, finalShipmentId)))[0] ?? null
-        : null;
-
-      const [draft, aiTags] = await Promise.all([
-        draftReplyWithAI(inboundTriage.normalizedBody, Subject ?? "", shipment ?? null, scopedOrgId, msg.id),
-        buildAiTags(inboundTriage.normalizedBody, Subject ?? ""),
-      ]);
-
-      const patch: Record<string, unknown> = { aiDraft: draft };
-      if (aiTags.length) patch.aiTags = aiTags;
-      await db.update(messagesTable).set(patch).where(eq(messagesTable.id, msg.id));
-
-      if (finalShipmentId && routingStatus === "routed") {
-        await extractFieldsFromEmail(inboundTriage.normalizedBody, Subject ?? "", finalShipmentId, msg.id, scopedOrgId);
-      }
-    } catch {
-      // best-effort
-    }
-  });
+  // Queue non-critical AI work after acknowledgement. Its record survives a
+  // request/process failure and has an organization-scoped idempotency key.
+  try {
+    await enqueueMessageEnrichment(scopedOrgId, msg.id);
+  } catch (error) {
+    req.log.error({ error, messageId: msg.id }, "email-webhook: could not queue AI enrichment");
+  }
 
   // Ingest attachments
   const documentIds: number[] = [];
