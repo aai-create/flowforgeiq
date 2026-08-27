@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizationsTable } from "./organizations";
@@ -35,6 +35,7 @@ export const messagesTable = pgTable("messages", {
 }, (t) => [
   index("messages_org_id_idx").on(t.orgId),
   index("messages_signal_status_org_idx").on(t.orgId, t.signalStatus),
+  uniqueIndex("messages_org_gmail_message_id_unique").on(t.orgId, t.gmailMessageId),
 ]);
 
 export const insertMessageSchema = createInsertSchema(messagesTable).omit({ id: true });

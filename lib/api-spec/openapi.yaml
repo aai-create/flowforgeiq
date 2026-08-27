@@ -3531,9 +3531,12 @@ components:
 
     InboundEmailWebhookResponse:
       type: object
-      required: [accepted, documentIds]
+      required: [accepted, duplicate, documentIds]
       properties:
         accepted: { type: boolean }
+        duplicate:
+          type: boolean
+          description: True when this provider message was already accepted for the same organization.
         documentIds:
           type: array
           items: { type: integer }

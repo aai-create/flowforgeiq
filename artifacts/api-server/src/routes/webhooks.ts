@@ -185,8 +185,40 @@ function getInboundGmailMetadata(payload: unknown): {
       headerValue("X-Gmail-Thread-ID", "Gmail-Thread-ID"),
     gmailMessageId:
       value("MessageID", "GmailMessageId", "GmailMessageID", "gmailMessageId", "messageId") ??
-      headerValue("Message-ID", "In-Reply-To"),
+      headerValue("Message-ID"),
   };
+}
+
+function inboundEmailAcceptedResponse(
+  documentIds: number[] = [],
+  duplicate = false,
+): { accepted: true; duplicate: boolean; documentIds: number[] } {
+  return { accepted: true, duplicate, documentIds };
+}
+
+/**
+ * Provider Message-ID is the only stable replay key currently available from
+ * the inbound email payload. In-Reply-To identifies a parent message, so it
+ * must never be used here or separate replies could be incorrectly suppressed.
+ */
+async function inboundEmailAlreadyAccepted(
+  orgId: number,
+  gmailMessageId: string | null,
+): Promise<boolean> {
+  if (!gmailMessageId) return false;
+
+  const [existing] = await db
+    .select({ id: messagesTable.id })
+    .from(messagesTable)
+    .where(
+      and(
+        eq(messagesTable.orgId, orgId),
+        eq(messagesTable.gmailMessageId, gmailMessageId),
+      ),
+    )
+    .limit(1);
+
+  return existing !== undefined;
 }
 
 // ─── PO / shipment reference scanning ─────────────────────────────────────────
@@ -826,12 +858,26 @@ router.post("/webhooks/email", async (req, res) => {
     scopedOrgId = tokenRow?.orgId ?? 1;
   }
 
+  if (!gmailMessageId) {
+    req.log.warn(
+      { scopedOrgId, to: toAddress },
+      "email-webhook: provider message ID unavailable; accepting without replay protection",
+    );
+  } else if (await inboundEmailAlreadyAccepted(scopedOrgId, gmailMessageId)) {
+    req.log.info(
+      { scopedOrgId, gmailMessageId },
+      "email-webhook: duplicate provider delivery ignored",
+    );
+    res.json(inboundEmailAcceptedResponse([], true));
+    return;
+  }
+
   // Emails with no plus-token route to unscoped needs-review immediately
   if (!plusToken) {
     req.log.info({ to: toAddress }, "email-webhook: no plus-token, routing to unscoped needs-review");
     const rawBody = TextBody ?? "";
     const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
-    await db.insert(messagesTable).values({
+    const inserted = await db.insert(messagesTable).values({
       shipmentId: null,
       supplierId: null,
       sender: From ?? "Unknown Sender",
@@ -855,8 +901,12 @@ router.post("/webhooks/email", async (req, res) => {
       receivedAt: new Date(),
       routedToClerkUserId: null,
       orgId: scopedOrgId,
-    });
-    res.json({ accepted: true, documentIds: [] });
+    })
+      .onConflictDoNothing({
+        target: [messagesTable.orgId, messagesTable.gmailMessageId],
+      })
+      .returning({ id: messagesTable.id });
+    res.json(inboundEmailAcceptedResponse([], inserted.length === 0));
     return;
   }
 
@@ -865,7 +915,7 @@ router.post("/webhooks/email", async (req, res) => {
     req.log.warn({ plusToken, to: toAddress }, "email-webhook: plus-token unresolved, routing to unscoped needs-review");
     const rawBody = TextBody ?? "";
     const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
-    await db.insert(messagesTable).values({
+    const inserted = await db.insert(messagesTable).values({
       shipmentId: null,
       supplierId: null,
       sender: From ?? "Unknown Sender",
@@ -889,8 +939,12 @@ router.post("/webhooks/email", async (req, res) => {
       receivedAt: new Date(),
       routedToClerkUserId: null,
       orgId: scopedOrgId,
-    });
-    res.json({ accepted: true, documentIds: [] });
+    })
+      .onConflictDoNothing({
+        target: [messagesTable.orgId, messagesTable.gmailMessageId],
+      })
+      .returning({ id: messagesTable.id });
+    res.json(inboundEmailAcceptedResponse([], inserted.length === 0));
     return;
   }
 
@@ -919,7 +973,7 @@ router.post("/webhooks/email", async (req, res) => {
       const routingStatus = extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
       const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
 
-      await db.insert(messagesTable).values({
+      const inserted = await db.insert(messagesTable).values({
         shipmentId: routingStatus === "routed" ? (extracted.shipmentId ?? null) : null,
         supplierId: null,
         sender: normalised.primarySender,
@@ -938,13 +992,19 @@ router.post("/webhooks/email", async (req, res) => {
         routingConfidence: extracted.confidence,
         matchMethod: extracted.matchMethod,
         rawSenderEmail: From ?? null,
+        gmailThreadId,
+        gmailMessageId,
         receivedAt: new Date(),
         routedToClerkUserId: scopedClerkUserId,
         orgId: scopedOrgId,
-      });
+      })
+        .onConflictDoNothing({
+          target: [messagesTable.orgId, messagesTable.gmailMessageId],
+        })
+        .returning({ id: messagesTable.id });
 
       req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus, scopedClerkUserId }, "email-webhook: chat forward ingested");
-      res.json({ accepted: true, documentIds: [] });
+      res.json(inboundEmailAcceptedResponse([], inserted.length === 0));
       return;
     } catch (err) {
       req.log.error({ err }, "email-webhook: chat forward processing failed, falling through to normal handling");
@@ -1034,7 +1094,19 @@ router.post("/webhooks/email", async (req, res) => {
             routedToClerkUserId: ctx.scopedClerkUserId,
             orgId: scopedOrgId,
           })
+          .onConflictDoNothing({
+            target: [messagesTable.orgId, messagesTable.gmailMessageId],
+          })
           .returning();
+
+        if (!msg2) {
+          req.log.info(
+            { scopedOrgId, gmailMessageId },
+            "email-webhook: duplicate provider delivery won by concurrent request",
+          );
+          res.json(inboundEmailAcceptedResponse([], true));
+          return;
+        }
 
         setImmediate(async () => {
           try {
@@ -1096,7 +1168,7 @@ router.post("/webhooks/email", async (req, res) => {
           }
         }
 
-        res.json({ accepted: true, documentIds: documentIds2 });
+        res.json(inboundEmailAcceptedResponse(documentIds2));
         return;
       } else {
         // Rule's shipment no longer belongs to this org — deactivate it and record why
@@ -1259,7 +1331,19 @@ router.post("/webhooks/email", async (req, res) => {
       routedToClerkUserId: ctx.scopedClerkUserId,
       orgId: scopedOrgId,
     })
+    .onConflictDoNothing({
+      target: [messagesTable.orgId, messagesTable.gmailMessageId],
+    })
     .returning();
+
+  if (!msg) {
+    req.log.info(
+      { scopedOrgId, gmailMessageId },
+      "email-webhook: duplicate provider delivery won by concurrent request",
+    );
+    res.json(inboundEmailAcceptedResponse([], true));
+    return;
+  }
 
   // Async: push notification + AI reply draft + field extraction
   setImmediate(async () => {
@@ -1337,7 +1421,7 @@ router.post("/webhooks/email", async (req, res) => {
     }
   }
 
-  res.json({ accepted: true, documentIds });
+  res.json(inboundEmailAcceptedResponse(documentIds));
 });
 
 async function buildAiTags(body: string, subject: string): Promise<string[]> {

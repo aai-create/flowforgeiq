@@ -176,6 +176,13 @@
       "when": 1787616100000,
       "tag": "0024_add_legal_acceptances",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787801320197,
+      "tag": "0025_repair_gmail_threading_and_replay_guard",
+      "breakpoints": true
     }
   ]
 }
