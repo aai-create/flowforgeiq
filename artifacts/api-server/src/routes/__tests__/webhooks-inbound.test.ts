@@ -130,6 +130,27 @@ describe("POST /webhooks/email — persistence and replay safety", () => {
     expect(lastInsertValues).toBeNull();
   });
 
+  it("acknowledges an atomic duplicate when a concurrent delivery wins the insert", async () => {
+    selectQueue = [[]];
+    mockInsertReturning.mockResolvedValue([]);
+    const app = await buildTestApp();
+
+    const response = await request(app)
+      .post("/webhooks/email?token=test-webhook-token")
+      .send({ ...VALID_BODY, MessageID: "<concurrent-provider-message@example.com>" });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      accepted: true,
+      duplicate: true,
+      documentIds: [],
+    });
+    expect(lastInsertValues).toMatchObject({
+      gmailMessageId: "<concurrent-provider-message@example.com>",
+      orgId: 1,
+    });
+  });
+
   it("keeps a missing provider ID explicit and does not use In-Reply-To as a replay key", async () => {
     mockInsertReturning.mockResolvedValue([{ id: 88 }]);
     const app = await buildTestApp();

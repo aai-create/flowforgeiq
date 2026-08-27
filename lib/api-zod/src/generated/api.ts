@@ -2719,9 +2719,9 @@ export const InboundEmailWebhookBody = zod.object({
   "HtmlBody": zod.string().optional(),
   "To": zod.string().optional().describe('The address the email was delivered to (may be plus-addressed, e.g. iq+token@flowforgeiq.com)'),
   "OriginalRecipient": zod.string().optional().describe('Postmark\'s original recipient header, used to extract plus-token for per-user routing'),
-   "MessageID": zod.string().optional().describe('RFC Message-ID from the inbound provider, used for reply threading'),
-   "GmailThreadId": zod.string().optional().describe('Gmail thread ID when supplied by the inbound provider'),
-   "ThreadID": zod.string().optional().describe('Legacy alias for the Gmail thread ID'),
+  "MessageID": zod.string().optional().describe('RFC Message-ID from the inbound provider, used for reply threading'),
+  "GmailThreadId": zod.string().optional().describe('Gmail thread ID when supplied by the inbound provider'),
+  "ThreadID": zod.string().optional().describe('Legacy alias for the Gmail thread ID'),
   "Attachments": zod.array(zod.object({
   "Name": zod.string(),
   "Content": zod.string().describe('Base64-encoded file content'),
@@ -2732,6 +2732,7 @@ export const InboundEmailWebhookBody = zod.object({
 
 export const InboundEmailWebhookResponse = zod.object({
   "accepted": zod.boolean(),
+  "duplicate": zod.boolean().describe('True when this provider message was already accepted for the same organization.'),
   "documentIds": zod.array(zod.number())
 })
 

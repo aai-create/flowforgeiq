@@ -3411,9 +3411,9 @@ components:
         HtmlBody: { type: string }
         To: { type: string, description: "The address the email was delivered to (may be plus-addressed, e.g. iq+token@flowforgeiq.com)" }
         OriginalRecipient: { type: string, description: "Postmark's original recipient header, used to extract plus-token for per-user routing" }
-         MessageID: { type: string, description: "RFC Message-ID from the inbound provider, used for reply threading" }
-         GmailThreadId: { type: string, description: "Gmail thread ID when supplied by the inbound provider" }
-         ThreadID: { type: string, description: "Legacy alias for the Gmail thread ID" }
+        MessageID: { type: string, description: "RFC Message-ID from the inbound provider, used for reply threading" }
+        GmailThreadId: { type: string, description: "Gmail thread ID when supplied by the inbound provider" }
+        ThreadID: { type: string, description: "Legacy alias for the Gmail thread ID" }
         Attachments:
           type: array
           items: { $ref: "#/components/schemas/InboundEmailAttachment" }

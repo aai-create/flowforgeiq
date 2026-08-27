@@ -8,5 +8,7 @@
 
 export interface InboundEmailWebhookResponse {
   accepted: boolean;
+  /** True when this provider message was already accepted for the same organization. */
+  duplicate: boolean;
   documentIds: number[];
 }

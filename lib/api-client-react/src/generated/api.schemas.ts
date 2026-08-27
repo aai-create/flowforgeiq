@@ -1279,6 +1279,12 @@ export interface InboundEmailWebhook {
   To?: string;
   /** Postmark's original recipient header, used to extract plus-token for per-user routing */
   OriginalRecipient?: string;
+  /** RFC Message-ID from the inbound provider, used for reply threading */
+  MessageID?: string;
+  /** Gmail thread ID when supplied by the inbound provider */
+  GmailThreadId?: string;
+  /** Legacy alias for the Gmail thread ID */
+  ThreadID?: string;
   Attachments?: InboundEmailAttachment[];
 }
 
@@ -1438,6 +1444,8 @@ export interface ChatIngestResult {
 
 export interface InboundEmailWebhookResponse {
   accepted: boolean;
+  /** True when this provider message was already accepted for the same organization. */
+  duplicate: boolean;
   documentIds: number[];
 }
 
