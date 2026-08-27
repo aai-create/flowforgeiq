@@ -1549,6 +1549,36 @@ paths:
         "404":
           description: Message not found
 
+  /signal-inbox/{messageId}/review:
+    post:
+      operationId: reviewSignal
+      tags: [messages]
+      summary: Confirm, correct, dismiss, or defer an uncertain routing or extraction decision
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignalReviewInput" }
+      responses:
+        "200":
+          description: Review decision recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+        "400":
+          description: Invalid review action or correction
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message not found
+        "409":
+          description: Review was already completed or changed concurrently
+
   /signal-inbox/{messageId}/draft:
     patch:
       operationId: updateSignalDraft
@@ -2905,6 +2935,23 @@ components:
             fromEmail:     { type: string, description: "The sender email address that had the rule" }
             oldPoNumber:   { type: string, description: "PO number of the shipment that closed and deactivated the rule" }
             oldShipmentId: { type: integer, description: "DB id of the shipment that closed" }
+         reviewStatus:
+           { type: string, description: "not_required | pending | confirmed | corrected | dismissed | deferred | error" }
+         reviewDecision:
+           type: ["object", "null"]
+           additionalProperties: true
+           description: "Structured category, confidence, reason, and evidence for the pending decision"
+         reviewAudit:
+           type: array
+           items: { type: object, additionalProperties: true }
+           description: "Append-only history of review actions"
+    SignalReviewInput:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [confirm, correct, dismiss, defer] }
+        shipmentId: { type: integer, description: "Required for a correction; optional for confirming an AI shipment match" }
+        note: { type: string, maxLength: 2000 }
     MessageInput:
       type: object
       required: [sender, channel, snippet, fullBody]
