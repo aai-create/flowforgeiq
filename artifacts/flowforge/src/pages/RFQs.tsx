@@ -32,6 +32,7 @@ import {
   Search, SlidersHorizontal, Sparkles, UserRound,
 } from "lucide-react";
 import { SamplesTab } from "./SamplesTab";
+import { RfqSourcingJourney } from "@/components/RfqSourcingJourney";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -257,7 +258,7 @@ export function RFQs() {
 
   const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
   const [portfolioSearch, setPortfolioSearch] = useState("");
-  const [portfolioFilter, setPortfolioFilter] = useState<"all" | "needs-review" | "no-quotes" | "accepted">("all");
+  const [portfolioFilter, setPortfolioFilter] = useState<"all" | "needs-review" | "no-quotes" | "samples" | "accepted">("all");
   const [showPortfolioFilters, setShowPortfolioFilters] = useState(false);
   const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
@@ -335,6 +336,7 @@ export function RFQs() {
         portfolioFilter === "all" ||
         (portfolioFilter === "needs-review" && rfq.status === "open" && rfq.quotes.length > 0) ||
         (portfolioFilter === "no-quotes" && rfq.status === "open" && rfq.quotes.length === 0) ||
+        (portfolioFilter === "samples" && rfq.status === "open" && (rfq.samples ?? []).some(sample => sample.approvalOutcome !== "approved")) ||
         (portfolioFilter === "accepted" && rfq.status === "accepted");
       return matchesSearch && matchesFilter;
     });
@@ -346,6 +348,11 @@ export function RFQs() {
 
   useEffect(() => {
     if (rfqs.length > 0 && selectedRfqId === null) {
+      const requestedId = Number(new URLSearchParams(window.location.search).get("rfqId"));
+      if (Number.isFinite(requestedId) && rfqs.some(r => r.id === requestedId)) {
+        setSelectedRfqId(requestedId);
+        return;
+      }
       try {
         const stored = sessionStorage.getItem(QUOTE_DRAFT_KEY);
         if (stored) {
@@ -469,23 +476,19 @@ export function RFQs() {
   };
 
   const handleUseThisQuote = (q: RfqQuote, rfq: RfqWithQuotes) => {
-    const supplierName = q.supplierId
-      ? (suppliers.find(s => s.id === q.supplierId)?.name ?? q.factoryName)
-      : q.factoryName;
-    try {
-      sessionStorage.setItem("rfq_po_prefill", JSON.stringify({
-        rfqQuoteId: q.id,
-        supplierId: q.supplierId ? String(q.supplierId) : "",
-        supplierName,
-        product: rfq.product,
-        quantity: String(rfq.quantity),
-        unitCostUsd: String(q.unitPriceUsd),
-      }));
-    } catch {}
-    navigate(`/orders?new=1&rfqQuoteId=${q.id}`);
+    if (!rfq.samples?.some(sample => sample.rfqQuoteId === q.id && sample.approvalOutcome === "approved" && sample.milestone === "approved")) {
+      showToast("A linked sample with written approval is required before creating a PO.");
+      return;
+    }
+    openConvert(q.id);
   };
 
   const openConvert = (quoteId: number) => {
+    const canConvert = selectedRfq?.samples?.some(sample => sample.rfqQuoteId === quoteId && sample.approvalOutcome === "approved" && sample.milestone === "approved");
+    if (!canConvert) {
+      showToast("A linked sample with written approval is required before creating a PO.");
+      return;
+    }
     setConvertForm({ acceptedQuoteId: quoteId, poNumber: "", supplierId: "", dueDate: "", exFactoryDate: "", destination: "", via: "OCEAN", depositPct: "30" });
     setConvertError(null);
     setShowConvert(true);
@@ -639,7 +642,7 @@ export function RFQs() {
                 <div className="flex shrink-0 items-center gap-2"><h1 className="text-sm font-bold text-[#212833]">{t("rfqs.title")}</h1><span className="rounded-full bg-[#F0F4F8] px-2 py-0.5 text-[10px] font-semibold text-[#5E687B]">{filteredRfqs.length}/{rfqs.length}</span></div>
                 <div className="mx-1 hidden h-5 w-px bg-[#E5EAF0] sm:block" />
                 <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-[#E5EAF0] bg-white p-0.5" role="tablist" aria-label={t("rfqs.views")}>
-                  {(["all", "needs-review", "no-quotes", "accepted"] as const).map(option => <button key={option} role="tab" aria-selected={portfolioFilter === option} onClick={() => setPortfolioFilter(option)} className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#9000FF] text-white" : "text-[#5E687B] hover:bg-[#F0F4F8]"}`}>{option === "all" ? t("common.all") : option === "needs-review" ? t("rfqs.needsReview") : option === "no-quotes" ? t("rfqs.awaitingQuotes") : t("rfqs.status.accepted")}</button>)}
+                  {(["all", "needs-review", "no-quotes", "samples", "accepted"] as const).map(option => <button key={option} role="tab" aria-selected={portfolioFilter === option} onClick={() => setPortfolioFilter(option)} className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#9000FF] text-white" : "text-[#5E687B] hover:bg-[#F0F4F8]"}`}>{option === "all" ? t("common.all") : option === "needs-review" ? t("rfqs.needsReview") : option === "no-quotes" ? t("rfqs.awaitingQuotes") : option === "samples" ? "Samples / approval" : t("rfqs.status.accepted")}</button>)}
                 </div>
                 <div className="relative ml-auto min-w-[150px] max-w-[240px] flex-1 sm:min-w-[190px]"><Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9E9FAE]" /><input value={portfolioSearch} onChange={e => setPortfolioSearch(e.target.value)} placeholder={t("rfqs.searchPlaceholder")} aria-label={t("common.search")} className="w-full rounded-md border border-transparent bg-[#F0F4F8] py-1.5 pl-8 pr-7 text-[11px] outline-none placeholder:text-[#9E9FAE] focus:border-[#9000FF]/30 focus:bg-white focus:ring-1 focus:ring-[#9000FF]/10" />{portfolioSearch && <button onClick={() => setPortfolioSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE]" aria-label={t("common.clear")}><X size={12} /></button>}</div>
                 <button onClick={() => setShowPortfolioFilters(v => !v)} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${showPortfolioFilters ? "border-[#9000FF]/30 bg-[#9000FF]/5 text-[#9000FF]" : "border-[#E5EAF0] text-[#5E687B] hover:bg-[#F0F4F8]"}`} aria-label={t("rfqs.filterButton")} aria-pressed={showPortfolioFilters}><SlidersHorizontal size={14} /></button>
@@ -655,7 +658,7 @@ export function RFQs() {
                   <div className="flex items-center gap-3">
                     <div className="relative min-w-0 flex-1"><Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ba2ae]" /><input value={portfolioSearch} onChange={e => setPortfolioSearch(e.target.value)} placeholder={t("rfqs.searchPlaceholder")} aria-label={t("common.search")} className="h-9 w-full rounded-lg border border-[#dfe3e9] bg-white pl-9 pr-3 text-[11px] text-[#313844] outline-none placeholder:text-[#a6adb8] focus:border-[#a494dc] focus:ring-2 focus:ring-[#8062d5]/10" /></div>
                     <div className="hidden items-center rounded-lg border border-[#dfe3e9] bg-white p-0.5 md:flex">
-                      {(["all", "needs-review", "no-quotes"] as const).map(option => <button key={option} onClick={() => setPortfolioFilter(option)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#eeebfb] text-[#6e51bb]" : "text-[#89919d] hover:text-[#5c6572]"}`}>{option === "all" ? "All RFQs" : option === "needs-review" ? "Needs review" : "No quotes"}</button>)}
+                  {(["all", "needs-review", "no-quotes", "samples"] as const).map(option => <button key={option} onClick={() => setPortfolioFilter(option)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#eeebfb] text-[#6e51bb]" : "text-[#89919d] hover:text-[#5c6572]"}`}>{option === "all" ? "All RFQs" : option === "needs-review" ? "Needs review" : option === "no-quotes" ? "No quotes" : "Samples / approval"}</button>)}
                     </div>
                     <button onClick={() => setShowPortfolioFilters(!showPortfolioFilters)} className={`flex h-9 w-9 items-center justify-center rounded-lg border bg-white ${showPortfolioFilters ? "border-[#a494dc] text-[#7457c7]" : "border-[#dfe3e9] text-[#8d95a2]"}`} aria-label={t("rfqs.filterButton")} aria-pressed={showPortfolioFilters}><SlidersHorizontal size={14} /></button>
                   </div>
@@ -690,6 +693,7 @@ export function RFQs() {
 
                 <aside className={`${selectedRfq ? "flex" : "hidden lg:flex"} w-full shrink-0 flex-col border-l border-[#E5EAF0] bg-white lg:w-[390px]`}>
                   {selectedRfq ? <>
+                    <RfqSourcingJourney rfq={selectedRfq} onConvert={openConvert} />
                     <div className="mx-5 mt-3 flex items-center justify-between lg:hidden"><button onClick={() => setSelectedRfqId(null)} className="text-[10px] font-semibold text-[#9000FF] hover:underline">{t("common.back")}</button><button onClick={() => { setEditingRfqId(selectedRfq.id); setNewRfqForm({ product: selectedRfq.product, category: selectedRfq.category, buyerName: selectedRfq.buyerName, targetPriceUsd: String(selectedRfq.targetPriceUsd), quantity: String(selectedRfq.quantity), deadline: selectedRfq.deadline.slice(0, 10), notes: selectedRfq.notes ?? "" }); setShowNewRfq(true); }} className="flex items-center gap-1 text-[10px] font-semibold text-[#5E687B]"><Edit2 size={11} />{t("common.edit")}</button></div>
                     <div className="border-b border-[#e8eaee] px-5 pb-4 pt-5"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eeeaf9] text-[10px] font-bold text-[#7256bb]">{selectedRfq.product.split(" ").slice(0, 2).map(part => part[0]).join("")}</div><div className="min-w-0"><p className="font-mono text-[9px] font-bold text-[#9aa1ad]">RFQ-{selectedRfq.id}</p><h3 className="mt-1 text-[14px] font-bold leading-5 tracking-[-0.01em] text-[#272e39]">{selectedRfq.product}</h3><p className="text-[11px] text-[#7d8693]">{selectedRfq.category || "General sourcing"}</p></div></div><button onClick={() => selectedRfq.status === "open" && cancelRfq(selectedRfq.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-[#9aa1ad] hover:bg-[#f4f5f7]" aria-label="Cancel RFQ"><MoreHorizontal size={15} /></button></div><div className="mt-4 flex items-center gap-2"><span className={`rounded border px-2 py-1 text-[9px] font-bold ${statusCls[selectedRfq.status] ?? "bg-slate-100"}`}>{getStatusLabel(t)[selectedRfq.status] ?? selectedRfq.status}</span><span className="text-[10px] text-[#9aa1ad]">·</span><span className="text-[10px] text-[#7e8794]">{selectedRfq.quotes.length} factory {selectedRfq.quotes.length === 1 ? "quote" : "quotes"}</span></div></div>
                     <div className="flex-1 overflow-y-auto px-5 py-4">

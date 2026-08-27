@@ -16,4 +16,5 @@ export interface RfqQuoteUpdate {
   /** @nullable */
   notes?: string | null;
   status?: RfqQuoteUpdateStatus;
+  shortlisted?: boolean;
 }

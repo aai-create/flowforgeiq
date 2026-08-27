@@ -22,12 +22,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { shortDate } from "@/lib/adapters";
 
-type SampleMilestone = "sample_requested" | "sample_shipped" | "sample_received" | "approved" | "rejected";
+type SampleMilestone = "sample_requested" | "sample_shipped" | "sample_received" | "changes_requested" | "approved" | "rejected";
 
 const MILESTONES: SampleMilestone[] = [
   "sample_requested",
   "sample_shipped",
   "sample_received",
+  "changes_requested",
   "approved",
   "rejected",
 ];
@@ -36,6 +37,7 @@ const MILESTONE_LABELS: Record<SampleMilestone, string> = {
   sample_requested: "Requested",
   sample_shipped: "Shipped",
   sample_received: "Received",
+  changes_requested: "Changes requested",
   approved: "Approved",
   rejected: "Rejected",
 };
@@ -44,6 +46,7 @@ const MILESTONE_COLORS: Record<SampleMilestone, string> = {
   sample_requested: "bg-slate-100 text-slate-600 border-slate-200",
   sample_shipped: "bg-blue-50 text-blue-700 border-blue-100",
   sample_received: "bg-amber-50 text-amber-700 border-amber-100",
+  changes_requested: "bg-amber-50 text-amber-700 border-amber-100",
   approved: "bg-emerald-50 text-emerald-700 border-emerald-100",
   rejected: "bg-red-50 text-red-700 border-red-100",
 };
@@ -502,6 +505,7 @@ export function SamplesTab() {
                       <div>
                         <p className="text-[12px] font-semibold text-[#212833] truncate">{s.product}</p>
                         {s.quantity && <p className="text-[10px] text-[#9E9FAE]">{s.quantity.toLocaleString()} units</p>}
+                        {s.rfqId != null && <button type="button" onClick={event => { event.stopPropagation(); window.location.href = `/rfqs?rfqId=${s.rfqId}`; }} className="mt-1 text-[9px] font-bold text-[#7457c7] hover:underline">RFQ-{s.rfqId}</button>}
                       </div>
                       <div><MilestoneBadge milestone={s.milestone as SampleMilestone} /></div>
                       <span className="text-[11px] text-[#9E9FAE]">{shortDate(s.createdAt)}</span>

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, sampleRequestsTable, suppliersTable, buyersTable, shipmentsTable, paymentsTable, stagesTable } from "@workspace/db";
+import { db, sampleRequestsTable, suppliersTable, buyersTable, shipmentsTable, paymentsTable, stagesTable, rfqsTable, rfqQuotesTable, documentsTable } from "@workspace/db";
 import { and, eq, asc, ne } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
 import { z } from "zod/v4";
@@ -12,7 +12,9 @@ const SampleRequestCreateSchema = z.object({
   product: z.string().min(1),
   quantity: z.number().int().positive().optional().nullable(),
   notes: z.string().optional().nullable(),
-  milestone: z.enum(["sample_requested", "sample_shipped", "sample_received", "approved", "rejected"]).optional(),
+  rfqId: z.number().int().optional().nullable(),
+  rfqQuoteId: z.number().int().optional().nullable(),
+  milestone: z.enum(["sample_requested", "sample_shipped", "sample_received", "changes_requested", "approved", "rejected"]).optional(),
   trackingCode: z.string().optional().nullable(),
   carrierName: z.string().optional().nullable(),
 });
@@ -23,7 +25,11 @@ const SampleRequestUpdateSchema = z.object({
   product: z.string().min(1).optional(),
   quantity: z.number().int().positive().optional().nullable(),
   notes: z.string().optional().nullable(),
-  milestone: z.enum(["sample_requested", "sample_shipped", "sample_received", "approved", "rejected"]).optional(),
+  rfqId: z.number().int().optional().nullable(),
+  rfqQuoteId: z.number().int().optional().nullable(),
+  milestone: z.enum(["sample_requested", "sample_shipped", "sample_received", "changes_requested", "approved", "rejected"]).optional(),
+  approvalOutcome: z.enum(["approved", "changes_requested"]).optional(),
+  writtenApproval: z.string().min(1).optional(),
   trackingCode: z.string().optional().nullable(),
   carrierName: z.string().optional().nullable(),
 });
@@ -45,6 +51,8 @@ async function loadSampleRequest(id: number, orgId: number) {
     .select({
       id: sampleRequestsTable.id,
       orgId: sampleRequestsTable.orgId,
+      rfqId: sampleRequestsTable.rfqId,
+      rfqQuoteId: sampleRequestsTable.rfqQuoteId,
       supplierId: sampleRequestsTable.supplierId,
       supplierName: suppliersTable.name,
       buyerId: sampleRequestsTable.buyerId,
@@ -53,6 +61,10 @@ async function loadSampleRequest(id: number, orgId: number) {
       quantity: sampleRequestsTable.quantity,
       notes: sampleRequestsTable.notes,
       milestone: sampleRequestsTable.milestone,
+      approvalOutcome: sampleRequestsTable.approvalOutcome,
+      writtenApproval: sampleRequestsTable.writtenApproval,
+      writtenApprovalAt: sampleRequestsTable.writtenApprovalAt,
+      writtenApprovalBy: sampleRequestsTable.writtenApprovalBy,
       trackingCode: sampleRequestsTable.trackingCode,
       carrierName: sampleRequestsTable.carrierName,
       convertedShipmentId: sampleRequestsTable.convertedShipmentId,
@@ -64,8 +76,11 @@ async function loadSampleRequest(id: number, orgId: number) {
     .leftJoin(buyersTable, eq(buyersTable.id, sampleRequestsTable.buyerId))
     .where(and(eq(sampleRequestsTable.id, id), eq(sampleRequestsTable.orgId, orgId)));
   if (!row) return null;
+  const documents = await db.select().from(documentsTable).where(and(eq(documentsTable.sampleRequestId, id), eq(documentsTable.orgId, orgId))).orderBy(asc(documentsTable.createdAt));
   return {
     ...row,
+    rfqId: row.rfqId ?? null,
+    rfqQuoteId: row.rfqQuoteId ?? null,
     supplierId: row.supplierId ?? null,
     supplierName: row.supplierName ?? null,
     buyerId: row.buyerId ?? null,
@@ -75,6 +90,11 @@ async function loadSampleRequest(id: number, orgId: number) {
     trackingCode: row.trackingCode ?? null,
     carrierName: row.carrierName ?? null,
     convertedShipmentId: row.convertedShipmentId ?? null,
+    approvalOutcome: row.approvalOutcome ?? null,
+    writtenApproval: row.writtenApproval ?? null,
+    writtenApprovalAt: row.writtenApprovalAt ? row.writtenApprovalAt.toISOString() : null,
+    writtenApprovalBy: row.writtenApprovalBy ?? null,
+    documents,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -87,6 +107,8 @@ router.get("/sample-requests", async (req, res) => {
     .select({
       id: sampleRequestsTable.id,
       orgId: sampleRequestsTable.orgId,
+      rfqId: sampleRequestsTable.rfqId,
+      rfqQuoteId: sampleRequestsTable.rfqQuoteId,
       supplierId: sampleRequestsTable.supplierId,
       supplierName: suppliersTable.name,
       buyerId: sampleRequestsTable.buyerId,
@@ -95,6 +117,10 @@ router.get("/sample-requests", async (req, res) => {
       quantity: sampleRequestsTable.quantity,
       notes: sampleRequestsTable.notes,
       milestone: sampleRequestsTable.milestone,
+      approvalOutcome: sampleRequestsTable.approvalOutcome,
+      writtenApproval: sampleRequestsTable.writtenApproval,
+      writtenApprovalAt: sampleRequestsTable.writtenApprovalAt,
+      writtenApprovalBy: sampleRequestsTable.writtenApprovalBy,
       trackingCode: sampleRequestsTable.trackingCode,
       carrierName: sampleRequestsTable.carrierName,
       convertedShipmentId: sampleRequestsTable.convertedShipmentId,
@@ -112,6 +138,8 @@ router.get("/sample-requests", async (req, res) => {
     .orderBy(asc(sampleRequestsTable.createdAt));
   res.json(rows.map(r => ({
     ...r,
+    rfqId: r.rfqId ?? null,
+    rfqQuoteId: r.rfqQuoteId ?? null,
     supplierId: r.supplierId ?? null,
     supplierName: r.supplierName ?? null,
     buyerId: r.buyerId ?? null,
@@ -121,6 +149,11 @@ router.get("/sample-requests", async (req, res) => {
     trackingCode: r.trackingCode ?? null,
     carrierName: r.carrierName ?? null,
     convertedShipmentId: r.convertedShipmentId ?? null,
+    approvalOutcome: r.approvalOutcome ?? null,
+    writtenApproval: r.writtenApproval ?? null,
+    writtenApprovalAt: r.writtenApprovalAt ? r.writtenApprovalAt.toISOString() : null,
+    writtenApprovalBy: r.writtenApprovalBy ?? null,
+    documents: [],
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   })));
@@ -138,11 +171,27 @@ router.get("/sample-requests/:id", async (req, res) => {
 router.post("/sample-requests", async (req, res) => {
   const orgId = await resolveOrgId(req);
   const body = SampleRequestCreateSchema.parse(req.body);
+  let linkedQuote: typeof rfqQuotesTable.$inferSelect | undefined;
+  if (body.rfqId !== undefined && body.rfqId !== null) {
+    const [rfq] = await db.select({ id: rfqsTable.id, buyerName: rfqsTable.buyerName, product: rfqsTable.product, quantity: rfqsTable.quantity })
+      .from(rfqsTable).where(and(eq(rfqsTable.id, body.rfqId), eq(rfqsTable.orgId, orgId)));
+    if (!rfq) { res.status(400).json({ error: "RFQ not found" }); return; }
+    if (body.rfqQuoteId == null) { res.status(400).json({ error: "An RFQ quote is required for a linked sample" }); return; }
+    [linkedQuote] = await db.select().from(rfqQuotesTable)
+      .where(and(eq(rfqQuotesTable.id, body.rfqQuoteId), eq(rfqQuotesTable.rfqId, body.rfqId), eq(rfqQuotesTable.orgId, orgId)));
+    if (!linkedQuote) { res.status(400).json({ error: "Quote not found or does not belong to this RFQ" }); return; }
+    if (!linkedQuote.shortlisted) { res.status(400).json({ error: "Only shortlisted quotes can start a sample round" }); return; }
+  } else if (body.rfqQuoteId != null) {
+    res.status(400).json({ error: "rfqId is required when linking a quote" }); return;
+  }
+  if (body.milestone === "approved") { res.status(400).json({ error: "Record written approval explicitly after the sample is received" }); return; }
   const [row] = await db.insert(sampleRequestsTable).values({
     orgId,
-    supplierId: body.supplierId ?? null,
+    rfqId: body.rfqId ?? null,
+    rfqQuoteId: body.rfqQuoteId ?? null,
+    supplierId: body.supplierId ?? linkedQuote?.supplierId ?? null,
     buyerId: body.buyerId ?? null,
-    product: body.product,
+    product: body.product || "",
     quantity: body.quantity ?? null,
     notes: body.notes ?? null,
     milestone: body.milestone ?? "sample_requested",
@@ -160,11 +209,27 @@ router.patch("/sample-requests/:id", async (req, res) => {
   const body = SampleRequestUpdateSchema.parse(req.body);
   const update: Record<string, unknown> = {};
   if (body.supplierId !== undefined) update.supplierId = body.supplierId;
+  if (body.rfqId !== undefined || body.rfqQuoteId !== undefined) {
+    res.status(400).json({ error: "RFQ and originating quote links cannot be changed after creation" }); return;
+  }
   if (body.buyerId !== undefined) update.buyerId = body.buyerId;
   if (body.product !== undefined) update.product = body.product;
   if (body.quantity !== undefined) update.quantity = body.quantity;
   if (body.notes !== undefined) update.notes = body.notes;
-  if (body.milestone !== undefined) update.milestone = body.milestone;
+  if (body.milestone === "approved" && body.approvalOutcome !== "approved") {
+    res.status(400).json({ error: "Written approval is required before marking a sample approved" }); return;
+  }
+  if (body.approvalOutcome === "approved" || body.approvalOutcome === "changes_requested") {
+    if (!body.writtenApproval?.trim()) { res.status(400).json({ error: "Written approval or requested changes are required" }); return; }
+    update.approvalOutcome = body.approvalOutcome;
+    update.writtenApproval = body.writtenApproval.trim();
+    update.writtenApprovalAt = new Date();
+    update.writtenApprovalBy = req.userId ?? null;
+    update.milestone = body.approvalOutcome === "approved" ? "approved" : "changes_requested";
+  } else if (body.milestone !== undefined) {
+    if (body.milestone === "approved") { res.status(400).json({ error: "Written approval is required before marking a sample approved" }); return; }
+    update.milestone = body.milestone;
+  }
   if (body.trackingCode !== undefined) update.trackingCode = body.trackingCode;
   if (body.carrierName !== undefined) update.carrierName = body.carrierName;
   if (Object.keys(update).length) {

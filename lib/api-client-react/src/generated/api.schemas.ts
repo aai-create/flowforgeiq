@@ -144,13 +144,23 @@ export const SampleRequestMilestone = {
   sample_requested: 'sample_requested',
   sample_shipped: 'sample_shipped',
   sample_received: 'sample_received',
+  changes_requested: 'changes_requested',
   approved: 'approved',
   rejected: 'rejected',
 } as const;
-
 export interface SampleRequest {
   id: number;
   orgId: number;
+  /**
+     * Owning RFQ, null for legacy standalone samples
+     * @nullable
+     */
+  rfqId?: number | null;
+  /**
+     * Originating RFQ quote, null for legacy standalone samples
+     * @nullable
+     */
+  rfqQuoteId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   /** @nullable */
@@ -165,6 +175,23 @@ export interface SampleRequest {
   /** @nullable */
   notes?: string | null;
   milestone: SampleRequestMilestone;
+  /**
+     * approved or changes_requested
+     * @nullable
+     */
+  approvalOutcome?: string | null;
+  /**
+     * Written buyer approval or requested changes record
+     * @nullable
+     */
+  writtenApproval?: string | null;
+  /** @nullable */
+  writtenApprovalAt?: string | null;
+  /**
+     * Clerk user ID that recorded the review
+     * @nullable
+     */
+  writtenApprovalBy?: string | null;
   /** @nullable */
   trackingCode?: string | null;
   /** @nullable */
@@ -173,6 +200,7 @@ export interface SampleRequest {
   convertedShipmentId?: number | null;
   createdAt: string;
   updatedAt: string;
+  documents?: DocumentWithExtraction[];
 }
 
 export type SampleRequestCreateMilestone = typeof SampleRequestCreateMilestone[keyof typeof SampleRequestCreateMilestone];
@@ -182,11 +210,16 @@ export const SampleRequestCreateMilestone = {
   sample_requested: 'sample_requested',
   sample_shipped: 'sample_shipped',
   sample_received: 'sample_received',
+  changes_requested: 'changes_requested',
   approved: 'approved',
   rejected: 'rejected',
 } as const;
 
 export interface SampleRequestCreate {
+  /** @nullable */
+  rfqId?: number | null;
+  /** @nullable */
+  rfqQuoteId?: number | null;
   supplierId?: number;
   buyerId?: number;
   product: string;
@@ -204,11 +237,17 @@ export const SampleRequestUpdateMilestone = {
   sample_requested: 'sample_requested',
   sample_shipped: 'sample_shipped',
   sample_received: 'sample_received',
+  changes_requested: 'changes_requested',
   approved: 'approved',
   rejected: 'rejected',
 } as const;
 
+export type SampleRequestUpdateApprovalOutcome = typeof SampleRequestUpdateApprovalOutcome[keyof typeof SampleRequestUpdateApprovalOutcome];
 export interface SampleRequestUpdate {
+  /** @nullable */
+  rfqId?: number | null;
+  /** @nullable */
+  rfqQuoteId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   /** @nullable */
@@ -219,6 +258,9 @@ export interface SampleRequestUpdate {
   /** @nullable */
   notes?: string | null;
   milestone?: SampleRequestUpdateMilestone;
+  approvalOutcome?: SampleRequestUpdateApprovalOutcome;
+  /** @minLength 1 */
+  writtenApproval?: string;
   /** @nullable */
   trackingCode?: string | null;
   /** @nullable */
@@ -886,7 +928,6 @@ export interface Task {
 export interface TaskUpdate {
   done?: boolean;
 }
-
 export interface ExtractedLineItem {
   description?: string;
   quantity?: number;
@@ -895,7 +936,6 @@ export interface ExtractedLineItem {
   unit?: string;
   discrepancy?: string;
 }
-
 export interface ExtractedFields {
   poNumber?: string;
   supplier?: string;
@@ -916,7 +956,6 @@ export interface ExtractedFields {
   transcriptSummary?: string;
   detectedEntities?: string[];
 }
-
 export interface ReconciliationFinding {
   type?: string;
   field?: string;
@@ -924,12 +963,10 @@ export interface ReconciliationFinding {
   actual?: string;
   severity?: string;
 }
-
 export interface FieldProvenanceEntry {
   confidence?: number;
   snippet?: string;
 }
-
 export type ExtractionFieldProvenance = {[key: string]: FieldProvenanceEntry};
 
 export interface Extraction {
@@ -963,10 +1000,11 @@ export interface DocumentWithExtraction {
   createdAt: string;
   extraction?: Extraction;
 }
-
 export interface DocumentUpdate {
   /** @nullable */
   shipmentId?: number | null;
+  /** @nullable */
+  sampleRequestId?: number | null;
 }
 
 export interface ExtractionCorrectionInput {
@@ -1495,6 +1533,7 @@ export interface RfqQuote {
   /** @nullable */
   notes?: string | null;
   status: RfqQuoteStatus;
+  shortlisted?: boolean;
   sortOrder: number;
 }
 
@@ -1517,6 +1556,7 @@ export interface RfqQuoteCreate {
   moq: number;
   notes?: string;
   status?: RfqQuoteCreateStatus;
+  shortlisted?: boolean;
 }
 
 export type RfqQuoteUpdateStatus = typeof RfqQuoteUpdateStatus[keyof typeof RfqQuoteUpdateStatus];
@@ -1538,6 +1578,7 @@ export interface RfqQuoteUpdate {
   /** @nullable */
   notes?: string | null;
   status?: RfqQuoteUpdateStatus;
+  shortlisted?: boolean;
 }
 
 export type RfqWithQuotesStatus = typeof RfqWithQuotesStatus[keyof typeof RfqWithQuotesStatus];
@@ -1576,6 +1617,7 @@ export interface RfqWithQuotes {
      */
   convertedShipmentId?: number | null;
   createdAt: string;
+  samples?: SampleRequest[];
   quotes: RfqQuote[];
 }
 
@@ -1914,11 +1956,13 @@ export type TestGmailSend200 = {
 
 export type ListDocumentsParams = {
 shipmentId?: number;
+sampleRequestId?: number;
 };
 
 export type UploadDocumentBody = {
   file: Blob;
   shipmentId?: number;
+  sampleRequestId?: number;
   sourceChannel?: string;
 };
 
@@ -1989,3 +2033,8 @@ export type AcceptInvite200 = {
   user: TeamMember;
 };
 
+
+export const SampleRequestUpdateApprovalOutcome = {
+  approved: 'approved',
+  changes_requested: 'changes_requested',
+} as const;

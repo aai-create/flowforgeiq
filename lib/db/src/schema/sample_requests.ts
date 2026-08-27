@@ -5,11 +5,14 @@ import { organizationsTable } from "./organizations";
 import { suppliersTable } from "./suppliers";
 import { buyersTable } from "./buyers";
 import { shipmentsTable } from "./shipments";
+import { rfqsTable } from "./rfqs";
+import { rfqQuotesTable } from "./rfq_quotes";
 
 export const SAMPLE_MILESTONES = [
   "sample_requested",
   "sample_shipped",
   "sample_received",
+  "changes_requested",
   "approved",
   "rejected",
 ] as const;
@@ -19,12 +22,18 @@ export type SampleMilestone = typeof SAMPLE_MILESTONES[number];
 export const sampleRequestsTable = pgTable("sample_requests", {
   id: serial("id").primaryKey(),
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
+  rfqId: integer("rfq_id").references(() => rfqsTable.id, { onDelete: "set null" }),
+  rfqQuoteId: integer("rfq_quote_id").references(() => rfqQuotesTable.id, { onDelete: "set null" }),
   supplierId: integer("supplier_id").references(() => suppliersTable.id, { onDelete: "set null" }),
   buyerId: integer("buyer_id").references(() => buyersTable.id, { onDelete: "set null" }),
   product: text("product").notNull(),
   quantity: integer("quantity"),
   notes: text("notes"),
   milestone: text("milestone").notNull().default("sample_requested"),
+  approvalOutcome: text("approval_outcome"),
+  writtenApproval: text("written_approval"),
+  writtenApprovalAt: timestamp("written_approval_at", { withTimezone: true }),
+  writtenApprovalBy: text("written_approval_by"),
   trackingCode: text("tracking_code"),
   carrierName: text("carrier_name"),
   convertedShipmentId: integer("converted_shipment_id").references(() => shipmentsTable.id, { onDelete: "set null" }),

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, rfqsTable, rfqQuotesTable, shipmentsTable, suppliersTable, paymentsTable, stagesTable, teamUsersTable } from "@workspace/db";
+import { db, rfqsTable, rfqQuotesTable, shipmentsTable, suppliersTable, paymentsTable, stagesTable, teamUsersTable, sampleRequestsTable } from "@workspace/db";
 import { and, eq, asc, isNotNull, type SQL } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
 import { resolveVisibilityMode, visibilityCondition } from "../lib/visibilityFilter";
@@ -68,6 +68,9 @@ async function loadRfq(id: number, orgId?: number, extraCond?: SQL) {
     .from(rfqQuotesTable)
     .where(quoteCond)
     .orderBy(asc(rfqQuotesTable.sortOrder));
+  const samples = await db.select().from(sampleRequestsTable)
+    .where(and(eq(sampleRequestsTable.rfqId, id), ...(orgId !== undefined ? [eq(sampleRequestsTable.orgId, orgId)] : [])))
+    .orderBy(asc(sampleRequestsTable.createdAt));
   return {
     ...rfq,
     assigneeId: rfq.assigneeId ?? null,
@@ -80,6 +83,27 @@ async function loadRfq(id: number, orgId?: number, extraCond?: SQL) {
       ...q,
       supplierId: q.supplierId ?? null,
       notes: q.notes ?? null,
+    })),
+    samples: samples.map(sample => ({
+      ...sample,
+      rfqId: sample.rfqId ?? null,
+      rfqQuoteId: sample.rfqQuoteId ?? null,
+      supplierId: sample.supplierId ?? null,
+      buyerId: sample.buyerId ?? null,
+      quantity: sample.quantity ?? null,
+      notes: sample.notes ?? null,
+      approvalOutcome: sample.approvalOutcome ?? null,
+      writtenApproval: sample.writtenApproval ?? null,
+      writtenApprovalAt: sample.writtenApprovalAt ? sample.writtenApprovalAt.toISOString() : null,
+      writtenApprovalBy: sample.writtenApprovalBy ?? null,
+      trackingCode: sample.trackingCode ?? null,
+      carrierName: sample.carrierName ?? null,
+      convertedShipmentId: sample.convertedShipmentId ?? null,
+      supplierName: null,
+      buyerName: null,
+      documents: [],
+      createdAt: sample.createdAt.toISOString(),
+      updatedAt: sample.updatedAt.toISOString(),
     })),
   };
 }
@@ -133,11 +157,21 @@ router.get("/rfqs", async (req, res) => {
   const allQuotes = rfqIds.length
     ? await db.select().from(rfqQuotesTable).where(eq(rfqQuotesTable.orgId, orgId)).orderBy(asc(rfqQuotesTable.sortOrder))
     : [];
+  const allSamples = rfqIds.length
+    ? await db.select().from(sampleRequestsTable).where(eq(sampleRequestsTable.orgId, orgId)).orderBy(asc(sampleRequestsTable.createdAt))
+    : [];
   const quotesByRfq = new Map<number, typeof allQuotes>();
   for (const q of allQuotes) {
     const arr = quotesByRfq.get(q.rfqId) ?? [];
     arr.push(q);
     quotesByRfq.set(q.rfqId, arr);
+  }
+  const samplesByRfq = new Map<number, typeof allSamples>();
+  for (const sample of allSamples) {
+    if (sample.rfqId == null) continue;
+    const arr = samplesByRfq.get(sample.rfqId) ?? [];
+    arr.push(sample);
+    samplesByRfq.set(sample.rfqId, arr);
   }
   const out = rows.map(({ rfq, assigneeName }) =>
     ListRfqsResponseItem.parse({
@@ -152,6 +186,27 @@ router.get("/rfqs", async (req, res) => {
         ...q,
         supplierId: q.supplierId ?? null,
         notes: q.notes ?? null,
+      })),
+      samples: (samplesByRfq.get(rfq.id) ?? []).map(sample => ({
+        ...sample,
+        rfqId: sample.rfqId ?? null,
+        rfqQuoteId: sample.rfqQuoteId ?? null,
+        supplierId: sample.supplierId ?? null,
+        buyerId: sample.buyerId ?? null,
+        quantity: sample.quantity ?? null,
+        notes: sample.notes ?? null,
+        approvalOutcome: sample.approvalOutcome ?? null,
+        writtenApproval: sample.writtenApproval ?? null,
+        writtenApprovalAt: sample.writtenApprovalAt ? sample.writtenApprovalAt.toISOString() : null,
+        writtenApprovalBy: sample.writtenApprovalBy ?? null,
+        trackingCode: sample.trackingCode ?? null,
+        carrierName: sample.carrierName ?? null,
+        convertedShipmentId: sample.convertedShipmentId ?? null,
+        supplierName: null,
+        buyerName: null,
+        documents: [],
+        createdAt: sample.createdAt.toISOString(),
+        updatedAt: sample.updatedAt.toISOString(),
       })),
     }),
   );
@@ -254,6 +309,7 @@ router.patch("/rfqs/:id/quotes/:quoteId", async (req, res) => {
   if (body.moq          !== undefined) update.moq          = body.moq;
   if (body.notes        !== undefined) update.notes        = body.notes;
   if (body.status       !== undefined) update.status       = body.status;
+  if (body.shortlisted  !== undefined) update.shortlisted  = body.shortlisted;
   if (Object.keys(update).length) {
     await db.update(rfqQuotesTable).set(update).where(and(eq(rfqQuotesTable.id, quoteId), eq(rfqQuotesTable.rfqId, rfqId), eq(rfqQuotesTable.orgId, orgId)));
   }
@@ -289,6 +345,20 @@ router.post("/rfqs/:id/convert", async (req, res) => {
     .where(and(eq(rfqQuotesTable.id, body.acceptedQuoteId), eq(rfqQuotesTable.orgId, orgId)));
   if (!acceptedQuote || acceptedQuote.rfqId !== rfqId) {
     res.status(400).json({ error: "Quote not found or does not belong to this RFQ" }); return;
+  }
+  const [approvedSample] = await db.select({ id: sampleRequestsTable.id })
+    .from(sampleRequestsTable)
+    .where(and(
+      eq(sampleRequestsTable.rfqId, rfqId),
+      eq(sampleRequestsTable.rfqQuoteId, acceptedQuote.id),
+      eq(sampleRequestsTable.orgId, orgId),
+      eq(sampleRequestsTable.approvalOutcome, "approved"),
+      eq(sampleRequestsTable.milestone, "approved"),
+      isNotNull(sampleRequestsTable.writtenApproval),
+    ))
+    .limit(1);
+  if (!approvedSample) {
+    res.status(400).json({ error: "PO_READY_REQUIRES_APPROVED_SAMPLE", message: "The selected quote needs a linked sample with written buyer approval before it can become a PO." }); return;
   }
   const [supplier] = await db.select().from(suppliersTable).where(and(eq(suppliersTable.id, body.supplierId), eq(suppliersTable.orgId, orgId)));
   if (!supplier) { res.status(400).json({ error: "Supplier not found" }); return; }

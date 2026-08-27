@@ -9,4 +9,6 @@
 export interface DocumentUpdate {
   /** @nullable */
   shipmentId?: number | null;
+  /** @nullable */
+  sampleRequestId?: number | null;
 }

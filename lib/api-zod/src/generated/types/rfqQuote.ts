@@ -20,5 +20,6 @@ export interface RfqQuote {
   /** @nullable */
   notes?: string | null;
   status: RfqQuoteStatus;
+  shortlisted?: boolean;
   sortOrder: number;
 }

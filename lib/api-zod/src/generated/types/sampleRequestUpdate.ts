@@ -5,9 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SampleRequestUpdateApprovalOutcome } from './sampleRequestUpdateApprovalOutcome';
 import type { SampleRequestUpdateMilestone } from './sampleRequestUpdateMilestone';
 
 export interface SampleRequestUpdate {
+  /** @nullable */
+  rfqId?: number | null;
+  /** @nullable */
+  rfqQuoteId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   /** @nullable */
@@ -18,6 +23,9 @@ export interface SampleRequestUpdate {
   /** @nullable */
   notes?: string | null;
   milestone?: SampleRequestUpdateMilestone;
+  approvalOutcome?: SampleRequestUpdateApprovalOutcome;
+  /** @minLength 1 */
+  writtenApproval?: string;
   /** @nullable */
   trackingCode?: string | null;
   /** @nullable */

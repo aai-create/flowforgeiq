@@ -2,10 +2,12 @@ import { pgTable, text, serial, integer, real, timestamp, jsonb, boolean, index 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizationsTable } from "./organizations";
+import { sampleRequestsTable } from "./sample_requests";
 
 export const documentsTable = pgTable("documents", {
   id: serial("id").primaryKey(),
   shipmentId: integer("shipment_id"),
+  sampleRequestId: integer("sample_request_id").references(() => sampleRequestsTable.id, { onDelete: "set null" }),
   fileName: text("file_name").notNull(),
   fileType: text("file_type").notNull(),
   mimeType: text("mime_type").notNull().default(""),

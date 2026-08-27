@@ -1243,6 +1243,10 @@ paths:
           name: shipmentId
           required: false
           schema: { type: integer }
+        - in: query
+          name: sampleRequestId
+          required: false
+          schema: { type: integer }
       responses:
         "200":
           description: All documents with extractions
@@ -1266,6 +1270,8 @@ paths:
                   type: string
                   format: binary
                 shipmentId:
+                  type: integer
+                sampleRequestId:
                   type: integer
                 sourceChannel:
                   type: string
@@ -2428,6 +2434,8 @@ components:
       properties:
         id:                   { type: integer }
         orgId:                { type: integer }
+        rfqId:                { type: ["integer", "null"], description: "Owning RFQ, null for legacy standalone samples" }
+        rfqQuoteId:           { type: ["integer", "null"], description: "Originating RFQ quote, null for legacy standalone samples" }
         supplierId:           { type: ["integer", "null"] }
         supplierName:         { type: ["string", "null"] }
         buyerId:              { type: ["integer", "null"] }
@@ -2435,35 +2443,48 @@ components:
         product:              { type: string }
         quantity:             { type: ["integer", "null"] }
         notes:                { type: ["string", "null"] }
-        milestone:            { type: string, enum: [sample_requested, sample_shipped, sample_received, approved, rejected] }
+        milestone:            { type: string, enum: [sample_requested, sample_shipped, sample_received, changes_requested, approved, rejected] }
+        approvalOutcome:      { type: ["string", "null"], description: "approved or changes_requested" }
+        writtenApproval:      { type: ["string", "null"], description: "Written buyer approval or requested changes record" }
+        writtenApprovalAt:    { type: ["string", "null"], format: date-time }
+        writtenApprovalBy:    { type: ["string", "null"], description: "Clerk user ID that recorded the review" }
         trackingCode:         { type: ["string", "null"] }
         carrierName:          { type: ["string", "null"] }
         convertedShipmentId:  { type: ["integer", "null"] }
         createdAt:            { type: string, format: date-time }
         updatedAt:            { type: string, format: date-time }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentWithExtraction" }
 
     SampleRequestCreate:
       type: object
       required: [product]
       properties:
+        rfqId:        { type: ["integer", "null"] }
+        rfqQuoteId:   { type: ["integer", "null"] }
         supplierId:  { type: integer }
         buyerId:     { type: integer }
         product:     { type: string }
         quantity:    { type: integer }
         notes:       { type: string }
-        milestone:   { type: string, enum: [sample_requested, sample_shipped, sample_received, approved, rejected] }
+        milestone:   { type: string, enum: [sample_requested, sample_shipped, sample_received, changes_requested, approved, rejected] }
         trackingCode: { type: string }
         carrierName: { type: string }
 
     SampleRequestUpdate:
       type: object
       properties:
+        rfqId:         { type: ["integer", "null"] }
+        rfqQuoteId:    { type: ["integer", "null"] }
         supplierId:   { type: ["integer", "null"] }
         buyerId:      { type: ["integer", "null"] }
         product:      { type: string }
         quantity:     { type: ["integer", "null"] }
         notes:        { type: ["string", "null"] }
-        milestone:    { type: string, enum: [sample_requested, sample_shipped, sample_received, approved, rejected] }
+        milestone:    { type: string, enum: [sample_requested, sample_shipped, sample_received, changes_requested, approved, rejected] }
+        approvalOutcome: { type: string, enum: [approved, changes_requested] }
+        writtenApproval: { type: string, minLength: 1 }
         trackingCode: { type: ["string", "null"] }
         carrierName:  { type: ["string", "null"] }
 
@@ -3067,6 +3088,7 @@ components:
       properties:
         id: { type: integer }
         shipmentId: { type: ["integer", "null"] }
+        sampleRequestId: { type: ["integer", "null"] }
         fileName: { type: string }
         fileType: { type: string }
         mimeType: { type: string }
@@ -3080,6 +3102,7 @@ components:
       type: object
       properties:
         shipmentId: { type: ["integer", "null"] }
+        sampleRequestId: { type: ["integer", "null"] }
 
     ExtractionCorrectionInput:
       type: object
@@ -3578,6 +3601,7 @@ components:
         moq:           { type: integer }
         notes:         { type: ["string", "null"] }
         status:        { type: string, enum: [pending, received, accepted, rejected] }
+        shortlisted:   { type: boolean }
         sortOrder:     { type: integer }
 
     RfqQuoteCreate:
@@ -3592,6 +3616,7 @@ components:
         moq:          { type: integer }
         notes:        { type: string }
         status:       { type: string, enum: [pending, received, accepted, rejected] }
+        shortlisted:  { type: boolean }
 
     RfqQuoteUpdate:
       type: object
@@ -3603,6 +3628,7 @@ components:
         moq:          { type: integer }
         notes:        { type: ["string", "null"] }
         status:       { type: string, enum: [pending, received, accepted, rejected] }
+        shortlisted:  { type: boolean }
 
     RfqWithQuotes:
       type: object
@@ -3621,6 +3647,9 @@ components:
         assigneeName:   { type: ["string", "null"], description: "Display name of the assigned team member; null if unassigned" }
         convertedShipmentId: { type: ["integer", "null"], description: "Shipment ID created when this RFQ was converted to a PO" }
         createdAt:      { type: string, format: date-time }
+        samples:
+          type: array
+          items: { $ref: "#/components/schemas/SampleRequest" }
         quotes:
           type: array
           items: { $ref: "#/components/schemas/RfqQuote" }

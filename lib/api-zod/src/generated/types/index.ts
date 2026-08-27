@@ -159,6 +159,7 @@ export * from './sampleRequestCreate';
 export * from './sampleRequestCreateMilestone';
 export * from './sampleRequestMilestone';
 export * from './sampleRequestUpdate';
+export * from './sampleRequestUpdateApprovalOutcome';
 export * from './sampleRequestUpdateMilestone';
 export * from './sendReplyInput';
 export * from './sendRfqEmailBody';

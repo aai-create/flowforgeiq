@@ -8,4 +8,5 @@
 
 export type ListDocumentsParams = {
 shipmentId?: number;
+sampleRequestId?: number;
 };

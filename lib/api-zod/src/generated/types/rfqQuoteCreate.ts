@@ -16,4 +16,5 @@ export interface RfqQuoteCreate {
   moq: number;
   notes?: string;
   status?: RfqQuoteCreateStatus;
+  shortlisted?: boolean;
 }

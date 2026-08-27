@@ -7,6 +7,7 @@
  */
 import type { RfqQuote } from './rfqQuote';
 import type { RfqWithQuotesStatus } from './rfqWithQuotesStatus';
+import type { SampleRequest } from './sampleRequest';
 
 export interface RfqWithQuotes {
   id: number;
@@ -35,5 +36,6 @@ export interface RfqWithQuotes {
      */
   convertedShipmentId?: number | null;
   createdAt: Date;
+  samples?: SampleRequest[];
   quotes: RfqQuote[];
 }

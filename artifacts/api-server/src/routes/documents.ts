@@ -7,6 +7,7 @@ import {
   extractionCorrectionsTable,
   shipmentsTable,
   suppliersTable,
+  sampleRequestsTable,
 } from "@workspace/db";
 import { and, desc, eq, asc, inArray } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
@@ -44,6 +45,8 @@ router.get("/documents", async (req, res) => {
   const params = ListDocumentsQueryParams.parse(req.query);
   const docs = params.shipmentId != null
     ? await db.select().from(documentsTable).where(and(eq(documentsTable.shipmentId, params.shipmentId), eq(documentsTable.orgId, orgId))).orderBy(desc(documentsTable.createdAt))
+    : params.sampleRequestId != null
+      ? await db.select().from(documentsTable).where(and(eq(documentsTable.sampleRequestId, params.sampleRequestId), eq(documentsTable.orgId, orgId))).orderBy(desc(documentsTable.createdAt))
     : await db.select().from(documentsTable).where(eq(documentsTable.orgId, orgId)).orderBy(desc(documentsTable.createdAt));
 
   if (!docs.length) { res.json([]); return; }
@@ -66,11 +69,19 @@ router.post("/documents", upload.single("file"), async (req, res) => {
   if (!file) { res.status(400).json({ error: "No file provided" }); return; }
 
   const rawShipmentId = req.body.shipmentId;
+  const rawSampleRequestId = req.body.sampleRequestId;
   const parsedShipmentId = rawShipmentId !== undefined && rawShipmentId !== "" ? Number(rawShipmentId) : null;
   if (parsedShipmentId !== null && (Number.isNaN(parsedShipmentId) || parsedShipmentId <= 0)) {
     res.status(400).json({ error: "Invalid shipmentId" }); return;
   }
   const shipmentId = parsedShipmentId;
+  const parsedSampleRequestId = rawSampleRequestId !== undefined && rawSampleRequestId !== "" ? Number(rawSampleRequestId) : null;
+  if (parsedSampleRequestId !== null && (Number.isNaN(parsedSampleRequestId) || parsedSampleRequestId <= 0)) {
+    res.status(400).json({ error: "Invalid sampleRequestId" }); return;
+  }
+  if (shipmentId !== null && parsedSampleRequestId !== null) {
+    res.status(400).json({ error: "A document cannot be linked to both a shipment and a sample" }); return;
+  }
   const orgId = await resolveOrgId(req);
 
   // Validate that the provided shipmentId belongs to this org
@@ -79,11 +90,17 @@ router.post("/documents", upload.single("file"), async (req, res) => {
       .where(and(eq(shipmentsTable.id, shipmentId), eq(shipmentsTable.orgId, orgId))).limit(1);
     if (!shipCheck) { res.status(400).json({ error: "Shipment not found" }); return; }
   }
+  if (parsedSampleRequestId !== null) {
+    const [sampleCheck] = await db.select({ id: sampleRequestsTable.id }).from(sampleRequestsTable)
+      .where(and(eq(sampleRequestsTable.id, parsedSampleRequestId), eq(sampleRequestsTable.orgId, orgId))).limit(1);
+    if (!sampleCheck) { res.status(400).json({ error: "Sample request not found" }); return; }
+  }
   const sourceChannel = (req.body.sourceChannel as string | undefined) ?? "upload";
   const fileType = getFileType(file.mimetype, file.originalname);
 
   const [doc] = await db.insert(documentsTable).values({
     shipmentId,
+    sampleRequestId: parsedSampleRequestId,
     fileName: file.originalname,
     fileType,
     mimeType: file.mimetype,
@@ -178,9 +195,11 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         errorMessage: null,
       }).where(eq(extractionsTable.id, extraction.id));
 
-      const resolvedShipmentId = result.matchedShipmentId ?? shipmentId ?? null;
+      // Evidence belongs to the sample until the buyer explicitly approves it;
+      // extraction must never move a sample document into a shipment.
+      const resolvedShipmentId = parsedSampleRequestId !== null ? null : (result.matchedShipmentId ?? shipmentId ?? null);
       const docStatus = resolvedShipmentId ? "extracted" : "unmatched";
-      await db.update(documentsTable).set({ shipmentId: resolvedShipmentId, status: docStatus }).where(eq(documentsTable.id, doc.id));
+      await db.update(documentsTable).set({ shipmentId: resolvedShipmentId, status: parsedSampleRequestId !== null ? "extracted" : docStatus }).where(eq(documentsTable.id, doc.id));
 
       // QC stage tagging: if QC photo is uploaded and has a result, tag the shipment status
       const extractedFields = result.extractedFields as Record<string, unknown>;
@@ -217,18 +236,27 @@ router.patch("/documents/:id", async (req, res) => {
   const orgId = await resolveOrgId(req);
   const input = UpdateDocumentBody.parse(req.body);
   const newShipmentId = input.shipmentId ?? null;
+  const newSampleRequestId = input.sampleRequestId ?? null;
+  if (newShipmentId !== null && newSampleRequestId !== null) {
+    res.status(400).json({ error: "A document cannot be linked to both a shipment and a sample" }); return;
+  }
 
   // Normalize status: linked docs are "extracted" (or keep "failed"/"processing");
   // unlinked docs become "unmatched" unless they were never extracted.
   const [existing] = await db.select().from(documentsTable).where(and(eq(documentsTable.id, id), eq(documentsTable.orgId, orgId))).limit(1);
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  if (newSampleRequestId !== null) {
+    const [sampleCheck] = await db.select({ id: sampleRequestsTable.id }).from(sampleRequestsTable)
+      .where(and(eq(sampleRequestsTable.id, newSampleRequestId), eq(sampleRequestsTable.orgId, orgId))).limit(1);
+    if (!sampleCheck) { res.status(400).json({ error: "Sample request not found" }); return; }
+  }
 
   let newStatus = existing.status;
   if (newShipmentId !== null && existing.status === "unmatched") newStatus = "extracted";
   if (newShipmentId === null && existing.status === "extracted") newStatus = "unmatched";
 
   await db.update(documentsTable)
-    .set({ shipmentId: newShipmentId, status: newStatus })
+    .set({ shipmentId: newShipmentId, sampleRequestId: newSampleRequestId, status: newSampleRequestId !== null ? "extracted" : newStatus })
     .where(and(eq(documentsTable.id, id), eq(documentsTable.orgId, orgId)));
 
   // Sync the latest extraction's shipmentMatchId to match the new link
@@ -237,7 +265,7 @@ router.patch("/documents/:id", async (req, res) => {
     .orderBy(desc(extractionsTable.createdAt)).limit(1);
   if (latestExt) {
     await db.update(extractionsTable)
-      .set({ shipmentMatchId: newShipmentId })
+        .set({ shipmentMatchId: newSampleRequestId !== null ? null : newShipmentId })
       .where(eq(extractionsTable.id, latestExt.id));
   }
 

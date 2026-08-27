@@ -9,5 +9,6 @@
 export type UploadDocumentBody = {
   file: Blob;
   shipmentId?: number;
+  sampleRequestId?: number;
   sourceChannel?: string;
 };

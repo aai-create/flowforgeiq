@@ -5,11 +5,22 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DocumentWithExtraction } from './documentWithExtraction';
 import type { SampleRequestMilestone } from './sampleRequestMilestone';
 
 export interface SampleRequest {
   id: number;
   orgId: number;
+  /**
+     * Owning RFQ, null for legacy standalone samples
+     * @nullable
+     */
+  rfqId?: number | null;
+  /**
+     * Originating RFQ quote, null for legacy standalone samples
+     * @nullable
+     */
+  rfqQuoteId?: number | null;
   /** @nullable */
   supplierId?: number | null;
   /** @nullable */
@@ -24,6 +35,23 @@ export interface SampleRequest {
   /** @nullable */
   notes?: string | null;
   milestone: SampleRequestMilestone;
+  /**
+     * approved or changes_requested
+     * @nullable
+     */
+  approvalOutcome?: string | null;
+  /**
+     * Written buyer approval or requested changes record
+     * @nullable
+     */
+  writtenApproval?: string | null;
+  /** @nullable */
+  writtenApprovalAt?: Date | null;
+  /**
+     * Clerk user ID that recorded the review
+     * @nullable
+     */
+  writtenApprovalBy?: string | null;
   /** @nullable */
   trackingCode?: string | null;
   /** @nullable */
@@ -32,4 +60,5 @@ export interface SampleRequest {
   convertedShipmentId?: number | null;
   createdAt: Date;
   updatedAt: Date;
+  documents?: DocumentWithExtraction[];
 }

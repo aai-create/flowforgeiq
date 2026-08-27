@@ -13,6 +13,7 @@ export const SampleRequestCreateMilestone = {
   sample_requested: 'sample_requested',
   sample_shipped: 'sample_shipped',
   sample_received: 'sample_received',
+  changes_requested: 'changes_requested',
   approved: 'approved',
   rejected: 'rejected',
 } as const;

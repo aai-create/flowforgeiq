@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, doublePrecision, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, doublePrecision, boolean, index } from "drizzle-orm/pg-core";
 import { rfqsTable } from "./rfqs";
 import { suppliersTable } from "./suppliers";
 import { createInsertSchema } from "drizzle-zod";
@@ -16,6 +16,7 @@ export const rfqQuotesTable = pgTable("rfq_quotes", {
   moq: integer("moq").notNull(),
   notes: text("notes"),
   status: text("status").notNull().default("received"),
+  shortlisted: boolean("shortlisted").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   orgId: integer("org_id").notNull().default(1).references(() => organizationsTable.id),
 }, (t) => [index("rfq_quotes_org_id_idx").on(t.orgId)]);

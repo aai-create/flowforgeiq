@@ -162,7 +162,6 @@ export const ListDeviceTokensResponse = zod.array(ListDeviceTokensResponseItem)
 export const createDeviceTokenBodyLabelMax = 80;
 
 
-
 export const CreateDeviceTokenBody = zod.object({
   "label": zod.string().max(createDeviceTokenBodyLabelMax).optional()
 })
@@ -292,6 +291,8 @@ export const ListSampleRequestsQueryParams = zod.object({
 export const ListSampleRequestsResponseItem = zod.object({
   "id": zod.number(),
   "orgId": zod.number(),
+  "rfqId": zod.number().nullish().describe('Owning RFQ, null for legacy standalone samples'),
+  "rfqQuoteId": zod.number().nullish().describe('Originating RFQ quote, null for legacy standalone samples'),
   "supplierId": zod.number().nullish(),
   "supplierName": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
@@ -299,23 +300,89 @@ export const ListSampleRequestsResponseItem = zod.object({
   "product": zod.string(),
   "quantity": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']),
+  "approvalOutcome": zod.string().nullish().describe('approved or changes_requested'),
+  "writtenApproval": zod.string().nullish().describe('Written buyer approval or requested changes record'),
+  "writtenApprovalAt": zod.coerce.date().nullish(),
+  "writtenApprovalBy": zod.string().nullish().describe('Clerk user ID that recorded the review'),
   "trackingCode": zod.string().nullish(),
   "carrierName": zod.string().nullish(),
   "convertedShipmentId": zod.number().nullish(),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})).optional()
 })
 export const ListSampleRequestsResponse = zod.array(ListSampleRequestsResponseItem)
 
 
 export const CreateSampleRequestBody = zod.object({
+  "rfqId": zod.number().nullish(),
+  "rfqQuoteId": zod.number().nullish(),
   "supplierId": zod.number().optional(),
   "buyerId": zod.number().optional(),
   "product": zod.string(),
   "quantity": zod.number().optional(),
   "notes": zod.string().optional(),
-  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']).optional(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']).optional(),
   "trackingCode": zod.string().optional(),
   "carrierName": zod.string().optional()
 })
@@ -328,6 +395,8 @@ export const GetSampleRequestParams = zod.object({
 export const GetSampleRequestResponse = zod.object({
   "id": zod.number(),
   "orgId": zod.number(),
+  "rfqId": zod.number().nullish().describe('Owning RFQ, null for legacy standalone samples'),
+  "rfqQuoteId": zod.number().nullish().describe('Originating RFQ quote, null for legacy standalone samples'),
   "supplierId": zod.number().nullish(),
   "supplierName": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
@@ -335,12 +404,76 @@ export const GetSampleRequestResponse = zod.object({
   "product": zod.string(),
   "quantity": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']),
+  "approvalOutcome": zod.string().nullish().describe('approved or changes_requested'),
+  "writtenApproval": zod.string().nullish().describe('Written buyer approval or requested changes record'),
+  "writtenApprovalAt": zod.coerce.date().nullish(),
+  "writtenApprovalBy": zod.string().nullish().describe('Clerk user ID that recorded the review'),
   "trackingCode": zod.string().nullish(),
   "carrierName": zod.string().nullish(),
   "convertedShipmentId": zod.number().nullish(),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})).optional()
 })
 
 
@@ -348,13 +481,18 @@ export const UpdateSampleRequestParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
 export const UpdateSampleRequestBody = zod.object({
+  "rfqId": zod.number().nullish(),
+  "rfqQuoteId": zod.number().nullish(),
   "supplierId": zod.number().nullish(),
   "buyerId": zod.number().nullish(),
   "product": zod.string().optional(),
   "quantity": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']).optional(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']).optional(),
+  "approvalOutcome": zod.enum(['approved', 'changes_requested']).optional(),
+  "writtenApproval": zod.string().min(1).optional(),
   "trackingCode": zod.string().nullish(),
   "carrierName": zod.string().nullish()
 })
@@ -362,6 +500,8 @@ export const UpdateSampleRequestBody = zod.object({
 export const UpdateSampleRequestResponse = zod.object({
   "id": zod.number(),
   "orgId": zod.number(),
+  "rfqId": zod.number().nullish().describe('Owning RFQ, null for legacy standalone samples'),
+  "rfqQuoteId": zod.number().nullish().describe('Originating RFQ quote, null for legacy standalone samples'),
   "supplierId": zod.number().nullish(),
   "supplierName": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
@@ -369,12 +509,76 @@ export const UpdateSampleRequestResponse = zod.object({
   "product": zod.string(),
   "quantity": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'approved', 'rejected']),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']),
+  "approvalOutcome": zod.string().nullish().describe('approved or changes_requested'),
+  "writtenApproval": zod.string().nullish().describe('Written buyer approval or requested changes record'),
+  "writtenApprovalAt": zod.coerce.date().nullish(),
+  "writtenApprovalBy": zod.string().nullish().describe('Clerk user ID that recorded the review'),
   "trackingCode": zod.string().nullish(),
   "carrierName": zod.string().nullish(),
   "convertedShipmentId": zod.number().nullish(),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})).optional()
 })
 
 
@@ -1628,7 +1832,8 @@ export const UpdateTaskResponse = zod.object({
 
 
 export const ListDocumentsQueryParams = zod.object({
-  "shipmentId": zod.coerce.number().optional()
+  "shipmentId": zod.coerce.number().optional(),
+  "sampleRequestId": zod.coerce.number().optional()
 })
 
 export const ListDocumentsResponseItem = zod.object({
@@ -1697,6 +1902,7 @@ export const ListDocumentsResponse = zod.array(ListDocumentsResponseItem)
 export const UploadDocumentBody = zod.object({
   "file": zod.instanceof(File),
   "shipmentId": zod.number().optional(),
+  "sampleRequestId": zod.number().optional(),
   "sourceChannel": zod.string().optional()
 })
 
@@ -1772,7 +1978,8 @@ export const UpdateDocumentParams = zod.object({
 })
 
 export const UpdateDocumentBody = zod.object({
-  "shipmentId": zod.number().nullish()
+  "shipmentId": zod.number().nullish(),
+  "sampleRequestId": zod.number().nullish()
 })
 
 export const UpdateDocumentResponse = zod.object({
@@ -2451,7 +2658,6 @@ export const UpdateSignalDraftParams = zod.object({
 export const updateSignalDraftBodyDraftBodyMax = 100000;
 
 
-
 export const UpdateSignalDraftBody = zod.object({
   "draftBody": zod.string().min(1).max(updateSignalDraftBodyDraftBodyMax)
 })
@@ -2808,7 +3014,6 @@ export const updateInboundEmailHandleBodyHandleMin = 3;
 export const updateInboundEmailHandleBodyHandleMax = 40;
 
 
-
 export const UpdateInboundEmailHandleBody = zod.object({
   "handle": zod.string().min(updateInboundEmailHandleBodyHandleMin).max(updateInboundEmailHandleBodyHandleMax).describe('Lowercase alphanumeric slug with dots\/hyphens (3–40 chars). Becomes the + part of the inbound address.')
 })
@@ -2948,6 +3153,89 @@ export const ListRfqsResponseItem = zod.object({
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member; null if unassigned'),
   "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
   "createdAt": zod.coerce.date(),
+  "samples": zod.array(zod.object({
+  "id": zod.number(),
+  "orgId": zod.number(),
+  "rfqId": zod.number().nullish().describe('Owning RFQ, null for legacy standalone samples'),
+  "rfqQuoteId": zod.number().nullish().describe('Originating RFQ quote, null for legacy standalone samples'),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "product": zod.string(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']),
+  "approvalOutcome": zod.string().nullish().describe('approved or changes_requested'),
+  "writtenApproval": zod.string().nullish().describe('Written buyer approval or requested changes record'),
+  "writtenApprovalAt": zod.coerce.date().nullish(),
+  "writtenApprovalBy": zod.string().nullish().describe('Clerk user ID that recorded the review'),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})).optional()
+})).optional(),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
   "rfqId": zod.number(),
@@ -2959,6 +3247,7 @@ export const ListRfqsResponseItem = zod.object({
   "moq": zod.number(),
   "notes": zod.string().nullish(),
   "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
+  "shortlisted": zod.boolean().optional(),
   "sortOrder": zod.number()
 }))
 })
@@ -2998,6 +3287,89 @@ export const GetRfqResponse = zod.object({
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member; null if unassigned'),
   "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
   "createdAt": zod.coerce.date(),
+  "samples": zod.array(zod.object({
+  "id": zod.number(),
+  "orgId": zod.number(),
+  "rfqId": zod.number().nullish().describe('Owning RFQ, null for legacy standalone samples'),
+  "rfqQuoteId": zod.number().nullish().describe('Originating RFQ quote, null for legacy standalone samples'),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "product": zod.string(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']),
+  "approvalOutcome": zod.string().nullish().describe('approved or changes_requested'),
+  "writtenApproval": zod.string().nullish().describe('Written buyer approval or requested changes record'),
+  "writtenApprovalAt": zod.coerce.date().nullish(),
+  "writtenApprovalBy": zod.string().nullish().describe('Clerk user ID that recorded the review'),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})).optional()
+})).optional(),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
   "rfqId": zod.number(),
@@ -3009,6 +3381,7 @@ export const GetRfqResponse = zod.object({
   "moq": zod.number(),
   "notes": zod.string().nullish(),
   "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
+  "shortlisted": zod.boolean().optional(),
   "sortOrder": zod.number()
 }))
 })
@@ -3044,6 +3417,89 @@ export const UpdateRfqResponse = zod.object({
   "assigneeName": zod.string().nullish().describe('Display name of the assigned team member; null if unassigned'),
   "convertedShipmentId": zod.number().nullish().describe('Shipment ID created when this RFQ was converted to a PO'),
   "createdAt": zod.coerce.date(),
+  "samples": zod.array(zod.object({
+  "id": zod.number(),
+  "orgId": zod.number(),
+  "rfqId": zod.number().nullish().describe('Owning RFQ, null for legacy standalone samples'),
+  "rfqQuoteId": zod.number().nullish().describe('Originating RFQ quote, null for legacy standalone samples'),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "product": zod.string(),
+  "quantity": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "milestone": zod.enum(['sample_requested', 'sample_shipped', 'sample_received', 'changes_requested', 'approved', 'rejected']),
+  "approvalOutcome": zod.string().nullish().describe('approved or changes_requested'),
+  "writtenApproval": zod.string().nullish().describe('Written buyer approval or requested changes record'),
+  "writtenApprovalAt": zod.coerce.date().nullish(),
+  "writtenApprovalBy": zod.string().nullish().describe('Clerk user ID that recorded the review'),
+  "trackingCode": zod.string().nullish(),
+  "carrierName": zod.string().nullish(),
+  "convertedShipmentId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "shipmentId": zod.number().nullish(),
+  "fileName": zod.string(),
+  "fileType": zod.string(),
+  "mimeType": zod.string(),
+  "fileSize": zod.number(),
+  "sourceChannel": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "extraction": zod.object({
+  "id": zod.number(),
+  "documentId": zod.number(),
+  "shipmentMatchId": zod.number().nullish(),
+  "extractedFields": zod.object({
+  "poNumber": zod.string().optional(),
+  "supplier": zod.string().optional(),
+  "buyer": zod.string().optional(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string().optional(),
+  "currency": zod.string().optional(),
+  "totalAmount": zod.number().optional(),
+  "incoterms": zod.string().optional(),
+  "paymentTerms": zod.string().optional(),
+  "etd": zod.string().optional(),
+  "eta": zod.string().optional(),
+  "portOfLoading": zod.string().optional(),
+  "portOfDischarge": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "qcResult": zod.string().optional(),
+  "qcIssues": zod.array(zod.string()).optional(),
+  "transcriptSummary": zod.string().optional(),
+  "detectedEntities": zod.array(zod.string()).optional()
+}),
+  "fieldProvenance": zod.record(zod.string(), zod.object({
+  "confidence": zod.number().optional(),
+  "snippet": zod.string().optional()
+})),
+  "lineItems": zod.array(zod.object({
+  "description": zod.string().optional(),
+  "quantity": zod.number().optional(),
+  "unitPrice": zod.number().optional(),
+  "totalPrice": zod.number().optional(),
+  "unit": zod.string().optional(),
+  "discrepancy": zod.string().optional()
+})),
+  "reconciliationFindings": zod.array(zod.object({
+  "type": zod.string().optional(),
+  "field": zod.string().optional(),
+  "expected": zod.string().optional(),
+  "actual": zod.string().optional(),
+  "severity": zod.string().optional()
+})),
+  "transcriptText": zod.string().nullish(),
+  "confidence": zod.number(),
+  "status": zod.string(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional()
+})).optional()
+})).optional(),
   "quotes": zod.array(zod.object({
   "id": zod.number(),
   "rfqId": zod.number(),
@@ -3055,6 +3511,7 @@ export const UpdateRfqResponse = zod.object({
   "moq": zod.number(),
   "notes": zod.string().nullish(),
   "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
+  "shortlisted": zod.boolean().optional(),
   "sortOrder": zod.number()
 }))
 })
@@ -3072,7 +3529,8 @@ export const AddRfqQuoteBody = zod.object({
   "leadTimeDays": zod.number(),
   "moq": zod.number(),
   "notes": zod.string().optional(),
-  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']).optional()
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']).optional(),
+  "shortlisted": zod.boolean().optional()
 })
 
 
@@ -3088,7 +3546,8 @@ export const UpdateRfqQuoteBody = zod.object({
   "leadTimeDays": zod.number().optional(),
   "moq": zod.number().optional(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']).optional()
+  "status": zod.enum(['pending', 'received', 'accepted', 'rejected']).optional(),
+  "shortlisted": zod.boolean().optional()
 })
 
 export const UpdateRfqQuoteResponse = zod.object({
@@ -3102,6 +3561,7 @@ export const UpdateRfqQuoteResponse = zod.object({
   "moq": zod.number(),
   "notes": zod.string().nullish(),
   "status": zod.enum(['pending', 'received', 'accepted', 'rejected']),
+  "shortlisted": zod.boolean().optional(),
   "sortOrder": zod.number()
 })
 
@@ -3308,5 +3768,4 @@ export const AcceptInviteResponse = zod.object({
   "createdAt": zod.coerce.date()
 })
 })
-
 

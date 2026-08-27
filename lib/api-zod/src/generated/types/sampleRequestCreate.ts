@@ -8,6 +8,10 @@
 import type { SampleRequestCreateMilestone } from './sampleRequestCreateMilestone';
 
 export interface SampleRequestCreate {
+  /** @nullable */
+  rfqId?: number | null;
+  /** @nullable */
+  rfqQuoteId?: number | null;
   supplierId?: number;
   buyerId?: number;
   product: string;

@@ -4818,6 +4818,9 @@ formData.append(`file`, uploadDocumentBody.file);
 if(uploadDocumentBody.shipmentId !== undefined) {
  formData.append(`shipmentId`, uploadDocumentBody.shipmentId.toString())
  }
+if(uploadDocumentBody.sampleRequestId !== undefined) {
+ formData.append(`sampleRequestId`, uploadDocumentBody.sampleRequestId.toString())
+ }
 if(uploadDocumentBody.sourceChannel !== undefined) {
  formData.append(`sourceChannel`, uploadDocumentBody.sourceChannel);
  }
