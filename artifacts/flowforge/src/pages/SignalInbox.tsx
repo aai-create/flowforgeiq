@@ -8,6 +8,7 @@ import {
   useSendSignal,
   useSkipSignal,
   useUpdateSignalDraft,
+  useReviewSignal,
   getListSignalInboxQueryKey,
   type SignalInboxItem,
 } from "@workspace/api-client-react";
@@ -34,6 +35,12 @@ interface Message {
   signalStatus?: string | null;
   rawSenderEmail?: string | null;
   shipmentId?: number | null;
+  routingConfidence?: number | null;
+  aiRoutingGuess?: { buyerName?: string | null; shipmentId?: number | null; confidence?: number; reasoning?: string } | null;
+  pendingExtractionFields?: Record<string, unknown> | null;
+  reviewStatus?: string | null;
+  reviewDecision?: { category?: string; confidence?: number; reason?: string; evidence?: Record<string, unknown> } | null;
+  reviewAudit?: Array<{ at?: string; actor?: string; action?: string; note?: string }> | null;
 }
 
 interface Proposal {
@@ -198,11 +205,13 @@ function SignalDetailPanel({
   onSend,
   onSkip,
   onDraftEdit,
+  onReview,
   isAssessing,
   isApproving,
   isSending,
   isSkipping,
   isUpdatingDraft,
+  isReviewing,
 }: {
   item: SignalInboxItem;
   onAssess: () => void;
@@ -210,11 +219,13 @@ function SignalDetailPanel({
   onSend: () => void;
   onSkip: () => void;
   onDraftEdit: (body: string) => void;
+  onReview: (action: "confirm" | "correct" | "dismiss" | "defer", shipmentId?: number, note?: string) => void;
   isAssessing: boolean;
   isApproving: boolean;
   isSending: boolean;
   isSkipping: boolean;
   isUpdatingDraft: boolean;
+  isReviewing: boolean;
 }) {
   const msg = item.message as unknown as Message;
   const proposal = item.proposal as Proposal | null;
@@ -245,6 +256,14 @@ function SignalDetailPanel({
   const canSkip = !["skipped", "sent", "send_uncertain", "sending"].includes(status);
   const canEdit = proposal && ["draft_ready", "approved"].includes(status);
   const canRetrySend = status === "send_failed";
+  const reviewPending = ["pending", "error", "deferred"].includes(msg.reviewStatus ?? "");
+  const decision = msg.reviewDecision;
+  const suggestedShipmentId = decision?.evidence?.shipmentId ?? msg.aiRoutingGuess?.shipmentId;
+  const handleCorrection = () => {
+    const answer = window.prompt("Enter the correct shipment ID for this message:");
+    const shipmentId = answer ? Number(answer) : NaN;
+    if (Number.isInteger(shipmentId) && shipmentId > 0) onReview("correct", shipmentId);
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -304,6 +323,66 @@ function SignalDetailPanel({
             </button>
           )}
         </div>
+
+        {/* AI Draft */}
+        {reviewPending && (
+          <section className={`rounded-xl border p-3 ${
+            msg.reviewStatus === "error"
+              ? "border-red-200 bg-red-50"
+              : "border-amber-200 bg-amber-50"
+          }`}>
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={14} className={msg.reviewStatus === "error" ? "text-red-600 mt-0.5" : "text-amber-700 mt-0.5"} />
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#5E687B]">
+                  {decision?.category === "extraction" ? "Extraction needs confirmation" : "Routing needs review"}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-[#3D4654]">
+                  {decision?.reason ?? msg.aiRoutingGuess?.reasoning ?? "Review this recommendation before it changes any operational record."}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                  {typeof decision?.confidence === "number" && (
+                    <span className="rounded-full border border-amber-200 bg-white px-2 py-0.5 text-amber-800">
+                      {Math.round(decision.confidence * 100)}% confidence
+                    </span>
+                  )}
+                  {suggestedShipmentId != null && (
+                    <span className="rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[#5E687B]">
+                      Proposed shipment #{String(suggestedShipmentId)}
+                    </span>
+                  )}
+                </div>
+                {msg.pendingExtractionFields && (
+                  <div className="mt-2 rounded-lg border border-amber-100 bg-white/70 p-2 text-[10px] text-[#5E687B]">
+                    <span className="font-semibold text-[#3D4654]">Proposed fields: </span>
+                    {Object.entries(msg.pendingExtractionFields)
+                      .filter(([key, value]) => key !== "confidence" && key !== "reasoning" && value != null && value !== "")
+                      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : String(value)}`)
+                      .join(" · ") || "No usable fields were returned"}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={() => onReview("confirm")} disabled={isReviewing}
+                className="rounded-lg bg-[#212833] px-2.5 py-1.5 text-[10px] font-semibold text-white disabled:opacity-50">
+                Confirm
+              </button>
+              <button onClick={handleCorrection} disabled={isReviewing}
+                className="rounded-lg border border-[#C9D1DB] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#3D4654] disabled:opacity-50">
+                Correct match
+              </button>
+              <button onClick={() => onReview("defer")} disabled={isReviewing}
+                className="rounded-lg border border-[#C9D1DB] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#3D4654] disabled:opacity-50">
+                Defer
+              </button>
+              <button onClick={() => onReview("dismiss")} disabled={isReviewing}
+                className="rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-[#7A3A3A] hover:bg-red-100 disabled:opacity-50">
+                Dismiss
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* AI Draft */}
         {proposal && draftBody && (
@@ -402,6 +481,20 @@ function SignalDetailPanel({
                   <span className="text-[#E5EAF0] mt-1">•</span>
                   <span className="text-[#5E687B] font-medium">{entry.action.replace(/_/g, " ")}</span>
                   <span>by {entry.actor}</span>
+                  {entry.note && <span className="text-[#9E9FAE]">— {entry.note}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {Array.isArray(msg.reviewAudit) && msg.reviewAudit.length > 0 && (
+          <div>
+            <div className="text-[9px] font-bold text-[#9E9FAE] uppercase tracking-wider mb-1.5">Review activity</div>
+            <div className="space-y-1">
+              {msg.reviewAudit.map((entry, i) => (
+                <div key={i} className="flex items-start gap-1.5 text-[10px] text-[#5E687B]">
+                  <span className="text-[#E5EAF0] mt-1">•</span>
+                  <span>{entry.action?.replace(/_/g, " ")}</span>
                   {entry.note && <span className="text-[#9E9FAE]">— {entry.note}</span>}
                 </div>
               ))}
@@ -524,6 +617,7 @@ export function SignalInbox() {
   const { mutate: send, isPending: isSending } = useSendSignal({ mutation: { onSuccess: invalidate } });
   const { mutate: skip, isPending: isSkipping } = useSkipSignal({ mutation: { onSuccess: invalidate } });
   const { mutate: updateDraft, isPending: isUpdatingDraft } = useUpdateSignalDraft({ mutation: { onSuccess: invalidate } });
+  const { mutate: review, isPending: isReviewing } = useReviewSignal({ mutation: { onSuccess: invalidate, onError: invalidate } });
 
   // Per-item mutation state (whether the mutation is for the selected item)
   const selectedMsg = selectedItem ? (selectedItem.message as unknown as Message) : null;
@@ -652,11 +746,16 @@ export function SignalInbox() {
             })}
             onSkip={() => skip({ messageId: selectedMsg.id })}
             onDraftEdit={body => updateDraft({ messageId: selectedMsg.id, data: { draftBody: body } })}
+            onReview={(action, shipmentId, note) => review({
+              messageId: selectedMsg.id,
+              data: { action, ...(shipmentId ? { shipmentId } : {}), ...(note ? { note } : {}) },
+            })}
             isAssessing={isAssessing}
             isApproving={isApproving}
             isSending={isSending}
             isSkipping={isSkipping}
             isUpdatingDraft={isUpdatingDraft}
+            isReviewing={isReviewing}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">

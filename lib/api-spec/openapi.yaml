@@ -2935,16 +2935,16 @@ components:
             fromEmail:     { type: string, description: "The sender email address that had the rule" }
             oldPoNumber:   { type: string, description: "PO number of the shipment that closed and deactivated the rule" }
             oldShipmentId: { type: integer, description: "DB id of the shipment that closed" }
-         reviewStatus:
-           { type: string, description: "not_required | pending | confirmed | corrected | dismissed | deferred | error" }
-         reviewDecision:
-           type: ["object", "null"]
-           additionalProperties: true
-           description: "Structured category, confidence, reason, and evidence for the pending decision"
-         reviewAudit:
-           type: array
-           items: { type: object, additionalProperties: true }
-           description: "Append-only history of review actions"
+        reviewStatus:
+          { type: string, description: "not_required | pending | confirmed | corrected | dismissed | deferred | error" }
+        reviewDecision:
+          type: ["object", "null"]
+          additionalProperties: true
+          description: "Structured category, confidence, reason, and evidence for the pending decision"
+        reviewAudit:
+          type: array
+          items: { type: object, additionalProperties: true }
+          description: "Append-only history of review actions"
     SignalReviewInput:
       type: object
       required: [action]

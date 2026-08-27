@@ -9,6 +9,7 @@ import {
   deterministicShipmentMatch,
   triageInboundEmail,
 } from "../lib/inbound-triage";
+import { makeReviewDecision, needsHumanReview } from "../lib/decision-review";
 
 const router: IRouter = Router();
 
@@ -237,7 +238,7 @@ Reply with JSON only (no markdown):
       output: "json",
     }));
 
-    const HIGH_CONFIDENCE = 0.65;
+    const confidence = Number.isFinite(parsed.confidence) ? parsed.confidence! : 0;
     const resolvedShipmentId =
       parsed.shipmentId != null &&
       shipments.some(s => s.id === parsed.shipmentId)
@@ -250,14 +251,28 @@ Reply with JSON only (no markdown):
         intent: parsed.intent ?? null,
         extractedDates: parsed.extractedDates ?? [],
         extractedAmounts: parsed.extractedAmounts ?? [],
-        confidence: parsed.confidence ?? 0,
+        confidence,
         reasoning: parsed.reasoning ?? null,
       },
+      reviewDecision: makeReviewDecision(
+        "extraction",
+        confidence,
+        parsed.reasoning ?? "AI extracted operational details from a mobile capture.",
+        {
+          shipmentId: resolvedShipmentId,
+          intent: parsed.intent ?? null,
+          extractedDates: parsed.extractedDates ?? [],
+          extractedAmounts: parsed.extractedAmounts ?? [],
+        },
+      ),
+      reviewStatus: "pending",
     };
 
-    if (resolvedShipmentId && (parsed.confidence ?? 0) >= HIGH_CONFIDENCE) {
+    // Only a clear routing match can be auto-confirmed. Extracted operational
+    // facts remain in the review queue regardless of model confidence.
+    if (resolvedShipmentId && !needsHumanReview("routing", confidence)) {
       patch.shipmentId = resolvedShipmentId;
-      patch.routingStatus = "auto_routed";
+      patch.routingStatus = "routed";
     }
 
     await db

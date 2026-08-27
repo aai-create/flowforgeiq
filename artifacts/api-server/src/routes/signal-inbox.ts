@@ -30,7 +30,7 @@ import { z } from "zod/v4";
 import { resolveOrgId } from "../middlewares/requireAuth";
 import { draftReplyWithAI } from "./webhooks";
 import { sendViaGmail, GmailNotConnectedError, GmailSendError } from "../lib/gmailSend";
-import { ListMessagesResponseItem } from "@workspace/api-zod";
+import { ListMessagesResponseItem, ReviewSignalBody } from "@workspace/api-zod";
 import { draftRevision } from "../lib/draftRevision";
 import {
   transitionSignalStatus,
@@ -85,6 +85,12 @@ function appendAudit(
 /** Parse auditTrail stored as unknown JSON to typed array. */
 function parseAuditTrail(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+}
+
+function parseReviewDecision(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function approvedRevision(auditTrail: unknown): string | null {
@@ -322,7 +328,18 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
     // (don't overwrite a concurrent /skip)
     await db
       .update(messagesTable)
-      .set({ signalStatus: transitionSignalStatus("assessing", "assessFailed") })
+      .set({
+        signalStatus: transitionSignalStatus("assessing", "assessFailed"),
+        reviewStatus: "error",
+        reviewDecision: {
+          category: "suggestion",
+          confidence: 0,
+          reason: "AI assessment failed. Review the original message or retry the assessment.",
+          evidence: { messageId },
+          required: true,
+        },
+        reviewAudit: appendAudit(parseAuditTrail(msg.reviewAudit), "assessment_failed", "system"),
+      })
       .where(
         and(
           eq(messagesTable.id, messageId),
@@ -723,6 +740,71 @@ router.post("/signal-inbox/:messageId/send", async (req, res) => {
       uncertain: true,
     });
   }
+});
+
+// ─── POST /signal-inbox/:messageId/review ────────────────────────────────────
+
+router.post("/signal-inbox/:messageId/review", async (req, res) => {
+  const messageId = Number(req.params.messageId);
+  const orgId = await resolveOrgId(req);
+  const input = ReviewSignalBody.parse(req.body);
+  const [message] = await db.select().from(messagesTable)
+    .where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
+
+  if (!message) {
+    res.status(404).json({ error: "Message not found" });
+    return;
+  }
+  if (!["pending", "error", "deferred"].includes(message.reviewStatus)) {
+    res.status(409).json({ error: "This review is already complete or no review is required." });
+    return;
+  }
+
+  const decision = parseReviewDecision(message.reviewDecision);
+  const guessedShipmentId = typeof decision?.evidence === "object" && decision.evidence
+    ? Number((decision.evidence as Record<string, unknown>).shipmentId)
+    : NaN;
+  const targetShipmentId = input.shipmentId ?? (Number.isInteger(guessedShipmentId) ? guessedShipmentId : null);
+
+  if (input.action === "correct" && !input.shipmentId) {
+    res.status(400).json({ error: "Choose a shipment when correcting a routing decision." });
+    return;
+  }
+  if (targetShipmentId != null && input.action !== "dismiss" && input.action !== "defer") {
+    const [shipment] = await db.select({ id: shipmentsTable.id }).from(shipmentsTable)
+      .where(and(eq(shipmentsTable.id, targetShipmentId), eq(shipmentsTable.orgId, orgId)));
+    if (!shipment) {
+      res.status(400).json({ error: "That shipment is not available in this workspace." });
+      return;
+    }
+  }
+
+  const nextStatus = input.action === "confirm" ? "confirmed"
+    : input.action === "correct" ? "corrected"
+      : input.action === "dismiss" ? "dismissed" : "deferred";
+  const reviewAudit = appendAudit(parseAuditTrail(message.reviewAudit), `review_${nextStatus}`, "user", input.note);
+  const patch: Record<string, unknown> = {
+    reviewStatus: nextStatus,
+    reviewAudit,
+  };
+  if ((input.action === "confirm" || input.action === "correct") && targetShipmentId != null) {
+    patch.shipmentId = targetShipmentId;
+    patch.routingStatus = "routed";
+  }
+
+  const [updated] = await db.update(messagesTable).set(patch)
+    .where(and(
+      eq(messagesTable.id, messageId),
+      eq(messagesTable.orgId, orgId),
+      inArray(messagesTable.reviewStatus, ["pending", "error", "deferred"]),
+    ))
+    .returning();
+  if (!updated) {
+    res.status(409).json({ error: "Review changed concurrently. Reload before deciding." });
+    return;
+  }
+  req.log.info({ messageId, action: input.action, reviewStatus: nextStatus }, "signal-inbox: review recorded");
+  res.json(ListMessagesResponseItem.parse(updated));
 });
 
 // ─── POST /signal-inbox/:messageId/skip ──────────────────────────────────────

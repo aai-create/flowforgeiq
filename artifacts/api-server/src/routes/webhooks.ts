@@ -26,10 +26,11 @@ import {
   emailInboundEventKey,
   triageInboundEmail,
 } from "../lib/inbound-triage";
+import { makeReviewDecision, ROUTING_AUTO_CONFIRM_CONFIDENCE } from "../lib/decision-review";
 
 const router: IRouter = Router();
 
-const ROUTING_NEEDS_REVIEW_THRESHOLD = 0.65;
+const ROUTING_NEEDS_REVIEW_THRESHOLD = ROUTING_AUTO_CONFIRM_CONFIDENCE;
 
 function getMimeFileType(mimeType: string): string {
   if (mimeType.startsWith("image/")) return "image";
@@ -394,34 +395,34 @@ Extract these fields if clearly mentioned (leave null otherwise):
 
     const conf = parsed.confidence ?? 0;
 
-    if (conf >= 0.85) {
-      const patch: Record<string, unknown> = {};
-      if (parsed.newStatus && ["on-track", "at-risk", "delayed"].includes(parsed.newStatus)) {
-        patch.status = parsed.newStatus;
-      }
-      if (parsed.exFactoryDate) {
-        const d = new Date(parsed.exFactoryDate);
-        if (!isNaN(d.getTime())) patch.exFactoryDate = d;
-      }
-      if (parsed.quantity && parsed.quantity > 0) {
-        patch.quantity = parsed.quantity;
-      }
-      if (Object.keys(patch).length > 0) {
-        await db.update(shipmentsTable).set(patch).where(and(eq(shipmentsTable.id, shipmentId), eq(shipmentsTable.orgId, orgId)));
-      }
-    } else if (conf >= 0.45) {
-      await db.update(messagesTable).set({
-        pendingExtractionFields: {
-          exFactoryDate: parsed.exFactoryDate ?? null,
-          quantity: parsed.quantity ?? null,
-          delayDays: parsed.delayDays ?? null,
-          newStatus: parsed.newStatus ?? null,
-          confidence: conf,
-        },
-      }).where(eq(messagesTable.id, messageId));
-    }
+    // An extraction changes operational data, so it is always proposed first.
+    // The original message keeps the evidence and the reviewer controls the next step.
+    await db.update(messagesTable).set({
+      pendingExtractionFields: {
+        exFactoryDate: parsed.exFactoryDate ?? null,
+        quantity: parsed.quantity ?? null,
+        delayDays: parsed.delayDays ?? null,
+        newStatus: parsed.newStatus ?? null,
+        confidence: conf,
+      },
+      reviewStatus: "pending",
+      reviewDecision: makeReviewDecision(
+        "extraction",
+        conf,
+        "AI extracted shipment details that require confirmation before changing the shipment.",
+        { shipmentId, ...parsed },
+      ),
+    }).where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
   } catch {
-    // field extraction is best-effort; never throw
+    await db.update(messagesTable).set({
+      reviewStatus: "error",
+      reviewDecision: makeReviewDecision(
+        "extraction",
+        0,
+        "Field extraction could not be completed. Review the original message manually.",
+        { shipmentId },
+      ),
+    }).where(and(eq(messagesTable.id, messageId), eq(messagesTable.orgId, orgId)));
   }
 }
 
@@ -1277,7 +1278,7 @@ router.post("/webhooks/email", async (req, res) => {
       );
       if (guess) {
         aiGuess = guess;
-        if (guess.shipmentId && guess.confidence >= 0.75) {
+        if (guess.shipmentId && guess.confidence >= ROUTING_AUTO_CONFIRM_CONFIDENCE) {
           finalShipmentId = guess.shipmentId;
           finalConfidence = Math.max(finalConfidence, guess.confidence * 0.9);
           finalMatchMethod = "ai-inferred";
@@ -1321,7 +1322,7 @@ router.post("/webhooks/email", async (req, res) => {
       if (guess) {
         aiGuess = guess;
         finalConfidence = guess.confidence * 0.6;
-        if (guess.shipmentId && guess.confidence >= 0.8) {
+        if (guess.shipmentId && guess.confidence >= ROUTING_AUTO_CONFIRM_CONFIDENCE) {
           finalShipmentId = guess.shipmentId;
           finalMatchMethod = "ai-inferred";
         }
@@ -1357,6 +1358,7 @@ router.post("/webhooks/email", async (req, res) => {
   // Require BOTH sufficient confidence AND a resolved shipment ID to auto-route.
   // A high-confidence sender with multiple unresolved candidates still goes to Needs Review.
   const routingStatus = (finalConfidence >= ROUTING_NEEDS_REVIEW_THRESHOLD && finalShipmentId !== null) ? "routed" : "needs-review";
+  const routingNeedsReview = !inboundTriage.suppressionReason && routingStatus === "needs-review";
 
   // Build a concise snippet from the email body
   const snippet = inboundTriage.normalizedBody.slice(0, 200);
@@ -1409,6 +1411,20 @@ router.post("/webhooks/email", async (req, res) => {
       normalizationVersion: inboundTriage.normalizationVersion,
       suppressionReason: inboundTriage.suppressionReason,
       aiRoutingGuess: aiGuess ?? null,
+      reviewStatus: routingNeedsReview ? "pending" : "not_required",
+      reviewDecision: routingNeedsReview
+        ? makeReviewDecision(
+          "routing",
+          finalConfidence,
+          aiGuess?.reasoning ?? "No reliable shipment match was available. Review the original message before assigning it.",
+          {
+            shipmentId: aiGuess?.shipmentId ?? finalShipmentId,
+            buyerName: aiGuess?.buyerName ?? ctx.resolvedCustomerName,
+            candidateShipmentIds: [...aiCandidateIds],
+            matchMethod: finalMatchMethod,
+          },
+        )
+        : null,
       receivedAt,
       routedToClerkUserId: ctx.scopedClerkUserId,
       orgId: scopedOrgId,
