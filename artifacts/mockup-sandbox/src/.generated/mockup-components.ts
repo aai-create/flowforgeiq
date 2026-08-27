@@ -25,9 +25,9 @@ export const modules: ModuleMap = {
   "./components/mockups/nav-redesign/ReportsRisk.tsx": () => import("../components/mockups/nav-redesign/ReportsRisk.tsx"),
   "./components/mockups/nav-redesign/UnifiedInbox.tsx": () => import("../components/mockups/nav-redesign/UnifiedInbox.tsx"),
   "./components/mockups/nav-redesign/UnifiedShipments.tsx": () => import("../components/mockups/nav-redesign/UnifiedShipments.tsx"),
+  "./components/mockups/rfq-main-panel/CommandCenter.tsx": () => import("../components/mockups/rfq-main-panel/CommandCenter.tsx"),
+  "./components/mockups/rfq-main-panel/ReviewWorkspace.tsx": () => import("../components/mockups/rfq-main-panel/ReviewWorkspace.tsx"),
   "./components/mockups/pdf-field-viewer/HoverPopover.tsx": () => import("../components/mockups/pdf-field-viewer/HoverPopover.tsx"),
   "./components/mockups/pdf-field-viewer/InlineSnippet.tsx": () => import("../components/mockups/pdf-field-viewer/InlineSnippet.tsx"),
-  "./components/mockups/pdf-field-viewer/SplitPane.tsx": () => import("../components/mockups/pdf-field-viewer/SplitPane.tsx"),
-  "./components/mockups/rfq-main-panel/CommandCenter.tsx": () => import("../components/mockups/rfq-main-panel/CommandCenter.tsx"),
-  "./components/mockups/rfq-main-panel/ReviewWorkspace.tsx": () => import("../components/mockups/rfq-main-panel/ReviewWorkspace.tsx")
+  "./components/mockups/pdf-field-viewer/SplitPane.tsx": () => import("../components/mockups/pdf-field-viewer/SplitPane.tsx")
 };
