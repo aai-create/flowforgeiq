@@ -20,6 +20,12 @@ import { runExtraction, extractFromChatText } from "../lib/extraction";
 import { normaliseChat } from "../lib/chatNormalise";
 import { detectChatForward, CHAT_ROUTING_THRESHOLD } from "../lib/chatDetect";
 import { requireAiResult, runAi } from "../lib/ai-gateway";
+import {
+  canonicalProviderMessageId,
+  deterministicShipmentMatch,
+  emailInboundEventKey,
+  triageInboundEmail,
+} from "../lib/inbound-triage";
 
 const router: IRouter = Router();
 
@@ -203,50 +209,20 @@ function inboundEmailAcceptedResponse(
  */
 async function inboundEmailAlreadyAccepted(
   orgId: number,
-  gmailMessageId: string | null,
+  inboundEventKey: string,
 ): Promise<boolean> {
-  if (!gmailMessageId) return false;
-
   const [existing] = await db
     .select({ id: messagesTable.id })
     .from(messagesTable)
     .where(
       and(
         eq(messagesTable.orgId, orgId),
-        eq(messagesTable.gmailMessageId, gmailMessageId),
+        eq(messagesTable.inboundEventKey, inboundEventKey),
       ),
     )
     .limit(1);
 
   return existing !== undefined;
-}
-
-// ─── PO / shipment reference scanning ─────────────────────────────────────────
-
-function scanForShipmentMatch(
-  subject: string,
-  body: string,
-  candidates: ShipmentRecord[],
-): number | null {
-  const raw = `${subject} ${body}`.toLowerCase();
-  const stripped = raw.replace(/[^a-z0-9]/g, "");
-
-  const hits = candidates.filter((s) => {
-    const po = s.poNumber.toLowerCase();
-    if (raw.includes(po)) return true;
-    const poAlpha = po.replace(/[^a-z0-9]/g, "");
-    if (poAlpha.length >= 4 && stripped.includes(poAlpha)) return true;
-
-    const product = s.product.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
-    if (product.length >= 6 && raw.includes(product)) return true;
-
-    const productAlpha = product.replace(/\s+/g, "");
-    if (productAlpha.length >= 6 && stripped.includes(productAlpha)) return true;
-
-    return false;
-  });
-
-  return hits.length === 1 ? hits[0].id : null;
 }
 
 // ─── AI shipment inference ────────────────────────────────────────────────────
@@ -624,7 +600,7 @@ async function resolveEmailRoutingContext(
     candidateShipments = candidates;
     routingShipmentIds = candidates.map((s) => s.id);
 
-    preMatchedShipmentId = scanForShipmentMatch(
+    preMatchedShipmentId = deterministicShipmentMatch(
       subject ?? "",
       textBody ?? "",
       candidates,
@@ -844,7 +820,8 @@ router.post("/webhooks/email", async (req, res) => {
   }
 
   const { From, Subject, TextBody, Attachments, To, OriginalRecipient } = parsed.data;
-  const { gmailThreadId, gmailMessageId } = getInboundGmailMetadata(req.body);
+  const { gmailThreadId, gmailMessageId: rawGmailMessageId } = getInboundGmailMetadata(req.body);
+  const gmailMessageId = canonicalProviderMessageId(rawGmailMessageId);
 
   // ── Per-user routing via plus-token in the To/OriginalRecipient header ───────
   const toAddress = OriginalRecipient ?? To ?? "";
@@ -871,15 +848,29 @@ router.post("/webhooks/email", async (req, res) => {
     scopedOrgId = tokenRow?.orgId ?? 1;
   }
 
+  const rawBody = TextBody ?? "";
+  const inboundTriage = triageInboundEmail(Subject ?? "", rawBody);
+  const receivedAt = new Date();
+  const inboundEventKey = emailInboundEventKey({
+    providerMessageId: gmailMessageId,
+    from: From ?? "",
+    recipient: toAddress,
+    subject: Subject ?? "",
+    normalizedBody: inboundTriage.normalizedBody,
+    receivedAt,
+  });
+
   if (!gmailMessageId) {
     req.log.warn(
-      { scopedOrgId, to: toAddress },
-      "email-webhook: provider message ID unavailable; accepting without replay protection",
+      { scopedOrgId, to: toAddress, inboundEventKey },
+      "email-webhook: provider message ID unavailable; using deterministic fallback replay key",
     );
-  } else if (await inboundEmailAlreadyAccepted(scopedOrgId, gmailMessageId)) {
+  }
+
+  if (await inboundEmailAlreadyAccepted(scopedOrgId, inboundEventKey)) {
     req.log.info(
-      { scopedOrgId, gmailMessageId },
-      "email-webhook: duplicate provider delivery ignored",
+      { scopedOrgId, gmailMessageId, inboundEventKey },
+      "email-webhook: duplicate inbound delivery ignored",
     );
     res.json(inboundEmailAcceptedResponse([], true));
     return;
@@ -888,8 +879,7 @@ router.post("/webhooks/email", async (req, res) => {
   // Emails with no plus-token route to unscoped needs-review immediately
   if (!plusToken) {
     req.log.info({ to: toAddress }, "email-webhook: no plus-token, routing to unscoped needs-review");
-    const rawBody = TextBody ?? "";
-    const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
+    const snippet = inboundTriage.normalizedBody.slice(0, 200);
     const inserted = await db.insert(messagesTable).values({
       shipmentId: null,
       supplierId: null,
@@ -910,14 +900,16 @@ router.post("/webhooks/email", async (req, res) => {
       rawSenderEmail: From ?? null,
       gmailThreadId,
       gmailMessageId,
+      inboundEventKey,
+      normalizedBody: inboundTriage.normalizedBody,
+      normalizationVersion: inboundTriage.normalizationVersion,
+      suppressionReason: inboundTriage.suppressionReason,
       aiRoutingGuess: null,
-      receivedAt: new Date(),
+      receivedAt,
       routedToClerkUserId: null,
       orgId: scopedOrgId,
     })
-      .onConflictDoNothing({
-        target: [messagesTable.orgId, messagesTable.gmailMessageId],
-      })
+      .onConflictDoNothing()
       .returning({ id: messagesTable.id });
     res.json(inboundEmailAcceptedResponse([], inserted.length === 0));
     return;
@@ -926,8 +918,7 @@ router.post("/webhooks/email", async (req, res) => {
   // If the plus-token was present but doesn't match any user, treat as unscoped needs-review
   if (!scopedClerkUserId) {
     req.log.warn({ plusToken, to: toAddress }, "email-webhook: plus-token unresolved, routing to unscoped needs-review");
-    const rawBody = TextBody ?? "";
-    const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
+    const snippet = inboundTriage.normalizedBody.slice(0, 200);
     const inserted = await db.insert(messagesTable).values({
       shipmentId: null,
       supplierId: null,
@@ -948,20 +939,59 @@ router.post("/webhooks/email", async (req, res) => {
       rawSenderEmail: From ?? null,
       gmailThreadId,
       gmailMessageId,
+      inboundEventKey,
+      normalizedBody: inboundTriage.normalizedBody,
+      normalizationVersion: inboundTriage.normalizationVersion,
+      suppressionReason: inboundTriage.suppressionReason,
       aiRoutingGuess: null,
-      receivedAt: new Date(),
+      receivedAt,
       routedToClerkUserId: null,
       orgId: scopedOrgId,
     })
-      .onConflictDoNothing({
-        target: [messagesTable.orgId, messagesTable.gmailMessageId],
-      })
+      .onConflictDoNothing()
       .returning({ id: messagesTable.id });
     res.json(inboundEmailAcceptedResponse([], inserted.length === 0));
     return;
   }
 
   req.log.info({ plusToken, scopedClerkUserId }, "email-webhook: plus-token resolved to user");
+
+  // Automated notices and quote-history-only deliveries remain auditable, but
+  // intentionally bypass routing, dispatch, and all model work.
+  if (inboundTriage.suppressionReason) {
+    const inserted = await db.insert(messagesTable).values({
+      shipmentId: null,
+      supplierId: null,
+      sender: From ?? "Unknown Sender",
+      recipient: toAddress || null,
+      channel: "email",
+      subject: Subject ?? null,
+      direction: "inbound",
+      snippet: inboundTriage.normalizedBody.slice(0, 200) || "(suppressed email)",
+      fullBody: rawBody,
+      aiDraft: "",
+      aiAction: "",
+      aiTags: [],
+      unread: true,
+      isFlagged: false,
+      routingStatus: "needs-review",
+      routingConfidence: 0,
+      matchMethod: "suppressed",
+      rawSenderEmail: From ?? null,
+      gmailThreadId,
+      gmailMessageId,
+      inboundEventKey,
+      normalizedBody: inboundTriage.normalizedBody,
+      normalizationVersion: inboundTriage.normalizationVersion,
+      suppressionReason: inboundTriage.suppressionReason,
+      aiRoutingGuess: null,
+      receivedAt,
+      routedToClerkUserId: scopedClerkUserId,
+      orgId: scopedOrgId,
+    }).onConflictDoNothing().returning({ id: messagesTable.id });
+    res.json(inboundEmailAcceptedResponse([], inserted.length === 0));
+    return;
+  }
 
   // ── Chat-forward detection: handle before normal email routing ──────────────
   const chatDetection = detectChatForward(Subject, TextBody);
@@ -982,17 +1012,31 @@ router.post("/webhooks/email", async (req, res) => {
         .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
         .where(eq(shipmentsTable.orgId, scopedOrgId));
 
-      const extracted = await extractFromChatText(
+      const deterministicallyMatchedShipmentId = deterministicShipmentMatch(
+        "",
         normalised.fullText,
         shipmentRows,
-        normalised.primarySender,
-        {
-          orgId: scopedOrgId,
-          workflow: "inbound_email",
-          event: "chat_forward_routing",
-          correlationId: req.header("x-request-id") ?? undefined,
-        },
       );
+      const extracted = deterministicallyMatchedShipmentId !== null
+        ? {
+            shipmentId: deterministicallyMatchedShipmentId,
+            confidence: 1,
+            matchMethod: "po-reference",
+            aiDraft: "",
+            aiAction: "",
+            aiTags: [],
+          }
+        : await extractFromChatText(
+            normalised.fullText,
+            shipmentRows,
+            normalised.primarySender,
+            {
+              orgId: scopedOrgId,
+              workflow: "inbound_email",
+              event: "chat_forward_routing",
+              correlationId: req.header("x-request-id") ?? undefined,
+            },
+          );
       const routingStatus = extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
       const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
 
@@ -1017,13 +1061,15 @@ router.post("/webhooks/email", async (req, res) => {
         rawSenderEmail: From ?? null,
         gmailThreadId,
         gmailMessageId,
-        receivedAt: new Date(),
+        inboundEventKey,
+        normalizedBody: normalised.fullText,
+        normalizationVersion: inboundTriage.normalizationVersion,
+        suppressionReason: inboundTriage.suppressionReason,
+        receivedAt,
         routedToClerkUserId: scopedClerkUserId,
         orgId: scopedOrgId,
       })
-        .onConflictDoNothing({
-          target: [messagesTable.orgId, messagesTable.gmailMessageId],
-        })
+        .onConflictDoNothing()
         .returning({ id: messagesTable.id });
 
       req.log.info({ channel: chatDetection.channel, confidence: extracted.confidence, routingStatus, scopedClerkUserId }, "email-webhook: chat forward ingested");
@@ -1034,7 +1080,13 @@ router.post("/webhooks/email", async (req, res) => {
     }
   }
 
-  const ctx = await resolveEmailRoutingContext(From, Subject, TextBody, scopedClerkUserId, scopedOrgId);
+  const ctx = await resolveEmailRoutingContext(
+    From,
+    Subject,
+    inboundTriage.normalizedBody,
+    scopedClerkUserId,
+    scopedOrgId,
+  );
 
   let finalShipmentId = ctx.preMatchedShipmentId;
   let finalConfidence = ctx.confidence;
@@ -1081,8 +1133,8 @@ router.post("/webhooks/email", async (req, res) => {
         finalMatchMethod = "contact-rule" as MatchMethod;
 
         // Build a label for the sender
-        const rawBody2 = TextBody ?? "";
-        const snippet2 = rawBody2.replace(/\s+/g, " ").trim().slice(0, 200);
+        const rawBody2 = rawBody;
+        const snippet2 = inboundTriage.normalizedBody.slice(0, 200);
         const senderLabel2 =
           ctx.matchedSupplierName ??
           ctx.resolvedCustomerName ??
@@ -1112,14 +1164,16 @@ router.post("/webhooks/email", async (req, res) => {
             rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
             gmailThreadId,
             gmailMessageId,
+            inboundEventKey,
+            normalizedBody: inboundTriage.normalizedBody,
+            normalizationVersion: inboundTriage.normalizationVersion,
+            suppressionReason: inboundTriage.suppressionReason,
             aiRoutingGuess: null,
-            receivedAt: new Date(),
+            receivedAt,
             routedToClerkUserId: ctx.scopedClerkUserId,
             orgId: scopedOrgId,
           })
-          .onConflictDoNothing({
-            target: [messagesTable.orgId, messagesTable.gmailMessageId],
-          })
+          .onConflictDoNothing()
           .returning();
 
         if (!msg2) {
@@ -1150,7 +1204,7 @@ router.post("/webhooks/email", async (req, res) => {
           } catch { /* best-effort */ }
         });
 
-        setImmediate(async () => {
+        if (!inboundTriage.suppressionReason) setImmediate(async () => {
           try {
             const shipmentForDraft = finalShipmentId
               ? (await db.select({
@@ -1159,7 +1213,7 @@ router.post("/webhooks/email", async (req, res) => {
                   exFactoryDate: shipmentsTable.exFactoryDate, dueDate: shipmentsTable.dueDate,
                 }).from(shipmentsTable).where(eq(shipmentsTable.id, finalShipmentId!)))[0] ?? null
               : null;
-            const rawBody3 = TextBody ?? "";
+            const rawBody3 = inboundTriage.normalizedBody;
             const [draft3, tags3] = await Promise.all([
               draftReplyWithAI(rawBody3, Subject ?? "", shipmentForDraft ?? null, scopedOrgId, msg2.id),
               buildAiTags(rawBody3, Subject ?? ""),
@@ -1212,11 +1266,11 @@ router.post("/webhooks/email", async (req, res) => {
   // shipment was resolved via reference scan (multiple candidates — need AI to pick one).
   const needsAiInference = !ctx.unresolvable && ctx.candidateShipments.length > 0 &&
     (finalConfidence < ROUTING_NEEDS_REVIEW_THRESHOLD || finalShipmentId === null);
-  if (needsAiInference) {
+  if (!inboundTriage.suppressionReason && needsAiInference) {
     try {
       const guess = await inferShipmentWithAI(
         Subject ?? "",
-        TextBody ?? "",
+        inboundTriage.normalizedBody,
         ctx.effectiveSenderEmail,
         ctx.candidateShipments,
         scopedOrgId,
@@ -1239,7 +1293,7 @@ router.post("/webhooks/email", async (req, res) => {
 
   // For completely unresolvable senders, also attempt AI inference against ALL org-scoped shipments.
   // These are explicitly added to the candidate set so the final guard permits them.
-  if (ctx.unresolvable && ctx.candidateShipments.length === 0) {
+  if (!inboundTriage.suppressionReason && ctx.unresolvable && ctx.candidateShipments.length === 0) {
     try {
       const allOrgShipments = await db
         .select({
@@ -1259,7 +1313,7 @@ router.post("/webhooks/email", async (req, res) => {
 
       const guess = await inferShipmentWithAI(
         Subject ?? "",
-        TextBody ?? "",
+        inboundTriage.normalizedBody,
         ctx.effectiveSenderEmail,
         allOrgShipments,
         scopedOrgId,
@@ -1305,8 +1359,7 @@ router.post("/webhooks/email", async (req, res) => {
   const routingStatus = (finalConfidence >= ROUTING_NEEDS_REVIEW_THRESHOLD && finalShipmentId !== null) ? "routed" : "needs-review";
 
   // Build a concise snippet from the email body
-  const rawBody = TextBody ?? "";
-  const snippet = rawBody.replace(/\s+/g, " ").trim().slice(0, 200);
+  const snippet = inboundTriage.normalizedBody.slice(0, 200);
   const senderLabel =
     ctx.matchedSupplierName ??
     ctx.resolvedCustomerName ??
@@ -1351,14 +1404,16 @@ router.post("/webhooks/email", async (req, res) => {
       rawSenderEmail: (ctx.forwardedFromEmail ?? ctx.effectiveSenderEmail) || null,
       gmailThreadId,
       gmailMessageId,
+      inboundEventKey,
+      normalizedBody: inboundTriage.normalizedBody,
+      normalizationVersion: inboundTriage.normalizationVersion,
+      suppressionReason: inboundTriage.suppressionReason,
       aiRoutingGuess: aiGuess ?? null,
-      receivedAt: new Date(),
+      receivedAt,
       routedToClerkUserId: ctx.scopedClerkUserId,
       orgId: scopedOrgId,
     })
-    .onConflictDoNothing({
-      target: [messagesTable.orgId, messagesTable.gmailMessageId],
-    })
+    .onConflictDoNothing()
     .returning();
 
   if (!msg) {
@@ -1371,7 +1426,7 @@ router.post("/webhooks/email", async (req, res) => {
   }
 
   // Async: push notification + AI reply draft + field extraction
-  setImmediate(async () => {
+  if (!inboundTriage.suppressionReason) setImmediate(async () => {
     try {
       const tokenRows = await db
         .select({ expoPushToken: pushTokensTable.expoPushToken })
@@ -1410,8 +1465,8 @@ router.post("/webhooks/email", async (req, res) => {
         : null;
 
       const [draft, aiTags] = await Promise.all([
-        draftReplyWithAI(rawBody, Subject ?? "", shipment ?? null, scopedOrgId, msg.id),
-        buildAiTags(rawBody, Subject ?? ""),
+        draftReplyWithAI(inboundTriage.normalizedBody, Subject ?? "", shipment ?? null, scopedOrgId, msg.id),
+        buildAiTags(inboundTriage.normalizedBody, Subject ?? ""),
       ]);
 
       const patch: Record<string, unknown> = { aiDraft: draft };
@@ -1419,7 +1474,7 @@ router.post("/webhooks/email", async (req, res) => {
       await db.update(messagesTable).set(patch).where(eq(messagesTable.id, msg.id));
 
       if (finalShipmentId && routingStatus === "routed") {
-        await extractFieldsFromEmail(rawBody, Subject ?? "", finalShipmentId, msg.id, scopedOrgId);
+        await extractFieldsFromEmail(inboundTriage.normalizedBody, Subject ?? "", finalShipmentId, msg.id, scopedOrgId);
       }
     } catch {
       // best-effort

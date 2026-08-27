@@ -32,6 +32,8 @@ function makeQueryResult(rows: unknown[]) {
 let selectQueue: unknown[][] = [];
 
 const mockInsertReturning = vi.fn();
+const mockInsertValues = vi.fn();
+const mockRunAi = vi.fn();
 
 vi.mock("@workspace/db", () => {
   return {
@@ -45,8 +47,10 @@ vi.mock("@workspace/db", () => {
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: mockInsertReturning,
+        values: mockInsertValues.mockReturnValue({
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: mockInsertReturning,
+          }),
         }),
       }),
       update: vi.fn().mockReturnValue({
@@ -68,7 +72,6 @@ vi.mock("@workspace/db", () => {
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   and: vi.fn(),
-  gte: vi.fn(),
   ilike: vi.fn(),
   or: vi.fn(),
 }));
@@ -85,16 +88,9 @@ vi.mock("../../../middlewares/requireAuth", () => ({
   },
 }));
 
-vi.mock("@workspace/integrations-openai-ai-server", () => ({
-  openai: {
-    chat: {
-      completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: '{"intent":"other","extractedDates":[],"extractedAmounts":[],"shipmentId":null,"confidence":0,"reasoning":"test"}' } }],
-        }),
-      },
-    },
-  },
+vi.mock("../../lib/ai-gateway", () => ({
+  runAi: mockRunAi,
+  requireAiResult: <T,>(result: { value: T }) => result.value,
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -148,6 +144,18 @@ describe("POST /capture/mobile — device token authentication", () => {
   beforeEach(() => {
     selectQueue = [];
     mockInsertReturning.mockReset();
+    mockRunAi.mockReset();
+    mockRunAi.mockResolvedValue({
+      ok: true,
+      value: {
+        intent: "other",
+        extractedDates: [],
+        extractedAmounts: [],
+        shipmentId: null,
+        confidence: 0,
+        reasoning: "test",
+      },
+    });
   });
 
   // ── Missing token ───────────────────────────────────────────────────────────
@@ -267,12 +275,12 @@ describe("POST /capture/mobile — device token authentication", () => {
     expect(res.body).toHaveProperty("resolvedContactType");
   });
 
-  it("returns 201 and suppresses duplicate message captured within 5 minutes", async () => {
+  it("returns 200 and suppresses a matching canonical capture event", async () => {
     // DB call sequence:
     //  1. device_tokens lookup       → [DEVICE_TOKEN_ROW]
     //  2. team_users check           → [TEAM_USER_ROW]
     //  3. dedup check                → [row whose snippet starts with the payload prefix]
-    const duplicateRow = { id: 99, snippet: VALID_PAYLOAD.messageText.slice(0, 60) + " extra" };
+    const duplicateRow = { id: 99 };
     selectQueue = [
       [DEVICE_TOKEN_ROW],
       [TEAM_USER_ROW],
@@ -291,14 +299,11 @@ describe("POST /capture/mobile — device token authentication", () => {
     expect(res.body.messageId).toBe(99);
   });
 
-  it("does NOT suppress a message whose text prefix differs from the recent row (no false positive)", async () => {
-    // The recent row in DB has a snippet that does NOT start with the new payload's prefix.
-    // Dedup should pass through and insert a fresh message.
-    const differentRow = { id: 88, snippet: "Completely different text that shares no prefix" };
+  it("does not suppress an unrelated recent row with a different canonical event key", async () => {
     selectQueue = [
       [DEVICE_TOKEN_ROW],
       [TEAM_USER_ROW],
-      [differentRow], // dedup query returns a row, but its snippet doesn't match the prefix
+      [],             // no matching canonical event key
       [],             // contact routing rule lookup → no rule
       [],             // suppliers contact resolution
       [],             // buyers contact resolution
@@ -402,10 +407,6 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
       [dupeRow],
     ];
 
-    // Get a handle on the mocked gte so we can inspect call args
-    const { gte: mockGte } = await import("drizzle-orm");
-    vi.mocked(mockGte).mockClear();
-
     const app = await buildTestApp();
     const res = await request(app)
       .post("/capture/mobile")
@@ -418,11 +419,6 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
     expect(res.body.messageId).toBe(66);
     expect(mockInsertReturning).not.toHaveBeenCalled();
 
-    // Verify the route computed the cutoff as exactly (now - WINDOW_MS)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gteCall = vi.mocked(mockGte).mock.calls.find((c: any) => c[1] instanceof Date);
-    expect(gteCall).toBeDefined();
-    expect((gteCall![1] as Date).getTime()).toBe(PINNED_NOW - WINDOW_MS);
   });
 
   // ── Case 3: just outside the window ──────────────────────────────────────────
@@ -441,10 +437,6 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
     ];
     mockInsertReturning.mockResolvedValue([INSERTED_MESSAGE]);
 
-    // Get a handle on the mocked gte so we can inspect call args
-    const { gte: mockGte } = await import("drizzle-orm");
-    vi.mocked(mockGte).mockClear();
-
     const app = await buildTestApp();
     const res = await request(app)
       .post("/capture/mobile")
@@ -457,12 +449,5 @@ describe("POST /capture/mobile — dedup window boundary conditions", () => {
     expect(res.body.messageId).toBe(INSERTED_MESSAGE.id);
     expect(mockInsertReturning).toHaveBeenCalledOnce();
 
-    // Verify the cutoff timestamp is still exactly (now - WINDOW_MS) — confirming
-    // the constant hasn't drifted and the 1 ms difference is on the data side, not
-    // the predicate side.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gteCall = vi.mocked(mockGte).mock.calls.find((c: any) => c[1] instanceof Date);
-    expect(gteCall).toBeDefined();
-    expect((gteCall![1] as Date).getTime()).toBe(PINNED_NOW - WINDOW_MS);
   });
 });

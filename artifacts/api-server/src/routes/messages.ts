@@ -14,6 +14,7 @@ import { ingestDocumentFromBase64 } from "./webhooks";
 import { sendViaGmail, GmailNotConnectedError, GmailSendError } from "../lib/gmailSend";
 import { normaliseChat } from "../lib/chatNormalise";
 import { extractFromChatText } from "../lib/extraction";
+import { deterministicShipmentMatch, triageInboundEmail } from "../lib/inbound-triage";
 
 const router: IRouter = Router();
 
@@ -305,6 +306,7 @@ router.post("/messages/ingest-chat", async (req, res) => {
   const input = IngestChatBody.parse(req.body);
 
   const normalised = normaliseChat(input.rawText, input.channel, input.senderHint);
+  const contentTriage = triageInboundEmail("", normalised.fullText);
 
   const orgId = await resolveOrgId(req);
   const shipmentRows = await db
@@ -321,24 +323,35 @@ router.post("/messages/ingest-chat", async (req, res) => {
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .where(eq(shipmentsTable.orgId, orgId));
 
-  const extracted = await extractFromChatText(
-    normalised.fullText,
-    shipmentRows,
-    normalised.primarySender,
-    {
-      orgId,
-      workflow: "chat_ingestion",
-      event: "manual_chat_ingestion",
-      correlationId: req.header("x-request-id") ?? undefined,
-    },
-  );
+  const directShipmentId = deterministicShipmentMatch("", contentTriage.normalizedBody, shipmentRows);
+  const extracted = directShipmentId !== null
+    ? {
+        shipmentId: directShipmentId,
+        confidence: 1,
+        matchMethod: "po-reference",
+        extractedFields: {},
+        aiDraft: "",
+        aiAction: "",
+        aiTags: [],
+      }
+    : await extractFromChatText(
+        contentTriage.normalizedBody,
+        shipmentRows,
+        normalised.primarySender,
+        {
+          orgId,
+          workflow: "chat_ingestion",
+          event: "manual_chat_ingestion",
+          correlationId: req.header("x-request-id") ?? undefined,
+        },
+      );
 
   const routingStatus =
     extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null
       ? "routed"
       : "needs-review";
 
-  const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
+  const snippet = contentTriage.normalizedBody.slice(0, 200);
 
   req.log.info(
     { channel: input.channel, confidence: extracted.confidence, routingStatus, shipmentId: extracted.shipmentId },
@@ -355,6 +368,8 @@ router.post("/messages/ingest-chat", async (req, res) => {
     sender: normalised.primarySender,
     snippet,
     fullBody: input.rawText,
+    normalizedBody: contentTriage.normalizedBody,
+    normalizationVersion: contentTriage.normalizationVersion,
     aiDraft: extracted.aiDraft,
     aiAction: extracted.aiAction,
     aiTags: extracted.aiTags,

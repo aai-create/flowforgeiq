@@ -26,6 +26,10 @@ export const messagesTable = pgTable("messages", {
   rawSenderEmail: text("raw_sender_email"),
   gmailThreadId: text("gmail_thread_id"),
   gmailMessageId: text("gmail_message_id"),
+  inboundEventKey: text("inbound_event_key"),
+  normalizedBody: text("normalized_body"),
+  normalizationVersion: text("normalization_version"),
+  suppressionReason: text("suppression_reason"),
   aiRoutingGuess: jsonb("ai_routing_guess"),
   pendingExtractionFields: jsonb("pending_extraction_fields"),
   rawChatText: text("raw_chat_text"),
@@ -36,6 +40,7 @@ export const messagesTable = pgTable("messages", {
   index("messages_org_id_idx").on(t.orgId),
   index("messages_signal_status_org_idx").on(t.orgId, t.signalStatus),
   uniqueIndex("messages_org_gmail_message_id_unique").on(t.orgId, t.gmailMessageId),
+  uniqueIndex("messages_org_inbound_event_key_unique").on(t.orgId, t.inboundEventKey),
 ]);
 
 export const insertMessageSchema = createInsertSchema(messagesTable).omit({ id: true });

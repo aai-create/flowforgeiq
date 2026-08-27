@@ -1,13 +1,16 @@
 import { Router, type IRouter } from "express";
 import { db, messagesTable, suppliersTable, buyersTable, shipmentsTable, contactRoutingRulesTable } from "@workspace/db";
-import { and, eq, gte, ilike, or } from "drizzle-orm";
+import { and, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireDeviceTokenAuth } from "../middlewares/requireDeviceTokenAuth";
 import { requireAiResult, runAi } from "../lib/ai-gateway";
+import {
+  captureInboundEventKey,
+  deterministicShipmentMatch,
+  triageInboundEmail,
+} from "../lib/inbound-triage";
 
 const router: IRouter = Router();
-
-const CAPTURE_DEDUP_WINDOW_MS = 5 * 60 * 1000;
 
 const MobileCapturePayload = z.object({
   senderRaw: z.string().min(1),
@@ -304,24 +307,33 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   const orgId = req.orgId;
   const userId = req.userId!;
 
-  // ─── Deduplication: same user + sender + first-60-char prefix within 5 min ──
-  const fiveMinutesAgo = new Date(Date.now() - CAPTURE_DEDUP_WINDOW_MS);
-  const textPrefix = input.messageText.slice(0, 60);
+  // ─── Canonical fallback identity ───────────────────────────────────────────
+  // Mobile providers do not supply a stable event ID. The shared key uses a
+  // five-minute bucket so retried captures coalesce atomically, while a later
+  // identical operational update remains a distinct message.
+  const receivedAt = input.capturedAt ? new Date(input.capturedAt) : new Date();
+  const contentTriage = triageInboundEmail("", input.messageText);
+  const inboundEventKey = captureInboundEventKey({
+    userId,
+    channel: input.channel,
+    sender: input.senderRaw,
+    normalizedBody: contentTriage.normalizedBody,
+    receivedAt,
+  });
 
   const recentRows = await db
-    .select({ id: messagesTable.id, snippet: messagesTable.snippet })
+    .select({ id: messagesTable.id })
     .from(messagesTable)
     .where(
       and(
         eq(messagesTable.orgId, orgId),
         eq(messagesTable.routedToClerkUserId, userId),
-        eq(messagesTable.sender, input.senderRaw),
-        gte(messagesTable.receivedAt, fiveMinutesAgo),
+        eq(messagesTable.inboundEventKey, inboundEventKey),
       ),
     )
     .limit(20);
 
-  const dupeRow = recentRows.find(r => r.snippet.startsWith(textPrefix));
+  const dupeRow = recentRows[0];
 
   if (dupeRow) {
     req.log.info({ messageId: dupeRow.id, senderRaw: input.senderRaw }, "capture/mobile: duplicate suppressed");
@@ -351,18 +363,33 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
     req.log.warn({ err }, "capture/mobile: contact resolution failed, defaulting to needs_review");
   }
 
-  // ─── Insert message ───────────────────────────────────────────────────────────
-  const receivedAt = input.capturedAt ? new Date(input.capturedAt) : new Date();
-  const snippet = input.messageText.slice(0, 200);
+  // ─── Deterministic shipment matching before AI ──────────────────────────────
+  let directShipmentId: number | null = null;
+  if (!ruleMatch && contact.supplierId) {
+    const candidateShipments = await db
+      .select({
+        id: shipmentsTable.id,
+        poNumber: shipmentsTable.poNumber,
+        product: shipmentsTable.product,
+      })
+      .from(shipmentsTable)
+      .where(and(eq(shipmentsTable.orgId, orgId), eq(shipmentsTable.supplierId, contact.supplierId)));
+    directShipmentId = deterministicShipmentMatch("", contentTriage.normalizedBody, candidateShipments);
+  }
+
+  // ─── Insert message ─────────────────────────────────────────────────────────
+  const snippet = contentTriage.normalizedBody.slice(0, 200);
 
   // If a routing rule matched, route directly; otherwise fall back to contact resolution
-  const finalShipmentId = ruleMatch?.shipmentId ?? null;
-  const routingStatus = ruleMatch
+  const finalShipmentId = ruleMatch?.shipmentId ?? directShipmentId;
+  const routingStatus = finalShipmentId !== null
+    ? "routed"
+    : ruleMatch
     ? "routed"
     : contact.routingStatus === "needs_review"
       ? "needs-review"
       : "routed";
-  const matchMethod = ruleMatch ? "contact-rule" : null;
+  const matchMethod = ruleMatch ? "contact-rule" : directShipmentId !== null ? "po-reference" : null;
 
   let inserted: (typeof messagesTable.$inferSelect) | undefined;
   try {
@@ -385,10 +412,15 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
         matchMethod,
         supplierId: contact.supplierId,
         rawChatText: input.messageText,
+        normalizedBody: contentTriage.normalizedBody,
+        normalizationVersion: contentTriage.normalizationVersion,
+        suppressionReason: contentTriage.suppressionReason,
+        inboundEventKey,
         routedToClerkUserId: userId,
         receivedAt,
         orgId,
       })
+      .onConflictDoNothing()
       .returning();
     inserted = rows[0];
   } catch (err) {
@@ -399,8 +431,18 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   }
 
   if (!inserted) {
-    res.set("Retry-After", "30");
-    res.status(503).json({ error: "Service temporarily unavailable — please retry" });
+    const [existing] = await db
+      .select({ id: messagesTable.id })
+      .from(messagesTable)
+      .where(and(eq(messagesTable.orgId, orgId), eq(messagesTable.inboundEventKey, inboundEventKey)))
+      .limit(1);
+    res.status(200).json({
+      status: "duplicate",
+      messageId: existing?.id ?? null,
+      routingStatus: null,
+      resolvedContactId: null,
+      resolvedContactType: null,
+    });
     return;
   }
 
@@ -425,7 +467,7 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
     resolvedContactType: contact.resolvedContactType,
   });
 
-  if (!ruleMatch) {
+  if (!ruleMatch && directShipmentId === null && !contentTriage.suppressionReason) {
     const requestId = req.headers["x-request-id"];
     const correlationId = typeof requestId === "string" && requestId.trim() ? requestId : undefined;
     setImmediate(() => {

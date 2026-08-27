@@ -146,7 +146,8 @@ describe("POST /webhooks/email — persistence and replay safety", () => {
       documentIds: [],
     });
     expect(lastInsertValues).toMatchObject({
-      gmailMessageId: "<concurrent-provider-message@example.com>",
+      gmailMessageId: "concurrent-provider-message@example.com",
+      inboundEventKey: "email:provider:concurrent-provider-message@example.com",
       orgId: 1,
     });
   });
@@ -170,12 +171,13 @@ describe("POST /webhooks/email — persistence and replay safety", () => {
     });
     expect(lastInsertValues).toMatchObject({
       gmailMessageId: null,
+      normalizedBody: VALID_BODY.TextBody,
       orgId: 1,
       routingStatus: "needs-review",
     });
     expect(warningCalls.some((args) =>
       args.some((value) =>
-        typeof value === "string" && value.includes("without replay protection"),
+        typeof value === "string" && value.includes("deterministic fallback replay key"),
       ),
     )).toBe(true);
   });
