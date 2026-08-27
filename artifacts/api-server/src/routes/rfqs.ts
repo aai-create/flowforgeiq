@@ -131,6 +131,11 @@ router.post("/rfqs/:id/send-email", async (req, res) => {
   const [rfq] = await db.select().from(rfqsTable).where(and(eq(rfqsTable.id, id), eq(rfqsTable.orgId, orgId)));
   if (!rfq) { res.status(404).json({ error: "RFQ not found" }); return; }
   const body = SendRfqEmailBodySchema.parse(req.body);
+  if (req.isTestBuyerSession) {
+    req.log.info({ rfqId: id, to: body.to }, "RFQ email suppressed for test buyer session");
+    res.json({ ok: true, testOnly: true });
+    return;
+  }
   const from = process.env.POSTMARK_FROM_EMAIL ?? "noreply@flowforgeiq.com";
   try {
     await sendViaPostmark({ from, to: body.to, subject: body.subject, textBody: body.body });

@@ -5,6 +5,10 @@ import { db, teamUsersTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { verifyImpersonationToken } from "../lib/impersonation";
 import { parseOrgIdCookie } from "../lib/orgCookie";
+import {
+  TEST_BUYER_SESSION_COOKIE,
+  parseTestBuyerSessionValue,
+} from "../lib/testBuyerWorkspace";
 
 declare global {
   namespace Express {
@@ -14,6 +18,7 @@ declare global {
       orgId: number;
       role?: string;
       isProvisioned?: boolean;
+      isTestBuyerSession?: boolean;
       superAdminEmail?: string;
       isImpersonating?: boolean;
       _impersonationDenied?: boolean;
@@ -96,6 +101,19 @@ export const orgContextMiddleware = async (
 
     if (userId) {
       req.userId = userId;
+      const testBuyerOrgId = parseTestBuyerSessionValue(
+        readCookie(req.headers.cookie, TEST_BUYER_SESSION_COOKIE),
+        userId,
+      );
+      if (testBuyerOrgId !== null) {
+        req.orgId = testBuyerOrgId;
+        req.role = "member";
+        req.actorName = "Test Buyer";
+        req.isProvisioned = true;
+        req.isTestBuyerSession = true;
+        next();
+        return;
+      }
       // ── Org selection cookie ──────────────────────────────────────────────
       // Multi-org users pick an org via POST /team/select-org, which sets the
       // ff-org-id cookie. If present and valid, scope the lookup to that org;
@@ -309,4 +327,13 @@ export const requireSuperAdmin = async (
 // Safe for routes that allow unauthenticated access (returns 1 for public/demo requests).
 export async function resolveOrgId(req: Request): Promise<number> {
   return req.orgId ?? 1;
+}
+
+function readCookie(cookieHeader: string | undefined, name: string): string | undefined {
+  const prefix = `${name}=`;
+  return cookieHeader
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length);
 }

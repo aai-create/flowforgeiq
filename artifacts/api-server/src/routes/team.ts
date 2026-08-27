@@ -7,6 +7,14 @@ import { clerkClient } from "@clerk/express";
 import crypto from "node:crypto";
 import * as postmark from "postmark";
 import { resolveBaseUrl } from "../lib/resolveBaseUrl";
+import {
+  createTestBuyerSessionValue,
+  createTestBuyerWorkspace,
+  TEST_BUYER_SESSION_COOKIE,
+  TEST_BUYER_SESSION_MAX_AGE_SECONDS,
+  testBuyerSessionCookieOptions,
+  testBuyerSessionEnabled,
+} from "../lib/testBuyerWorkspace";
 
 function generateInboundToken(): string {
   return crypto.randomBytes(8).toString("hex");
@@ -70,6 +78,35 @@ router.post("/team/legal-acceptance", requireClerkAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "legal acknowledgement persistence failed");
     res.status(500).json({ error: "Could not save policy acknowledgement. Please try again." });
+  }
+});
+
+/**
+ * Test-only bootstrap for browser checks. It creates an isolated copy of the
+ * seeded buyer RFQ data for this Clerk identity and binds the org to a signed
+ * HttpOnly cookie. This route is deliberately absent from production behavior.
+ */
+router.post("/team/test-buyer-session", requireClerkAuth, async (req, res) => {
+  if (!testBuyerSessionEnabled()) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  try {
+    const workspace = await createTestBuyerWorkspace(req.userId!);
+    const cookieValue = createTestBuyerSessionValue(req.userId!, workspace.id);
+    if (!cookieValue) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.cookie(TEST_BUYER_SESSION_COOKIE, cookieValue, testBuyerSessionCookieOptions());
+    res.json({
+      testOnly: true,
+      org: workspace,
+      expiresInSeconds: TEST_BUYER_SESSION_MAX_AGE_SECONDS,
+    });
+  } catch (err) {
+    req.log.error({ err }, "test buyer workspace unavailable");
+    res.status(503).json({ error: "Seeded buyer workspace is not available yet" });
   }
 });
 

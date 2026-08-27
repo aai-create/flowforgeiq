@@ -3,8 +3,9 @@
  * a user with two memberships (different roles/names per org).
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Request, Response } from "express";
+import { createTestBuyerSessionValue } from "../../lib/testBuyerWorkspace";
 
 const mockSelectWhere = vi.fn();
 
@@ -31,6 +32,8 @@ import { orgContextMiddleware } from "../requireAuth";
 
 const ORG1_ROW = { orgId: 1, name: "Alice (Acme)", role: "admin" };
 const ORG2_ROW = { orgId: 2, name: "Alice (Globex)", role: "member" };
+const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+const ORIGINAL_SESSION_SECRET = process.env.SESSION_SECRET;
 
 function makeReq(cookie?: string): Request {
   return {
@@ -43,6 +46,15 @@ function makeReq(cookie?: string): Request {
 beforeEach(() => {
   mockSelectWhere.mockReset();
   mockGetAuth.mockReset().mockReturnValue({ userId: "user_multi" });
+  process.env.NODE_ENV = "development";
+  process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+});
+
+afterEach(() => {
+  if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+  if (ORIGINAL_SESSION_SECRET === undefined) delete process.env.SESSION_SECRET;
+  else process.env.SESSION_SECRET = ORIGINAL_SESSION_SECRET;
 });
 
 describe("orgContextMiddleware ff-org-id cookie", () => {
@@ -90,6 +102,20 @@ describe("orgContextMiddleware ff-org-id cookie", () => {
     await orgContextMiddleware(req, {} as Response, () => {});
     expect(req.orgId).toBe(1);
     expect(req.isProvisioned).toBe(false);
+    expect(mockSelectWhere).not.toHaveBeenCalled();
+  });
+
+  it("valid test buyer cookie → selects the isolated org without membership lookup", async () => {
+    const cookie = createTestBuyerSessionValue("user_multi", 42);
+    const req = makeReq(`ff-test-buyer=${cookie}`);
+
+    await orgContextMiddleware(req, {} as Response, () => {});
+
+    expect(req.orgId).toBe(42);
+    expect(req.role).toBe("member");
+    expect(req.actorName).toBe("Test Buyer");
+    expect(req.isProvisioned).toBe(true);
+    expect(req.isTestBuyerSession).toBe(true);
     expect(mockSelectWhere).not.toHaveBeenCalled();
   });
 });
