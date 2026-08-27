@@ -1,0 +1,171 @@
+Yes. I found and reviewed the current **`aai-create/flowforgeiq`** repository; it is a TypeScript pnpm workspace with Replit configuration, a substantial project instruction file, threat model, prototype assets, and detailed RFQ/shipment and Signal Inbox planning docs. The repository was updated today, so this is a current snapshot. [techcrunch](https://techcrunch.com/2026/04/15/openai-updates-its-agents-sdk-to-help-enterprises-build-safer-more-capable-agents/)
+
+Because you already use Perplexity for targeted codebase-aware plans, I would **not** add an agent harness primarily for planning. Use Replit Agent as the implementation executor for compact plans, and add product features that directly control inference, infrastructure, and manual-work cost.
+
+## Highest-value cost features
+
+### 1. AI decision gateway
+
+Build a single internal `aiGateway` service before AI logic spreads across channel adapters and UI flows.
+
+It should:
+- Assign every request a tenant, workflow, correlation ID, and cost budget.
+- Route each step to a predefined model tier: cheap extraction/classification first, stronger drafting/reasoning only for exceptions.
+- Enforce token, tool-call, retry, and time limits.
+- Store a structured output plus metadata: model, tokens, latency, cache status, cost estimate, and outcome.
+- Fail closed to **“needs human review”**, rather than retrying an expensive task indefinitely.
+
+This prevents the most common runaway cost pattern: every inbound item triggering a premium model with full thread context.
+
+**Prompt to give Replit Agent:**
+
+> Implement `packages/ai-gateway` as a provider-neutral TypeScript service. Add typed request/response schemas, tenant/workflow metadata, model-tier routing rules, token and retry budgets, provider adapter interfaces, structured JSON output validation, and an append-only usage-event record. Do not connect a real model provider yet. Add unit tests for routing, budget rejection, malformed output, and fallback to `needs_review`.
+
+## 2. Canonical thread summaries
+
+Your product documentation centers on consolidating RFQ-to-shipment communications and a Signal Inbox workflow. The most direct recurring inference reduction is a **rolling thread summary**. [docs.replit](https://docs.replit.com/replitai/agent-skills)
+
+Instead of repeatedly sending the full email/WhatsApp/SMS history, maintain:
+
+```ts
+type ConversationState = {
+  conversationId: string;
+  summaryVersion: number;
+  currentSummary: string;
+  facts: {
+    parties: string[];
+    rfqNumbers: string[];
+    skuOrLineItems: string[];
+    quantities: Array<{ value: number; unit?: string }>;
+    pricing: string[];
+    shipmentReferences: string[];
+    deadlines: string[];
+    commitments: string[];
+    unresolvedQuestions: string[];
+  };
+  lastProcessedEventId: string;
+  lastUpdatedAt: string;
+};
+```
+
+Every new message receives only:
+- The latest canonical summary.
+- A handful of directly relevant prior events.
+- The current inbound event.
+- The applicable tenant/playbook rules.
+
+Update the summary asynchronously after the event completes. This reduces input context and also produces a much faster operator experience.
+
+## 3. Deterministic pre-processing
+
+Implement low-cost deterministic logic **before** invoking an LLM:
+
+- Channel/provider message ID deduplication.
+- Thread matching from provider thread IDs, email headers, phone numbers, and known aliases.
+- MIME parsing; strip quoted email history and signatures.
+- Attachment type/size detection.
+- Regex extraction for PO/RFQ/shipment/tracking identifiers.
+- Known customer/supplier alias lookup.
+- Spam, autoreply, and “no action required” classification rules.
+- Hash-based content deduplication.
+
+For the documents you describe, this can eliminate unnecessary model calls for duplicates, status notifications, autoresponders, repeated forwards, and messages that have no new business signal. The repository’s planning documentation makes this particularly suitable because the app is organized around signal ingestion rather than generic chat. [docs.replit](https://docs.replit.com/replitai/agent-skills)
+
+## 4. Confidence-based escalation
+
+Implement a typed triage policy rather than allowing every message to receive full agent treatment:
+
+| Outcome | Action | Model cost |
+|---|---|---|
+| Duplicate / auto-reply / no actionable change | Persist event only | None |
+| High-confidence extraction and routing | Create/update structured record | Low |
+| Clear request requiring a draft | Generate an approval-required reply | Medium |
+| Ambiguous parties, conflicting data, commercial commitment, or sensitive action | Human-review queue with evidence | Low or none until requested |
+| User explicitly requests complex reasoning | Premium model | Highest, explicit |
+
+The key product feature is a **Review Queue** with supporting evidence, not a more autonomous agent. That protects both cost and customer trust.
+
+## 5. Tenant budgets and cost console
+
+Create a simple internal-first **Cost & Quality Console**:
+
+- Cost per tenant, channel, workflow, conversation, and model.
+- Number of events suppressed before AI.
+- Cache-hit rate and summary reuse.
+- Escalation percentage by workflow.
+- Cost per resolved RFQ, shipment update, or completed action.
+- Human overrides and corrected outputs.
+- Configurable tenant budgets with warning thresholds and hard stops.
+
+This allows FlowForge to price intelligently later: not “unlimited AI,” but a fair included-workflow allowance with transparent overage or human-review fallback.
+
+The core tables could be:
+
+```text
+ai_usage_events
+- id, tenant_id, conversation_id, event_id, workflow
+- provider, model, input_tokens, output_tokens
+- cache_read_tokens, cache_write_tokens, estimated_cost
+- latency_ms, status, created_at
+
+ai_budget_policies
+- tenant_id, period, warning_limit, hard_limit
+- downgrade_model, fallback_mode
+
+ai_budget_snapshots
+- tenant_id, period_start, accrued_cost, utilization_percent
+```
+
+## 6. Async enrichment pipeline
+
+Do not run everything synchronously in the inbound webhook path.
+
+Split it into:
+1. Capture and acknowledge the incoming signal.
+2. Normalize, deduplicate, and attach it to a conversation.
+3. Display it to the user immediately.
+4. Queue non-urgent work: document enrichment, summary refresh, indexing, analytics, and suggested-action generation.
+5. Only synchronously generate a response when the user asks or a workflow explicitly requires it.
+
+This avoids expensive retries and long-running Replit requests, while making the product feel fast.
+
+## Replit-cost features
+
+Your repository includes `.replit` and `replit.md`, so I would add an explicit “Agent Cost Controls” section to the project instructions—not more generic project context. [langchain](https://www.langchain.com/blog/langgraph-cloud)
+
+Use rules like:
+
+```md
+## Agent Cost Controls
+- Implement only the requested spec file; do not discover adjacent work.
+- Present a plan and affected files before edits for tasks spanning more than 3 files.
+- Do not run broad test suites unless requested; run targeted tests first.
+- Do not install packages without explaining the need.
+- Do not refactor unrelated modules.
+- Stop after acceptance criteria pass and produce a concise change log.
+- Prefer existing workspace packages and utilities over creating duplicates.
+```
+
+I would also add a `specs/` directory with feature files generated by Perplexity. That bridges your existing planning habit directly into Replit:
+
+```text
+specs/
+  FF-001-canonical-events.md
+  FF-002-thread-resolution.md
+  FF-003-ai-gateway.md
+  FF-004-review-queue.md
+  FF-005-cost-quality-console.md
+```
+
+## Recommended order
+
+1. **Canonical event and deduplication layer** — removes needless downstream work.
+2. **Thread resolution plus rolling summary** — cuts recurring context tokens.
+3. **AI decision gateway** — makes model use measurable and enforceable.
+4. **Confidence and review queue** — limits premium escalation and safeguards actions.
+5. **Usage events, budgets, and dashboard** — lets you operate and price by unit economics.
+6. **Asynchronous enrichment/jobs** — improves latency and prevents costly request failures.
+
+The code search did not find explicit Anthropic/OpenAI references in the indexed repository snapshot, so I would treat this as a good time to establish a provider-neutral gateway before direct model calls begin proliferating. [replit](https://replit.com/integrations)
+
+I have not modified the repository. If you want, I can turn the first item—**FF-001 canonical-event deduplication and no-AI triage**—into a GitHub issue or a Replit-ready spec file, but creating either would require your approval.
