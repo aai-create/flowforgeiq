@@ -19,7 +19,7 @@ import { and, asc, eq, or, isNull } from "drizzle-orm";
 import { runExtraction, extractFromChatText } from "../lib/extraction";
 import { normaliseChat } from "../lib/chatNormalise";
 import { detectChatForward, CHAT_ROUTING_THRESHOLD } from "../lib/chatDetect";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { requireAiResult, runAi } from "../lib/ai-gateway";
 
 const router: IRouter = Router();
 
@@ -263,6 +263,7 @@ async function inferShipmentWithAI(
   body: string,
   senderEmail: string,
   candidates: ShipmentRecord[],
+  orgId: number,
 ): Promise<AiRoutingGuess | null> {
   if (!candidates.length) return null;
 
@@ -295,16 +296,18 @@ Reply with JSON only (no markdown):
 }`;
 
   try {
-    const resp = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+    const parsed = requireAiResult(await runAi<AiRoutingGuess>({
+      metadata: {
+        orgId,
+        workflow: "inbound_email",
+        event: "shipment_routing",
+        conversationId: senderEmail || null,
+      },
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
-      max_completion_tokens: 200,
-    });
-
-    const raw = resp.choices[0]?.message?.content?.trim() ?? "";
-    const clean = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    const parsed = JSON.parse(clean) as AiRoutingGuess;
+      maxCompletionTokens: 200,
+      output: "json",
+    }));
 
     if (typeof parsed.shipmentId !== "number" && parsed.shipmentId !== null) {
       return null;
@@ -332,6 +335,8 @@ export async function draftReplyWithAI(
   emailBody: string,
   subject: string,
   shipment: ShipmentRecord | null,
+  orgId: number,
+  messageId: number,
 ): Promise<string> {
   const shipmentCtx = shipment
     ? `Shipment context: PO ${shipment.poNumber}, Product: "${shipment.product}", Customer: ${shipment.customerName}.`
@@ -349,13 +354,18 @@ ${emailBody?.slice(0, 2000) || "(empty)"}
 Write only the reply body — no greeting line needed, just the content. Keep it under 120 words.`;
 
   try {
-    const resp = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+    return requireAiResult(await runAi<string>({
+      metadata: {
+        orgId,
+        workflow: "inbound_email",
+        event: "reply_draft",
+        conversationId: `message:${messageId}`,
+      },
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
-      max_completion_tokens: 300,
-    });
-    return resp.choices[0]?.message?.content?.trim() ?? "";
+      maxCompletionTokens: 300,
+      output: "text",
+    }));
   } catch {
     return "";
   }
@@ -387,22 +397,24 @@ Extract these fields if clearly mentioned (leave null otherwise):
 }`;
 
   try {
-    const resp = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0,
-      max_completion_tokens: 200,
-    });
-
-    const raw = resp.choices[0]?.message?.content?.trim() ?? "";
-    const clean = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    const parsed = JSON.parse(clean) as {
+    const parsed = requireAiResult(await runAi<{
       exFactoryDate?: string | null;
       quantity?: number | null;
       delayDays?: number | null;
       newStatus?: string | null;
       confidence?: number;
-    };
+    }>({
+      metadata: {
+        orgId,
+        workflow: "inbound_email",
+        event: "field_extraction",
+        conversationId: `message:${messageId}`,
+      },
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+      maxCompletionTokens: 200,
+      output: "json",
+    }));
 
     const conf = parsed.confidence ?? 0;
 
@@ -729,6 +741,7 @@ async function ingestDocumentFromBase64({
         fileBuffer,
         shipments: extractionShipments,
         corrections,
+        orgId,
         supplierId: supplierId ?? undefined,
         poLineItemsByShipment: {},
       });
@@ -969,7 +982,17 @@ router.post("/webhooks/email", async (req, res) => {
         .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
         .where(eq(shipmentsTable.orgId, scopedOrgId));
 
-      const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
+      const extracted = await extractFromChatText(
+        normalised.fullText,
+        shipmentRows,
+        normalised.primarySender,
+        {
+          orgId: scopedOrgId,
+          workflow: "inbound_email",
+          event: "chat_forward_routing",
+          correlationId: req.header("x-request-id") ?? undefined,
+        },
+      );
       const routingStatus = extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null ? "routed" : "needs-review";
       const snippet = normalised.fullText.replace(/\s+/g, " ").trim().slice(0, 200);
 
@@ -1138,7 +1161,7 @@ router.post("/webhooks/email", async (req, res) => {
               : null;
             const rawBody3 = TextBody ?? "";
             const [draft3, tags3] = await Promise.all([
-              draftReplyWithAI(rawBody3, Subject ?? "", shipmentForDraft ?? null),
+              draftReplyWithAI(rawBody3, Subject ?? "", shipmentForDraft ?? null, scopedOrgId, msg2.id),
               buildAiTags(rawBody3, Subject ?? ""),
             ]);
             const patch3: Record<string, unknown> = { aiDraft: draft3 };
@@ -1196,6 +1219,7 @@ router.post("/webhooks/email", async (req, res) => {
         TextBody ?? "",
         ctx.effectiveSenderEmail,
         ctx.candidateShipments,
+        scopedOrgId,
       );
       if (guess) {
         aiGuess = guess;
@@ -1238,6 +1262,7 @@ router.post("/webhooks/email", async (req, res) => {
         TextBody ?? "",
         ctx.effectiveSenderEmail,
         allOrgShipments,
+        scopedOrgId,
       );
       if (guess) {
         aiGuess = guess;
@@ -1385,7 +1410,7 @@ router.post("/webhooks/email", async (req, res) => {
         : null;
 
       const [draft, aiTags] = await Promise.all([
-        draftReplyWithAI(rawBody, Subject ?? "", shipment ?? null),
+        draftReplyWithAI(rawBody, Subject ?? "", shipment ?? null, scopedOrgId, msg.id),
         buildAiTags(rawBody, Subject ?? ""),
       ]);
 

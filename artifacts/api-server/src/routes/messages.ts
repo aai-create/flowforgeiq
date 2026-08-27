@@ -321,7 +321,17 @@ router.post("/messages/ingest-chat", async (req, res) => {
     .innerJoin(suppliersTable, eq(shipmentsTable.supplierId, suppliersTable.id))
     .where(eq(shipmentsTable.orgId, orgId));
 
-  const extracted = await extractFromChatText(normalised.fullText, shipmentRows, normalised.primarySender);
+  const extracted = await extractFromChatText(
+    normalised.fullText,
+    shipmentRows,
+    normalised.primarySender,
+    {
+      orgId,
+      workflow: "chat_ingestion",
+      event: "manual_chat_ingestion",
+      correlationId: req.header("x-request-id") ?? undefined,
+    },
+  );
 
   const routingStatus =
     extracted.confidence >= CHAT_ROUTING_THRESHOLD && extracted.shipmentId != null

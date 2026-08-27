@@ -241,7 +241,7 @@ router.post("/signal-inbox/:messageId/assess", async (req, res) => {
       : null;
 
     const draftBody = await Promise.race([
-      draftReplyWithAI(msg.fullBody, msg.subject ?? "", shipment),
+      draftReplyWithAI(msg.fullBody, msg.subject ?? "", shipment, orgId, messageId),
       new Promise<string>((_, reject) =>
         setTimeout(() => reject(new Error("AI assessment timed out")), ASSESS_TIMEOUT_MS),
       ),

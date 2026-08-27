@@ -183,6 +183,13 @@
       "when": 1787801320197,
       "tag": "0025_repair_gmail_threading_and_replay_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787802955300,
+      "tag": "0026_add_ai_usage_telemetry",
+      "breakpoints": true
     }
   ]
 }

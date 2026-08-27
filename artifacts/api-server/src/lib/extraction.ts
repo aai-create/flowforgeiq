@@ -1,4 +1,4 @@
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { requireAiResult, runAi, transcribeWithAi, type AiMetadata } from "./ai-gateway";
 
 interface ShipmentRow {
   id: number;
@@ -35,6 +35,7 @@ interface ExtractionInput {
   fileBuffer: Buffer;
   shipments: ShipmentRow[];
   corrections: CorrectionRow[];
+  orgId: number;
   supplierId?: number;
   poLineItemsByShipment?: PoLineItemsMap;
 }
@@ -237,14 +238,15 @@ async function extractFromPdfOrText(
   doc: DocRow,
   shipments: ShipmentRow[],
   corrections: CorrectionRow[],
+  orgId: number,
   supplierId?: number,
 ): Promise<ExtractionResult> {
   const corrCtx = CORRECTION_CONTEXT(corrections, "pdf", supplierId);
   const shipCtx = SHIPMENT_CONTEXT(shipments);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    max_completion_tokens: 4096,
+  const raw = requireAiResult(await runAi<Record<string, any>>({
+    metadata: { orgId, workflow: "document_extraction", event: "pdf_or_text", conversationId: `document:${doc.id}` },
+    maxCompletionTokens: 4096,
     messages: [{ role: "user", content: `You are a supply-chain document extraction AI.
 ${EXTRACTION_RULES}
 
@@ -272,10 +274,10 @@ Respond with JSON only (no markdown). Schema:
   "matchedShipmentId": number|null,
   "confidence": number
 }` }],
-    response_format: { type: "json_object" },
-  });
+    responseFormat: { type: "json_object" },
+    output: "json",
+  }));
 
-  const raw = JSON.parse(response.choices[0]?.message?.content ?? "{}");
   const fields = parseExtractedFields(raw.extractedFields ?? {});
   const fieldProvenance = parseFieldProvenance(raw.fieldProvenance);
   const lineItems = parseLineItems(raw.lineItems ?? []);
@@ -291,14 +293,15 @@ async function extractFromImage(
   doc: DocRow,
   shipments: ShipmentRow[],
   corrections: CorrectionRow[],
+  orgId: number,
   supplierId?: number,
 ): Promise<ExtractionResult> {
   const corrCtx = CORRECTION_CONTEXT(corrections, "image", supplierId);
   const shipCtx = SHIPMENT_CONTEXT(shipments);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    max_completion_tokens: 4096,
+  const raw = requireAiResult(await runAi<Record<string, any>>({
+    metadata: { orgId, workflow: "document_extraction", event: "image", conversationId: `document:${doc.id}` },
+    maxCompletionTokens: 4096,
     messages: [{
       role: "user",
       content: [
@@ -326,10 +329,10 @@ Respond with JSON only. Schema:
         { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
       ],
     }],
-    response_format: { type: "json_object" },
-  });
+    responseFormat: { type: "json_object" },
+    output: "json",
+  }));
 
-  const raw = JSON.parse(response.choices[0]?.message?.content ?? "{}");
   const fields = parseExtractedFields(raw.extractedFields ?? {});
   if (raw.imageDescription) fields.transcriptSummary = raw.imageDescription as string;
   const fieldProvenance = parseFieldProvenance(raw.fieldProvenance);
@@ -355,18 +358,22 @@ async function extractFromAudio(
   doc: DocRow,
   shipments: ShipmentRow[],
   corrections: CorrectionRow[],
+  orgId: number,
   supplierId?: number,
 ): Promise<ExtractionResult> {
   const corrCtx = CORRECTION_CONTEXT(corrections, "audio", supplierId);
   const shipCtx = SHIPMENT_CONTEXT(shipments);
 
-  const { speechToText } = await import("@workspace/integrations-openai-ai-server/audio");
   const audioFormat = detectAudioFormat(mimeType, doc.fileName);
-  const transcript = await speechToText(audioBuffer, audioFormat);
+  const transcript = requireAiResult(await transcribeWithAi({
+    metadata: { orgId, workflow: "document_extraction", event: "audio_transcription", conversationId: `document:${doc.id}` },
+    audioBuffer,
+    format: audioFormat,
+  }));
 
-  const summaryResponse = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    max_completion_tokens: 2048,
+  const raw = requireAiResult(await runAi<Record<string, any>>({
+    metadata: { orgId, workflow: "document_extraction", event: "audio_summary", conversationId: `document:${doc.id}` },
+    maxCompletionTokens: 2048,
     messages: [{ role: "user", content: `You are a supply-chain communication AI.
 
 Active shipments:
@@ -382,10 +389,10 @@ Respond with JSON only. Schema:
   ${PROVENANCE_SCHEMA},
   "matchedShipmentId": number|null, "confidence": number
 }` }],
-    response_format: { type: "json_object" },
-  });
+    responseFormat: { type: "json_object" },
+    output: "json",
+  }));
 
-  const raw = JSON.parse(summaryResponse.choices[0]?.message?.content ?? "{}");
   const fields = parseExtractedFields(raw.extractedFields ?? {});
   const fieldProvenance = parseFieldProvenance(raw.fieldProvenance);
 
@@ -397,14 +404,15 @@ async function extractFromSpreadsheetText(
   doc: DocRow,
   shipments: ShipmentRow[],
   corrections: CorrectionRow[],
+  orgId: number,
   supplierId?: number,
 ): Promise<ExtractionResult> {
   const corrCtx = CORRECTION_CONTEXT(corrections, "spreadsheet", supplierId);
   const shipCtx = SHIPMENT_CONTEXT(shipments);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    max_completion_tokens: 4096,
+  const raw = requireAiResult(await runAi<Record<string, any>>({
+    metadata: { orgId, workflow: "document_extraction", event: "spreadsheet", conversationId: `document:${doc.id}` },
+    maxCompletionTokens: 4096,
     messages: [{ role: "user", content: `You are a supply-chain data extraction AI.
 ${EXTRACTION_RULES}
 
@@ -427,10 +435,10 @@ Respond with JSON only. Schema:
   "lineItems": [{"description":string,"quantity":number,"unitPrice":number,"totalPrice":number,"unit":string}],
   "matchedShipmentId": number|null, "confidence": number
 }` }],
-    response_format: { type: "json_object" },
-  });
+    responseFormat: { type: "json_object" },
+    output: "json",
+  }));
 
-  const raw = JSON.parse(response.choices[0]?.message?.content ?? "{}");
   const fields = parseExtractedFields(raw.extractedFields ?? {});
   const fieldProvenance = parseFieldProvenance(raw.fieldProvenance);
   const lineItems = parseLineItems(raw.lineItems ?? []);
@@ -657,12 +665,31 @@ export async function extractFromChatText(
   chatText: string,
   shipments: ShipmentRow[],
   senderHint?: string,
+  metadata?: AiMetadata,
 ): Promise<ChatExtractionResult> {
   const shipCtx = SHIPMENT_CONTEXT(shipments);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    max_completion_tokens: 1024,
+  const raw = requireAiResult(await runAi<{
+    matchedShipmentId?: number | null;
+    confidence?: number;
+    matchMethod?: string;
+    extractedFields?: {
+      eta?: string | null;
+      quotePrice?: number | null;
+      productionPct?: number | null;
+      qcNote?: string | null;
+      statusUpdate?: string | null;
+    };
+    aiDraft?: string;
+    aiAction?: string;
+    aiTags?: string[];
+  }>({
+    metadata: metadata ?? {
+      orgId: 1,
+      workflow: "chat_ingestion",
+      event: "chat_extraction",
+    },
+    maxCompletionTokens: 1024,
     messages: [{ role: "user", content: `You are a supply-chain chat message processor. Parse informal supplier/buyer chat messages and extract supply-chain data.
 
 Active shipments (for PO matching):
@@ -689,24 +716,9 @@ Reply with JSON only (no markdown):
   "aiAction": "<one-line action description, e.g. 'Approve 2-day delay and update ETA'>",
   "aiTags": ["<tag1>", "<tag2>"]
 }` }],
-    response_format: { type: "json_object" },
-  });
-
-  const raw = JSON.parse(response.choices[0]?.message?.content ?? "{}") as {
-    matchedShipmentId?: number | null;
-    confidence?: number;
-    matchMethod?: string;
-    extractedFields?: {
-      eta?: string | null;
-      quotePrice?: number | null;
-      productionPct?: number | null;
-      qcNote?: string | null;
-      statusUpdate?: string | null;
-    };
-    aiDraft?: string;
-    aiAction?: string;
-    aiTags?: string[];
-  };
+    responseFormat: { type: "json_object" },
+    output: "json",
+  }));
 
   const extractedFields: ChatExtractedFields = {};
   if (raw.extractedFields?.eta) extractedFields.eta = raw.extractedFields.eta;
@@ -733,7 +745,7 @@ Reply with JSON only (no markdown):
 }
 
 export async function runExtraction(input: ExtractionInput): Promise<ExtractionResult> {
-  const { doc, fileBuffer, shipments, corrections, supplierId, poLineItemsByShipment } = input;
+  const { doc, fileBuffer, shipments, corrections, orgId, supplierId, poLineItemsByShipment } = input;
 
   let result: ExtractionResult;
   let modality: string;
@@ -741,18 +753,18 @@ export async function runExtraction(input: ExtractionInput): Promise<ExtractionR
   if (doc.fileType === "image") {
     modality = "image";
     const base64 = fileBuffer.toString("base64");
-    result = await extractFromImage(base64, doc.mimeType, doc, shipments, corrections, supplierId);
+    result = await extractFromImage(base64, doc.mimeType, doc, shipments, corrections, orgId, supplierId);
   } else if (doc.fileType === "audio") {
     modality = "audio";
-    result = await extractFromAudio(fileBuffer, doc.mimeType, doc, shipments, corrections, supplierId);
+    result = await extractFromAudio(fileBuffer, doc.mimeType, doc, shipments, corrections, orgId, supplierId);
   } else if (doc.fileType === "spreadsheet") {
     modality = "spreadsheet";
     const csvText = await parseSpreadsheet(fileBuffer, doc.fileName);
-    result = await extractFromSpreadsheetText(csvText, doc, shipments, corrections, supplierId);
+    result = await extractFromSpreadsheetText(csvText, doc, shipments, corrections, orgId, supplierId);
   } else {
     modality = "pdf";
     const text = await parsePdf(fileBuffer);
-    result = await extractFromPdfOrText(text, doc, shipments, corrections, supplierId);
+    result = await extractFromPdfOrText(text, doc, shipments, corrections, orgId, supplierId);
   }
 
   // Validate the AI-returned matchedShipmentId against the org-scoped candidates list.

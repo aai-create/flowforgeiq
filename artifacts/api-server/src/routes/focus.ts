@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, tasksTable, shipmentsTable, paymentsTable, suppliersTable } from "@workspace/db";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { resolveOrgId } from "../middlewares/requireAuth";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { requireAiResult, runAi } from "../lib/ai-gateway";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -253,17 +253,24 @@ Respond with a JSON array (no markdown, no wrapper object) containing exactly 3 
 
 Focus on: overdue payments → balance wire reminders, at-risk/delayed shipments → follow-up or escalation, ready-to-advance stages → QC pass or ex-factory confirmation.`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    messages: [{ role: "system", content: systemPrompt }],
-    response_format: { type: "json_object" },
-  });
-
-  const raw = completion.choices[0]?.message?.content ?? "[]";
-
   let suggestions: AiSuggestion[] = [];
   try {
-    const parsed: unknown = JSON.parse(raw);
+    const requestId = req.headers["x-request-id"];
+    const correlationId = typeof requestId === "string" && requestId.trim() ? requestId : undefined;
+    const parsed = requireAiResult(await runAi<unknown>({
+      metadata: {
+        orgId,
+        workflow: "focus",
+        event: "suggestions",
+        conversationId: `focus:suggestions:org:${orgId}`,
+        ...(correlationId ? { correlationId } : {}),
+      },
+      model: "gpt-5-mini",
+      messages: [{ role: "system", content: systemPrompt }],
+      maxCompletionTokens: 1024,
+      responseFormat: { type: "json_object" },
+      output: "json",
+    }));
     // Model may wrap in an object despite instructions — unwrap
     const arr = Array.isArray(parsed) ? parsed : (parsed as Record<string, unknown>).suggestions ?? (parsed as Record<string, unknown>).items ?? Object.values(parsed as object)[0];
     suggestions = (Array.isArray(arr) ? arr : []).slice(0, 3) as AiSuggestion[];

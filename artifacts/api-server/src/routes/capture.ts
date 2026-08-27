@@ -3,7 +3,7 @@ import { db, messagesTable, suppliersTable, buyersTable, shipmentsTable, contact
 import { and, eq, gte, ilike, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireDeviceTokenAuth } from "../middlewares/requireDeviceTokenAuth";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { requireAiResult, runAi } from "../lib/ai-gateway";
 
 const router: IRouter = Router();
 
@@ -169,6 +169,7 @@ async function enrichMessageWithAI(
   senderRaw: string,
   messageText: string,
   supplierId: number | null,
+  correlationId?: string,
 ): Promise<void> {
   try {
     const shipments = await db
@@ -210,23 +211,28 @@ Reply with JSON only (no markdown):
   "reasoning": "<one sentence>"
 }`;
 
-    const resp = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0,
-      max_completion_tokens: 300,
-    });
-
-    const raw = resp.choices[0]?.message?.content?.trim() ?? "";
-    const clean = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    const parsed = JSON.parse(clean) as {
+    const parsed = requireAiResult(await runAi<{
       intent?: string;
       extractedDates?: string[];
       extractedAmounts?: number[];
       shipmentId?: number | null;
       confidence?: number;
       reasoning?: string;
-    };
+    }>({
+      metadata: {
+        orgId,
+        workflow: "mobile_capture",
+        event: "message_enrichment",
+        conversationId: String(messageId),
+        ...(correlationId ? { correlationId } : {}),
+      },
+      model: "gpt-5-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+      maxCompletionTokens: 300,
+      responseFormat: { type: "json_object" },
+      output: "json",
+    }));
 
     const HIGH_CONFIDENCE = 0.65;
     const resolvedShipmentId =
@@ -420,8 +426,17 @@ router.post("/capture/mobile", requireDeviceTokenAuth, async (req, res) => {
   });
 
   if (!ruleMatch) {
+    const requestId = req.headers["x-request-id"];
+    const correlationId = typeof requestId === "string" && requestId.trim() ? requestId : undefined;
     setImmediate(() => {
-      enrichMessageWithAI(inserted.id, orgId, input.senderRaw, input.messageText, contact.supplierId);
+      enrichMessageWithAI(
+        inserted.id,
+        orgId,
+        input.senderRaw,
+        input.messageText,
+        contact.supplierId,
+        correlationId,
+      );
     });
   }
 });

@@ -10,7 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { runTriggerEngine } from "../lib/copilot-trigger";
 import { computeThreadDensity } from "../lib/thread-density";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { requireAiResult, runAi } from "../lib/ai-gateway";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -431,13 +431,20 @@ If asked to draft a reply, write a clear, professional message the buyer can sen
     { role: "user", content: input.message },
   ];
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-5-mini",
+  const requestId = req.header("x-request-id");
+  const content = requireAiResult(await runAi<string>({
+    metadata: {
+      orgId,
+      workflow: "copilot",
+      event: "chat_reply",
+      conversationId: input.shipmentId ? `shipment:${input.shipmentId}` : null,
+      correlationId: requestId || undefined,
+    },
     messages: chatMessages,
-  });
-
-  const content = completion.choices[0]?.message?.content;
-  const reply = (content && content.trim()) ? content.trim() : "I couldn't generate a response. Please try again.";
+    maxCompletionTokens: 1024,
+    output: "text",
+  }));
+  const reply = content || "I couldn't generate a response. Please try again.";
 
   // If the caller scoped the chat to a specific shipment, compute sparse-thread density
   // so the client can show the amber callout alongside the AI draft.

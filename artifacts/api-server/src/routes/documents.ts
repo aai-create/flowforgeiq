@@ -155,6 +155,7 @@ router.post("/documents", upload.single("file"), async (req, res) => {
         fileBuffer: file.buffer,
         shipments: shipmentRows.map(r => ({ ...r.shipment, supplierName: r.supplierName })),
         corrections,
+        orgId,
         supplierId,
         poLineItemsByShipment,
       });
