@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -486,6 +486,8 @@ export function SignalInbox() {
   const queryClient = useQueryClient();
   const search = useSearch();
   const [filter, setFilter] = useState<Filter>(() => filterFromSearch(search));
+  const filterTabs = Object.keys(FILTER_LABELS) as Filter[];
+  const filterTabRefs = useRef<Partial<Record<Filter, HTMLButtonElement | null>>>({});
   const [selectedId, setSelectedId] = useState<number | null>(() => {
     const value = new URLSearchParams(search).get("messageId") ?? new URLSearchParams(search).get("message");
     const id = value ? Number(value) : NaN;
@@ -547,41 +549,75 @@ export function SignalInbox() {
 
   const badgeCount = draftReadyCount + sendFailedCount;
 
+  const handleFilterKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, currentFilter: Filter) => {
+    const currentIndex = filterTabs.indexOf(currentFilter);
+    let nextIndex = currentIndex;
+
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % filterTabs.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + filterTabs.length) % filterTabs.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = filterTabs.length - 1;
+
+    if (nextIndex === currentIndex) return;
+
+    event.preventDefault();
+    const nextFilter = filterTabs[nextIndex];
+    setFilter(nextFilter);
+    requestAnimationFrame(() => filterTabRefs.current[nextFilter]?.focus());
+  };
+
   return (
     <div className="flex-1 flex min-w-0 overflow-hidden">
       {/* ── LEFT: Signal list ── */}
       <div className="w-[300px] shrink-0 flex flex-col border-r border-[#E5EAF0] bg-white overflow-hidden">
-        {/* Toolbar */}
-        <div className="px-3 py-2 border-b border-[#E5EAF0] flex items-center gap-2 shrink-0 bg-[#F7F9FA]">
-          <Inbox size={14} className="text-[#9000FF]" />
-            <span className="text-xs font-bold text-[#212833]">Inbox</span>
-          {badgeCount > 0 && (
-            <span className="ml-auto text-[9px] font-bold bg-[#9000FF] text-white px-1.5 py-0.5 rounded-full">
-              {badgeCount}
-            </span>
-          )}
-          {isFetching && <RefreshCw size={10} className="animate-spin text-[#9E9FAE] ml-auto" />}
-        </div>
+        {/* Compact workspace toolbar: keep the title, badge, status views, and refresh
+            in one horizontally reachable strip, including in narrow panes. */}
+        <div className="shrink-0 overflow-x-auto border-b border-[#E5EAF0] bg-white" role="toolbar" aria-label="Inbox controls">
+          <div className="flex min-w-max items-center gap-2 px-3 py-2">
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Inbox size={14} className="text-[#9000FF]" />
+              <h1 className="text-xs font-bold text-[#212833]">Inbox</h1>
+              {badgeCount > 0 && (
+                <span className="text-[9px] font-bold bg-[#9000FF] text-white px-1.5 py-0.5 rounded-full">
+                  {badgeCount}
+                </span>
+              )}
+            </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-0.5 px-2 py-1.5 border-b border-[#E5EAF0] bg-white shrink-0 overflow-x-auto">
-          {(Object.keys(FILTER_LABELS) as Filter[]).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`shrink-0 text-[10px] font-semibold px-2 py-1 rounded-md transition-colors ${
-                filter === f
-                  ? "bg-[#9000FF] text-white"
-                  : "text-[#5E687B] hover:bg-[#F0F4F8]"
-              }`}
-            >
-              {FILTER_LABELS[f]}
-            </button>
-          ))}
+            <div className="h-5 w-px shrink-0 bg-[#E5EAF0]" />
+
+            <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-[#E5EAF0] bg-white p-0.5" role="tablist" aria-label="Inbox status views" aria-orientation="horizontal">
+              {filterTabs.map(f => (
+                <button
+                  key={f}
+                  id={`inbox-tab-${f}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={filter === f}
+                  aria-controls="inbox-message-list"
+                  tabIndex={filter === f ? 0 : -1}
+                  onClick={() => setFilter(f)}
+                  onKeyDown={event => handleFilterKeyDown(event, f)}
+                  ref={element => { filterTabRefs.current[f] = element; }}
+                  className={`shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#9000FF]/40 focus-visible:ring-offset-1 ${
+                    filter === f
+                      ? "bg-[#9000FF] text-white"
+                      : "text-[#5E687B] hover:bg-[#F0F4F8] hover:text-[#212833]"
+                  }`}
+                >
+                  {FILTER_LABELS[f]}
+                </button>
+              ))}
+            </div>
+
+            <span className="flex shrink-0 items-center justify-center text-[#9E9FAE]" aria-label={isFetching ? "Refreshing inbox" : undefined}>
+              <RefreshCw size={11} className={isFetching ? "animate-spin" : ""} aria-hidden="true" />
+            </span>
+          </div>
         </div>
 
         {/* Signal list */}
-        <div className="flex-1 overflow-y-auto">
+        <div id="inbox-message-list" role="tabpanel" aria-labelledby={`inbox-tab-${filter}`} className="flex-1 overflow-y-auto">
           {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
               <Inbox size={28} className="text-[#E5EAF0]" />

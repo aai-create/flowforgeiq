@@ -37,7 +37,7 @@ export function InboxHub() {
     >
       <GlobalHeader breadcrumb="Inbox" />
       <div className="flex-1 flex min-w-0 overflow-hidden">
-        <NavSidebar counts={{ inbox: actionableCount > 0 ? actionableCount : null }}>
+        <NavSidebar showBrand={false} counts={{ inbox: actionableCount > 0 ? actionableCount : null }}>
           <div className="flex-1" />
         </NavSidebar>
         <SignalInbox />
