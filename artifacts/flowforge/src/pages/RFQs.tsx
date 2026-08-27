@@ -27,10 +27,9 @@ import {
   Plus, FileText, CheckCircle2, AlertCircle,
   X, Trash2, Edit2, Check, TrendingDown, TrendingUp, Minus,
   Download, ArrowRight, RefreshCw, Info, Mail, ChevronsUpDown, Package,
-  ArrowUpRight, BarChart3, Bell, Building2, CalendarDays, Circle,
-  ClipboardList, Clock3, DollarSign, Inbox, LayoutGrid, MoreHorizontal,
-  PackageCheck, Search, Settings, SlidersHorizontal, Sparkles, UserRound,
-  Users,
+  ArrowUpRight, BarChart3, Building2, CalendarDays,
+  ClipboardList, Clock3, DollarSign, MoreHorizontal,
+  Search, SlidersHorizontal, Sparkles, UserRound,
 } from "lucide-react";
 import { SamplesTab } from "./SamplesTab";
 import { Button } from "@/components/ui/button";
@@ -242,7 +241,7 @@ export function RFQs() {
   const shipmentsQueryKey = getListShipmentsQueryKey();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rfqs = [], refetch: refetchRfqs } = useListRfqs({ query: { placeholderData: keepPreviousData } as any });
+  const { data: rfqs = [], isLoading, isFetching, refetch: refetchRfqs } = useListRfqs({ query: { placeholderData: keepPreviousData } as any });
   const { data: suppliers = [] } = useListSuppliers();
   const { data: stages = [] } = useListStages();
   const { data: knownBuyers = [] } = useListRfqBuyers();
@@ -260,6 +259,7 @@ export function RFQs() {
   const [portfolioSearch, setPortfolioSearch] = useState("");
   const [portfolioFilter, setPortfolioFilter] = useState<"all" | "needs-review" | "no-quotes" | "accepted">("all");
   const [showPortfolioFilters, setShowPortfolioFilters] = useState(false);
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
   const [showConvert, setShowConvert] = useState(false);
   const [showAddQuote, setShowAddQuote] = useState(() => {
@@ -294,6 +294,7 @@ export function RFQs() {
     } catch {}
     return false;
   });
+  const [editingRfqId, setEditingRfqId] = useState<number | null>(null);
 
   const [convertForm, setConvertForm] = useState<ConvertFormState>({
     acceptedQuoteId: null, poNumber: "", supplierId: "", dueDate: "", exFactoryDate: "",
@@ -360,10 +361,10 @@ export function RFQs() {
   }, [rfqs, selectedRfqId]);
 
   useEffect(() => {
-    if (showNewRfq) {
+    if (showNewRfq && editingRfqId === null) {
       try { sessionStorage.setItem(RFQ_DRAFT_KEY, JSON.stringify(newRfqForm)); } catch {}
     }
-  }, [showNewRfq, newRfqForm]);
+  }, [showNewRfq, newRfqForm, editingRfqId]);
 
   useEffect(() => {
     if (showAddQuote && selectedRfqId !== null) {
@@ -377,24 +378,26 @@ export function RFQs() {
       setNewRfqError("Please fill in all required fields."); return;
     }
     try {
-      const created = await createRfqMutation.mutateAsync({
-        data: {
-          product: newRfqForm.product.trim(),
-          category: newRfqForm.category.trim(),
-          buyerName: newRfqForm.buyerName.trim(),
-          targetPriceUsd: Number(newRfqForm.targetPriceUsd),
-          quantity: Number(newRfqForm.quantity),
-          deadline: new Date(newRfqForm.deadline).toISOString(),
-          notes: newRfqForm.notes.trim() || undefined,
-        },
-      });
+      const data = {
+        product: newRfqForm.product.trim(),
+        category: newRfqForm.category.trim(),
+        buyerName: newRfqForm.buyerName.trim(),
+        targetPriceUsd: Number(newRfqForm.targetPriceUsd),
+        quantity: Number(newRfqForm.quantity),
+        deadline: new Date(newRfqForm.deadline).toISOString(),
+        notes: newRfqForm.notes.trim() || undefined,
+      };
+      const saved = editingRfqId !== null
+        ? await updateRfqMutation.mutateAsync({ id: editingRfqId, data })
+        : await createRfqMutation.mutateAsync({ data });
       queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
-      setSelectedRfqId(created.id);
+      setSelectedRfqId(saved.id);
       setShowNewRfq(false);
+      setEditingRfqId(null);
       setNewRfqForm({ product: "", category: "", buyerName: "", targetPriceUsd: "", quantity: "", deadline: "", notes: "" });
       try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {}
       setBuyerInput("");
-      showToast("RFQ created");
+      showToast(editingRfqId !== null ? t("rfqs.rfqUpdated") : t("rfqs.rfqCreated"));
     } catch {
       setNewRfqError("Failed to create RFQ. Please try again.");
     }
@@ -427,7 +430,12 @@ export function RFQs() {
   };
 
   const submitEditQuote = async () => {
-    if (!editingQuoteId || !editQuoteForm.factoryName.trim()) return;
+    if (!editingQuoteId) return;
+    const unitPriceUsd = Number(editQuoteForm.unitPriceUsd);
+    const leadTimeDays = Number(editQuoteForm.leadTimeDays);
+    const moq = Number(editQuoteForm.moq);
+    if (!editQuoteForm.factoryName.trim()) { showToast(t("rfqs.factoryNameRequired")); return; }
+    if (!Number.isFinite(unitPriceUsd) || unitPriceUsd <= 0 || !Number.isInteger(leadTimeDays) || leadTimeDays <= 0 || !Number.isInteger(moq) || moq <= 0) { showToast(t("rfqs.validQuoteNumbersRequired")); return; }
     try {
       await updateQuoteMutation.mutateAsync({
         id: selectedRfqId!,
@@ -435,17 +443,17 @@ export function RFQs() {
         data: {
           factoryName: editQuoteForm.factoryName.trim(),
           country: editQuoteForm.country || "CN",
-          unitPriceUsd: Number(editQuoteForm.unitPriceUsd),
-          leadTimeDays: Number(editQuoteForm.leadTimeDays),
-          moq: Number(editQuoteForm.moq),
+          unitPriceUsd,
+          leadTimeDays,
+          moq,
           notes: editQuoteForm.notes.trim() || undefined,
         },
       });
       queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
       setEditingQuoteId(null);
-      showToast("Quote updated");
+      showToast(t("rfqs.quoteUpdated"));
     } catch {
-      showToast("Failed to update quote");
+      showToast(t("rfqs.quoteUpdateFailed"));
     }
   };
 
@@ -537,9 +545,19 @@ export function RFQs() {
   };
 
   const cancelRfq = async (id: number) => {
-    await updateRfqMutation.mutateAsync({ id, data: { status: "cancelled" } });
-    queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
-    showToast("RFQ cancelled");
+    setCancelTargetId(id);
+  };
+
+  const confirmCancelRfq = async () => {
+    if (cancelTargetId === null) return;
+    try {
+      await updateRfqMutation.mutateAsync({ id: cancelTargetId, data: { status: "cancelled" } });
+      queryClient.invalidateQueries({ queryKey: rfqsQueryKey });
+      setCancelTargetId(null);
+      showToast(t("rfqs.rfqCancelled"));
+    } catch {
+      showToast(t("rfqs.rfqCancelFailed"));
+    }
   };
 
   const openSendEmail = (rfq: RfqWithQuotes) => {
@@ -602,18 +620,11 @@ export function RFQs() {
         </div>
       )}
 
-      <div className="h-screen w-full overflow-hidden bg-[#f6f7f9] text-[#202632]" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
-        <div className="flex h-6 items-center justify-between bg-[#e8752c] px-4 text-[10px] font-semibold tracking-[0.01em] text-white">
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-white/20 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.13em]">Sourcing workspace</span>
-            <span className="text-white/85">FlowForgeIQ workspace controls</span>
-          </div>
-          <span className="flex items-center gap-1 text-white/85"><Circle size={6} fill="currentColor" /> All systems operational</span>
-        </div>
-        <GlobalHeader breadcrumb="RFQs" />
+      <div className="h-screen w-full overflow-hidden bg-[#FAFBFC] text-[#212833]" style={{ fontFamily: "Inter, sans-serif", fontSize: 13 }}>
+        <GlobalHeader breadcrumb={activeTab === "samples" ? t("rfqs.samples") : t("rfqs.title")} />
 
         {activeTab === "samples" ? (
-          <div className="flex h-[calc(100vh-72px)] flex-col overflow-hidden">
+          <div className="flex h-[calc(100vh-48px)] flex-col overflow-hidden">
             <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#e3e6eb] bg-white px-5">
               <div className="flex items-center gap-2"><Package className="h-4 w-4 text-[#7457c7]" /><span className="text-sm font-bold text-[#272c37]">Samples</span></div>
               <button onClick={() => setActiveTab("rfqs")} className="rounded-lg border border-[#dfe3e9] px-3 py-1.5 text-[10px] font-bold text-[#5d6674] hover:bg-[#f7f7f9]">Back to RFQs</button>
@@ -621,82 +632,44 @@ export function RFQs() {
             <div className="min-h-0 flex-1"><SamplesTab /></div>
           </div>
         ) : (
-          <div className="flex h-[calc(100vh-72px)] min-h-0 overflow-hidden">
+          <div className="flex h-[calc(100vh-48px)] min-h-0 overflow-hidden">
             <NavSidebar showBrand={false} counts={{ myOrders: null }} />
-            <aside className="hidden w-[184px] shrink-0 flex-col border-r border-[#e3e6eb] bg-[#fbfbfc] xl:flex">
-              <div className="flex h-[56px] items-center gap-2 border-b border-[#e9ebef] px-4">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eeeaf9] text-[#7657c7]"><Sparkles size={14} /></div>
-                <div><p className="text-[11px] font-bold leading-3 text-[#272c37]">Sourcing</p><p className="mt-0.5 text-[9px] text-[#9299a7]">Buyer workspace</p></div>
-              </div>
-              <div className="flex-1 px-2.5 py-4">
-                <p className="px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#a0a6b1]">Workspace</p>
-                <button className="mt-2 flex w-full items-center gap-2 rounded-lg bg-[#eeebfb] px-2.5 py-2 text-left text-[#7354c5]" aria-current="page">
-                  <ClipboardList size={14} /><span className="flex-1 text-[11px] font-semibold">RFQ command center</span>
-                </button>
-                <button onClick={() => setActiveTab("samples")} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[#697386] hover:bg-[#f0f1f4]">
-                  <Package size={14} /><span className="text-[11px] font-medium">Samples & requests</span>
-                </button>
-                <p className="mt-7 px-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#a0a6b1]">Views</p>
-                {[
-                  ["Open RFQs", rfqs.filter(r => r.status === "open").length, "all"],
-                  ["Awaiting quotes", rfqs.filter(r => r.status === "open" && r.quotes.length === 0).length, "no-quotes"],
-                  ["Needs review", rfqs.filter(r => r.status === "open" && r.quotes.length > 0).length, "needs-review"],
-                  ["Accepted", rfqs.filter(r => r.status === "accepted").length, "accepted"],
-                ].map(([label, count, value]) => (
-                  <button key={label} onClick={() => setPortfolioFilter(value as typeof portfolioFilter)} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[#697386] hover:bg-[#f0f1f4]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#c1c6ce]" /><span className="flex-1 text-[11px]">{label}</span><span className="text-[10px] font-semibold text-[#a4aab5]">{count}</span>
-                  </button>
-                ))}
-                <div className="mt-7 rounded-xl border border-[#e8e5f2] bg-[#f8f6fd] p-3">
-                  <p className="flex items-center gap-1.5 text-[10px] font-bold text-[#6044a9]"><Sparkles size={11} /> Sourcing pulse</p>
-                  <p className="mt-1.5 text-[10px] leading-4 text-[#75708a]">{rfqs.filter(r => r.status === "open" && r.quotes.length > 0).length} quote decisions are ready for review.</p>
-                  <button onClick={() => setPortfolioFilter("needs-review")} className="mt-2 text-[10px] font-bold text-[#7657c7]">Review now <ArrowUpRight size={10} className="inline" /></button>
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              <header className="flex min-h-12 shrink-0 items-center gap-2 overflow-x-auto border-b border-[#E5EAF0] bg-white px-3 sm:px-5">
+                <div className="flex shrink-0 items-center gap-2"><h1 className="text-sm font-bold text-[#212833]">{t("rfqs.title")}</h1><span className="rounded-full bg-[#F0F4F8] px-2 py-0.5 text-[10px] font-semibold text-[#5E687B]">{filteredRfqs.length}/{rfqs.length}</span></div>
+                <div className="mx-1 hidden h-5 w-px bg-[#E5EAF0] sm:block" />
+                <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-[#E5EAF0] bg-white p-0.5" role="tablist" aria-label={t("rfqs.views")}>
+                  {(["all", "needs-review", "no-quotes", "accepted"] as const).map(option => <button key={option} role="tab" aria-selected={portfolioFilter === option} onClick={() => setPortfolioFilter(option)} className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#9000FF] text-white" : "text-[#5E687B] hover:bg-[#F0F4F8]"}`}>{option === "all" ? t("common.all") : option === "needs-review" ? t("rfqs.needsReview") : option === "no-quotes" ? t("rfqs.awaitingQuotes") : t("rfqs.status.accepted")}</button>)}
                 </div>
-              </div>
-              <div className="border-t border-[#e9ebef] px-4 py-3"><span className="flex items-center gap-2 text-[10px] font-medium text-[#7d8491]"><Users size={13} /> Team directory</span></div>
-            </aside>
-
-            <main className="flex min-w-0 flex-1 flex-col">
-              <header className="flex h-[56px] shrink-0 items-center gap-4 border-b border-[#e3e6eb] bg-white px-6">
-                <div className="flex min-w-0 flex-1 items-center gap-3"><p className="text-[12px] font-semibold text-[#858d9b]">Sourcing</p><span className="text-[#c4c8d0]">/</span><h1 className="truncate text-[13px] font-bold text-[#262c37]">RFQ Command Center</h1><span className="rounded-full bg-[#f0eff7] px-2 py-1 text-[9px] font-bold text-[#7256bb]">Live</span></div>
-                <div className="flex items-center gap-3"><button className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[#8c95a3] hover:bg-[#f5f6f8]" aria-label="Notifications"><Bell size={16} /><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#e8752c]" /></button><span className="hidden text-[10px] text-[#858d9b] lg:inline">Last synced moments ago</span><button onClick={() => setShowNewRfq(true)} className="flex items-center gap-1.5 rounded-lg bg-[#7457c7] px-3 py-2 text-[10px] font-bold text-white shadow-[0_4px_12px_rgba(116,87,199,0.22)]"><Plus size={13} /> New RFQ</button></div>
+                <div className="relative ml-auto min-w-[150px] max-w-[240px] flex-1 sm:min-w-[190px]"><Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9E9FAE]" /><input value={portfolioSearch} onChange={e => setPortfolioSearch(e.target.value)} placeholder={t("rfqs.searchPlaceholder")} aria-label={t("common.search")} className="w-full rounded-md border border-transparent bg-[#F0F4F8] py-1.5 pl-8 pr-7 text-[11px] outline-none placeholder:text-[#9E9FAE] focus:border-[#9000FF]/30 focus:bg-white focus:ring-1 focus:ring-[#9000FF]/10" />{portfolioSearch && <button onClick={() => setPortfolioSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9E9FAE]" aria-label={t("common.clear")}><X size={12} /></button>}</div>
+                <button onClick={() => setShowPortfolioFilters(v => !v)} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${showPortfolioFilters ? "border-[#9000FF]/30 bg-[#9000FF]/5 text-[#9000FF]" : "border-[#E5EAF0] text-[#5E687B] hover:bg-[#F0F4F8]"}`} aria-label={t("rfqs.filterButton")} aria-pressed={showPortfolioFilters}><SlidersHorizontal size={14} /></button>
+                <button onClick={() => void refetchRfqs()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#5E687B] hover:bg-[#F0F4F8]" aria-label={t("common.refresh")} disabled={isFetching}><RefreshCw size={13} className={isFetching ? "animate-spin" : ""} /></button>
+                {selectedRfq && <button onClick={() => { setEditingRfqId(selectedRfq.id); setNewRfqForm({ product: selectedRfq.product, category: selectedRfq.category, buyerName: selectedRfq.buyerName, targetPriceUsd: String(selectedRfq.targetPriceUsd), quantity: String(selectedRfq.quantity), deadline: selectedRfq.deadline.slice(0, 10), notes: selectedRfq.notes ?? "" }); setShowNewRfq(true); }} className="hidden shrink-0 items-center gap-1.5 rounded-md border border-[#E5EAF0] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#5E687B] hover:bg-[#F0F4F8] lg:flex"><Edit2 size={12} /> {t("common.edit")}</button>}
+                <button onClick={() => { setEditingRfqId(null); setShowNewRfq(true); }} className="flex shrink-0 items-center gap-1.5 rounded-md bg-[#9000FF] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#7200CC]"><Plus size={13} /> <span className="hidden sm:inline">{t("rfqs.newRfq")}</span></button>
               </header>
+              {showPortfolioFilters && <div className="flex shrink-0 items-center gap-2 border-b border-[#E5EAF0] bg-[#FAFBFC] px-3 py-2 text-[10px] sm:px-5"><span className="font-semibold text-[#5E687B]">{t("rfqs.filterLabel")}</span><button onClick={() => setPortfolioFilter("accepted")} className="rounded px-2 py-1 font-semibold text-[#9000FF] hover:bg-[#F0EEFF]">{t("rfqs.status.accepted")}</button><button onClick={() => { setPortfolioSearch(""); setPortfolioFilter("all"); }} className="rounded px-2 py-1 text-[#5E687B] hover:bg-white">{t("rfqs.clearFilters")}</button></div>}
 
               <div className="flex min-h-0 flex-1 overflow-hidden">
-                <section className="min-w-0 flex-1 overflow-y-auto bg-[#f6f7f9] px-6 py-5">
-                  <div className="flex items-start justify-between gap-5">
-                    <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8d95a3]">Active sourcing portfolio</p><h2 className="mt-1.5 text-[25px] font-bold tracking-[-0.035em] text-[#252b36]">Find the next best quote.</h2><p className="mt-1 text-[12px] text-[#858d9b]">A live view of every request, from first send to factory selection.</p></div>
-                    <button onClick={() => setShowNewRfq(true)} className="hidden shrink-0 items-center gap-2 rounded-lg bg-[#7457c7] px-3.5 py-2.5 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(116,87,199,0.22)] sm:flex"><Plus size={14} /> New RFQ</button>
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
-                    {[
-                      { label: "Total RFQs", value: rfqs.length, sub: "in this workspace", icon: ClipboardList, tone: "text-[#7256bb] bg-[#eeebfb]" },
-                      { label: "Open requests", value: rfqs.filter(r => r.status === "open").length, sub: `${rfqs.filter(r => r.status === "open" && r.quotes.length > 0).length} need attention`, icon: Clock3, tone: "text-[#a36d2a] bg-[#fff4df]" },
-                      { label: "Factory quotes", value: totalQuotes, sub: `across ${rfqs.filter(r => r.quotes.length > 0).length} requests`, icon: DollarSign, tone: "text-[#287765] bg-[#e9f6f1]" },
-                      { label: "Avg. response", value: rfqs.length ? `${(totalQuotes / rfqs.length).toFixed(1)} q` : "—", sub: "quotes per request", icon: BarChart3, tone: "text-[#496796] bg-[#e9eff8]" },
-                    ].map(({ label, value, sub, icon: Icon, tone }) => (
-                      <div key={label} className="rounded-xl border border-[#e4e7ec] bg-white p-3.5 shadow-[0_1px_2px_rgba(27,33,45,0.02)]"><div className="flex items-center gap-2"><span className={`flex h-6 w-6 items-center justify-center rounded-md ${tone}`}><Icon size={13} /></span><span className="text-[10px] font-semibold text-[#858d9b]">{label}</span></div><div className="mt-2 flex items-end justify-between"><p className="text-[21px] font-bold tracking-[-0.04em] text-[#242a35]">{value}</p><p className="text-[9px] text-[#a0a6b1]">{sub}</p></div></div>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className="relative min-w-0 flex-1"><Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ba2ae]" /><input value={portfolioSearch} onChange={e => setPortfolioSearch(e.target.value)} placeholder="Search product, buyer, or RFQ number" className="h-9 w-full rounded-lg border border-[#dfe3e9] bg-white pl-9 pr-3 text-[11px] text-[#313844] outline-none placeholder:text-[#a6adb8] focus:border-[#a494dc] focus:ring-2 focus:ring-[#8062d5]/10" /></div>
+                <section className={`${selectedRfq ? "hidden lg:block" : "block"} min-w-0 flex-1 overflow-y-auto bg-[#FAFBFC] p-3 sm:p-5`}>
+                  <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold text-[#5E687B]">{t("rfqs.activePortfolio")}</p><p className="mt-0.5 text-[11px] text-[#9E9FAE]">{t("rfqs.portfolioDesc")}</p></div><div className="hidden items-center gap-2 text-[10px] text-[#9E9FAE] sm:flex"><span>{totalQuotes} {t("rfqs.factoryQuotes")}</span><span className="text-[#E5EAF0]">·</span><span>{isFetching ? t("rfqs.syncing") : t("rfqs.updatedMomentsAgo")}</span></div></div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative min-w-0 flex-1"><Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ba2ae]" /><input value={portfolioSearch} onChange={e => setPortfolioSearch(e.target.value)} placeholder={t("rfqs.searchPlaceholder")} aria-label={t("common.search")} className="h-9 w-full rounded-lg border border-[#dfe3e9] bg-white pl-9 pr-3 text-[11px] text-[#313844] outline-none placeholder:text-[#a6adb8] focus:border-[#a494dc] focus:ring-2 focus:ring-[#8062d5]/10" /></div>
                     <div className="hidden items-center rounded-lg border border-[#dfe3e9] bg-white p-0.5 md:flex">
                       {(["all", "needs-review", "no-quotes"] as const).map(option => <button key={option} onClick={() => setPortfolioFilter(option)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${portfolioFilter === option ? "bg-[#eeebfb] text-[#6e51bb]" : "text-[#89919d] hover:text-[#5c6572]"}`}>{option === "all" ? "All RFQs" : option === "needs-review" ? "Needs review" : "No quotes"}</button>)}
                     </div>
-                    <button onClick={() => setShowPortfolioFilters(!showPortfolioFilters)} className={`flex h-9 w-9 items-center justify-center rounded-lg border bg-white ${showPortfolioFilters ? "border-[#a494dc] text-[#7457c7]" : "border-[#dfe3e9] text-[#8d95a2]"}`} aria-label="Show RFQ filters"><SlidersHorizontal size={14} /></button>
+                    <button onClick={() => setShowPortfolioFilters(!showPortfolioFilters)} className={`flex h-9 w-9 items-center justify-center rounded-lg border bg-white ${showPortfolioFilters ? "border-[#a494dc] text-[#7457c7]" : "border-[#dfe3e9] text-[#8d95a2]"}`} aria-label={t("rfqs.filterButton")} aria-pressed={showPortfolioFilters}><SlidersHorizontal size={14} /></button>
                   </div>
-                  {showPortfolioFilters && <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#e6e1f5] bg-[#fbfaff] px-3 py-2 text-[10px] text-[#766c8f]"><span className="font-bold text-[#6e51bb]">Filter:</span><button onClick={() => setPortfolioFilter("accepted")} className="rounded bg-[#eeeaf9] px-2 py-1 font-semibold text-[#6e51bb]">Accepted</button><button onClick={() => { setPortfolioSearch(""); setPortfolioFilter("all"); }} className="rounded px-2 py-1 hover:bg-[#efeff3]">Clear filters</button></div>}
+                  {showPortfolioFilters && <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#e6e1f5] bg-[#fbfaff] px-3 py-2 text-[10px] text-[#766c8f]"><span className="font-bold text-[#6e51bb]">{t("rfqs.filterLabel")}</span><button onClick={() => setPortfolioFilter("accepted")} className="rounded bg-[#eeeaf9] px-2 py-1 font-semibold text-[#6e51bb]">{t("rfqs.status.accepted")}</button><button onClick={() => { setPortfolioSearch(""); setPortfolioFilter("all"); }} className="rounded px-2 py-1 hover:bg-[#efeff3]">{t("rfqs.clearFilters")}</button></div>}
 
-                  <div className="mt-3 flex items-center justify-between"><p className="text-[10px] font-semibold text-[#858d9b]">{filteredRfqs.length} requests <span className="font-normal text-[#b0b5be]">· updated moments ago</span></p><button className="flex items-center gap-1 text-[10px] font-semibold text-[#7457c7]"><CalendarDays size={12} /> Current workspace <MoreHorizontal size={11} /></button></div>
+                  {isLoading && <div className="mt-3 flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-[#E5EAF0] bg-white"><RefreshCw size={18} className="animate-spin text-[#9000FF]" /><span className="text-xs text-[#5E687B]">{t("common.loading")}</span></div>}
+                  <div className="mt-3 flex items-center justify-between"><p className="text-[10px] font-semibold text-[#858d9b]">{filteredRfqs.length} {t("rfqs.requests")} <span className="font-normal text-[#b0b5be]">· {isFetching ? t("rfqs.syncing") : t("rfqs.updatedMomentsAgo")}</span></p><button onClick={() => setActiveTab("samples")} className="flex items-center gap-1 text-[10px] font-semibold text-[#7457c7]"><Package size={12} /> {t("rfqs.samples")} <ArrowRight size={11} /></button></div>
                   <div className="mt-2 overflow-hidden rounded-xl border border-[#e1e4e9] bg-white shadow-[0_2px_5px_rgba(27,33,45,0.025)]">
-                    <div className="grid grid-cols-[minmax(220px,1.7fr)_minmax(105px,.8fr)_90px_100px_88px] items-center gap-3 border-b border-[#e9ebef] bg-[#fbfbfc] px-4 py-2.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[#9aa1ad]"><span>Request</span><span>Buyer / owner</span><span>Deadline</span><span>Quotes</span><span className="text-right">Target</span></div>
+                    <div className="hidden grid-cols-[minmax(220px,1.7fr)_minmax(105px,.8fr)_90px_100px_88px] items-center gap-3 border-b border-[#e9ebef] bg-[#fbfbfc] px-4 py-2.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[#9aa1ad] md:grid"><span>{t("rfqs.request")}</span><span>{t("rfqs.buyerOwner")}</span><span>{t("rfqs.deadline")}</span><span>{t("rfqs.quotes")}</span><span className="text-right">{t("rfqs.targetPrice")}</span></div>
                     {filteredRfqs.length > 0 ? filteredRfqs.map(rfq => {
                       const isSelected = rfq.id === selectedRfq?.id;
                       const best = rfq.quotes.length ? Math.min(...rfq.quotes.map(q => q.unitPriceUsd)) : null;
                       const deadlineLabel = rfq.status === "accepted" ? "Accepted" : rfq.quotes.length ? "Quotes in" : "Awaiting quotes";
-                      return <button type="button" key={rfq.id} onClick={() => { setSelectedRfqId(rfq.id); setSelectedQuoteId(null); }} className={`group grid w-full grid-cols-[minmax(220px,1.7fr)_minmax(105px,.8fr)_90px_100px_88px] items-center gap-3 border-b border-[#eef0f3] px-4 py-3 text-left transition-colors last:border-b-0 ${isSelected ? "bg-[#fbfaff] shadow-[inset_3px_0_0_#8062d5]" : "hover:bg-[#fcfcfd]"}`}>
+                      return <button type="button" key={rfq.id} onClick={() => { setSelectedRfqId(rfq.id); setSelectedQuoteId(null); }} className={`hidden group w-full grid-cols-[minmax(220px,1.7fr)_minmax(105px,.8fr)_90px_100px_88px] items-center gap-3 border-b border-[#eef0f3] px-4 py-3 text-left transition-colors last:border-b-0 md:grid ${isSelected ? "bg-[#fbfaff] shadow-[inset_3px_0_0_#8062d5]" : "hover:bg-[#fcfcfd]"}`}>
                         <div className="min-w-0"><div className="flex items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#eeeaf9] text-[9px] font-bold text-[#7256bb]">{rfq.product.split(" ").slice(0, 2).map(part => part[0]).join("")}</span><div className="min-w-0"><p className="truncate text-[11px] font-bold text-[#2c333f]">{rfq.product} <span className="font-medium text-[#8a929f]">— {rfq.category || "General"}</span></p><div className="mt-1 flex items-center gap-2"><span className="font-mono text-[9px] text-[#a0a6b1]">RFQ-{rfq.id}</span><span className={`rounded border px-1.5 py-0.5 text-[8px] font-bold ${statusCls[rfq.status] ?? "bg-slate-100"}`}>{getStatusLabel(t)[rfq.status] ?? rfq.status}</span></div></div></div></div>
                         <div className="min-w-0"><p className="truncate text-[10px] font-semibold text-[#4f5866]">{rfq.buyerName}</p><p className="mt-1 flex items-center gap-1 text-[9px] text-[#a0a6b1]"><UserRound size={10} /> {rfq.assigneeName || "Unassigned"}</p></div>
                         <div><p className="text-[10px] font-semibold text-[#4f5866]">{shortDate(rfq.deadline)}</p><p className={`mt-1 text-[9px] ${rfq.status === "open" && !rfq.quotes.length ? "font-bold text-[#c87336]" : "text-[#a0a6b1]"}`}>{deadlineLabel}</p></div>
@@ -705,15 +678,27 @@ export function RFQs() {
                       </button>;
                     }) : <div className="flex flex-col items-center justify-center py-14 text-center"><Search size={20} className="text-[#b5bbc5]" /><p className="mt-3 text-[12px] font-semibold text-[#626c7a]">No RFQs match those filters</p><button onClick={() => { setPortfolioSearch(""); setPortfolioFilter("all"); }} className="mt-1 text-[10px] font-bold text-[#7457c7]">Clear filters</button></div>}
                   </div>
+                  <div className="space-y-2 p-2 md:hidden">
+                    {filteredRfqs.length > 0 ? filteredRfqs.map(rfq => (
+                      <button type="button" key={`mobile-${rfq.id}`} onClick={() => { setSelectedRfqId(rfq.id); setSelectedQuoteId(null); }} className="w-full rounded-lg border border-[#E5EAF0] bg-white p-3 text-left shadow-[0_1px_2px_rgba(33,40,51,0.03)]">
+                        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-xs font-bold text-[#212833]">{rfq.product}</p><p className="mt-1 text-[10px] text-[#9E9FAE]">RFQ-{rfq.id} · {rfq.buyerName}</p></div><span className={`shrink-0 rounded border px-1.5 py-0.5 text-[8px] font-bold ${statusCls[rfq.status] ?? "bg-slate-100"}`}>{getStatusLabel(t)[rfq.status] ?? rfq.status}</span></div>
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]"><span><b className="block text-[#9E9FAE]">{t("rfqs.deadline")}</b><span className="font-semibold text-[#4F5866]">{shortDate(rfq.deadline)}</span></span><span><b className="block text-[#9E9FAE]">{t("rfqs.quotes")}</b><span className="font-semibold text-[#4F5866]">{rfq.quotes.length}</span></span><span className="text-right"><b className="block text-[#9E9FAE]">{t("rfqs.targetPrice")}</b><span className="font-semibold text-[#4F5866]">{usd(rfq.targetPriceUsd)}</span></span></div>
+                      </button>
+                    )) : <div className="rounded-lg border border-dashed border-[#DCE1E8] bg-white py-12 text-center text-xs text-[#5E687B]">{t("rfqs.noMatches")}</div>}
+                  </div>
                 </section>
 
-                <aside className="flex w-[344px] shrink-0 flex-col border-l border-[#e1e4e9] bg-white">
+                <aside className={`${selectedRfq ? "flex" : "hidden lg:flex"} w-full shrink-0 flex-col border-l border-[#E5EAF0] bg-white lg:w-[390px]`}>
                   {selectedRfq ? <>
+                    <div className="mx-5 mt-3 flex items-center justify-between lg:hidden"><button onClick={() => setSelectedRfqId(null)} className="text-[10px] font-semibold text-[#9000FF] hover:underline">{t("common.back")}</button><button onClick={() => { setEditingRfqId(selectedRfq.id); setNewRfqForm({ product: selectedRfq.product, category: selectedRfq.category, buyerName: selectedRfq.buyerName, targetPriceUsd: String(selectedRfq.targetPriceUsd), quantity: String(selectedRfq.quantity), deadline: selectedRfq.deadline.slice(0, 10), notes: selectedRfq.notes ?? "" }); setShowNewRfq(true); }} className="flex items-center gap-1 text-[10px] font-semibold text-[#5E687B]"><Edit2 size={11} />{t("common.edit")}</button></div>
                     <div className="border-b border-[#e8eaee] px-5 pb-4 pt-5"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eeeaf9] text-[10px] font-bold text-[#7256bb]">{selectedRfq.product.split(" ").slice(0, 2).map(part => part[0]).join("")}</div><div className="min-w-0"><p className="font-mono text-[9px] font-bold text-[#9aa1ad]">RFQ-{selectedRfq.id}</p><h3 className="mt-1 text-[14px] font-bold leading-5 tracking-[-0.01em] text-[#272e39]">{selectedRfq.product}</h3><p className="text-[11px] text-[#7d8693]">{selectedRfq.category || "General sourcing"}</p></div></div><button onClick={() => selectedRfq.status === "open" && cancelRfq(selectedRfq.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-[#9aa1ad] hover:bg-[#f4f5f7]" aria-label="Cancel RFQ"><MoreHorizontal size={15} /></button></div><div className="mt-4 flex items-center gap-2"><span className={`rounded border px-2 py-1 text-[9px] font-bold ${statusCls[selectedRfq.status] ?? "bg-slate-100"}`}>{getStatusLabel(t)[selectedRfq.status] ?? selectedRfq.status}</span><span className="text-[10px] text-[#9aa1ad]">·</span><span className="text-[10px] text-[#7e8794]">{selectedRfq.quotes.length} factory {selectedRfq.quotes.length === 1 ? "quote" : "quotes"}</span></div></div>
-                    <div className="flex-1 overflow-y-auto px-5 py-4"><div className="grid grid-cols-2 gap-2">{[{ label: "Buyer", value: selectedRfq.buyerName, icon: Building2 }, { label: "Quantity", value: `${selectedRfq.quantity.toLocaleString()} units`, icon: ClipboardList }, { label: "Target price", value: `${usd(selectedRfq.targetPriceUsd)} / unit`, icon: DollarSign }, { label: "Deadline", value: shortDate(selectedRfq.deadline), icon: CalendarDays }].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-lg border border-[#e8eaee] bg-[#fbfbfc] p-2.5"><div className="flex items-center gap-1.5 text-[#a0a7b2]"><Icon size={11} /><span className="text-[9px] font-semibold">{label}</span></div><p className="mt-1.5 truncate text-[10px] font-bold text-[#495362]">{value}</p></div>)}</div>
+                    <div className="flex-1 overflow-y-auto px-5 py-4">
+                      <div className="mb-3 flex items-center justify-between rounded-lg border border-[#E5EAF0] bg-[#F7F9FA] p-2.5"><span className="text-[10px] font-semibold text-[#5E687B]">{t("rfqs.assignee")}</span><AssigneePicker assigneeId={selectedRfq.assigneeId ?? null} assigneeName={selectedRfq.assigneeName} onChange={id => handleRfqAssigneeChange(selectedRfq.id, id)} /></div>
+                      <div className="grid grid-cols-2 gap-2">{[{ label: t("rfqs.buyer"), value: selectedRfq.buyerName, icon: Building2 }, { label: t("rfqs.quantity"), value: `${selectedRfq.quantity.toLocaleString()} ${t("common.units")}`, icon: ClipboardList }, { label: t("rfqs.targetPrice"), value: `${usd(selectedRfq.targetPriceUsd)} ${t("common.perUnit")}`, icon: DollarSign }, { label: t("rfqs.deadline"), value: shortDate(selectedRfq.deadline), icon: CalendarDays }].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-lg border border-[#e8eaee] bg-[#fbfbfc] p-2.5"><div className="flex items-center gap-1.5 text-[#a0a7b2]"><Icon size={11} /><span className="text-[9px] font-semibold">{label}</span></div><p className="mt-1.5 truncate text-[10px] font-bold text-[#495362]">{value}</p></div>)}</div>
                       <div className="mt-5 flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#737d8b]">Quote snapshot</p>{selectedRfq.status === "open" && <button onClick={() => setShowAddQuote(true)} className="flex items-center gap-1 text-[10px] font-bold text-[#7457c7]"><Plus size={12} /> Add quote</button>}</div>
                       {selectedPreviewQuote && <div className="mt-2 rounded-lg border border-[#ded7f2] bg-[#fbfaff] p-3"><div className="flex items-start justify-between gap-2"><div><p className="text-[10px] font-bold text-[#3c4552]">{selectedPreviewQuote.factoryName}</p><p className="mt-0.5 text-[9px] text-[#a0a6b1]">{fmtCountry(selectedPreviewQuote.country, i18n.language)}</p></div><span className={`rounded px-1.5 py-1 text-[8px] font-bold ${quoteStatusCls[selectedPreviewQuote.status]}`}>{selectedPreviewQuote.status}</span></div><div className="mt-3 grid grid-cols-3 gap-2 border-y border-[#eef0f2] py-2"><div><p className="text-[8px] uppercase tracking-wide text-[#a0a6b1]">Unit price</p><p className="mt-1 text-[11px] font-bold text-[#303946]">{usd(selectedPreviewQuote.unitPriceUsd)}</p></div><div><p className="text-[8px] uppercase tracking-wide text-[#a0a6b1]">Vs target</p><p className={`mt-1 text-[11px] font-bold ${selectedPreviewQuote.unitPriceUsd <= selectedRfq.targetPriceUsd ? "text-[#287765]" : "text-[#ba6c3b]"}`}>{selectedPreviewQuote.unitPriceUsd <= selectedRfq.targetPriceUsd ? "" : "+"}{((selectedPreviewQuote.unitPriceUsd - selectedRfq.targetPriceUsd) / selectedRfq.targetPriceUsd * 100).toFixed(1)}%</p></div><div><p className="text-[8px] uppercase tracking-wide text-[#a0a6b1]">Lead time</p><p className="mt-1 text-[11px] font-bold text-[#303946]">{selectedPreviewQuote.leadTimeDays} days</p></div></div><div className="mt-2 flex items-center justify-between"><span className="text-[9px] text-[#a0a6b1]">MOQ {selectedPreviewQuote.moq.toLocaleString()}</span>{selectedRfq.status === "open" && selectedPreviewQuote.status !== "accepted" && <button onClick={() => { setSelectedQuoteId(selectedPreviewQuote.id); handleUseThisQuote(selectedPreviewQuote, selectedRfq); }} className="flex items-center gap-1 text-[9px] font-bold text-[#7457c7]"><Check size={11} /> Use quote</button>}</div></div>}
-                      {!selectedPreviewQuote && <div className="mt-2 rounded-lg border border-dashed border-[#d9dde4] bg-[#fbfbfc] px-3 py-5 text-center"><DollarSign size={16} className="mx-auto text-[#9ea6b2]" /><p className="mt-2 text-[10px] font-semibold text-[#6e7785]">No factory quotes yet</p><p className="mt-1 text-[9px] leading-4 text-[#a0a6b1]">Add a quote or send this request to your factory network.</p></div>}
+                       {selectedPreviewQuote && <div className="mt-2 flex items-center justify-end gap-2"><button onClick={() => { setEditingQuoteId(selectedPreviewQuote.id); setEditQuoteForm({ factoryName: selectedPreviewQuote.factoryName, country: selectedPreviewQuote.country, unitPriceUsd: String(selectedPreviewQuote.unitPriceUsd), leadTimeDays: String(selectedPreviewQuote.leadTimeDays), moq: String(selectedPreviewQuote.moq), notes: selectedPreviewQuote.notes ?? "", supplierId: selectedPreviewQuote.supplierId ? String(selectedPreviewQuote.supplierId) : "" }); }} className="flex items-center gap-1 rounded px-2 py-1 text-[9px] font-semibold text-[#5E687B] hover:bg-[#F0F4F8]"><Edit2 size={11} />{t("common.edit")}</button><button onClick={() => { if (window.confirm(t("rfqs.deleteQuoteConfirm"))) void deleteQuote(selectedPreviewQuote.id); }} className="flex items-center gap-1 rounded px-2 py-1 text-[9px] font-semibold text-red-600 hover:bg-red-50"><Trash2 size={11} />{t("common.delete")}</button>{selectedRfq.status === "open" && <button onClick={() => openConvert(selectedPreviewQuote.id)} className="rounded bg-[#9000FF] px-2 py-1 text-[9px] font-semibold text-white hover:bg-[#7200CC]">{t("rfqs.convertToPo")}</button>}</div>}
+                       {!selectedPreviewQuote && <div className="mt-2 rounded-lg border border-dashed border-[#d9dde4] bg-[#fbfbfc] px-3 py-5 text-center"><DollarSign size={16} className="mx-auto text-[#9ea6b2]" /><p className="mt-2 text-[10px] font-semibold text-[#6e7785]">{t("rfqs.noQuotes")}</p><p className="mt-1 text-[9px] leading-4 text-[#a0a6b1]">{t("rfqs.noQuotesDesc")}</p></div>}
                       {selectedRfq.notes && <div className="mt-4 rounded-lg bg-[#f8f7fc] p-3"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#8d95a3]">Brief notes</p><p className="mt-1.5 text-[10px] leading-4 text-[#726b85]">{selectedRfq.notes}</p></div>}
                       <div className="mt-5 rounded-lg bg-[#f8f7fc] p-3"><p className="flex items-center gap-1.5 text-[10px] font-bold text-[#6044a9]"><Sparkles size={11} /> Next best action</p><p className="mt-1.5 text-[10px] leading-4 text-[#726b85]">{selectedRfq.quotes.length === 0 ? "Send this RFQ to your factory network before the deadline." : selectedRfq.status === "accepted" ? "Quote selected. Review the live purchase order." : "Compare lead time and landed cost before choosing a supplier."}</p></div>
                     </div>
@@ -726,11 +711,22 @@ export function RFQs() {
         )}
       </div>
 
+      <Dialog open={cancelTargetId !== null} onOpenChange={open => { if (!open) setCancelTargetId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{t("rfqs.cancelConfirmTitle")}</DialogTitle></DialogHeader>
+          <p className="py-1 text-sm text-[#5E687B]">{t("rfqs.cancelConfirmDesc")}</p>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setCancelTargetId(null)}>{t("common.cancel")}</Button>
+            <Button size="sm" className="bg-red-600 text-white hover:bg-red-700" onClick={() => void confirmCancelRfq()} disabled={updateRfqMutation.isPending}>{t("rfqs.cancelRfq")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* New RFQ Modal */}
-      <Dialog open={showNewRfq} onOpenChange={open => { if (!open) { setShowNewRfq(false); setNewRfqError(null); try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {} } }}>
+      <Dialog open={showNewRfq} onOpenChange={open => { if (!open) { setShowNewRfq(false); setEditingRfqId(null); setNewRfqError(null); try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {} } }}>
         <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>{t("rfqs.dialogNewTitle")}</DialogTitle>
+            <DialogTitle>{editingRfqId !== null ? t("rfqs.editRfqTitle") : t("rfqs.dialogNewTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             {newRfqError && (
@@ -849,10 +845,10 @@ export function RFQs() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => { setShowNewRfq(false); setNewRfqError(null); try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {} }}>{t("common.cancel")}</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowNewRfq(false); setEditingRfqId(null); setNewRfqError(null); try { sessionStorage.removeItem(RFQ_DRAFT_KEY); } catch {} }}>{t("common.cancel")}</Button>
             <Button size="sm" className="bg-[#9000FF] hover:bg-[#7200CC] text-white" onClick={submitNewRfq}
-              disabled={createRfqMutation.isPending}>
-              {createRfqMutation.isPending ? t("common.creating") : t("rfqs.createRfq")}
+              disabled={createRfqMutation.isPending || updateRfqMutation.isPending}>
+              {createRfqMutation.isPending || updateRfqMutation.isPending ? t("common.saving") : editingRfqId !== null ? t("rfqs.saveRfq") : t("rfqs.createRfq")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -925,6 +921,21 @@ export function RFQs() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingQuoteId !== null} onOpenChange={open => { if (!open) setEditingQuoteId(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{t("rfqs.editQuoteTitle")}</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <div className="col-span-2"><label className="mb-1 block text-xs font-semibold text-[#5E687B]">{t("rfqs.fieldFactoryName")}</label><input value={editQuoteForm.factoryName} onChange={e => setEditQuoteForm(f => ({ ...f, factoryName: e.target.value }))} className="w-full rounded-lg border border-[#E5EAF0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9000FF]/20" /></div>
+            <div><label className="mb-1 block text-xs font-semibold text-[#5E687B]">{t("rfqs.fieldCountry")}</label><input value={editQuoteForm.country} onChange={e => setEditQuoteForm(f => ({ ...f, country: e.target.value }))} className="w-full rounded-lg border border-[#E5EAF0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9000FF]/20" /></div>
+            <div><label className="mb-1 block text-xs font-semibold text-[#5E687B]">{t("rfqs.fieldUnitPrice")}</label><input type="number" step="0.01" value={editQuoteForm.unitPriceUsd} onChange={e => setEditQuoteForm(f => ({ ...f, unitPriceUsd: e.target.value }))} className="w-full rounded-lg border border-[#E5EAF0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9000FF]/20" /></div>
+            <div><label className="mb-1 block text-xs font-semibold text-[#5E687B]">{t("rfqs.fieldLeadTime")}</label><input type="number" value={editQuoteForm.leadTimeDays} onChange={e => setEditQuoteForm(f => ({ ...f, leadTimeDays: e.target.value }))} className="w-full rounded-lg border border-[#E5EAF0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9000FF]/20" /></div>
+            <div><label className="mb-1 block text-xs font-semibold text-[#5E687B]">{t("rfqs.fieldMoq")}</label><input type="number" value={editQuoteForm.moq} onChange={e => setEditQuoteForm(f => ({ ...f, moq: e.target.value }))} className="w-full rounded-lg border border-[#E5EAF0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9000FF]/20" /></div>
+            <div className="col-span-2"><label className="mb-1 block text-xs font-semibold text-[#5E687B]">{t("rfqs.fieldNotes")}</label><input value={editQuoteForm.notes} onChange={e => setEditQuoteForm(f => ({ ...f, notes: e.target.value }))} className="w-full rounded-lg border border-[#E5EAF0] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9000FF]/20" /></div>
+          </div>
+          <DialogFooter><Button variant="ghost" size="sm" onClick={() => setEditingQuoteId(null)}>{t("common.cancel")}</Button><Button size="sm" className="bg-[#9000FF] text-white hover:bg-[#7200CC]" onClick={() => void submitEditQuote()} disabled={updateQuoteMutation.isPending}>{updateQuoteMutation.isPending ? t("common.saving") : t("common.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
